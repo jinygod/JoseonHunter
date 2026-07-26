@@ -28,3 +28,8 @@ The previous review draft was rejected before user presentation because its conc
 - Mountain hunter source: muted green garb, fur shoulder, horn bow, quiver; flat `#ff00ff` background. Generated output `exec-2c8d7547-2163-4271-808e-0ac8f8dd0ee4.png` was saved and key-removed using the same helper/options.
 
 The three 384x448 deterministic sheets were rebuilt from modular RGBA layers. They now include 1px dark silhouette outlines, deliberate cluster shading/trims, character-specific face/hair/headwear, and readable carried items: hopae/hwando, charm/fan/bell, and bow/quiver. Direction frames are explicitly down/right/up (00/04/08 and 12/18/24), move frames alternate feet and body bob, and death progresses 30 to 33 to 37. `CharacterSheetContract.FramesDiffer` plus per-hero direction/death tests were added. The contact board was regenerated and all character entries remain pending.
+
+### Fix-round verification
+
+- `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Assets/Test-ProductionAssets.ps1 -Batch characters`: passed (exit 0).
+- Unity EditMode results: passed, 12 total / 12 passed / 0 failed. This run compiled the generic runtime importer and the expanded character-sheet tests successfully; only existing API-obsolescence warnings were emitted.
