@@ -1,119 +1,38 @@
 # Unity Project Context
 
-<!-- unity-onboarding:generated:start -->
-
-## Project Summary
+## Foundation milestone — validated 2026-07-26
 
 - Project root: `D:\UnityProjects\JoseonHunter`
-- Purpose: Unity destination for migrating the existing Flutter + Flame project at `C:\Users\전성진\Documents\뱀서라이크게임`
-- Current state: Empty Unity project; no first-party assets, scripts, scenes, or build scenes exist yet.
-- Last analyzed: 2026-07-26
-- Last analyzed commit: Pre-initialization state; the repository was initialized after this onboarding pass.
+- Validated foundation baseline: `55c1a40fb8b520cce9741295d89e93b6978e807d`
+- Unity: `6000.5.5f1` (`d16e074b49fd`)
+- Intended first player target: Android, landscape only; identifier `com.jinygod.joseonhunter`, version `0.1.0` (code `1`), minimum SDK `26`, ARM64, IL2CPP.
+- Android Build Support, SDK, NDK, and OpenJDK were verified installed for this project. An Android player build/device run is not part of this foundation checkpoint.
 
-## Confirmed Environment
+## Project pipeline and input
 
-- Unity version: 6000.5.5f1, revision `d16e074b49fd`
-- Android Build Support: available (SDK, NDK, OpenJDK verified)
-- Official Unity MCP: available and approved for Codex; Bridge running, validation level Standard, and batch-mode auto-approval disabled.
-- Render pipeline: Built-in Render Pipeline
-- Input system: Legacy Input Manager (`activeInputHandler: 0`); no Input System package is installed.
-- Target platforms: Not yet configured. The source product targets landscape Android first.
+- Universal Render Pipeline is active through `Assets/JoseonHunter/Settings/Rendering/JoseonHunterUniversalRenderPipeline.asset`; its renderer type is 2D (`m_RendererType: 1`).
+- `com.unity.render-pipelines.universal` resolves to `17.5.0`; the Input System-only setting is active (`activeInputHandler: 1`) and `com.unity.inputsystem` resolves to `1.20.0`.
+- Direct package versions in `Packages/manifest.json`: Assistant `2.16.0-pre.1`, Inference `2.6.1`, Input System `1.20.0`, Multiplayer Center `1.0.1`, URP `17.5.0`, Test Framework `1.7.0`, and uGUI `2.5.0`.
+- The existing Flutter project remains the behavioral reference. The migration synchronizer uses the checked-in allowlist `Tools/AssetMigration/asset-migration-manifest.json`; it copies only approved entries and never deletes Unity assets.
 
-## Important Packages And Frameworks
+## Assemblies, scenes, and assets
 
-| Area | Finding | Confidence | Evidence |
-| --- | --- | --- | --- |
-| Unity AI | Assistant 2.16.0-pre.1 and Inference 2.6.1 are direct dependencies. | Confirmed | `Packages/manifest.json` |
-| Multiplayer | Multiplayer Center 1.0.1 is present, but there is no gameplay networking implementation. | Confirmed | `Packages/manifest.json`, empty `Assets/` |
-| Rendering | No URP or HDRP package or render-pipeline asset is configured. | Confirmed | `Packages/manifest.json`, `ProjectSettings/GraphicsSettings.asset` |
-| Testing | Unity Test Framework is present only as a transitive dependency; no first-party test assemblies or tests exist. | Confirmed | `Packages/packages-lock.json`, empty `Assets/` |
+- First-party production assemblies: `JoseonHunter.Domain`, `JoseonHunter.Content`, `JoseonHunter.Runtime`, `JoseonHunter.Presentation`, `JoseonHunter.Infrastructure`, and editor-only `JoseonHunter.Editor`.
+- Test assemblies: `JoseonHunter.EditModeTests` and `JoseonHunter.PlayModeTests`.
+- Enabled build scenes, in required navigation order: `Assets/JoseonHunter/Scenes/Bootstrap.unity`, `Lobby.unity`, then `Gameplay.unity`.
+- The scene scaffold generator is available at **JoseonHunter/Setup/Generate Foundation Scenes**. It refuses to replace an open dirty foundation or non-foundation scene.
+- Approved first-slice migrated assets and their hashes are inventoried in `Docs/Assets/first-slice-asset-inventory.md`. Production audio and fonts remain excluded until their source-ledger approval is recorded.
 
-## Directory Structure
+## Testing and validation
 
-| Path | Purpose | Confidence | Evidence |
-| --- | --- | --- | --- |
-| `Assets/` | Empty destination for first-party game content. | Confirmed | Filesystem inspection |
-| `Packages/` | Unity package manifest and resolved lock file. | Confirmed | `Packages/manifest.json`, `Packages/packages-lock.json` |
-| `ProjectSettings/` | Unity 6000.5 project settings. | Confirmed | `ProjectSettings/ProjectVersion.txt` |
-| `Library/`, `Temp/`, `Logs/` | Generated Unity Editor state; do not treat as source. | Confirmed | Unity project layout |
+- Canonical EditMode entry point: `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1`.
+- The 2026-07-26 foundation run passed all 26 EditMode tests; XML artifact: `Logs/editmode-results.xml` (generated and ignored). It includes seven scene-scaffold tests, package/settings tests, asset importer tests, migration-validator tests, and assembly-boundary coverage.
+- The isolated synchronizer harness is `Tools/AssetMigration/Test-SyncFlutterAssets.ps1`; the foundation run passed.
+- Official Unity MCP is the only approved provider. Its connected bridge successfully compiled and executed C# invoking `EditorApplication.ExecuteMenuItem("JoseonHunter/Setup/Generate Foundation Scenes")` (execution ID `1`, no compilation logs), and a Console read reported `errorCount: 0`.
+- Console warnings observed through MCP were Unity/package/environment warnings (URP shader conversion, historical revoked MCP attempts, account API/signature), not first-party compile errors. Preserve and re-triage warnings instead of clearing them.
 
-## Assembly Boundaries
+## Current capabilities and limitations
 
-No `.asmdef` or `.asmref` files exist. Assembly boundaries have not been established.
-
-## Scenes And Startup Flow
-
-- Build scenes: None.
-- Likely startup scene: None.
-- Scene loading flow: Not implemented.
-
-## Architecture
-
-| Pattern | Finding | Confidence | Evidence |
-| --- | --- | --- | --- |
-| Runtime architecture | Not established. | Confirmed | Empty `Assets/` |
-| Data architecture | Not established; Flutter source currently owns content definitions, save data, settings, telemetry, and progression behavior. | Confirmed | Source-project structure and empty Unity project |
-| Presentation | Not established; Flutter source currently uses Material widgets plus Flame. | Confirmed | Source-project `lib/app/`, `lib/game/` |
-
-## Coding Conventions
-
-- Namespace style: Not established.
-- Serialized fields: Not established.
-- Async: Not established.
-- Comments/docs: Not established.
-
-## Testing And Validation
-
-- EditMode tests: None.
-- PlayMode tests: None.
-- CI/build validation: None.
-- Live Unity MCP baseline: Unity 6000.5.5f1 at `D:\UnityProjects\JoseonHunter`; Console probe returned zero errors and zero warnings; zero first-party scene assets and zero build scenes.
-- Migration validation should compare deterministic Unity domain behavior against the existing Flutter tests before replacing the source application.
-
-## Available Unity Tooling
-
-| Capability | Status | Evidence |
-| --- | --- | --- |
-| `unity.connection.status` | available | Official Bridge reports running and enabled with approved Codex clients connected. |
-| `unity.editor.version` | available | Live Editor probe returned 6000.5.5f1. |
-| `unity.console.read` | available | Live non-clearing probe returned zero errors and zero warnings. |
-| `unity.scene.list` | available | Read-only Editor probe found one unsaved empty loaded scene, zero first-party scene assets, and zero build scenes. |
-| `unity.scene.inspect` | unavailable | No Unity MCP capability is exposed. |
-| `unity.buildsettings.read` | available | Read-only Editor probe returned zero build scenes. |
-| `unity.gameobject.inspect` | unavailable | No Unity MCP capability is exposed. |
-| `unity.asset.search` | available | Read-only `AssetDatabase` probe found zero first-party scene assets. |
-| `unity.package.read` | unavailable | Read from package files instead. |
-| `unity.tests.list` | unavailable | Filesystem inspection is available. |
-| `unity.tests.run` | unavailable | Unity batch-mode execution remains available through the installed editor if configured later. |
-| `unity.playmode.read` | unavailable | No Unity MCP capability is exposed. |
-| `unity.profiler.read` | unavailable | No Unity MCP capability is exposed. |
-
-## Important Constraints
-
-- Preserve the Flutter project as the behavioral reference until Unity reaches feature parity.
-- Do not copy Flutter-generated folders or platform build output into Unity.
-- Import only source-owned assets and retain licensing ledgers and attribution.
-- Preserve pixel-art sampling, sprite geometry, audio loop behavior, and landscape Android intent during asset import.
-- Track only source-owned Unity files; generated directories are excluded by the repository `.gitignore`.
-- Do not infer multiplayer support from the Multiplayer Center package.
-
-## Unknowns And Confidence
-
-- The final Unity render pipeline, input package, scene architecture, and assembly boundaries require an approved migration design.
-- Android player settings, orientation, package identifier, signing, and backend integrations are not configured.
-- Save compatibility strategy between Flutter `SharedPreferences` data and Unity persistence is not yet approved.
-- No automated Unity baseline can run until first-party tests and assemblies are created.
-
-## Source Files Inspected
-
-- `ProjectSettings/ProjectVersion.txt`
-- `ProjectSettings/GraphicsSettings.asset`
-- `ProjectSettings/ProjectSettings.asset`
-- `ProjectSettings/EditorBuildSettings.asset`
-- `Packages/manifest.json`
-- `Packages/packages-lock.json`
-- Flutter source `README.md`
-- Flutter source `pubspec.yaml`
-- Flutter source directory layout under `lib/` and `assets/`
-
-<!-- unity-onboarding:generated:end -->
+- The foundation has compilation and batch EditMode evidence, scene/build-settings evidence, and connected-MCP Editor command evidence.
+- There is no Android Gradle artifact, device installation, PlayMode gameplay smoke test, performance capture, or visual-quality approval in this checkpoint. Those must be performed by the vertical-slice/release validation that requires them.
+- Do not infer gameplay networking from the Multiplayer Center package; no gameplay networking is implemented.
