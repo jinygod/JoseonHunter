@@ -39,11 +39,10 @@ namespace JoseonHunter.Editor.AssetImport
             var audioRights = ReadRightsLedger(
                 Path.Combine(projectRoot, "Docs/Assets/audio-rights-ledger.csv"), "audio", errors);
             var destinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var approvedDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var entry in manifest.entries)
             {
-                ValidateEntry(entry, projectRoot, assetRights, audioRights, destinations, approvedDestinations, errors);
+                ValidateEntry(entry, projectRoot, assetRights, audioRights, destinations, errors);
             }
 
             return errors.ToList();
@@ -55,7 +54,6 @@ namespace JoseonHunter.Editor.AssetImport
             IDictionary<string, RightsRecord> assetRights,
             IDictionary<string, RightsRecord> audioRights,
             ISet<string> destinations,
-            ISet<string> approvedDestinations,
             ISet<string> errors)
         {
             if (entry == null || string.IsNullOrWhiteSpace(entry.destination))
@@ -82,11 +80,6 @@ namespace JoseonHunter.Editor.AssetImport
             {
                 errors.Add("license status is not approved: " + destination);
             }
-            else
-            {
-                approvedDestinations.Add(destination);
-            }
-
             if (!File.Exists(destinationPath))
             {
                 errors.Add("missing destination file: " + destination);
@@ -183,32 +176,6 @@ namespace JoseonHunter.Editor.AssetImport
             if (!File.Exists(Path.Combine(projectRoot, licenseDestination)))
             {
                 errors.Add("missing font license: " + licenseName);
-            }
-        }
-
-        private static void ValidateApprovedAssetsAreManifested(
-            string projectRoot,
-            ISet<string> approvedDestinations,
-            ISet<string> errors)
-        {
-            var artDirectory = Path.Combine(projectRoot, "Assets/JoseonHunter/Art");
-            if (!Directory.Exists(artDirectory))
-            {
-                return;
-            }
-
-            foreach (var file in Directory.GetFiles(artDirectory, "*", SearchOption.AllDirectories))
-            {
-                if (file.EndsWith(".meta", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var destination = NormalizePath(file.Substring(projectRoot.Length).TrimStart('\\', '/'));
-                if (!approvedDestinations.Contains(destination))
-                {
-                    errors.Add("asset is not approved by manifest: " + destination);
-                }
             }
         }
 

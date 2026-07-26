@@ -172,6 +172,24 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(errors, Is.Empty, string.Join(Environment.NewLine, errors));
         }
 
+        [Test]
+        public void ValidateAllowsProvenancedArtOutsideFlutterMigrationManifest()
+        {
+            const string productionAsset =
+                "Assets/JoseonHunter/Art/ValidationFixtures/non-migrated-production.png";
+            Directory.CreateDirectory(ToAbsolutePath("Assets/JoseonHunter/Art/ValidationFixtures"));
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.CopyAsset(
+                "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png", productionAsset);
+            AssetDatabase.ImportAsset(productionAsset, ImportAssetOptions.ForceSynchronousImport);
+
+            var errors = AssetMigrationValidator.Validate(WriteManifest());
+
+            Assert.That(errors, Is.Empty, string.Join(Environment.NewLine, errors));
+            AssetDatabase.DeleteAsset(productionAsset);
+            DeleteEmptyAssetDirectory("Assets/JoseonHunter/Art/ValidationFixtures");
+        }
+
         private static string WriteManifest(params ManifestEntry[] entries)
         {
             var path = ToAbsolutePath(
