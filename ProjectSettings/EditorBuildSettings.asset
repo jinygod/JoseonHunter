@@ -4,6 +4,15 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/JoseonHunter/Scenes/Bootstrap.unity
+    guid: 859018ed92c4f674a89df562dd78c808
+  - enabled: 1
+    path: Assets/JoseonHunter/Scenes/Lobby.unity
+    guid: 4b5f3d9f1245bc04c8c179535e1be35c
+  - enabled: 1
+    path: Assets/JoseonHunter/Scenes/Gameplay.unity
+    guid: 109666ab5ccbd9c4498555c0bcc314a0
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
