@@ -78,6 +78,14 @@ namespace JoseonHunter.Editor.AssetProduction
             return false;
         }
 
+        public static bool FramesDiffer(string sourceRoot, int firstFrame, int secondFrame)
+        {
+            if (firstFrame < 0 || secondFrame < 0 || firstFrame >= Frames || secondFrame >= Frames)
+                return false;
+            var pixels = BuildComposite(sourceRoot, ReadManifest(Path.Combine(sourceRoot, "manifest.json"), new List<string>())?.layers);
+            return FrameSignature(pixels, firstFrame) != FrameSignature(pixels, secondFrame);
+        }
+
         private static CharacterSheetValidationResult Result(List<string> errors, Vector2Int cellSize, Vector2Int footAnchor, Vector2 pivot, int frames) =>
             new CharacterSheetValidationResult(errors, cellSize, footAnchor, pivot, frames);
 

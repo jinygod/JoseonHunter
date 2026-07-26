@@ -45,6 +45,12 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(CharacterSheetContract.HasAnimationVariation(root, 0, 12), Is.True);
             Assert.That(CharacterSheetContract.HasAnimationVariation(root, 12, 18), Is.True);
             Assert.That(CharacterSheetContract.HasAnimationVariation(root, 30, 8), Is.True);
+            Assert.That(CharacterSheetContract.FramesDiffer(root, 0, 4), Is.True, "down and right idle must differ");
+            Assert.That(CharacterSheetContract.FramesDiffer(root, 4, 8), Is.True, "right and up idle must differ");
+            Assert.That(CharacterSheetContract.FramesDiffer(root, 12, 18), Is.True, "down and right move must differ");
+            Assert.That(CharacterSheetContract.FramesDiffer(root, 18, 24), Is.True, "right and up move must differ");
+            Assert.That(CharacterSheetContract.FramesDiffer(root, 30, 33), Is.True, "death must progress");
+            Assert.That(CharacterSheetContract.FramesDiffer(root, 33, 37), Is.True, "death must finish collapsed");
         }
 
         [TestCase("rookie-constable", "rookie_constable")]

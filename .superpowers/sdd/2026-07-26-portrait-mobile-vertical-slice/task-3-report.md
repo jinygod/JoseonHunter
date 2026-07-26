@@ -18,3 +18,13 @@ Runtime sheets and source layers are deterministic RGBA pixel artwork built to t
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Assets/Test-ProductionAssets.ps1 -Batch characters`: passed (exit 0).
 - Focused `AssetImportProfileTests` and full EditMode invocation were attempted after preflight, but Unity reported that another Unity instance already had this worktree open. The launcher returned exit 0 despite the fatal lock message, so these are recorded as **not independently verified** and must be rerun once the project lock is released.
+
+## Task 3: fix round 1/5 - chibi art-direction correction (2026-07-27)
+
+The previous review draft was rejected before user presentation because its concept sources used tall anime proportions and the runtime sheets were disconnected block figures. All three concepts were regenerated with three separate built-in `image_gen` calls; no CLI/API fallback was used. The new prompts required original super-deformed Joseon-fantasy pixel characters, 2 to 2.5 heads tall with 40 to 45 percent head height, compact limbs, front/right/back cues, clean pixel clusters, modular layer logic, flat chroma backgrounds, and explicitly prohibited tall anime proportions, SPUM naming/copying, samurai armor, and Chinese imperial motifs.
+
+- Rookie constable source: navy patrol uniform, oversized black gat, hopae, hwando; flat `#00ff00` background. Generated output `exec-7aa9037c-fd5a-48d9-a603-e2e234069e1b.png` was copied to `ArtSource/Pixel/Characters/rookie-constable/concept-imagegen-raw.png` and key-removed with the installed helper (`--force --auto-key border --soft-matte --transparent-threshold 12 --opaque-threshold 220 --despill`).
+- Shaman source: cream/vermilion ritual robe, jade, talisman bundle, bell; flat `#00ff00` background. Generated output `exec-b2404fb5-e8b7-4e0c-bec2-7602bbc460d7.png` was saved and key-removed using the same helper/options.
+- Mountain hunter source: muted green garb, fur shoulder, horn bow, quiver; flat `#ff00ff` background. Generated output `exec-2c8d7547-2163-4271-808e-0ac8f8dd0ee4.png` was saved and key-removed using the same helper/options.
+
+The three 384x448 deterministic sheets were rebuilt from modular RGBA layers. They now include 1px dark silhouette outlines, deliberate cluster shading/trims, character-specific face/hair/headwear, and readable carried items: hopae/hwando, charm/fan/bell, and bow/quiver. Direction frames are explicitly down/right/up (00/04/08 and 12/18/24), move frames alternate feet and body bob, and death progresses 30 to 33 to 37. `CharacterSheetContract.FramesDiffer` plus per-hero direction/death tests were added. The contact board was regenerated and all character entries remain pending.

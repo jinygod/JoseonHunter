@@ -1,21 +1,21 @@
-# Character review — draft, pending approval
+# Character review - fix round 1, pending approval
 
 ![Character review board](characters-review-board.png)
 
-This is the Step 1 review batch only. No character or mannequin approval status has changed; all remain `pending` until explicit user feedback.
+This replaces the earlier draft with an original super-deformed Joseon-fantasy direction: 2 to 2.5 heads tall, head about 40 to 45 percent of the character height, and compact limbs. Each left-hand source panel is a separately generated built-in-imagegen three-view reference; the matching runtime contact sheet is deterministic pixel art, not a generated sprite sheet.
 
-| Hero | Required readable traits | Direction samples | Animation samples |
+| Hero | Readable identity | Direction samples | Motion/death samples |
 | --- | --- | --- | --- |
-| Rookie constable | Navy patrol uniform, black gat, hopae, hwando silhouette | idle: 00 / 04 / 08; move: 12 / 18 / 24 | idle 00–11, move 12–29, death 30–37 |
-| Shaman | Cream/vermilion ritual robe, jade accent, talisman bundle | idle: 00 / 04 / 08; move: 12 / 18 / 24 | idle 00–11, move 12–29, death 30–37 |
-| Mountain hunter | Muted green garb, fur accent, horn bow silhouette | idle: 00 / 04 / 08; move: 12 / 18 / 24 | idle 00–11, move 12–29, death 30–37 |
+| Rookie constable | Navy patrol uniform, oversized black gat, hopae, hwando | idle 00 / 04 / 08; move 12 / 18 / 24 | death 30 / 33 / 37 |
+| Shaman | Cream/vermilion robe, jade ornament, talisman bundle, bell | idle 00 / 04 / 08; move 12 / 18 / 24 | death 30 / 33 / 37 |
+| Mountain hunter | Muted green garb, fur shoulder, horn bow, quiver | idle 00 / 04 / 08; move 12 / 18 / 24 | death 30 / 33 / 37 |
 
-The board shows every requested direction on both light and dark backgrounds, with three death stages (30, 33, 37). Each flattened sheet is 384×448: 38 occupied 64×64 cells (six columns; final four cells empty), foot anchor `(32,56)`, pivot `(0.5,0.125)`, and 32 PPU. Idle/move/death only: there are no attack or hit frames.
+Every sheet is 384x448, with 38 occupied 64x64 cells, foot anchor `(32,56)`, pivot `(0.5,0.125)`, and 32 PPU. Idle/move/death are the only ranges: no attack or hit frames exist. The board presents the exact down/right/up frames and light/dark background checks; move poses alternate body/feet, and death frames progress from fall to collapse.
 
-Each hero has deterministic source layers, palette, flattened source sheet, individual 96×96 portrait, and individual locked silhouette. The rookie constable additionally has four individually addressable palette variants. Generated concept images are saved as raw chroma-key sources and chroma-key cutouts for provenance; they are not runtime pixel sheets.
+Each hero includes deterministic source layers, palette, flattened sheet, individual 96x96 portrait, and individual locked silhouette. Rookie constable has four individually addressable palette variants. Every character/mannequin manifest entry remains `pending`; no user approval has been inferred.
 
-No SPUM assets, SPUM reproductions, or derived SPUM artwork are present in this batch.
+No SPUM assets, names, copies, or derived artwork are present.
 
 ## Requested decision
 
-Please explicitly approve this characters batch or list exact revisions. Silence does not constitute approval.
+Please explicitly approve this character batch or list exact revisions. Silence does not constitute approval.
