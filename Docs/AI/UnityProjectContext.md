@@ -14,7 +14,7 @@
 
 - Unity version: 6000.5.5f1, revision `d16e074b49fd`
 - Android Build Support: available (SDK, NDK, OpenJDK verified)
-- Official Unity MCP: relay configured for Codex; Unity Editor approval and low-risk connection probes remain pending.
+- Official Unity MCP: available and approved for Codex; Bridge running, validation level Standard, and batch-mode auto-approval disabled.
 - Render pipeline: Built-in Render Pipeline
 - Input system: Legacy Input Manager (`activeInputHandler: 0`); no Input System package is installed.
 - Target platforms: Not yet configured. The source product targets landscape Android first.
@@ -67,20 +67,21 @@ No `.asmdef` or `.asmref` files exist. Assembly boundaries have not been establi
 - EditMode tests: None.
 - PlayMode tests: None.
 - CI/build validation: None.
+- Live Unity MCP baseline: Unity 6000.5.5f1 at `D:\UnityProjects\JoseonHunter`; Console probe returned zero errors and zero warnings; zero first-party scene assets and zero build scenes.
 - Migration validation should compare deterministic Unity domain behavior against the existing Flutter tests before replacing the source application.
 
 ## Available Unity Tooling
 
 | Capability | Status | Evidence |
 | --- | --- | --- |
-| `unity.connection.status` | unavailable | No Unity MCP capability is exposed in the current Codex session. |
-| `unity.editor.version` | unavailable | Read from project files instead. |
-| `unity.console.read` | unavailable | No Unity MCP capability is exposed. |
-| `unity.scene.list` | unavailable | Read from serialized assets and Build Settings instead. |
+| `unity.connection.status` | available | Official Bridge reports running and enabled with approved Codex clients connected. |
+| `unity.editor.version` | available | Live Editor probe returned 6000.5.5f1. |
+| `unity.console.read` | available | Live non-clearing probe returned zero errors and zero warnings. |
+| `unity.scene.list` | available | Read-only Editor probe found one unsaved empty loaded scene, zero first-party scene assets, and zero build scenes. |
 | `unity.scene.inspect` | unavailable | No Unity MCP capability is exposed. |
-| `unity.buildsettings.read` | unavailable | Read from `EditorBuildSettings.asset` instead. |
+| `unity.buildsettings.read` | available | Read-only Editor probe returned zero build scenes. |
 | `unity.gameobject.inspect` | unavailable | No Unity MCP capability is exposed. |
-| `unity.asset.search` | unavailable | Filesystem inspection is available. |
+| `unity.asset.search` | available | Read-only `AssetDatabase` probe found zero first-party scene assets. |
 | `unity.package.read` | unavailable | Read from package files instead. |
 | `unity.tests.list` | unavailable | Filesystem inspection is available. |
 | `unity.tests.run` | unavailable | Unity batch-mode execution remains available through the installed editor if configured later. |
