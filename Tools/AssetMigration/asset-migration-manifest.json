@@ -1,7 +1,6 @@
 {
   "version": 1,
   "entries": [
-    { "source": "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png", "destination": "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png", "profile": "pixel", "licenseStatus": "approved" },
     { "source": "assets/images/player/rookie_constable_player_32.png", "destination": "Assets/JoseonHunter/Art/Characters/rookie_constable_player_32.png", "profile": "pixel", "licenseStatus": "approved" },
     { "source": "assets/images/characters/lobby/rookie_constable.png", "destination": "Assets/JoseonHunter/Art/Characters/Lobby/rookie_constable.png", "profile": "ui", "licenseStatus": "approved" },
     { "source": "assets/images/monsters/fallen_general_64.png", "destination": "Assets/JoseonHunter/Art/Bosses/fallen_general_64.png", "profile": "pixel", "licenseStatus": "approved" },

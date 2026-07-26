@@ -46,7 +46,6 @@ namespace JoseonHunter.Editor.AssetImport
                 ValidateEntry(entry, projectRoot, assetRights, audioRights, destinations, approvedDestinations, errors);
             }
 
-            ValidateApprovedAssetsAreManifested(projectRoot, approvedDestinations, errors);
             return errors.ToList();
         }
 
