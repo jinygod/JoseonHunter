@@ -88,5 +88,35 @@ namespace JoseonHunter.Tests.EditMode
                 EditorSceneManager.CloseScene(scene, true);
             }
         }
+
+        [Test]
+        public void GenerateRefusesToReplaceAnOpenDirtyNonFoundationScene()
+        {
+            EditorSceneManager.OpenScene(
+                "Assets/JoseonHunter/Scenes/Bootstrap.unity",
+                OpenSceneMode.Single);
+            var scene = EditorSceneManager.NewScene(
+                NewSceneSetup.EmptyScene,
+                NewSceneMode.Additive);
+            try
+            {
+                var unsavedChange = new GameObject("UnsavedNonFoundationChange");
+                SceneManager.MoveGameObjectToScene(unsavedChange, scene);
+                EditorSceneManager.MarkSceneDirty(scene);
+
+                Assert.That(
+                    () => SceneScaffoldGenerator.Generate(),
+                    Throws.TypeOf<InvalidOperationException>());
+                Assert.That(scene.isLoaded, Is.True);
+                Assert.That(scene.isDirty, Is.True);
+            }
+            finally
+            {
+                if (scene.isLoaded)
+                {
+                    EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+        }
     }
 }

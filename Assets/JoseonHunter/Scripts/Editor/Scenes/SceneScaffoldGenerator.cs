@@ -23,7 +23,7 @@ namespace JoseonHunter.Editor.Scenes
         [MenuItem("JoseonHunter/Setup/Generate Foundation Scenes")]
         public static void Generate()
         {
-            RefuseDirtyOpenFoundationScenes();
+            RefuseDirtyOpenScenes();
             EnsureScenesFolder();
 
             foreach (var scenePath in ScenePaths)
@@ -37,15 +37,15 @@ namespace JoseonHunter.Editor.Scenes
                 .ToArray();
         }
 
-        private static void RefuseDirtyOpenFoundationScenes()
+        private static void RefuseDirtyOpenScenes()
         {
-            foreach (var scenePath in ScenePaths)
+            for (var index = 0; index < SceneManager.sceneCount; index++)
             {
-                var openScene = SceneManager.GetSceneByPath(scenePath);
-                if (openScene.IsValid() && openScene.isLoaded && openScene.isDirty)
+                var openScene = SceneManager.GetSceneAt(index);
+                if (openScene.isLoaded && openScene.isDirty)
                 {
                     throw new InvalidOperationException(
-                        $"Cannot overwrite dirty open foundation scene: {scenePath}");
+                        $"Cannot replace dirty open scene: {openScene.path}");
                 }
             }
         }
