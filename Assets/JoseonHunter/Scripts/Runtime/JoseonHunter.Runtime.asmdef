@@ -1,0 +1,10 @@
+{
+  "name": "JoseonHunter.Runtime",
+  "rootNamespace": "JoseonHunter.Runtime",
+  "references": [
+    "JoseonHunter.Domain",
+    "JoseonHunter.Content",
+    "Unity.InputSystem"
+  ],
+  "autoReferenced": false
+}

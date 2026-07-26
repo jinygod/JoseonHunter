@@ -1,0 +1,13 @@
+{
+  "name": "JoseonHunter.PlayModeTests",
+  "rootNamespace": "JoseonHunter.Tests.PlayMode",
+  "references": [
+    "JoseonHunter.Domain",
+    "JoseonHunter.Content",
+    "JoseonHunter.Runtime",
+    "JoseonHunter.Presentation",
+    "JoseonHunter.Infrastructure"
+  ],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}

@@ -1,0 +1,13 @@
+{
+  "name": "JoseonHunter.Editor",
+  "rootNamespace": "JoseonHunter.Editor",
+  "references": [
+    "JoseonHunter.Domain",
+    "JoseonHunter.Content",
+    "JoseonHunter.Runtime",
+    "JoseonHunter.Presentation",
+    "JoseonHunter.Infrastructure"
+  ],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": false
+}

@@ -1,0 +1,8 @@
+{
+  "name": "JoseonHunter.Content",
+  "rootNamespace": "JoseonHunter.Content",
+  "references": [
+    "JoseonHunter.Domain"
+  ],
+  "autoReferenced": false
+}

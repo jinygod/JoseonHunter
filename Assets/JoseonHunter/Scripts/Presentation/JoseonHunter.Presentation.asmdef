@@ -1,0 +1,12 @@
+{
+  "name": "JoseonHunter.Presentation",
+  "rootNamespace": "JoseonHunter.Presentation",
+  "references": [
+    "JoseonHunter.Domain",
+    "JoseonHunter.Content",
+    "JoseonHunter.Runtime",
+    "Unity.InputSystem",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "autoReferenced": false
+}

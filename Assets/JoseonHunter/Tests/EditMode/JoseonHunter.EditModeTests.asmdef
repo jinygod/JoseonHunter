@@ -2,7 +2,13 @@
   "name": "JoseonHunter.EditModeTests",
   "rootNamespace": "JoseonHunter.Tests.EditMode",
   "references": [
-    "Unity.RenderPipelines.Universal.Runtime"
+    "Unity.RenderPipelines.Universal.Runtime",
+    "JoseonHunter.Domain",
+    "JoseonHunter.Content",
+    "JoseonHunter.Runtime",
+    "JoseonHunter.Presentation",
+    "JoseonHunter.Infrastructure",
+    "JoseonHunter.Editor"
   ],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"],
