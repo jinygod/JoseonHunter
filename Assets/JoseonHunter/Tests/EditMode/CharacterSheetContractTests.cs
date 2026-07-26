@@ -33,6 +33,31 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(result.FrameCount, Is.EqualTo(38));
         }
 
+        [Test]
+        public void CanonicalActiveFramesHaveReadableBoundsAndAnimationVariation()
+        {
+            var root = "ArtSource/Pixel/Characters/mannequin";
+            var runtime = "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png";
+            Assert.That(CharacterSheetContract.Validate(root, runtime).Errors, Is.Empty);
+            Assert.That(CharacterSheetContract.ActiveFrameBounds(root), Has.Length.EqualTo(38));
+            Assert.That(CharacterSheetContract.ActiveFrameBounds(root)[0].height, Is.InRange(44, 52));
+            Assert.That(CharacterSheetContract.ActiveFrameBounds(root)[0].yMax, Is.InRange(57, 59));
+            Assert.That(CharacterSheetContract.HasAnimationVariation(root, 0, 12), Is.True);
+            Assert.That(CharacterSheetContract.HasAnimationVariation(root, 12, 18), Is.True);
+            Assert.That(CharacterSheetContract.HasAnimationVariation(root, 30, 8), Is.True);
+        }
+
+        [Test]
+        public void ValidateRejectsRuntimeThatDoesNotMatchLayerComposite()
+        {
+            var root = CreateFixture();
+            var runtime = Path.Combine(root, "runtime.png");
+            WritePng(runtime, 384, 448, new Color32(1, 2, 3, 255));
+
+            Assert.That(CharacterSheetContract.Validate(root, runtime).Errors,
+                Does.Contain("runtime does not match layer composite"));
+        }
+
         [TestCase("wrong canvas size", "body", 383, 448, "invalid canvas")]
         [TestCase("mismatched layer dimensions", "body", 384, 447, "invalid canvas")]
         public void ValidateRejectsInvalidLayerCanvas(string name, string layer, int width, int height, string expected)

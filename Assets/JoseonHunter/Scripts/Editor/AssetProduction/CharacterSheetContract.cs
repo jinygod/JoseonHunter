@@ -40,8 +40,39 @@ namespace JoseonHunter.Editor.AssetProduction
             var palette = ReadPalette(Path.Combine(sourceRoot, "palette.png"), errors);
             foreach (var layer in manifest.layers ?? Array.Empty<string>())
                 ValidateLayer(Path.Combine(sourceRoot, "layers", layer + ".png"), layer, palette, errors);
+            ValidateRuntime(sourceRoot, runtimePath, manifest.layers, errors);
 
             return Result(errors, cellSize, footAnchor, pivot, frameCount);
+        }
+
+        public static RectInt[] ActiveFrameBounds(string sourceRoot)
+        {
+            var pixels = BuildComposite(sourceRoot, ReadManifest(Path.Combine(sourceRoot, "manifest.json"), new List<string>())?.layers);
+            var bounds = new RectInt[Frames];
+            for (var frame = 0; frame < Frames; frame++)
+            {
+                var minX = 64; var minY = 64; var maxX = -1; var maxY = -1;
+                var originX = (frame % 6) * 64; var originY = (frame / 6) * 64;
+                for (var y = 0; y < 64; y++) for (var x = 0; x < 64; x++)
+                {
+                    if (pixels[(originY + y) * SheetWidth + originX + x].a == 0) continue;
+                    minX = Math.Min(minX, x); maxX = Math.Max(maxX, x);
+                    var displayY = 63 - y;
+                    minY = Math.Min(minY, displayY); maxY = Math.Max(maxY, displayY);
+                }
+                bounds[frame] = maxX < 0 ? new RectInt() : new RectInt(minX, minY, maxX - minX + 1, maxY - minY + 1);
+            }
+            return bounds;
+        }
+
+        public static bool HasAnimationVariation(string sourceRoot, int start, int frames)
+        {
+            var pixels = BuildComposite(sourceRoot, ReadManifest(Path.Combine(sourceRoot, "manifest.json"), new List<string>())?.layers);
+            if (frames < 2) return false;
+            var first = FrameSignature(pixels, start);
+            for (var frame = start + 1; frame < start + frames; frame++)
+                if (FrameSignature(pixels, frame) != first) return true;
+            return false;
         }
 
         private static CharacterSheetValidationResult Result(List<string> errors, Vector2Int cellSize, Vector2Int footAnchor, Vector2 pivot, int frames) =>
@@ -123,6 +154,43 @@ namespace JoseonHunter.Editor.AssetProduction
             if (hasPaletteViolation) errors.Add("color outside palette: " + layer);
             if (hasUnusedPixel) errors.Add("non-transparent unused cell: " + layer);
             UnityEngine.Object.DestroyImmediate(texture);
+        }
+
+        private static void ValidateRuntime(string sourceRoot, string runtimePath, string[] layers, List<string> errors)
+        {
+            var runtime = LoadPng(runtimePath);
+            if (runtime == null) { errors.Add("missing runtime sheet"); return; }
+            if (runtime.width != SheetWidth || runtime.height != SheetHeight) { errors.Add("invalid runtime canvas"); UnityEngine.Object.DestroyImmediate(runtime); return; }
+            var expected = BuildComposite(sourceRoot, layers);
+            var actual = runtime.GetPixels32();
+            for (var index = 0; index < expected.Length; index++)
+                if (!expected[index].Equals(actual[index])) { errors.Add("runtime does not match layer composite"); break; }
+            UnityEngine.Object.DestroyImmediate(runtime);
+        }
+
+        private static Color32[] BuildComposite(string sourceRoot, string[] layers)
+        {
+            var composite = new Color32[SheetWidth * SheetHeight];
+            foreach (var layer in layers ?? Array.Empty<string>())
+            {
+                var texture = LoadPng(Path.Combine(sourceRoot, "layers", layer + ".png"));
+                if (texture == null || texture.width != SheetWidth || texture.height != SheetHeight) { if (texture != null) UnityEngine.Object.DestroyImmediate(texture); continue; }
+                var pixels = texture.GetPixels32();
+                for (var index = 0; index < pixels.Length; index++) if (pixels[index].a > 0) composite[index] = pixels[index];
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+            return composite;
+        }
+
+        private static int FrameSignature(Color32[] pixels, int frame)
+        {
+            unchecked
+            {
+                var hash = 17; var originX = (frame % 6) * 64; var originY = (frame / 6) * 64;
+                for (var y = 0; y < 64; y++) for (var x = 0; x < 64; x++)
+                    hash = hash * 31 + pixels[(originY + y) * SheetWidth + originX + x].GetHashCode();
+                return hash;
+            }
         }
 
         private static Texture2D LoadPng(string path)
