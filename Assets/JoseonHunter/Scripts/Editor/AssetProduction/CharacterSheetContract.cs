@@ -108,6 +108,9 @@ namespace JoseonHunter.Editor.AssetProduction
             if (!Matches(manifest.layers, RequiredLayers)) errors.Add("invalid layer contract");
             if (!Matches(manifest.paletteSlots, RequiredPaletteSlots)) errors.Add("invalid palette slots");
             if (string.IsNullOrWhiteSpace(manifest.promptRevision)) errors.Add("missing prompt revision");
+            if (manifest.animations == null || manifest.animations.Length != 3 ||
+                manifest.animations[0].name != "idle" || manifest.animations[1].name != "move" ||
+                manifest.animations[2].name != "death") errors.Add("invalid animation contract");
             ValidateAnimation(manifest.animations, "idle", 0, 12, 6, errors);
             ValidateAnimation(manifest.animations, "move", 12, 18, 10, errors);
             ValidateAnimation(manifest.animations, "death", 30, 8, 10, errors);

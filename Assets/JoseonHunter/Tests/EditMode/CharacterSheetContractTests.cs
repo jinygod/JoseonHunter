@@ -86,6 +86,20 @@ namespace JoseonHunter.Tests.EditMode
                 Does.Contain("invalid palette slots").And.Contain("invalid layer contract"));
         }
 
+        [Test]
+        public void ValidateRejectsUnexpectedFourthAnimation()
+        {
+            var root = CreateFixture();
+            var path = Path.Combine(root, "manifest.json");
+            var json = File.ReadAllText(path).Replace(
+                "],\"layers\":[",
+                ",{\"name\":\"attack\",\"start\":0,\"frames\":1,\"fps\":1}],\"layers\":[");
+            File.WriteAllText(path, json);
+
+            Assert.That(CharacterSheetContract.Validate(root, Path.Combine(root, "runtime.png")).Errors,
+                Does.Contain("invalid animation contract"));
+        }
+
         [TestCase("wrong canvas size", "body", 383, 448, "invalid canvas")]
         [TestCase("mismatched layer dimensions", "body", 384, 447, "invalid canvas")]
         public void ValidateRejectsInvalidLayerCanvas(string name, string layer, int width, int height, string expected)
