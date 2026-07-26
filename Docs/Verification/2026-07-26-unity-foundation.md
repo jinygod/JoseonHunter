@@ -12,7 +12,8 @@
 | Command | Exit code | Result / artifact |
 | --- | ---: | --- |
 | `git status --short` | 0 | Clean at post-test documentation baseline. A transient Unity-authored Android scripting-symbol change and temporary audio fixtures were observed during validation and had cleared before documentation changes. |
-| `git diff --check` | 0 | No whitespace errors. Unity serialized YAML was not rewritten. |
+| `git diff --check` | 0 | Clean working-tree diff only: no uncommitted whitespace errors. This result does not assess committed branch history. |
+| `git diff --check cc102b79ee1bc3149de27b5a0e82ea8e9e4836f1..bfa5c54d4aaada88749e051649711ff0458f68f7` | 2 | 287 trailing-whitespace diagnostics across 51 files in the full reviewed branch range: 50 Unity-authored serialized/meta files and one non-Unity exception, `Docs/Assets/asset-rights-ledger.csv`. Unity YAML/meta was intentionally not normalized by hand. |
 | `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/AssetMigration/Test-SyncFlutterAssets.ps1` | 0 | PASS: invalid-input rejection, dry-run safety, failure aggregation, JSON reporting, SHA idempotency. |
 | `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1` | 0 | EditMode 26/26 passed, 0 failed/skipped; `Logs/editmode-results.xml`, duration `5.739051s`. |
 
@@ -50,4 +51,4 @@ This is a compile/configuration/EditMode checkpoint, not a gameplay or target-de
 - Authorized publish command: `git push origin HEAD:master` (exit code `0`).
 - Successful push output: `To https://github.com/jinygod/JoseonHunter.git`; `cc102b7..6d7c143  HEAD -> master`.
 - At the time of that publish, `git ls-remote origin refs/heads/master` returned `6d7c143f01a58960e13f666a7301d69ac3e63c87\trefs/heads/master`.
-- Any later docs-only correction is separately recorded in the ignored Task 8 report, because a commit cannot truthfully embed its own final SHA. It does not change the verified foundation code/configuration state at `55c1a40`.
+- Published docs-only correction: `bfa5c54d4aaada88749e051649711ff0458f68f7` (`docs: correct foundation verification`). `git push origin HEAD:master` exited 0, and `git ls-remote origin refs/heads/master` confirmed `bfa5c54d4aaada88749e051649711ff0458f68f7\trefs/heads/master` at that time. It did not change the verified foundation code/configuration state at `55c1a40`.
