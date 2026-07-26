@@ -3,7 +3,8 @@ param(
   [string]$RuntimePath,
   [string]$ResultsPath,
   [datetime]$NotBeforeUtc,
-  [switch]$CheckTestResultsOnly
+  [switch]$CheckTestResultsOnly,
+  [switch]$PrintValidationArgumentsOnly
 )
 
 function Assert-FreshPassingTestResults {
@@ -29,6 +30,10 @@ if ([string]::IsNullOrWhiteSpace($SourceRoot) -or [string]::IsNullOrWhiteSpace($
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $source = Join-Path $root $SourceRoot
 $runtime = Join-Path $root $RuntimePath
+if ($PrintValidationArgumentsOnly) {
+  [pscustomobject]@{ SourceRoot = $source; RuntimePath = $runtime }
+  return
+}
 $required = @('manifest.json', 'palette.png', 'flattened.png')
 foreach ($file in $required) {
   if (-not (Test-Path -LiteralPath (Join-Path $source $file))) { throw "Missing required source file: $file" }
@@ -61,7 +66,7 @@ Get-ChildItem -LiteralPath $source -File -Recurse -Include '*provenance*' | ForE
 
 $unity = 'C:\Program Files\Unity\Hub\Editor\6000.5.5f1\Editor\Unity.exe'
 $preflightLog = Join-Path $root 'Logs\front-facing-preflight.log'
-$validation = Start-Process -FilePath $unity -Wait -PassThru -ArgumentList @('-batchmode', '-nographics', '-quit', '-projectPath', $root, '-executeMethod', 'JoseonHunter.Editor.AssetProduction.FrontFacingCharacterPreflight.ValidateFromCommandLine', '-frontFacingSourceRoot', $SourceRoot, '-frontFacingRuntimePath', $RuntimePath, '-logFile', $preflightLog)
+$validation = Start-Process -FilePath $unity -Wait -PassThru -ArgumentList @('-batchmode', '-nographics', '-quit', '-projectPath', $root, '-executeMethod', 'JoseonHunter.Editor.AssetProduction.FrontFacingCharacterPreflight.ValidateFromCommandLine', '-frontFacingSourceRoot', $source, '-frontFacingRuntimePath', $runtime, '-logFile', $preflightLog)
 if ($validation.ExitCode -ne 0) { throw "Front-facing contract validation failed. See $preflightLog" }
 
 $testResults = Join-Path $root 'Logs\editmode-results.xml'
