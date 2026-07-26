@@ -66,6 +66,19 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ValidateReportsMissingRequiredBatch()
+        {
+            Assert.That(Validate(
+                    Entry("characters", "characters"),
+                    Entry("enemies", "enemies"),
+                    Entry("weapons", "weapons_vfx"),
+                    Entry("stage", "stage"),
+                    Entry("ui", "ui"),
+                    Entry("store", "store")),
+                Does.Contain("missing required batch: audio"));
+        }
+
+        [Test]
         public void ValidateReportsMissingSourcePath()
         {
             Assert.That(Validate(Entry("id", sourcePath: "")),
@@ -105,6 +118,17 @@ namespace JoseonHunter.Tests.EditMode
                     .And.Contain("missing PPU: id")
                     .And.Contain("missing SHA-256: id")
                     .And.Contain("missing prompt revision: id"));
+        }
+
+        [Test]
+        public void ValidateReportsAudioVisualMetadata()
+        {
+            Assert.That(Validate(Entry("audio", "audio", width: 1, height: 1,
+                frameCount: 1, pivotX: 0.5f, pivotY: 0.5f, pixelsPerUnit: 1)),
+                Does.Contain("audio dimensions must be zero: audio")
+                    .And.Contain("audio frame count must be zero: audio")
+                    .And.Contain("audio pivot must be zero: audio")
+                    .And.Contain("audio PPU must be zero: audio"));
         }
 
         [Test]

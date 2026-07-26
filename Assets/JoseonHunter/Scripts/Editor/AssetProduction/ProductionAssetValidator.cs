@@ -33,9 +33,18 @@ namespace JoseonHunter.Editor.AssetProduction
             }
 
             var ids = new HashSet<string>(StringComparer.Ordinal);
+            var declaredBatches = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in manifest.assets)
             {
-                ValidateEntry(entry, ids, errors);
+                ValidateEntry(entry, ids, declaredBatches, errors);
+            }
+
+            foreach (var batch in ValidBatches)
+            {
+                if (!declaredBatches.Contains(batch))
+                {
+                    errors.Add("missing required batch: " + batch);
+                }
             }
 
             return errors.ToList();
@@ -44,6 +53,7 @@ namespace JoseonHunter.Editor.AssetProduction
         private static void ValidateEntry(
             ProductionAssetEntry entry,
             ISet<string> ids,
+            ISet<string> declaredBatches,
             ISet<string> errors)
         {
             var id = entry == null ? string.Empty : entry.id;
@@ -61,6 +71,10 @@ namespace JoseonHunter.Editor.AssetProduction
             if (!ValidBatches.Contains(entry.batch ?? string.Empty))
             {
                 errors.Add("unknown batch: " + (entry.batch ?? string.Empty));
+            }
+            else
+            {
+                declaredBatches.Add(entry.batch);
             }
 
             if (string.IsNullOrWhiteSpace(entry.sourcePath))
@@ -93,7 +107,29 @@ namespace JoseonHunter.Editor.AssetProduction
                 errors.Add("approval status other than pending or approved: " + id);
             }
 
-            if (!string.Equals(entry.batch, "audio", StringComparison.Ordinal))
+            if (string.Equals(entry.batch, "audio", StringComparison.Ordinal))
+            {
+                if (entry.width != 0 || entry.height != 0)
+                {
+                    errors.Add("audio dimensions must be zero: " + id);
+                }
+
+                if (entry.frameCount != 0)
+                {
+                    errors.Add("audio frame count must be zero: " + id);
+                }
+
+                if (entry.pivotX != 0f || entry.pivotY != 0f)
+                {
+                    errors.Add("audio pivot must be zero: " + id);
+                }
+
+                if (entry.pixelsPerUnit != 0)
+                {
+                    errors.Add("audio PPU must be zero: " + id);
+                }
+            }
+            else
             {
                 if (entry.width <= 0 || entry.height <= 0)
                 {
