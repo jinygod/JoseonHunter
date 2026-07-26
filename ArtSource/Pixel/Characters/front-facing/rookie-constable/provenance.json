@@ -11,7 +11,19 @@
   },
   "transparent_background": true,
   "prompt_sha256": "88FF8202946C138B8745C3BE8944FC5449C1C84404CBE50071615A86BEB915C5",
-  "output_sha256": "98B3D152390844A5823D840CBDA6C1C2840C1638BC0D92C2939C4E742D71EF02",
+  "raw_provider_output": "base-pixellab-raw.png",
+  "raw_output_sha256": "98B3D152390844A5823D840CBDA6C1C2840C1638BC0D92C2939C4E742D71EF02",
+  "normalized_output": "base.png",
+  "normalized_output_sha256": "1DDB67DBB86EFF92243BFCA5FFAA3AFB54AFB532AD2E32D4924BB13FFD994C7F",
+  "output_sha256": "1DDB67DBB86EFF92243BFCA5FFAA3AFB54AFB532AD2E32D4924BB13FFD994C7F",
+  "normalization": {
+    "tool": "Tools/Assets/Normalize-RookieConstableBase.ps1",
+    "source_canvas": [64, 64],
+    "nearest_neighbor_uniform_scale": 0.9375,
+    "scaled_canvas": [60, 60],
+    "destination_offset": [2, 0],
+    "purpose": "Preserve the raw provider output while placing the normalized foot-contact row at y=56 without clipping."
+  },
   "generation_count": 2,
   "generation_budget": 6,
   "balance_before": {
@@ -38,7 +50,9 @@
     "transparent_corners": [0, 0, 0, 0],
     "hard_alpha": true,
     "opaque_color_count": 38,
-    "opaque_bounds": [10, 3, 53, 60],
+    "opaque_bounds": [11, 3, 52, 56],
+    "opaque_center_x": 31.5,
+    "opaque_max_y": 56,
     "bottom_centered": true
   },
   "runtime_imported": false
