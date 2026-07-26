@@ -47,6 +47,20 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(CharacterSheetContract.HasAnimationVariation(root, 30, 8), Is.True);
         }
 
+        [TestCase("rookie-constable", "rookie_constable")]
+        [TestCase("shaman", "shaman")]
+        [TestCase("mountain-hunter", "mountain_hunter")]
+        public void ProductionCharacterSheetsMeetTheSharedContract(string sourceId, string runtimeId)
+        {
+            var root = "ArtSource/Pixel/Characters/" + sourceId;
+            var runtime = "Assets/JoseonHunter/Art/Characters/Runtime/" + runtimeId + ".png";
+            Assert.That(CharacterSheetContract.Validate(root, runtime).Errors, Is.Empty);
+            Assert.That(CharacterSheetContract.ActiveFrameBounds(root), Has.Length.EqualTo(38));
+            Assert.That(CharacterSheetContract.HasAnimationVariation(root, 0, 12), Is.True);
+            Assert.That(CharacterSheetContract.HasAnimationVariation(root, 12, 18), Is.True);
+            Assert.That(CharacterSheetContract.HasAnimationVariation(root, 30, 8), Is.True);
+        }
+
         [Test]
         public void ValidateRejectsRuntimeThatDoesNotMatchLayerComposite()
         {

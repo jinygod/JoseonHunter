@@ -11,7 +11,7 @@ namespace JoseonHunter.Editor.AssetImport
         private const string UiAudioRoot = "Assets/JoseonHunter/Audio/UI/";
         private const string UiArtRoot = "Assets/JoseonHunter/Art/UI/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
-        private const string MannequinRuntime = "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png";
+        private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
 
         private void OnPreprocessTexture()
         {
@@ -26,10 +26,16 @@ namespace JoseonHunter.Editor.AssetImport
             texture.mipmapEnabled = false;
             texture.spritePixelsPerUnit = 32f;
             texture.alphaIsTransparency = true;
-            if (assetPath == MannequinRuntime)
+            if (assetPath.StartsWith(CharacterRuntimeRoot, System.StringComparison.Ordinal) &&
+                assetPath.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase) &&
+                IsCharacterSheet(assetPath))
             {
                 texture.spriteImportMode = SpriteImportMode.Multiple;
-                texture.spritesheet = MannequinSprites();
+                texture.spritesheet = CharacterSprites(System.IO.Path.GetFileNameWithoutExtension(assetPath));
+            }
+            else
+            {
+                texture.spriteImportMode = SpriteImportMode.Single;
             }
             texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
             {
@@ -39,20 +45,30 @@ namespace JoseonHunter.Editor.AssetImport
             });
         }
 
-        private static SpriteMetaData[] MannequinSprites()
+        private static SpriteMetaData[] CharacterSprites(string characterId)
         {
             var sprites = new SpriteMetaData[38];
             for (var frame = 0; frame < sprites.Length; frame++)
             {
                 sprites[frame] = new SpriteMetaData
                 {
-                    name = "mannequin_" + frame.ToString("D2"),
+                    name = characterId + "_" + frame.ToString("D2"),
                     rect = new Rect((frame % 6) * 64, (frame / 6) * 64, 64, 64),
                     alignment = (int)SpriteAlignment.Custom,
                     pivot = new Vector2(0.5f, 0.125f)
                 };
             }
             return sprites;
+        }
+
+        private static bool IsCharacterSheet(string path)
+        {
+            var id = System.IO.Path.GetFileNameWithoutExtension(path);
+            return id.IndexOf("portrait", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                id.IndexOf("locked", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                id.IndexOf("palette", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                id.IndexOf("cosmetic", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                id.IndexOf("source_layers", System.StringComparison.OrdinalIgnoreCase) < 0;
         }
 
         private void OnPreprocessAudio()

@@ -71,6 +71,27 @@ namespace JoseonHunter.Tests.EditMode
             }
         }
 
+        [TestCase("rookie_constable")]
+        [TestCase("shaman")]
+        [TestCase("mountain_hunter")]
+        public void ProductionCharacterRuntimeUsesThirtyEightCustomPivotSlices(string characterId)
+        {
+            var path = "Assets/JoseonHunter/Art/Characters/Runtime/" + characterId + ".png";
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            var texture = AssetImporter.GetAtPath(path) as TextureImporter;
+
+            Assert.That(texture, Is.Not.Null);
+            Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple));
+            Assert.That(texture.spritesheet, Has.Length.EqualTo(38));
+            foreach (var sprite in texture.spritesheet)
+            {
+                Assert.That(sprite.name, Does.StartWith(characterId + "_"));
+                Assert.That(sprite.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
+                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+            }
+        }
+
         [Test]
         public void LobbyUiSpriteUsesBilinearImportProfile()
         {

@@ -97,7 +97,7 @@ namespace JoseonHunter.Editor.AssetProduction
 
         private static void ValidateManifest(CharacterSheetManifest manifest, Vector2Int cellSize, Vector2Int footAnchor, Vector2 pivot, int frames, List<string> errors)
         {
-            if (manifest.id != "mannequin") errors.Add("invalid id");
+            if (string.IsNullOrWhiteSpace(manifest.id)) errors.Add("missing id");
             if (cellSize != new Vector2Int(64, 64)) errors.Add("invalid cell size");
             if (footAnchor != new Vector2Int(32, 56)) errors.Add("invalid foot anchor");
             if (pivot != new Vector2(0.5f, 0.125f)) errors.Add("invalid pivot");

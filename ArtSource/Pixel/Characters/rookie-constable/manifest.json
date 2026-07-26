@@ -1,0 +1,66 @@
+{
+  "id": "rookie-constable",
+  "cellSize": [
+    64,
+    64
+  ],
+  "footAnchor": [
+    32,
+    56
+  ],
+  "pivot": [
+    0.5,
+    0.125
+  ],
+  "pixelsPerUnit": 32,
+  "directions": [
+    "down",
+    "right",
+    "up"
+  ],
+  "mirrorLeftFrom": "right",
+  "animations": [
+    {
+      "name": "idle",
+      "start": 0,
+      "frames": 12,
+      "fps": 6
+    },
+    {
+      "name": "move",
+      "start": 12,
+      "frames": 18,
+      "fps": 10
+    },
+    {
+      "name": "death",
+      "start": 30,
+      "frames": 8,
+      "fps": 10
+    }
+  ],
+  "layers": [
+    "shadow",
+    "back-equipment",
+    "body",
+    "back-hair",
+    "lower-clothing",
+    "upper-clothing",
+    "armor",
+    "face",
+    "front-hair",
+    "headwear",
+    "left-weapon",
+    "right-prop",
+    "front-overlay"
+  ],
+  "paletteSlots": [
+    "skin",
+    "primary-cloth",
+    "secondary-cloth",
+    "accent",
+    "metal",
+    "outline"
+  ],
+  "promptRevision": "character-concept-v1"
+}
