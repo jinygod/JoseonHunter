@@ -12,6 +12,8 @@ namespace JoseonHunter.Editor.AssetImport
         private const string UiArtRoot = "Assets/JoseonHunter/Art/UI/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
+        private const string FrontFacingCharacterRuntimeRoot =
+            "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
 
         private void OnPreprocessTexture()
         {
@@ -31,7 +33,11 @@ namespace JoseonHunter.Editor.AssetImport
                 IsCharacterSheet(assetPath))
             {
                 texture.spriteImportMode = SpriteImportMode.Multiple;
-                texture.spritesheet = CharacterSprites(System.IO.Path.GetFileNameWithoutExtension(assetPath));
+                var isFrontFacing = assetPath.StartsWith(FrontFacingCharacterRuntimeRoot, System.StringComparison.Ordinal);
+                texture.spritesheet = CharacterSprites(
+                    System.IO.Path.GetFileNameWithoutExtension(assetPath),
+                    isFrontFacing ? 12 : 38,
+                    isFrontFacing ? 4 : 6);
             }
             else
             {
@@ -45,15 +51,15 @@ namespace JoseonHunter.Editor.AssetImport
             });
         }
 
-        private static SpriteMetaData[] CharacterSprites(string characterId)
+        private static SpriteMetaData[] CharacterSprites(string characterId, int frameCount, int columns)
         {
-            var sprites = new SpriteMetaData[38];
+            var sprites = new SpriteMetaData[frameCount];
             for (var frame = 0; frame < sprites.Length; frame++)
             {
                 sprites[frame] = new SpriteMetaData
                 {
                     name = characterId + "_" + frame.ToString("D2"),
-                    rect = new Rect((frame % 6) * 64, (frame / 6) * 64, 64, 64),
+                    rect = new Rect((frame % columns) * 64, (frame / columns) * 64, 64, 64),
                     alignment = (int)SpriteAlignment.Custom,
                     pivot = new Vector2(0.5f, 0.125f)
                 };

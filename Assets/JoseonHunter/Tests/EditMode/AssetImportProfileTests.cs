@@ -11,12 +11,15 @@ namespace JoseonHunter.Tests.EditMode
             "Assets/JoseonHunter/Audio/Music/import-profile-test-music.wav";
         private const string SfxFixturePath =
             "Assets/JoseonHunter/Audio/SFX/import-profile-test-sfx.wav";
+        private const string FrontFacingFixturePath =
+            "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/import_profile_test.png";
 
         [SetUp]
         public void SetUp()
         {
             CreateMonoWaveFixture(MusicFixturePath);
             CreateMonoWaveFixture(SfxFixturePath);
+            CreateTextureFixture(FrontFacingFixturePath, 256, 192);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
         }
 
@@ -25,10 +28,34 @@ namespace JoseonHunter.Tests.EditMode
         {
             AssetDatabase.DeleteAsset(MusicFixturePath);
             AssetDatabase.DeleteAsset(SfxFixturePath);
+            AssetDatabase.DeleteAsset(FrontFacingFixturePath);
+            DeleteEmptyDirectory("Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing");
             DeleteEmptyDirectory("Assets/JoseonHunter/Audio/Music");
             DeleteEmptyDirectory("Assets/JoseonHunter/Audio/SFX");
             DeleteEmptyDirectory("Assets/JoseonHunter/Audio");
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        [Test]
+        public void FrontFacingRuntimeUsesTwelveCustomPivotSlices()
+        {
+            AssetDatabase.ImportAsset(FrontFacingFixturePath, ImportAssetOptions.ForceSynchronousImport);
+            var texture = AssetImporter.GetAtPath(FrontFacingFixturePath) as TextureImporter;
+
+            Assert.That(texture, Is.Not.Null);
+            Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(texture.mipmapEnabled, Is.False);
+            Assert.That(texture.spritePixelsPerUnit, Is.EqualTo(32f));
+            Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple));
+            Assert.That(texture.spritesheet, Has.Length.EqualTo(12));
+            for (var frame = 0; frame < texture.spritesheet.Length; frame++)
+            {
+                var sprite = texture.spritesheet[frame];
+                Assert.That(sprite.name, Is.EqualTo("import_profile_test_" + frame.ToString("D2")));
+                Assert.That(sprite.rect, Is.EqualTo(new Rect((frame % 4) * 64, (frame / 4) * 64, 64, 64)));
+                Assert.That(sprite.alignment, Is.EqualTo((int)SpriteAlignment.Custom));
+                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+            }
         }
 
         [Test]
@@ -71,10 +98,8 @@ namespace JoseonHunter.Tests.EditMode
             }
         }
 
-        [TestCase("rookie_constable")]
-        [TestCase("shaman")]
-        [TestCase("mountain_hunter")]
-        public void ProductionCharacterRuntimeUsesThirtyEightCustomPivotSlices(string characterId)
+        [TestCase("mannequin")]
+        public void LegacyCharacterRuntimeUsesThirtyEightCustomPivotSlices(string characterId)
         {
             var path = "Assets/JoseonHunter/Art/Characters/Runtime/" + characterId + ".png";
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
@@ -169,6 +194,15 @@ namespace JoseonHunter.Tests.EditMode
                     writer.Write((short)0);
                 }
             }
+        }
+
+        private static void CreateTextureFixture(string assetPath, int width, int height)
+        {
+            var absolutePath = Path.GetFullPath(assetPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(absolutePath));
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            File.WriteAllBytes(absolutePath, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
         }
 
         private static void DeleteEmptyDirectory(string assetPath)
