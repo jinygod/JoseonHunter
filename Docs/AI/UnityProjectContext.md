@@ -13,6 +13,8 @@
 ## Confirmed Environment
 
 - Unity version: 6000.5.5f1, revision `d16e074b49fd`
+- Android Build Support: available (SDK, NDK, OpenJDK verified)
+- Official Unity MCP: relay configured for Codex; Unity Editor approval and low-risk connection probes remain pending.
 - Render pipeline: Built-in Render Pipeline
 - Input system: Legacy Input Manager (`activeInputHandler: 0`); no Input System package is installed.
 - Target platforms: Not yet configured. The source product targets landscape Android first.
