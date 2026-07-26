@@ -11,6 +11,7 @@ namespace JoseonHunter.Editor.AssetImport
         private const string UiAudioRoot = "Assets/JoseonHunter/Audio/UI/";
         private const string UiArtRoot = "Assets/JoseonHunter/Art/UI/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
+        private const string MannequinRuntime = "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png";
 
         private void OnPreprocessTexture()
         {
@@ -25,12 +26,33 @@ namespace JoseonHunter.Editor.AssetImport
             texture.mipmapEnabled = false;
             texture.spritePixelsPerUnit = 32f;
             texture.alphaIsTransparency = true;
+            if (assetPath == MannequinRuntime)
+            {
+                texture.spriteImportMode = SpriteImportMode.Multiple;
+                texture.spritesheet = MannequinSprites();
+            }
             texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
             {
                 name = "Android",
                 overridden = true,
                 format = TextureImporterFormat.ASTC_6x6,
             });
+        }
+
+        private static SpriteMetaData[] MannequinSprites()
+        {
+            var sprites = new SpriteMetaData[38];
+            for (var frame = 0; frame < sprites.Length; frame++)
+            {
+                sprites[frame] = new SpriteMetaData
+                {
+                    name = "mannequin_" + frame.ToString("D2"),
+                    rect = new Rect((frame % 6) * 64, (frame / 6) * 64, 64, 64),
+                    alignment = (int)SpriteAlignment.Custom,
+                    pivot = new Vector2(0.5f, 0.125f)
+                };
+            }
+            return sprites;
         }
 
         private void OnPreprocessAudio()

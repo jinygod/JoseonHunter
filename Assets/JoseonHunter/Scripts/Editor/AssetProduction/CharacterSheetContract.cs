@@ -22,6 +22,9 @@ namespace JoseonHunter.Editor.AssetProduction
         private const int SheetWidth = 384;
         private const int SheetHeight = 448;
         private const int Frames = 38;
+        private static readonly string[] RequiredDirections = { "down", "right", "up" };
+        private static readonly string[] RequiredLayers = { "shadow", "back-equipment", "body", "back-hair", "lower-clothing", "upper-clothing", "armor", "face", "front-hair", "headwear", "left-weapon", "right-prop", "front-overlay" };
+        private static readonly string[] RequiredPaletteSlots = { "skin", "primary-cloth", "secondary-cloth", "accent", "metal", "outline" };
 
         public static CharacterSheetValidationResult Validate(string sourceRoot, string runtimePath)
         {
@@ -100,7 +103,14 @@ namespace JoseonHunter.Editor.AssetProduction
             if (pivot != new Vector2(0.5f, 0.125f)) errors.Add("invalid pivot");
             if (manifest.pixelsPerUnit != 32) errors.Add("invalid pixels per unit");
             if (frames != Frames) errors.Add("invalid frame count");
-            if (manifest.layers == null || manifest.layers.Length != 13) errors.Add("invalid layer contract");
+            if (!Matches(manifest.directions, RequiredDirections)) errors.Add("invalid directions");
+            if (manifest.mirrorLeftFrom != "right") errors.Add("invalid mirror source");
+            if (!Matches(manifest.layers, RequiredLayers)) errors.Add("invalid layer contract");
+            if (!Matches(manifest.paletteSlots, RequiredPaletteSlots)) errors.Add("invalid palette slots");
+            if (string.IsNullOrWhiteSpace(manifest.promptRevision)) errors.Add("missing prompt revision");
+            ValidateAnimation(manifest.animations, "idle", 0, 12, 6, errors);
+            ValidateAnimation(manifest.animations, "move", 12, 18, 10, errors);
+            ValidateAnimation(manifest.animations, "death", 30, 8, 10, errors);
         }
 
         private static HashSet<Color32> ReadPalette(string path, List<string> errors)
@@ -193,6 +203,24 @@ namespace JoseonHunter.Editor.AssetProduction
             }
         }
 
+        private static bool Matches(string[] values, string[] required)
+        {
+            if (values == null || values.Length != required.Length) return false;
+            for (var index = 0; index < required.Length; index++)
+                if (values[index] != required[index]) return false;
+            return true;
+        }
+
+        private static void ValidateAnimation(CharacterAnimation[] animations, string name, int start, int frames, int fps, List<string> errors)
+        {
+            CharacterAnimation match = null;
+            var matches = 0;
+            foreach (var animation in animations ?? Array.Empty<CharacterAnimation>())
+                if (animation.name == name) { match = animation; matches++; }
+            if (matches != 1 || match.start != start || match.frames != frames || match.fps != fps)
+                errors.Add("invalid animation: " + name);
+        }
+
         private static Texture2D LoadPng(string path)
         {
             if (!File.Exists(path)) return null;
@@ -211,7 +239,7 @@ namespace JoseonHunter.Editor.AssetProduction
         private static Vector2Int ToVector2Int(int[] values) => values != null && values.Length == 2 ? new Vector2Int(values[0], values[1]) : Vector2Int.zero;
         private static Vector2 ToVector2(float[] values) => values != null && values.Length == 2 ? new Vector2(values[0], values[1]) : Vector2.zero;
 
-        [Serializable] private sealed class CharacterSheetManifest { public string id; public int[] cellSize; public int[] footAnchor; public float[] pivot; public int pixelsPerUnit; public string[] layers; public CharacterAnimation[] animations; }
-        [Serializable] private sealed class CharacterAnimation { public int start; public int frames; }
+        [Serializable] private sealed class CharacterSheetManifest { public string id; public int[] cellSize; public int[] footAnchor; public float[] pivot; public int pixelsPerUnit; public string[] directions; public string mirrorLeftFrom; public string[] layers; public string[] paletteSlots; public string promptRevision; public CharacterAnimation[] animations; }
+        [Serializable] private sealed class CharacterAnimation { public string name; public int start; public int frames; public int fps; }
     }
 }

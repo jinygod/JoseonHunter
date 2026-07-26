@@ -58,6 +58,34 @@ namespace JoseonHunter.Tests.EditMode
                 Does.Contain("runtime does not match layer composite"));
         }
 
+        [TestCase("\"directions\":[\"down\",\"right\",\"up\"]", "\"directions\":[\"down\",\"up\",\"right\"]", "invalid directions")]
+        [TestCase("\"mirrorLeftFrom\":\"right\"", "\"mirrorLeftFrom\":\"up\"", "invalid mirror source")]
+        [TestCase("\"promptRevision\":\"mannequin-v1\"", "\"promptRevision\":\"\"", "missing prompt revision")]
+        [TestCase("\"fps\":6", "\"fps\":7", "invalid animation: idle")]
+        public void ValidateRejectsExactManifestContractViolations(string find, string replace, string expected)
+        {
+            var root = CreateFixture();
+            var path = Path.Combine(root, "manifest.json");
+            File.WriteAllText(path, File.ReadAllText(path).Replace(find, replace));
+
+            Assert.That(CharacterSheetContract.Validate(root, Path.Combine(root, "runtime.png")).Errors,
+                Does.Contain(expected));
+        }
+
+        [Test]
+        public void ValidateRejectsWrongPaletteSlotsAndLayerOrder()
+        {
+            var root = CreateFixture();
+            var path = Path.Combine(root, "manifest.json");
+            var json = File.ReadAllText(path)
+                .Replace("\"skin\",\"primary-cloth\"", "\"primary-cloth\",\"skin\"")
+                .Replace("\"shadow\",\"back-equipment\"", "\"back-equipment\",\"shadow\"");
+            File.WriteAllText(path, json);
+
+            Assert.That(CharacterSheetContract.Validate(root, Path.Combine(root, "runtime.png")).Errors,
+                Does.Contain("invalid palette slots").And.Contain("invalid layer contract"));
+        }
+
         [TestCase("wrong canvas size", "body", 383, 448, "invalid canvas")]
         [TestCase("mismatched layer dimensions", "body", 384, 447, "invalid canvas")]
         public void ValidateRejectsInvalidLayerCanvas(string name, string layer, int width, int height, string expected)

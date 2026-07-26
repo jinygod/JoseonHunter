@@ -49,6 +49,29 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void MannequinRuntimeUsesThirtyEightCustomPivotSlices()
+        {
+            AssetDatabase.ImportAsset(
+                "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png",
+                ImportAssetOptions.ForceSynchronousImport);
+            var texture = AssetImporter.GetAtPath(
+                "Assets/JoseonHunter/Art/Characters/Runtime/mannequin.png") as TextureImporter;
+
+            Assert.That(texture, Is.Not.Null);
+            Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(texture.mipmapEnabled, Is.False);
+            Assert.That(texture.spritePixelsPerUnit, Is.EqualTo(32f));
+            Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple));
+            Assert.That(texture.spritesheet, Has.Length.EqualTo(38));
+            foreach (var sprite in texture.spritesheet)
+            {
+                Assert.That(sprite.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
+                Assert.That(sprite.alignment, Is.EqualTo((int)SpriteAlignment.Custom));
+                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+            }
+        }
+
+        [Test]
         public void LobbyUiSpriteUsesBilinearImportProfile()
         {
             var texture = AssetImporter.GetAtPath(
