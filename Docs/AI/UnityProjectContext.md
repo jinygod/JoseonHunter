@@ -3,7 +3,8 @@
 ## Foundation milestone — validated 2026-07-26
 
 - Project root: `D:\UnityProjects\JoseonHunter`
-- Validated foundation baseline: `55c1a40fb8b520cce9741295d89e93b6978e807d`
+- Implementation baseline: `55c1a40fb8b520cce9741295d89e93b6978e807d` (the verified Unity code/configuration state).
+- Verified documentation and published milestone commit: `6d7c143f01a58960e13f666a7301d69ac3e63c87` (`docs: verify Unity foundation milestone`). Subsequent docs-only correction commits update recorded evidence only; they do not alter the verified code/configuration state.
 - Unity: `6000.5.5f1` (`d16e074b49fd`)
 - Intended first player target: Android, landscape only; identifier `com.jinygod.joseonhunter`, version `0.1.0` (code `1`), minimum SDK `26`, ARM64, IL2CPP.
 - Android Build Support, SDK, NDK, and OpenJDK were verified installed for this project. An Android player build/device run is not part of this foundation checkpoint.

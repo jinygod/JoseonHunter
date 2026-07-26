@@ -14,7 +14,7 @@
 | `git status --short` | 0 | Clean at post-test documentation baseline. A transient Unity-authored Android scripting-symbol change and temporary audio fixtures were observed during validation and had cleared before documentation changes. |
 | `git diff --check` | 0 | No whitespace errors. Unity serialized YAML was not rewritten. |
 | `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/AssetMigration/Test-SyncFlutterAssets.ps1` | 0 | PASS: invalid-input rejection, dry-run safety, failure aggregation, JSON reporting, SHA idempotency. |
-| `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1` | 0 | EditMode 26/26 passed, 0 failed/skipped; `Logs/editmode-results.xml`, duration `5.2266208s`. |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1` | 0 | EditMode 26/26 passed, 0 failed/skipped; `Logs/editmode-results.xml`, duration `5.739051s`. |
 
 The EditMode XML records 7/7 scene-scaffold tests and validates the scene order, dirty-scene protection, URP 2D/Input System-only configuration, Android landscape intent, required first-party assemblies, asset profiles, and migration policy.
 
@@ -43,3 +43,11 @@ The EditMode XML records 7/7 scene-scaffold tests and validates the scene order,
 ## Limitations
 
 This is a compile/configuration/EditMode checkpoint, not a gameplay or target-device release validation. No PlayMode smoke test, Android Gradle build, device installation, performance measurement, or visual acceptance was performed. Warnings remain classified as Unity/package/environment messages and should be re-triaged in a future validation run.
+
+## Published milestone evidence
+
+- Documentation milestone commit: `6d7c143f01a58960e13f666a7301d69ac3e63c87` — `docs: verify Unity foundation milestone`.
+- Authorized publish command: `git push origin HEAD:master` (exit code `0`).
+- Successful push output: `To https://github.com/jinygod/JoseonHunter.git`; `cc102b7..6d7c143  HEAD -> master`.
+- At the time of that publish, `git ls-remote origin refs/heads/master` returned `6d7c143f01a58960e13f666a7301d69ac3e63c87\trefs/heads/master`.
+- Any later docs-only correction is separately recorded in the ignored Task 8 report, because a commit cannot truthfully embed its own final SHA. It does not change the verified foundation code/configuration state at `55c1a40`.
