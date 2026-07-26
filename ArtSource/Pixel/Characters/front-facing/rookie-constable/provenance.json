@@ -1,0 +1,45 @@
+{
+  "status": "pending",
+  "provider": "PixelLab",
+  "mcp_tool": "mcp__pixellab__create_image_pixflux",
+  "model_or_operation": "Pixflux",
+  "selected_job_id": "4ef6eae9-9560-467c-b796-e0be979f8b08",
+  "selected_output_created_utc": "2026-07-26T22:12:09.3764358Z",
+  "dimensions": {
+    "width": 64,
+    "height": 64
+  },
+  "transparent_background": true,
+  "prompt_sha256": "88FF8202946C138B8745C3BE8944FC5449C1C84404CBE50071615A86BEB915C5",
+  "output_sha256": "98B3D152390844A5823D840CBDA6C1C2840C1638BC0D92C2939C4E742D71EF02",
+  "generation_count": 2,
+  "generation_budget": 6,
+  "balance_before": {
+    "generations_used": 0,
+    "generations_remaining": 40
+  },
+  "balance_after": {
+    "generations_used": 2,
+    "generations_remaining": 38
+  },
+  "attempts": [
+    {
+      "job_id": "8bb79c32-2fe8-42e9-a682-8626f0e46173",
+      "result": "rejected",
+      "reason": "Output contained two characters rather than one base sprite."
+    },
+    {
+      "job_id": "4ef6eae9-9560-467c-b796-e0be979f8b08",
+      "result": "selected"
+    }
+  ],
+  "preflight": {
+    "pixel_format": "Format32bppArgb",
+    "transparent_corners": [0, 0, 0, 0],
+    "hard_alpha": true,
+    "opaque_color_count": 38,
+    "opaque_bounds": [10, 3, 53, 60],
+    "bottom_centered": true
+  },
+  "runtime_imported": false
+}
