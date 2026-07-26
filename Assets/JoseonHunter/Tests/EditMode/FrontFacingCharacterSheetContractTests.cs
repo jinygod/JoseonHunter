@@ -112,6 +112,18 @@ namespace JoseonHunter.Tests.EditMode
                 Does.Contain("runtime does not match flattened source"));
         }
 
+        [Test]
+        public void ProductionPathValidationReturnsContractErrors()
+        {
+            var root = CreateFixture();
+            WriteSheet(Path.Combine(root, "runtime.png"), new Color32(40, 34, 45, 255),
+                (0, 0, new Color32(1, 2, 3, 255)));
+
+            var result = FrontFacingCharacterPreflight.Validate(root, Path.Combine(root, "runtime.png"));
+
+            Assert.That(result.Errors, Does.Contain("runtime does not match flattened source"));
+        }
+
         private static string CreateFixture()
         {
             var root = Path.Combine(FixtureRoot, Guid.NewGuid().ToString("N"));

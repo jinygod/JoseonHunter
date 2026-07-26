@@ -31,7 +31,7 @@ try {
     try {
       $graphics.Clear([Drawing.Color]::Transparent)
       for ($frame = 0; $frame -lt $images.Count; $frame++) {
-        $graphics.DrawImageUnscaled($images[$frame], ($frame % 4) * 64, [math]::Floor($frame / 4) * 64)
+        $graphics.DrawImageUnscaled($images[$frame], ($frame % 4) * 64, (2 - [math]::Floor($frame / 4)) * 64)
       }
     } finally { $graphics.Dispose() }
     $sheet.Save($OutputPath, [Drawing.Imaging.ImageFormat]::Png)
