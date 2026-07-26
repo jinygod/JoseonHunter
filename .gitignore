@@ -43,3 +43,6 @@ Thumbs.db
 
 # Agent isolation worktrees
 /.worktrees/
+
+# Local design companion sessions
+/.superpowers/

@@ -1,5 +1,11 @@
 # Flutter to Unity Migration Design
 
+> **Superseded for product direction and the first playable release.**
+> The validated Unity foundation remains applicable, but portrait orientation,
+> the three-minute run, original modular pixel art, menus, progression, and
+> release scope are now defined by
+> `2026-07-26-portrait-mobile-vertical-slice-design.md`.
+
 ## Summary
 
 Migrate the existing Flutter + Flame game, Joseon Dynasty Survival, into the
