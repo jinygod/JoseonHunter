@@ -1,0 +1,10 @@
+{
+  "name": "JoseonHunter.EditModeTests",
+  "rootNamespace": "JoseonHunter.Tests.EditMode",
+  "references": [
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}
