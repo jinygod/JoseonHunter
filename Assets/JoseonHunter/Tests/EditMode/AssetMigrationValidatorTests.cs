@@ -58,6 +58,32 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ValidateReportsTraversalOutsideApprovedRoots()
+        {
+            const string destination = "Assets/JoseonHunter/../../Packages/manifest.json";
+            var manifestPath = WriteManifest(
+                Entry("assets/images/player/rookie_constable_player_32.png", destination));
+
+            var errors = AssetMigrationValidator.Validate(manifestPath);
+
+            Assert.That(errors, Does.Contain("destination outside approved roots: " + destination));
+        }
+
+        [Test]
+        public void ValidateTreatsEquivalentDestinationsAsDuplicates()
+        {
+            const string destination = "Assets/JoseonHunter/Art/Characters/rookie_constable_player_32.png";
+            var manifestPath = WriteManifest(
+                Entry("assets/images/player/rookie_constable_player_32.png", destination),
+                Entry("assets/images/player/rookie_constable_player_32.png",
+                    "Assets/JoseonHunter/Art/Characters/Equivalent/../rookie_constable_player_32.png"));
+
+            var errors = AssetMigrationValidator.Validate(manifestPath);
+
+            Assert.That(errors, Does.Contain("duplicate destination: " + destination));
+        }
+
+        [Test]
         public void ValidateReportsMissingDestinationFile()
         {
             const string destination = "Assets/JoseonHunter/Art/Characters/missing-validator-file.png";
@@ -78,6 +104,30 @@ namespace JoseonHunter.Tests.EditMode
             var errors = AssetMigrationValidator.Validate(manifestPath);
 
             Assert.That(errors, Does.Contain("license status is not approved: " + PixelFixturePath));
+        }
+
+        [Test]
+        public void ValidateBlocksApprovedManifestAudioWhenAudioLedgerIsTemporary()
+        {
+            const string destination = "Assets/JoseonHunter/Audio/SFX/validator-temporary.wav";
+            var manifestPath = WriteManifest(
+                Entry("assets/audio/sfx/hwando.ogg", destination, "sfx", "approved"));
+
+            var errors = AssetMigrationValidator.Validate(manifestPath);
+
+            Assert.That(errors, Does.Contain("audio rights ledger status is not approved: assets/audio/sfx/hwando.ogg"));
+        }
+
+        [Test]
+        public void ValidateBlocksTemporaryManifestAudioEvenWhenAudioSourceExistsInLedger()
+        {
+            const string destination = "Assets/JoseonHunter/Audio/SFX/validator-temporary.wav";
+            var manifestPath = WriteManifest(
+                Entry("assets/audio/sfx/hwando.ogg", destination, "sfx", "temporary"));
+
+            var errors = AssetMigrationValidator.Validate(manifestPath);
+
+            Assert.That(errors, Does.Contain("license status is not approved: " + destination));
         }
 
         [Test]

@@ -6,5 +6,5 @@ New-Item -ItemType Directory -Path $logs -Force | Out-Null
 & $unity -batchmode -nographics -projectPath $root `
   -runTests -testPlatform editmode -testFilter $Filter `
   -testResults (Join-Path $logs 'editmode-results.xml') `
-  -logFile (Join-Path $logs 'editmode.log') -quit
+  -logFile (Join-Path $logs 'editmode.log')
 exit $LASTEXITCODE

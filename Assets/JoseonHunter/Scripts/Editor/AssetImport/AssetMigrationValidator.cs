@@ -34,13 +34,16 @@ namespace JoseonHunter.Editor.AssetImport
             }
 
             var projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            var rightsByPath = ReadRightsLedger(Path.Combine(projectRoot, "Docs/Assets/asset-rights-ledger.csv"), errors);
-            var destinations = new HashSet<string>(StringComparer.Ordinal);
-            var approvedDestinations = new HashSet<string>(StringComparer.Ordinal);
+            var assetRights = ReadRightsLedger(
+                Path.Combine(projectRoot, "Docs/Assets/asset-rights-ledger.csv"), "asset", errors);
+            var audioRights = ReadRightsLedger(
+                Path.Combine(projectRoot, "Docs/Assets/audio-rights-ledger.csv"), "audio", errors);
+            var destinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var approvedDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var entry in manifest.entries)
             {
-                ValidateEntry(entry, projectRoot, rightsByPath, destinations, approvedDestinations, errors);
+                ValidateEntry(entry, projectRoot, assetRights, audioRights, destinations, approvedDestinations, errors);
             }
 
             ValidateApprovedAssetsAreManifested(projectRoot, approvedDestinations, errors);
@@ -50,7 +53,8 @@ namespace JoseonHunter.Editor.AssetImport
         private static void ValidateEntry(
             AssetMigrationEntry entry,
             string projectRoot,
-            IDictionary<string, RightsRecord> rightsByPath,
+            IDictionary<string, RightsRecord> assetRights,
+            IDictionary<string, RightsRecord> audioRights,
             ISet<string> destinations,
             ISet<string> approvedDestinations,
             ISet<string> errors)
@@ -61,16 +65,18 @@ namespace JoseonHunter.Editor.AssetImport
                 return;
             }
 
-            var destination = NormalizePath(entry.destination);
+            var requestedDestination = NormalizePath(entry.destination);
+            string destination;
+            string destinationPath;
+            if (!TryResolveApprovedDestination(projectRoot, requestedDestination, out destination, out destinationPath))
+            {
+                errors.Add("destination outside approved roots: " + requestedDestination);
+                return;
+            }
+
             if (!destinations.Add(destination))
             {
                 errors.Add("duplicate destination: " + destination);
-            }
-
-            if (!IsApprovedDestination(destination))
-            {
-                errors.Add("destination outside approved roots: " + destination);
-                return;
             }
 
             if (!string.Equals(entry.licenseStatus, "approved", StringComparison.Ordinal))
@@ -82,13 +88,12 @@ namespace JoseonHunter.Editor.AssetImport
                 approvedDestinations.Add(destination);
             }
 
-            var destinationPath = Path.Combine(projectRoot, destination);
             if (!File.Exists(destinationPath))
             {
                 errors.Add("missing destination file: " + destination);
             }
 
-            ValidateRights(entry, destination, destinationPath, rightsByPath, errors);
+            ValidateRights(entry, destination, destinationPath, assetRights, audioRights, errors);
             ValidateImporter(entry, destination, errors);
             ValidateFontLicense(entry, destination, projectRoot, errors);
         }
@@ -97,7 +102,8 @@ namespace JoseonHunter.Editor.AssetImport
             AssetMigrationEntry entry,
             string destination,
             string destinationPath,
-            IDictionary<string, RightsRecord> rightsByPath,
+            IDictionary<string, RightsRecord> assetRights,
+            IDictionary<string, RightsRecord> audioRights,
             ISet<string> errors)
         {
             if (string.Equals(entry.profile, "raw", StringComparison.Ordinal))
@@ -105,16 +111,21 @@ namespace JoseonHunter.Editor.AssetImport
                 return;
             }
 
+            var isAudio = string.Equals(entry.profile, "music", StringComparison.Ordinal) ||
+                string.Equals(entry.profile, "sfx", StringComparison.Ordinal) ||
+                NormalizePath(entry.source).StartsWith("assets/audio/", StringComparison.OrdinalIgnoreCase);
+            var rightsByPath = isAudio ? audioRights : assetRights;
+            var ledgerName = isAudio ? "audio" : "asset";
             RightsRecord rights;
             if (!rightsByPath.TryGetValue(NormalizePath(entry.source), out rights))
             {
-                errors.Add("missing rights ledger entry: " + entry.source);
+                errors.Add("missing " + ledgerName + " rights ledger entry: " + entry.source);
                 return;
             }
 
             if (!string.Equals(rights.Status, "approved", StringComparison.Ordinal))
             {
-                errors.Add("rights ledger status is not approved: " + entry.source);
+                errors.Add(ledgerName + " rights ledger status is not approved: " + entry.source);
             }
 
             if (!File.Exists(destinationPath) || string.IsNullOrEmpty(rights.RuntimeHash))
@@ -202,12 +213,16 @@ namespace JoseonHunter.Editor.AssetImport
             }
         }
 
-        private static Dictionary<string, RightsRecord> ReadRightsLedger(string ledgerPath, ISet<string> errors)
+        private static Dictionary<string, RightsRecord> ReadRightsLedger(
+            string ledgerPath,
+            string ledgerName,
+            ISet<string> errors)
         {
             var rights = new Dictionary<string, RightsRecord>(StringComparer.Ordinal);
             if (!File.Exists(ledgerPath))
             {
-                errors.Add("missing rights ledger: Docs/Assets/asset-rights-ledger.csv");
+                errors.Add("missing " + ledgerName + " rights ledger: " +
+                    NormalizePath(ledgerPath.Substring(Path.GetFullPath(Path.Combine(Application.dataPath, "..")).Length)));
                 return rights;
             }
 
@@ -219,9 +234,13 @@ namespace JoseonHunter.Editor.AssetImport
 
             var headers = lines[0].Split(',');
             var runtimePathIndex = Array.IndexOf(headers, "runtime_path");
+            if (runtimePathIndex < 0)
+            {
+                runtimePathIndex = Array.IndexOf(headers, "local_path");
+            }
             var statusIndex = Array.IndexOf(headers, "status");
             var notesIndex = Array.IndexOf(headers, "notes");
-            if (runtimePathIndex < 0 || statusIndex < 0 || notesIndex < 0)
+            if (runtimePathIndex < 0 || statusIndex < 0)
             {
                 errors.Add("rights ledger is missing required columns");
                 return rights;
@@ -230,12 +249,14 @@ namespace JoseonHunter.Editor.AssetImport
             for (var index = 1; index < lines.Length; index++)
             {
                 var columns = lines[index].Split(',');
-                if (columns.Length <= Math.Max(runtimePathIndex, Math.Max(statusIndex, notesIndex)))
+                if (columns.Length <= Math.Max(runtimePathIndex, statusIndex))
                 {
                     continue;
                 }
 
-                var match = RuntimeHash.Match(columns[notesIndex]);
+                var match = notesIndex >= 0 && columns.Length > notesIndex
+                    ? RuntimeHash.Match(columns[notesIndex])
+                    : Match.Empty;
                 rights[NormalizePath(columns[runtimePathIndex])] = new RightsRecord(
                     columns[statusIndex], match.Success ? match.Groups[1].Value : null);
             }
@@ -252,10 +273,30 @@ namespace JoseonHunter.Editor.AssetImport
             }
         }
 
-        private static bool IsApprovedDestination(string destination)
+        private static bool TryResolveApprovedDestination(
+            string projectRoot,
+            string destination,
+            out string canonicalDestination,
+            out string destinationPath)
         {
-            return destination.StartsWith(AssetRoot, StringComparison.Ordinal) ||
-                destination.StartsWith(DocumentationRoot, StringComparison.Ordinal);
+            destinationPath = Path.GetFullPath(Path.Combine(projectRoot, destination));
+            var assetRoot = Path.GetFullPath(Path.Combine(projectRoot, AssetRoot));
+            var documentationRoot = Path.GetFullPath(Path.Combine(projectRoot, DocumentationRoot));
+            if (!IsContainedBy(destinationPath, assetRoot) && !IsContainedBy(destinationPath, documentationRoot))
+            {
+                canonicalDestination = null;
+                return false;
+            }
+
+            canonicalDestination = NormalizePath(destinationPath.Substring(projectRoot.Length).TrimStart('\\', '/'));
+            return true;
+        }
+
+        private static bool IsContainedBy(string candidate, string root)
+        {
+            var rootWithSeparator = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                Path.DirectorySeparatorChar;
+            return candidate.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase);
         }
 
         private static string NormalizePath(string path)
