@@ -55,6 +55,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime);
+            var frameStartElapsed = elapsedSeconds;
             elapsedSeconds += step;
             cooldown -= step;
             if (Level == 5 && sets.Count > 0) MoveMobilePosts(step, context.OwnerPosition);
@@ -64,7 +65,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (Level == 5 && sets.Count > 0) RequestMobileReposition(context.OwnerPosition);
                 else PlaceSet(context.OwnerPosition);
             }
-            ResolveCrossings(context);
+            ResolveCrossings(context, frameStartElapsed, step);
             RememberCurrentTargetPositions();
         }
 
@@ -109,7 +110,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
 
-        private void ResolveCrossings(in WeaponExecutionContext context)
+        private void ResolveCrossings(in WeaponExecutionContext context, float frameStartElapsed, float step)
         {
             runtime.Targets.CopyTo(targets);
             foreach (var target in targets)
@@ -117,11 +118,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 var current = target.WorldPosition;
                 if (!previousPositions.TryGetValue(target.RuntimeId, out var previous)) previous = current;
-                foreach (var set in sets) ResolveTargetAgainstSet(target, previous, current, set, context);
+                foreach (var set in sets) ResolveTargetAgainstSet(target, previous, current, set, context, frameStartElapsed, step);
             }
         }
 
-        private void ResolveTargetAgainstSet(ICombatTarget target, Float2 previous, Float2 current, WardSet set, in WeaponExecutionContext context)
+        private void ResolveTargetAgainstSet(ICombatTarget target, Float2 previous, Float2 current, WardSet set, in WeaponExecutionContext context, float frameStartElapsed, float step)
         {
             foreach (var segment in Segments(set))
             {
@@ -129,10 +130,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (set.TouchingTargetIds.Contains(target.RuntimeId)) continue;
                 var atCrossing = Lerp(previous, current, movementT);
                 if (!TryConfirmPixelContact(segment, target, atCrossing, out var contact)) continue;
+                var crossingTime = frameStartElapsed + step * movementT;
                 // Mark the contact before damage so a rejected re-entry interval cannot turn into repeated line damage.
                 set.TouchingTargetIds.Add(target.RuntimeId);
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.Attack, WeaponId.JangseungWard, target,
-                    Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, elapsedSeconds), out _))
+                    Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, crossingTime), out _))
                 {
                     target.ApplyKnockback(OutwardDirection(segment, previous, current), Mathf.Max(0.1f, Level * 0.2f));
                     if (target is IJangseungWardStatusTarget status)
@@ -162,7 +164,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var degrees = Mathf.RoundToInt(Mathf.Atan2(dy, dx) * Mathf.Rad2Deg);
             var mask = StretchedMask(length);
             var midpoint = new Float2((segment.Start.X + segment.End.X) * 0.5f, (segment.Start.Y + segment.End.Y) * 0.5f);
-            var transform = new PixelMaskTransform(midpoint, degrees, false, Vector2.one);
+            var intervalCount = Mathf.Max(1, Mathf.CeilToInt(length * segmentMask.PixelsPerUnit));
+            var scaleCorrection = length * segmentMask.PixelsPerUnit / intervalCount;
+            var transform = new PixelMaskTransform(midpoint, degrees, false, new Vector2(scaleCorrection, 1f));
             var hurt = target.HurtMaskTransform;
             var offset = new Float2(hurt.Position.X - target.WorldPosition.X, hurt.Position.Y - target.WorldPosition.Y);
             var targetTransform = new PixelMaskTransform(new Float2(targetAtCrossing.X + offset.X, targetAtCrossing.Y + offset.Y), hurt.RotationDegrees, hurt.FlipX, hurt.Scale);
@@ -172,19 +176,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private PixelHitMask StretchedMask(float length)
         {
             var pixelsPerUnit = segmentMask.PixelsPerUnit;
-            var width = Mathf.Max(1, Mathf.CeilToInt(length * pixelsPerUnit));
+            var intervalCount = Mathf.Max(1, Mathf.CeilToInt(length * pixelsPerUnit));
+            var width = intervalCount + 1;
             var height = Mathf.Max(1, Mathf.CeilToInt(BoundaryThickness * pixelsPerUnit));
             var key = width * 4099 + height;
             if (stretchedSegmentMasks.TryGetValue(key, out var cached)) return cached;
             var packed = new uint[(width * height + 31) / 32];
             for (var y = 0; y < height; y++) for (var x = 0; x < width; x++)
             {
-                var sourceX = width == 1 ? 0 : Mathf.RoundToInt(x * (segmentMask.Width - 1f) / (width - 1f));
+                var sourceX = Mathf.RoundToInt(x * (segmentMask.Width - 1f) / intervalCount);
                 var sourceY = height == 1 ? 0 : Mathf.RoundToInt(y * (segmentMask.Height - 1f) / (height - 1f));
                 if (!segmentMask.IsActive(sourceX, sourceY)) continue;
                 var bit = y * width + x; packed[bit >> 5] |= 1u << (bit & 31);
             }
-            cached = new PixelHitMask(width, height, new Vector2(width * 0.5f, height * 0.5f), pixelsPerUnit, packed);
+            cached = new PixelHitMask(width, height, new Vector2(intervalCount * 0.5f, height * 0.5f), pixelsPerUnit, packed);
             stretchedSegmentMasks.Add(key, cached);
             return cached;
         }

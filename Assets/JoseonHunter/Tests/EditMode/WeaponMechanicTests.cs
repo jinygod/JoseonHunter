@@ -742,6 +742,49 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(target.Health, Is.EqualTo(90), "An opaque PPU32 resampled column should confirm the finite crossing.");
         }
 
+        [Test]
+        public void JangseungWardUsesExactMovementCrossingTimeForLargeFrames()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0.5f, 1);
+            var target = new TestTarget(1, new Float2(0f, -0.8f), mask); registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            ward.Tick(0f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            target.MoveTo(new Float2(0f, 0.2f));
+            ward.Tick(1f, new WeaponExecutionContext(default, root.transform, null, 0, 2)); // crosses at 0.8s
+            target.MoveTo(new Float2(0f, -0.8f));
+            ward.Tick(1f, new WeaponExecutionContext(default, root.transform, null, 0, 3)); // crosses at 1.2s
+
+            Assert.That(events, Has.Count.EqualTo(1), "The 0.4 second re-entry gap must not be rounded to the two frame-end timestamps.");
+        }
+
+        [Test]
+        public void JangseungWardPpu32MaskIncludesEndpointsAndRotatedFiniteSegments()
+        {
+            var mask = new PixelHitMask(1, 1, Vector2.zero, 32f, new uint[] { 1u });
+            var opaque = new PixelHitMask(3, 3, new Vector2(1f, 1f), 32f, new uint[] { 511u });
+            var endpointRegistry = new CombatTargetRegistry(); var endpointDamage = new CombatDamageService(endpointRegistry);
+            var endpointWard = new JangseungWardExecutor(new WeaponRuntimeController(endpointRegistry, endpointDamage, mask), opaque, 10f, 10f, 1f, 2, 1, 0f, 1);
+            var endpointTarget = new TestTarget(1, new Float2(1f, -0.5f), mask); endpointRegistry.Register(endpointTarget);
+
+            endpointWard.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            endpointTarget.MoveTo(new Float2(1f, 0.5f));
+            endpointWard.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            Assert.That(endpointTarget.Health, Is.EqualTo(90), "The stretched mask must contain its finite endpoint.");
+
+            var diagonalRegistry = new CombatTargetRegistry(); var diagonalDamage = new CombatDamageService(diagonalRegistry);
+            var diagonalWard = new JangseungWardExecutor(new WeaponRuntimeController(diagonalRegistry, diagonalDamage, mask), opaque, 10f, 10f, 1f, 3, 1, 0f, 1);
+            var diagonalTarget = new TestTarget(2, new Float2(0.5f, 0f), mask); diagonalRegistry.Register(diagonalTarget);
+            diagonalWard.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            diagonalTarget.MoveTo(new Float2(0.5f, 1f));
+            diagonalWard.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+
+            Assert.That(diagonalTarget.Health, Is.EqualTo(90), "A 45-degree finite segment must preserve its PPU32 endpoint-aligned mask geometry.");
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
