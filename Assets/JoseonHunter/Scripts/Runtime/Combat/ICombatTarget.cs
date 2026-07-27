@@ -7,6 +7,9 @@ namespace JoseonHunter.Runtime.Combat
         int RuntimeId { get; }
         bool IsAlive { get; }
         int Health { get; }
+        bool IsBoss { get; }
+        bool IsElite { get; }
+        float ThreatScore { get; }
         Float2 WorldPosition { get; }
         PixelHitMask HurtMask { get; }
         PixelMaskTransform HurtMaskTransform { get; }

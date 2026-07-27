@@ -109,6 +109,9 @@ namespace JoseonHunter.Runtime.Gameplay
             public int RuntimeId => runtimeId;
             public bool IsAlive => state.Object != null && state.Health > 0f;
             public int Health => Mathf.CeilToInt(Mathf.Max(0f, state.Health));
+            public bool IsBoss => state.IsBoss;
+            public bool IsElite => false;
+            public float ThreatScore => state.IsBoss ? 100f : 0f;
             public Float2 WorldPosition
             {
                 get

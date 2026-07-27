@@ -47,6 +47,9 @@ namespace JoseonHunter.Tests.PlayMode
             public int RuntimeId { get; }
             public bool IsAlive => true;
             public int Health => 1000;
+            public bool IsBoss => false;
+            public bool IsElite => false;
+            public float ThreatScore => 0f;
             public Float2 WorldPosition => new Float2(0f, 0f);
             public PixelHitMask HurtMask => null;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Identity;

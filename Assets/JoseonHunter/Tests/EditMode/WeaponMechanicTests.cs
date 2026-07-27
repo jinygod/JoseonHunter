@@ -64,6 +64,53 @@ namespace JoseonHunter.Tests.EditMode
             });
         }
 
+        [Test]
+        public void GakgungPrioritizesBossOverCloserNormalAndMissesMovedTarget()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bow = new GakgungExecutor(runtime, 10f, 1f, 2f, 10f, 1);
+            var normal = new TestTarget(1, new Float2(0.2f, 0f), mask, false, false, 999f);
+            var boss = new TestTarget(2, new Float2(1f, 0f), mask, true, false, 0f);
+            registry.Register(normal); registry.Register(boss);
+
+            bow.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            boss.MoveTo(new Float2(1f, 4f));
+            for (var tick = 2; tick < 20; tick++) bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bow.LastSelectedTargetRuntimeId, Is.EqualTo(2));
+                Assert.That(bow.LastLaunchCount, Is.EqualTo(1));
+                Assert.That(boss.Health, Is.EqualTo(100));
+            });
+        }
+
+        [Test]
+        public void SingijeonUsesDensestDirectionAndConfiguredNonHomingLanes()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var singijeon = new SingijeonExecutor(runtime, 10f, 1f, 2f, 10f, 3, 1);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask, true, false, 100f));
+            registry.Register(new TestTarget(2, new Float2(1f, 0.1f), mask, false, false, 0f));
+            registry.Register(new TestTarget(3, new Float2(1f, -0.1f), mask, false, false, 0f));
+            registry.Register(new TestTarget(4, new Float2(-1f, 0f), mask, false, false, 0f));
+
+            singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(singijeon.LastDirection.X, Is.GreaterThan(0f));
+                Assert.That(singijeon.LastLaunchCount, Is.EqualTo(3));
+                Assert.That(singijeon.ActiveProjectileCount, Is.EqualTo(3));
+            });
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
@@ -102,16 +149,21 @@ namespace JoseonHunter.Tests.EditMode
         private sealed class TestTarget : ICombatTarget
         {
             private readonly PixelHitMask mask;
-            public TestTarget(int runtimeId, Float2 position, PixelHitMask mask)
+            public TestTarget(int runtimeId, Float2 position, PixelHitMask mask, bool isBoss = false, bool isElite = false, float threatScore = 0f)
             {
                 RuntimeId = runtimeId; WorldPosition = position; this.mask = mask; Health = 100;
+                IsBoss = isBoss; IsElite = isElite; ThreatScore = threatScore;
             }
             public int RuntimeId { get; }
             public bool IsAlive => Health > 0;
             public int Health { get; private set; }
-            public Float2 WorldPosition { get; }
+            public bool IsBoss { get; }
+            public bool IsElite { get; }
+            public float ThreatScore { get; }
+            public Float2 WorldPosition { get; private set; }
             public PixelHitMask HurtMask => mask;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
+            public void MoveTo(Float2 position) => WorldPosition = position;
             public void ApplyResolvedDamage(int damage) => Health -= damage;
             public void ApplyKnockback(Float2 direction, float force) { }
         }

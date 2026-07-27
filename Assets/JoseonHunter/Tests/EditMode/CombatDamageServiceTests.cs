@@ -73,6 +73,9 @@ namespace JoseonHunter.Tests.EditMode
             public int RuntimeId { get; }
             public bool IsAlive => Health > 0;
             public int Health { get; private set; }
+            public bool IsBoss => false;
+            public bool IsElite => false;
+            public float ThreatScore => 0f;
             public Float2 WorldPosition => new Float2(0f, 0f);
             public PixelHitMask HurtMask => null;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Identity;
