@@ -10,3 +10,8 @@
 
 - Focused `git diff --check` for Task 4 paths: passed.
 - Unity test launch intentionally skipped: two pre-existing Unity Editor processes are active, and Task direction prohibits a new launch.
+
+## Review fix round 1
+
+- Validation now accepts distinct source and binary-mask importers and applies the PPU, compression, mipmap, filtering, and readability contract to both.
+- Pixel reads are guarded by both importer and loaded texture readability, so invalid unreadable assets return contract errors without `GetPixels32`.
