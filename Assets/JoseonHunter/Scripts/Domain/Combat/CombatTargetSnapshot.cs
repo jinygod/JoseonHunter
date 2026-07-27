@@ -64,8 +64,9 @@ namespace JoseonHunter.Domain.Combat
                 case WeaponTargeting.Nearest:
                 case WeaponTargeting.NearestUnmarked:
                 case WeaponTargeting.PlayerBoundary:
-                default:
                     return CompareFloat(DistanceSquared(playerPosition, candidate.Position), DistanceSquared(playerPosition, current.Position), candidate.RuntimeId, current.RuntimeId) < 0;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(targeting), targeting, "Unknown weapon targeting mode.");
             }
         }
 
@@ -76,8 +77,6 @@ namespace JoseonHunter.Domain.Combat
             result = current.IsElite.CompareTo(candidate.IsElite);
             if (result != 0) return result;
             result = current.Threat.CompareTo(candidate.Threat);
-            if (result != 0) return result;
-            result = current.Health.CompareTo(candidate.Health);
             if (result != 0) return result;
             return candidate.RuntimeId.CompareTo(current.RuntimeId);
         }

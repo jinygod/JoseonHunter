@@ -15,7 +15,7 @@ namespace JoseonHunter.Tests.EditMode
                 new CombatTargetSnapshot(4, 25f, 5f, false, false, new Float2(-2f, 0f))
             };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.HighestThreat, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(4));
+            Assert.That(SelectedId(WeaponTargeting.HighestThreat, targets), Is.EqualTo(4));
         }
 
         [Test]
@@ -33,8 +33,8 @@ namespace JoseonHunter.Tests.EditMode
                 Target(3, 3f, 0f)
             };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.Nearest, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(8));
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.NearestUnmarked, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(8));
+            Assert.That(SelectedId(WeaponTargeting.Nearest, targets), Is.EqualTo(8));
+            Assert.That(SelectedId(WeaponTargeting.NearestUnmarked, targets), Is.EqualTo(8));
         }
 
         [Test]
@@ -47,7 +47,19 @@ namespace JoseonHunter.Tests.EditMode
                 new CombatTargetSnapshot(3, 1f, 0f, false, true, new Float2(1f, 0f))
             };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.HighestThreat, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(3));
+            Assert.That(SelectedId(WeaponTargeting.HighestThreat, targets), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void HighestThreatUsesRuntimeIdBeforeHealthWhenThreatIsTied()
+        {
+            var targets = new[]
+            {
+                new CombatTargetSnapshot(9, 100f, 5f, false, false, new Float2(1f, 0f)),
+                new CombatTargetSnapshot(4, 1f, 5f, false, false, new Float2(1f, 0f))
+            };
+
+            Assert.That(SelectedId(WeaponTargeting.HighestThreat, targets), Is.EqualTo(4));
         }
 
         [Test]
@@ -61,8 +73,8 @@ namespace JoseonHunter.Tests.EditMode
                 Target(4, 5f, 0f)
             };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.DensestCenter, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(2));
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.PredictedCrowd, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(2));
+            Assert.That(SelectedId(WeaponTargeting.DensestCenter, targets), Is.EqualTo(2));
+            Assert.That(SelectedId(WeaponTargeting.PredictedCrowd, targets), Is.EqualTo(2));
         }
 
         [Test]
@@ -70,7 +82,7 @@ namespace JoseonHunter.Tests.EditMode
         {
             var targets = new[] { Target(8, 4f, 0f), Target(2, 2f, 0f) };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.PlayerBoundary, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(2));
+            Assert.That(SelectedId(WeaponTargeting.PlayerBoundary, targets), Is.EqualTo(2));
         }
 
         [Test]
@@ -81,7 +93,7 @@ namespace JoseonHunter.Tests.EditMode
                 Target(5, 4f, 1f), Target(2, 4f, -1f), Target(9, -2f, 0f)
             };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.DensestDirection, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(2));
+            Assert.That(SelectedId(WeaponTargeting.DensestDirection, targets), Is.EqualTo(2));
         }
 
         [Test]
@@ -93,7 +105,22 @@ namespace JoseonHunter.Tests.EditMode
                 new CombatTargetSnapshot(3, 10f, 5f, true, false, new Float2(1f, 0f))
             };
 
-            Assert.That(CombatTargetSelector.Select(WeaponTargeting.DangerousSector, new Float2(0f, 0f), targets).RuntimeId, Is.EqualTo(3));
+            Assert.That(SelectedId(WeaponTargeting.DangerousSector, targets), Is.EqualTo(3));
+        }
+
+        [Test]
+        public void UnknownTargetingModeIsRejected()
+        {
+            Assert.That(
+                () => CombatTargetSelector.Select((WeaponTargeting)999, new Float2(0f, 0f), new[] { Target(1, 1f, 0f) }),
+                Throws.TypeOf<System.ArgumentOutOfRangeException>());
+        }
+
+        private static int SelectedId(WeaponTargeting targeting, CombatTargetSnapshot[] targets)
+        {
+            var selected = CombatTargetSelector.Select(targeting, new Float2(0f, 0f), targets);
+            Assert.That(selected.HasValue, Is.True);
+            return selected.Value.RuntimeId;
         }
 
         private static CombatTargetSnapshot Target(int id, float x, float y) =>
