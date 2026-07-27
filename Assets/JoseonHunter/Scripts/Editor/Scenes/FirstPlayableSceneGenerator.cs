@@ -43,6 +43,8 @@ namespace JoseonHunter.Editor.Scenes
                 "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/experience_spirit_flame.png");
             AssignSprite(serialized, "coinSprite",
                 "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png");
+            AssignSprite(serialized, "treasureChestSprite",
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/treasure_chest.png");
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, GameplayScenePath);

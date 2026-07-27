@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &660566891
+--- !u!1 &257473166
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 660566893}
-  - component: {fileID: 660566892}
+  - component: {fileID: 257473168}
+  - component: {fileID: 257473167}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -136,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &660566892
+--- !u!20 &257473167
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 660566891}
+  m_GameObject: {fileID: 257473166}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -187,13 +187,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &660566893
+--- !u!4 &257473168
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 660566891}
+  m_GameObject: {fileID: 257473166}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
@@ -202,7 +202,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &824404569
+--- !u!1 &1725235307
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -210,8 +210,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 824404571}
-  - component: {fileID: 824404570}
+  - component: {fileID: 1725235309}
+  - component: {fileID: 1725235308}
   m_Layer: 0
   m_Name: FirstPlayable
   m_TagString: Untagged
@@ -219,13 +219,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &824404570
+--- !u!114 &1725235308
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 824404569}
+  m_GameObject: {fileID: 1725235307}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e2d11bac50ddb504781142cecd9a9c48, type: 3}
@@ -237,13 +237,14 @@ MonoBehaviour:
   bossSprite: {fileID: 21300000, guid: c14d3d33bed6ba64e93d3db4be4fc7fc, type: 3}
   experienceSprite: {fileID: 21300000, guid: 5c0857d1d85a6c04f9bffef2fec1dcc8, type: 3}
   coinSprite: {fileID: 21300000, guid: 426b6a3b7c3a8f145bcefcf4520c422e, type: 3}
---- !u!4 &824404571
+  treasureChestSprite: {fileID: 21300000, guid: 8aa0ede2ce7b58e48a84cd323a8dc2f5, type: 3}
+--- !u!4 &1725235309
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 824404569}
+  m_GameObject: {fileID: 1725235307}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -256,5 +257,5 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 660566893}
-  - {fileID: 824404571}
+  - {fileID: 257473168}
+  - {fileID: 1725235309}

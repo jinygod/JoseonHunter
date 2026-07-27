@@ -14,6 +14,7 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite bossSprite;
         [SerializeField] private Sprite experienceSprite;
         [SerializeField] private Sprite coinSprite;
+        [SerializeField] private Sprite treasureChestSprite;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<PickupState> pickups = new List<PickupState>();
@@ -21,6 +22,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly List<string> upgradeOffers = new List<string>();
 
         private Camera gameplayCamera;
+        private Transform flatField;
         private Transform runtimeObjects;
         private GameObject player;
         private SpriteRenderer playerRenderer;
@@ -41,8 +43,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private float geumjulDamage;
         private float contactInvulnerability;
         private float spawnTimer;
+        private float chestSpawnTimer;
         private float trailTimer;
         private float sealCooldown;
+        private float magnetMessageTimer;
         private int experience;
         private int experienceToNext;
         private int level;
@@ -68,14 +72,23 @@ namespace JoseonHunter.Runtime.Gameplay
             public float ContactDamage;
             public float NextContactTime;
             public bool IsBoss;
+            public bool IsTreasure;
             public Transform HealthFill;
+        }
+
+        private enum PickupKind
+        {
+            Experience,
+            Yeopjeon,
+            Magnet
         }
 
         private sealed class PickupState
         {
             public GameObject Object;
-            public bool IsCoin;
+            public PickupKind Kind;
             public int Value;
+            public bool ForceCollect;
         }
 
         private void Awake()
@@ -121,15 +134,18 @@ namespace JoseonHunter.Runtime.Gameplay
             elapsed = Mathf.Min(TestDuration, elapsed + delta);
             contactInvulnerability = Mathf.Max(0f, contactInvulnerability - delta);
             sealCooldown = Mathf.Max(0f, sealCooldown - delta);
+            magnetMessageTimer = Mathf.Max(0f, magnetMessageTimer - delta);
 
             ReadMovement();
             UpdatePlayer(delta);
             UpdateSpawning(delta);
+            UpdateTreasureSpawning(delta);
             UpdateEnemies(delta);
             UpdateAttack(delta);
             UpdatePickups(delta);
             UpdateGeumjul(delta);
             UpdateCamera();
+            UpdateField();
 
             if (!bossSpawned && elapsed >= BossSpawnTime)
             {
@@ -181,23 +197,23 @@ namespace JoseonHunter.Runtime.Gameplay
                 Destroy(oldField.gameObject);
             }
 
-            var field = new GameObject("FlatField").transform;
-            field.SetParent(transform, false);
+            flatField = new GameObject("FlatField").transform;
+            flatField.SetParent(transform, false);
 
-            var ground = CreateSpriteObject("Soft Grass", solidSprite, new Vector2(0f, 0f), -20, field);
+            var ground = CreateSpriteObject("Soft Grass", solidSprite, new Vector2(0f, 0f), -20, flatField);
             ground.transform.localScale = new Vector3(22f, 32f, 1f);
             ground.GetComponent<SpriteRenderer>().color = new Color(0.80f, 0.89f, 0.73f);
 
             for (var x = -10; x <= 10; x += 2)
             {
-                var line = CreateSpriteObject("Grass Grid V", solidSprite, new Vector2(x, 0f), -19, field);
+                var line = CreateSpriteObject("Grass Grid V", solidSprite, new Vector2(x, 0f), -19, flatField);
                 line.transform.localScale = new Vector3(0.025f, 32f, 1f);
                 line.GetComponent<SpriteRenderer>().color = new Color(0.63f, 0.78f, 0.57f, 0.35f);
             }
 
             for (var y = -15; y <= 15; y += 2)
             {
-                var line = CreateSpriteObject("Grass Grid H", solidSprite, new Vector2(0f, y), -19, field);
+                var line = CreateSpriteObject("Grass Grid H", solidSprite, new Vector2(0f, y), -19, flatField);
                 line.transform.localScale = new Vector3(22f, 0.025f, 1f);
                 line.GetComponent<SpriteRenderer>().color = new Color(0.63f, 0.78f, 0.57f, 0.35f);
             }
@@ -227,8 +243,10 @@ namespace JoseonHunter.Runtime.Gameplay
             pickupRadius = 2.2f;
             geumjulDamage = 38f;
             spawnTimer = 0.2f;
+            chestSpawnTimer = 18f;
             trailTimer = 0f;
             sealCooldown = 0f;
+            magnetMessageTimer = 0f;
             experience = 0;
             experienceToNext = 8;
             level = 1;
@@ -302,8 +320,6 @@ namespace JoseonHunter.Runtime.Gameplay
         private void UpdatePlayer(float delta)
         {
             var position = (Vector2)player.transform.position + movement * (moveSpeed * delta);
-            position.x = Mathf.Clamp(position.x, -9.5f, 9.5f);
-            position.y = Mathf.Clamp(position.y, -14.5f, 14.5f);
             player.transform.position = position;
 
             if (movement.x > 0.01f)
@@ -323,9 +339,21 @@ namespace JoseonHunter.Runtime.Gameplay
             var target = player.transform.position;
             var current = gameplayCamera.transform.position;
             var next = Vector3.Lerp(current, new Vector3(target.x, target.y, -10f), 7f * Time.deltaTime);
-            next.x = Mathf.Clamp(next.x, -4f, 4f);
-            next.y = Mathf.Clamp(next.y, -7f, 7f);
             gameplayCamera.transform.position = next;
+        }
+
+        private void UpdateField()
+        {
+            if (flatField == null)
+            {
+                return;
+            }
+
+            var cameraPosition = gameplayCamera.transform.position;
+            flatField.position = new Vector3(
+                Mathf.Round(cameraPosition.x / 2f) * 2f,
+                Mathf.Round(cameraPosition.y / 2f) * 2f,
+                0f);
         }
 
         private void UpdateSpawning(float delta)
@@ -352,8 +380,6 @@ namespace JoseonHunter.Runtime.Gameplay
             var radius = isBoss ? 7.5f : UnityEngine.Random.Range(7.5f, 9.5f);
             var position = (Vector2)player.transform.position +
                            new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-            position.x = Mathf.Clamp(position.x, -9.5f, 9.5f);
-            position.y = Mathf.Clamp(position.y, -14.5f, 14.5f);
 
             var chosenSprite = isBoss
                 ? bossSprite
@@ -388,6 +414,57 @@ namespace JoseonHunter.Runtime.Gameplay
             });
         }
 
+        private void UpdateTreasureSpawning(float delta)
+        {
+            chestSpawnTimer -= delta;
+            if (chestSpawnTimer > 0f)
+            {
+                return;
+            }
+
+            var activeChests = enemies.FindAll(value => value.IsTreasure).Count;
+            if (activeChests >= 2)
+            {
+                chestSpawnTimer = 3f;
+                return;
+            }
+
+            SpawnTreasureChest();
+            chestSpawnTimer = UnityEngine.Random.Range(40f, 60f);
+        }
+
+        private void SpawnTreasureChest()
+        {
+            var angle = UnityEngine.Random.value * Mathf.PI * 2f;
+            var radius = UnityEngine.Random.Range(7f, 10f);
+            var position = (Vector2)player.transform.position +
+                           new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            var chestObject = CreateSpriteObject(
+                "Treasure Chest",
+                treasureChestSprite != null ? treasureChestSprite : solidSprite,
+                position,
+                8,
+                runtimeObjects);
+            chestObject.transform.localScale = Vector3.one * 0.32f;
+            var renderer = chestObject.GetComponent<SpriteRenderer>();
+            if (treasureChestSprite == null)
+            {
+                renderer.color = new Color(0.72f, 0.40f, 0.12f);
+            }
+
+            enemies.Add(new EnemyState
+            {
+                Object = chestObject,
+                Renderer = renderer,
+                Health = 75f,
+                MaximumHealth = 75f,
+                Speed = 0f,
+                ContactDamage = 0f,
+                IsTreasure = true,
+                HealthFill = CreateHealthBar(chestObject.transform)
+            });
+        }
+
         private void SpawnBoss()
         {
             bossSpawned = true;
@@ -404,6 +481,11 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (enemy.Object == null)
                 {
                     enemies.RemoveAt(index);
+                    continue;
+                }
+
+                if (enemy.IsTreasure)
+                {
                     continue;
                 }
 
@@ -505,42 +587,79 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var wasBoss = enemy.IsBoss;
+            var wasTreasure = enemy.IsTreasure;
             var deathPosition = enemy.Object.transform.position;
             enemies.Remove(enemy);
             Destroy(enemy.Object);
+            if (wasTreasure)
+            {
+                ScatterTreasure(deathPosition);
+                return;
+            }
+
             kills++;
             if (wasBoss)
             {
                 bossAlive = false;
-                coins += 30;
                 EndRun(true);
                 return;
             }
 
-            SpawnPickup(deathPosition, false, 1);
-            if (UnityEngine.Random.value < 0.24f)
+            SpawnPickup(deathPosition, PickupKind.Experience, 1);
+            if (UnityEngine.Random.value < 0.01f)
             {
-                SpawnPickup(deathPosition + (Vector3)(UnityEngine.Random.insideUnitCircle * 0.2f), true, 1);
+                SpawnPickup(
+                    deathPosition + (Vector3)(UnityEngine.Random.insideUnitCircle * 0.2f),
+                    PickupKind.Magnet,
+                    0);
             }
         }
 
-        private void SpawnPickup(Vector2 position, bool isCoin, int value)
+        private void ScatterTreasure(Vector2 position)
         {
-            var sprite = isCoin ? coinSprite : experienceSprite;
+            var count = UnityEngine.Random.Range(6, 11);
+            for (var index = 0; index < count; index++)
+            {
+                var angle = Mathf.PI * 2f * index / count + UnityEngine.Random.Range(-0.18f, 0.18f);
+                var radius = UnityEngine.Random.Range(0.45f, 1.15f);
+                var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                SpawnPickup(position + offset, PickupKind.Yeopjeon, UnityEngine.Random.Range(1, 4));
+            }
+        }
+
+        private void SpawnPickup(Vector2 position, PickupKind kind, int value)
+        {
+            var sprite = kind == PickupKind.Experience
+                ? experienceSprite
+                : kind == PickupKind.Yeopjeon
+                    ? coinSprite
+                    : treasureChestSprite;
+            var objectName = kind == PickupKind.Experience
+                ? "Experience Flame"
+                : kind == PickupKind.Yeopjeon
+                    ? "Yeopjeon"
+                    : "Spirit Magnet";
             var pickupObject = CreateSpriteObject(
-                isCoin ? "Yeopjeon" : "Experience Flame",
+                objectName,
                 sprite != null ? sprite : solidSprite,
                 position,
                 6,
                 runtimeObjects);
-            pickupObject.transform.localScale = Vector3.one * (isCoin ? 0.18f : 0.14f);
+            pickupObject.transform.localScale = Vector3.one *
+                                                (kind == PickupKind.Yeopjeon ? 0.18f : 0.14f);
+            var renderer = pickupObject.GetComponent<SpriteRenderer>();
+            if (kind == PickupKind.Magnet)
+            {
+                renderer.color = new Color(0.25f, 0.92f, 1f);
+            }
             if (sprite == null)
             {
-                pickupObject.GetComponent<SpriteRenderer>().color =
-                    isCoin ? new Color(0.95f, 0.68f, 0.12f) : new Color(0.35f, 0.85f, 1f);
+                renderer.color = kind == PickupKind.Yeopjeon
+                    ? new Color(0.95f, 0.68f, 0.12f)
+                    : new Color(0.35f, 0.85f, 1f);
             }
 
-            pickups.Add(new PickupState { Object = pickupObject, IsCoin = isCoin, Value = value });
+            pickups.Add(new PickupState { Object = pickupObject, Kind = kind, Value = value });
         }
 
         private void UpdatePickups(float delta)
@@ -556,12 +675,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
 
                 var distance = Vector2.Distance(pickup.Object.transform.position, playerPosition);
-                if (distance <= pickupRadius)
+                if (pickup.ForceCollect || distance <= pickupRadius)
                 {
                     pickup.Object.transform.position = Vector2.MoveTowards(
                         pickup.Object.transform.position,
                         playerPosition,
-                        Mathf.Lerp(4f, 12f, 1f - distance / pickupRadius) * delta);
+                        pickup.ForceCollect
+                            ? 24f * delta
+                            : Mathf.Lerp(4f, 12f, 1f - distance / pickupRadius) * delta);
                 }
 
                 if (distance > 0.42f)
@@ -569,18 +690,35 @@ namespace JoseonHunter.Runtime.Gameplay
                     continue;
                 }
 
-                if (pickup.IsCoin)
+                if (pickup.Kind == PickupKind.Yeopjeon)
                 {
                     coins += pickup.Value;
                 }
-                else
+                else if (pickup.Kind == PickupKind.Experience)
                 {
                     AddExperience(pickup.Value);
+                }
+                else
+                {
+                    CollectMagnet();
                 }
 
                 Destroy(pickup.Object);
                 pickups.RemoveAt(index);
             }
+        }
+
+        private void CollectMagnet()
+        {
+            foreach (var pickup in pickups)
+            {
+                if (pickup.Kind == PickupKind.Experience)
+                {
+                    pickup.ForceCollect = true;
+                }
+            }
+
+            magnetMessageTimer = 1.2f;
         }
 
         private void AddExperience(int amount)
@@ -840,6 +978,14 @@ namespace JoseonHunter.Runtime.Gameplay
             if (!bossSpawned && elapsed >= BossWarningTime)
             {
                 GUI.Box(new Rect(165f, 250f, 750f, 100f), "⚠ 타락한 장수가 다가옵니다!", centered);
+            }
+
+            if (magnetMessageTimer > 0f)
+            {
+                GUI.Box(
+                    new Rect(240f, 380f, 600f, 100f),
+                    "\uD63C\uB839 \uB300\uD68C\uC218!",
+                    centered);
             }
 
             if (upgradeOpen)
