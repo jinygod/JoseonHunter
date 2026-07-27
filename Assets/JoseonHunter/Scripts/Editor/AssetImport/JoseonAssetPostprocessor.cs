@@ -35,6 +35,7 @@ namespace JoseonHunter.Editor.AssetImport
                 texture.spriteImportMode = SpriteImportMode.Single;
                 SetSingleSpritePivot(texture, new Vector2(0.5f, 0.125f));
                 texture.textureCompression = TextureImporterCompression.Uncompressed;
+                texture.ClearPlatformTextureSettings("Android");
                 return;
             }
             if (assetPath.StartsWith(CharacterRuntimeRoot, System.StringComparison.Ordinal) &&

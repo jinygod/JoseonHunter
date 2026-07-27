@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,7 +25,6 @@ namespace JoseonHunter.Editor.AssetProduction
         };
         private static readonly Regex SensitivePattern = new(@"api[_-]?key|token|secret|bearer", RegexOptions.IgnoreCase);
         private static readonly Regex UuidPattern = new(@"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", RegexOptions.IgnoreCase);
-        private static readonly Regex JsonStringProperty = new("\\\"(?<name>(?:\\\\.|[^\\\"])*)\\\"\\s*:\\s*\\\"(?<value>(?:\\\\.|[^\\\"])*)\\\"", RegexOptions.Compiled);
 
         public static StaticSpriteBatchValidationResult Validate(string manifestPath, string sourceRoot, string runtimeRoot, bool requireRuntime)
         {
@@ -107,12 +107,20 @@ namespace JoseonHunter.Editor.AssetProduction
         }
         private static bool ContainsSensitiveProvenance(string json)
         {
-            foreach (Match match in JsonStringProperty.Matches(json))
+            try { return ContainsSensitiveValue(JToken.Parse(json), null); }
+            catch { return true; }
+        }
+        private static bool ContainsSensitiveValue(JToken token, string propertyName)
+        {
+            if (token is JProperty property)
+                return SensitivePattern.IsMatch(property.Name) || ContainsSensitiveValue(property.Value, property.Name);
+            if (token is JValue value && value.Type == JTokenType.String)
             {
-                var name = match.Groups["name"].Value; var value = match.Groups["value"].Value;
-                if (SensitivePattern.IsMatch(name) || SensitivePattern.IsMatch(value)) return true;
-                if (!string.Equals(name, "jobId", StringComparison.OrdinalIgnoreCase) && UuidPattern.IsMatch(value)) return true;
+                var text = value.Value<string>();
+                return SensitivePattern.IsMatch(text) ||
+                    (!string.Equals(propertyName, "jobId", StringComparison.OrdinalIgnoreCase) && UuidPattern.IsMatch(text));
             }
+            foreach (var child in token.Children()) if (ContainsSensitiveValue(child, propertyName)) return true;
             return false;
         }
         private static bool IsRgbaPng(string path)

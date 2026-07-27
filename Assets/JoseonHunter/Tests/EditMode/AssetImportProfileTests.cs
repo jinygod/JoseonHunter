@@ -61,6 +61,15 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void StaticSpriteRuntimeClearsExistingAndroidOverride()
+        {
+            var texture = AssetImporter.GetAtPath(StaticSpriteFixturePath) as TextureImporter;
+            texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings { name = "Android", overridden = true, format = TextureImporterFormat.ASTC_6x6 });
+            texture.SaveAndReimport();
+            Assert.That(texture.GetPlatformTextureSettings("Android").overridden, Is.False);
+        }
+
+        [Test]
         public void FrontFacingRuntimeUsesTwelveCustomPivotSlices()
         {
             AssetDatabase.ImportAsset(FrontFacingFixturePath, ImportAssetOptions.ForceSynchronousImport);
