@@ -22,10 +22,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private const float BoundaryThickness = 0.12f;
         private readonly WeaponRuntimeController runtime;
         private readonly PixelHitMask segmentMask;
+        private readonly Dictionary<int, PixelHitMask> stretchedSegmentMasks = new Dictionary<int, PixelHitMask>();
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private readonly List<WardSet> sets = new List<WardSet>();
         private readonly Dictionary<int, Float2> previousPositions = new Dictionary<int, Float2>();
         private float cooldown;
+        private float elapsedSeconds;
 
         public JangseungWardExecutor(WeaponRuntimeController runtime, PixelHitMask wardSegmentMask, float baseDamage, float cooldownSeconds, float radius, int postCount, int setCapacity, float reentryInterval, int level)
         {
@@ -53,6 +55,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime);
+            elapsedSeconds += step;
             cooldown -= step;
             if (Level == 5 && sets.Count > 0) MoveMobilePosts(step, context.OwnerPosition);
             if (cooldown <= 0f)
@@ -68,7 +71,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             foreach (var set in sets) Retire(set);
-            sets.Clear(); previousPositions.Clear(); cooldown = 0f; EvictedWardSetCount = 0;
+            sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
         }
 
         private void PlaceSet(Float2 center)
@@ -129,7 +132,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 // Mark the contact before damage so a rejected re-entry interval cannot turn into repeated line damage.
                 set.TouchingTargetIds.Add(target.RuntimeId);
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.Attack, WeaponId.JangseungWard, target,
-                    Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick), out _))
+                    Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, elapsedSeconds), out _))
                 {
                     target.ApplyKnockback(OutwardDirection(segment, previous, current), Mathf.Max(0.1f, Level * 0.2f));
                     if (target is IJangseungWardStatusTarget status)
@@ -157,16 +160,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var dx = segment.End.X - segment.Start.X; var dy = segment.End.Y - segment.Start.Y;
             var length = Mathf.Sqrt(dx * dx + dy * dy);
             var degrees = Mathf.RoundToInt(Mathf.Atan2(dy, dx) * Mathf.Rad2Deg);
-            // The authored mask is stretched only along this finite segment; the broad phase above never treats an infinite line as a boundary.
-            var width = Mathf.Max(1, segmentMask.Width - 1);
-            var transform = new PixelMaskTransform(segment.Start, degrees, false, new Vector2(length / width, BoundaryThickness));
+            var mask = StretchedMask(length);
+            var midpoint = new Float2((segment.Start.X + segment.End.X) * 0.5f, (segment.Start.Y + segment.End.Y) * 0.5f);
+            var transform = new PixelMaskTransform(midpoint, degrees, false, Vector2.one);
             var hurt = target.HurtMaskTransform;
-            var targetTransform = new PixelMaskTransform(targetAtCrossing, hurt.RotationDegrees, hurt.FlipX, hurt.Scale);
-            if (PixelMaskContactService.TryFindContact(segmentMask, transform, target.HurtMask, targetTransform, out contact)) return true;
-            // A one-pixel hurt mask can cross between two authored segment pixels. The segment intersection supplies the
-            // exact finite contact position; sample the same ward mask there so transparent ward/target pixels still reject it.
-            var crossingTransform = new PixelMaskTransform(targetAtCrossing, degrees, false, Vector2.one);
-            return PixelMaskContactService.TryFindContact(segmentMask, crossingTransform, target.HurtMask, targetTransform, out contact);
+            var offset = new Float2(hurt.Position.X - target.WorldPosition.X, hurt.Position.Y - target.WorldPosition.Y);
+            var targetTransform = new PixelMaskTransform(new Float2(targetAtCrossing.X + offset.X, targetAtCrossing.Y + offset.Y), hurt.RotationDegrees, hurt.FlipX, hurt.Scale);
+            return PixelMaskContactService.TryFindContact(mask, transform, target.HurtMask, targetTransform, out contact);
+        }
+
+        private PixelHitMask StretchedMask(float length)
+        {
+            var pixelsPerUnit = segmentMask.PixelsPerUnit;
+            var width = Mathf.Max(1, Mathf.CeilToInt(length * pixelsPerUnit));
+            var height = Mathf.Max(1, Mathf.CeilToInt(BoundaryThickness * pixelsPerUnit));
+            var key = width * 4099 + height;
+            if (stretchedSegmentMasks.TryGetValue(key, out var cached)) return cached;
+            var packed = new uint[(width * height + 31) / 32];
+            for (var y = 0; y < height; y++) for (var x = 0; x < width; x++)
+            {
+                var sourceX = width == 1 ? 0 : Mathf.RoundToInt(x * (segmentMask.Width - 1f) / (width - 1f));
+                var sourceY = height == 1 ? 0 : Mathf.RoundToInt(y * (segmentMask.Height - 1f) / (height - 1f));
+                if (!segmentMask.IsActive(sourceX, sourceY)) continue;
+                var bit = y * width + x; packed[bit >> 5] |= 1u << (bit & 31);
+            }
+            cached = new PixelHitMask(width, height, new Vector2(width * 0.5f, height * 0.5f), pixelsPerUnit, packed);
+            stretchedSegmentMasks.Add(key, cached);
+            return cached;
         }
 
         private IEnumerable<Segment> Segments(WardSet set)

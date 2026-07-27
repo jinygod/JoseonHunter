@@ -654,23 +654,26 @@ namespace JoseonHunter.Tests.EditMode
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
             var runtime = new WeaponRuntimeController(registry, damage, mask);
-            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 3f, 1);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0.6f, 1);
             var target = new TestTarget(1, new Float2(0f, -0.5f), mask); registry.Register(target);
             var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
 
-            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
             target.MoveTo(new Float2(0.2f, -0.4f));
-            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
             Assert.That(events, Is.Empty, "Movement on one side must not become area damage.");
 
             target.MoveTo(new Float2(0.2f, 0.5f));
-            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
             target.MoveTo(new Float2(0.3f, 0f));
-            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 4));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 4));
             target.MoveTo(new Float2(0.3f, -0.5f));
-            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 5));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 5));
             target.MoveTo(new Float2(0.3f, 0.5f));
-            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 6));
+            ward.Tick(0.3f, new WeaponExecutionContext(default, root.transform, null, 0, 6));
+            Assert.That(events, Has.Count.EqualTo(1), "Three simulation ticks are insufficient when only 0.5 real seconds elapsed.");
+            target.MoveTo(new Float2(0.3f, -0.5f));
+            ward.Tick(0.3f, new WeaponExecutionContext(default, root.transform, null, 0, 7));
 
             Assert.Multiple(() =>
             {
@@ -714,6 +717,29 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(ward.ActiveWardSetCount, Is.EqualTo(1));
                 Assert.That(ward.ActivePostCount, Is.EqualTo(4));
             });
+        }
+
+        [Test]
+        public void JangseungWardResamplesCenteredPpu32MaskAndRejectsTransparentCrossings()
+        {
+            var hurtMask = new PixelHitMask(1, 1, Vector2.zero, 32f, new uint[] { 1u });
+            // The middle source column is transparent; the two outer columns survive nearest-neighbor stretching.
+            var wardMask = new PixelHitMask(3, 3, new Vector2(1f, 1f), 32f, new uint[] { 365u });
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, hurtMask);
+            var ward = new JangseungWardExecutor(runtime, wardMask, 10f, 10f, 1f, 2, 1, 0f, 1);
+            var target = new TestTarget(1, new Float2(0f, -0.5f), hurtMask); registry.Register(target);
+
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            target.MoveTo(new Float2(0f, 0.5f));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            Assert.That(target.Health, Is.EqualTo(100), "A transparent authored segment column must not confirm a crossing.");
+
+            target.MoveTo(new Float2(0.75f, 0.5f));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
+            target.MoveTo(new Float2(0.75f, -0.5f));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 4));
+            Assert.That(target.Health, Is.EqualTo(90), "An opaque PPU32 resampled column should confirm the finite crossing.");
         }
 
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
