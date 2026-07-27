@@ -1,19 +1,13 @@
 {
+    "attemptSummary":  "Original humanoid candidate rejected; one text-only humanoid retry rejected or provider timeout; object-only Pixen fix selected.",
     "generationConsumedForStaticBatch":  1,
-    "mcpTool":  "mcp__pixellab__create_image_pixflux",
+    "outputSha256":  "78d83f01271d49288a2ef490eb1ef3c2bf56356ce020e63848ab657831afda03",
+    "mcpTool":  "mcp__pixellab__create_image_pixen",
     "provider":  "PixelLab",
-    "rawOutputSha256":  "60b9e2ceafe3537cbe0f5da4f9850b571c6549b5c1c36a877b382ad4e4181974",
-    "rawOutput":  "raw-provider-output.png",
-    "jobId":  "1881bdc2-6dc7-44b1-b6a9-b04d3248a71c",
-    "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to bounds center x=32 and maximum opaque y=56.",
+    "rawOutputSha256":  "81812432d61257c8985f79ff97751b377f66a6f3bc2f2af73919f1a2938e7541",
+    "rawOutput":  "raw-provider-output-fix2.png",
+    "jobId":  "3a00223a-c20b-4a18-b272-17fa9637aa9c",
+    "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to PNG/top-left bottom anchor y=56.",
     "status":  "pending",
-    "operation":  "Pixflux 64x64 transparent",
-    "selectedFixJobId":  "3a00223a-c20b-4a18-b272-17fa9637aa9c",
-    "fixStatus":  "selected_object_only_pixen",
-    "rejectedJobs":  [
-                         "202728e8-7343-4f14-a90c-e44e6f304ad2",
-                         "a64e58ab-da3f-4ae1-889d-f98ebd3cc748",
-                         "7d411f6d-b230-49f4-a325-2e5054826265"
-                     ],
-    "outputSha256":  "78d83f01271d49288a2ef490eb1ef3c2bf56356ce020e63848ab657831afda03"
+    "operation":  "Pixen 64x64 transparent object-only override"
 }
