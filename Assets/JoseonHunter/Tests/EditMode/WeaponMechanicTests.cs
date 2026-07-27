@@ -563,6 +563,46 @@ namespace JoseonHunter.Tests.EditMode
             });
         }
 
+        [Test]
+        public void FrostStatusSourcesRetainTheStrongestOverlapUntilTheirOwnFieldExits()
+        {
+            var target = new TestTarget(1, default, PixelHitMask.FromRows("1"));
+
+            target.ApplyFrostSlow(101, 0.6f);
+            target.ApplyFrostSlow(202, 0.35f);
+            target.RemoveFrostSlow(101, 0.35f);
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.LastSlowStrength, Is.EqualTo(0.35f));
+                Assert.That(target.ActiveSlowSourceCount, Is.EqualTo(1));
+            });
+
+            target.RemoveFrostSlow(202, 0.35f);
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.LastSlowStrength, Is.Zero);
+                Assert.That(target.ActiveSlowSourceCount, Is.Zero);
+                Assert.That(target.LastSlowDecay, Is.EqualTo(0.35f));
+            });
+        }
+
+        [Test]
+        public void ThunderBombLargeBlastStepSweepsAnIntermediateRingContact()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bomb = new ThunderBombExecutor(runtime, 10f, 10f, 3f, 0.01f, 0f, 1f, 1);
+            var target = new TestTarget(1, new Float2(1.3f, 0f), mask); registry.Register(target);
+            registry.Register(new TestTarget(2, new Float2(0f, 0f), mask));
+
+            bomb.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            bomb.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            bomb.Tick(1f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
+
+            Assert.That(target.Health, Is.EqualTo(90));
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
@@ -616,16 +656,20 @@ namespace JoseonHunter.Tests.EditMode
             public int KnockbackCount { get; private set; }
             public int SlowApplications { get; private set; }
             public int FreezeCount { get; private set; }
+            public int ActiveSlowSourceCount => slowSources.Count;
             public float LastSlowStrength { get; private set; }
             public float LastSlowDecay { get; private set; }
+            private readonly Dictionary<int, float> slowSources = new Dictionary<int, float>();
             public PixelHitMask HurtMask => mask;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
             public void MoveTo(Float2 position) => WorldPosition = position;
             public void SetHurtMask(PixelHitMask value) => mask = value;
             public void ApplyResolvedDamage(int damage) => Health -= damage;
             public void ApplyKnockback(Float2 direction, float force) => KnockbackCount++;
-            public void ApplyFrostSlow(float strength, float decaySeconds) { SlowApplications++; LastSlowStrength = strength; LastSlowDecay = decaySeconds; }
-            public void ApplyFreeze(float durationSeconds) => FreezeCount++;
+            public void ApplyFrostSlow(int sourceId, float strength) { slowSources[sourceId] = strength; SlowApplications++; LastSlowStrength = StrongestSlow(); }
+            public void RemoveFrostSlow(int sourceId, float decaySeconds) { slowSources.Remove(sourceId); LastSlowStrength = StrongestSlow(); LastSlowDecay = decaySeconds; }
+            public void ApplyFreeze(int sourceId, float durationSeconds) => FreezeCount++;
+            private float StrongestSlow() { var result = 1f; foreach (var source in slowSources) result = Mathf.Min(result, source.Value); return slowSources.Count == 0 ? 0f : result; }
         }
     }
 }

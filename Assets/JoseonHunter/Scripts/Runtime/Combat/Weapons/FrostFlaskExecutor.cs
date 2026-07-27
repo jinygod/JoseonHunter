@@ -9,8 +9,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     /// <summary>Optional target capability so frost can affect runtime actors without expanding the universal damage target contract.</summary>
     public interface IFrostStatusTarget
     {
-        void ApplyFrostSlow(float strength, float decaySeconds);
-        void ApplyFreeze(float durationSeconds);
+        void ApplyFrostSlow(int sourceId, float strength);
+        void RemoveFrostSlow(int sourceId, float decaySeconds);
+        void ApplyFreeze(int sourceId, float durationSeconds);
     }
 
     /// <summary>Bounded persistent frost fields with timed contact damage and independent master ice-spike attacks.</summary>
@@ -83,19 +84,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (field.ActiveAge >= Duration) { Expire(field); return; }
             runtime.Targets.CopyTo(targets);
             var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f, Radius * 2f));
-            var inside = new HashSet<int>();
+            var inside = field.InsideScratch;
+            inside.Clear();
             foreach (var target in targets)
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(diskMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 inside.Add(target.RuntimeId);
                 field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += step; field.Residence[target.RuntimeId] = residence;
-                if (target is IFrostStatusTarget status) { status.ApplyFrostSlow(0.5f, SlowDecaySeconds); if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId)) status.ApplyFreeze(0.2f); }
+                if (target is IFrostStatusTarget status) { status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f); if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId)) status.ApplyFreeze(field.Attack.InstanceId, 0.2f); }
                 if (field.ActiveAge + 0.0001f >= field.NextDamageAge)
                     runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Tick, context.SimulationTick), out _);
             }
             foreach (var previous in field.Inside)
-                if (!inside.Contains(previous) && runtime.Targets.TryGet(previous, out var target) && target is IFrostStatusTarget status) status.ApplyFrostSlow(0f, SlowDecaySeconds);
+                if (!inside.Contains(previous) && runtime.Targets.TryGet(previous, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
             field.Inside.Clear(); foreach (var id in inside) field.Inside.Add(id);
             if (field.ActiveAge + 0.0001f >= field.NextDamageAge) field.NextDamageAge += TickInterval;
             if (Level == 5)
@@ -136,7 +138,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Expire(Field field)
         {
             if (field.Expired) return;
-            foreach (var id in field.Inside) if (runtime.Targets.TryGet(id, out var target) && target is IFrostStatusTarget status) status.ApplyFrostSlow(0f, SlowDecaySeconds);
+            foreach (var id in field.Inside) if (runtime.Targets.TryGet(id, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
             field.Expired = true; Retire(field); ExpiredFieldCount++;
         }
 
@@ -172,6 +174,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public Dictionary<int, float> Residence { get; } = new Dictionary<int, float>();
             public HashSet<int> Frozen { get; } = new HashSet<int>();
             public HashSet<int> Inside { get; } = new HashSet<int>();
+            public HashSet<int> InsideScratch { get; } = new HashSet<int>();
         }
     }
 }

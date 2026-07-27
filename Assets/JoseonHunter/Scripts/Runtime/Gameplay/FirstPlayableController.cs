@@ -91,9 +91,61 @@ namespace JoseonHunter.Runtime.Gameplay
             public bool IsBoss;
             public bool IsTreasure;
             public ICombatTarget CombatTarget;
+            private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
+            private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
+            private readonly List<int> statusSourceScratch = new List<int>();
+            private float slowDecayRemaining;
+            private float slowDecayStartMultiplier = 1f;
+
+            public void ApplyFrostSlow(int sourceId, float strength)
+            {
+                frostSlowSources[sourceId] = Mathf.Clamp01(strength);
+                slowDecayRemaining = 0f;
+            }
+
+            public void RemoveFrostSlow(int sourceId, float decaySeconds)
+            {
+                var previousMultiplier = SlowMultiplier();
+                if (!frostSlowSources.Remove(sourceId) || frostSlowSources.Count != 0) return;
+                slowDecayStartMultiplier = previousMultiplier;
+                slowDecayRemaining = Mathf.Max(0f, decaySeconds);
+            }
+
+            public void ApplyFreeze(int sourceId, float durationSeconds) => freezeSources[sourceId] = Mathf.Max(freezeSources.TryGetValue(sourceId, out var remaining) ? remaining : 0f, Mathf.Max(0f, durationSeconds));
+
+            public void TickStatuses(float delta)
+            {
+                statusSourceScratch.Clear();
+                foreach (var source in freezeSources) statusSourceScratch.Add(source.Key);
+                for (var index = statusSourceScratch.Count - 1; index >= 0; index--)
+                {
+                    var sourceId = statusSourceScratch[index];
+                    var remaining = freezeSources[sourceId] - delta;
+                    if (remaining <= 0f) freezeSources.Remove(sourceId);
+                    else freezeSources[sourceId] = remaining;
+                }
+                slowDecayRemaining = Mathf.Max(0f, slowDecayRemaining - delta);
+            }
+
+            public float MovementMultiplier
+            {
+                get
+                {
+                    if (freezeSources.Count > 0) return 0f;
+                    if (frostSlowSources.Count > 0) return SlowMultiplier();
+                    return slowDecayRemaining <= 0f ? 1f : Mathf.Lerp(1f, slowDecayStartMultiplier, slowDecayRemaining / 0.35f);
+                }
+            }
+
+            private float SlowMultiplier()
+            {
+                var multiplier = 1f;
+                foreach (var source in frostSlowSources) multiplier = Mathf.Min(multiplier, source.Value);
+                return multiplier;
+            }
         }
 
-        private sealed class PrototypeCombatTarget : ICombatTarget
+        private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget
         {
             private readonly FirstPlayableController owner;
             private readonly EnemyState state;
@@ -124,6 +176,9 @@ namespace JoseonHunter.Runtime.Gameplay
             public PixelMaskTransform HurtMaskTransform => owner.TransformFor(state.Renderer, WorldPosition);
             public void ApplyResolvedDamage(int damage) => owner.DamageEnemy(state, damage);
             public void ApplyKnockback(Float2 direction, float force) { }
+            public void ApplyFrostSlow(int sourceId, float strength) => state.ApplyFrostSlow(sourceId, strength);
+            public void RemoveFrostSlow(int sourceId, float decaySeconds) => state.RemoveFrostSlow(sourceId, decaySeconds);
+            public void ApplyFreeze(int sourceId, float durationSeconds) => state.ApplyFreeze(sourceId, durationSeconds);
         }
 
         private enum PickupKind
@@ -549,9 +604,11 @@ namespace JoseonHunter.Runtime.Gameplay
                     continue;
                 }
 
+                enemy.TickStatuses(delta);
+
                 var enemyPosition = (Vector2)enemy.Object.transform.position;
                 var direction = (playerPosition - enemyPosition).normalized;
-                enemy.Object.transform.position = enemyPosition + direction * (enemy.Speed * delta);
+                enemy.Object.transform.position = enemyPosition + direction * (enemy.Speed * enemy.MovementMultiplier * delta);
                 enemy.Renderer.flipX = direction.x < 0f;
 
                 var hitDistance = enemy.IsBoss ? 0.85f : 0.55f;
