@@ -77,13 +77,100 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(second, Is.EqualTo(first));
         }
 
+        [Test]
+        public void FullyExhaustedOfferStateThrowsStableDiagnostic()
+        {
+            var state = State(
+                weapons: new Dictionary<string, int>
+                {
+                    ["hwando"] = 5, ["shaman_charm"] = 5, ["hunter_bow"] = 5
+                },
+                supports: new Dictionary<string, int>
+                {
+                    ["talisman"] = 5, ["boots"] = 5, ["warding_bell"] = 5
+                });
+
+            var exception = Assert.Throws<System.InvalidOperationException>(() => UpgradeSelector.Select(state, 7));
+
+            Assert.That(exception.Message, Is.EqualTo("At least three distinct eligible upgrades are required."));
+        }
+
+        [Test]
+        public void TwoCandidateOfferStateThrowsStableDiagnostic()
+        {
+            var state = State(
+                weapons: new Dictionary<string, int>
+                {
+                    ["hwando"] = 5, ["shaman_charm"] = 5, ["hunter_bow"] = 5
+                },
+                supports: new Dictionary<string, int>
+                {
+                    ["talisman"] = 4, ["boots"] = 4, ["warding_bell"] = 5
+                });
+
+            Assert.That(
+                () => UpgradeSelector.Select(state, 7),
+                Throws.InvalidOperationException.With.Message.EqualTo("At least three distinct eligible upgrades are required."));
+        }
+
+        [Test]
+        public void AcquiredUnlockedEvolutionNeverAppearsWhenThreeAlternativesExist()
+        {
+            var state = State(
+                weapons: new Dictionary<string, int> { ["hwando"] = 5 },
+                unlocked: new HashSet<string> { "hwando_evolution" },
+                acquired: new HashSet<string> { "hwando_evolution" });
+
+            var offers = UpgradeSelector.Select(state, 3);
+
+            Assert.That(offers, Has.Count.EqualTo(3));
+            Assert.That(offers.Any(offer => offer.Id == "hwando_evolution"), Is.False);
+        }
+
+        [Test]
+        public void UpgradeStateSnapshotsCallerCollections()
+        {
+            var weapons = new Dictionary<string, int> { ["hwando"] = 1 };
+            var supports = new Dictionary<string, int> { ["talisman"] = 1 };
+            var unlocked = new HashSet<string>();
+            var acquired = new HashSet<string>();
+            var state = new UpgradeState(weapons, supports, unlocked, acquired);
+            var expectedOffers = UpgradeSelector.Select(state, 11);
+
+            weapons["hwando"] = 5;
+            supports["talisman"] = 5;
+            unlocked.Add("hwando_evolution");
+            acquired.Add("hwando_evolution");
+
+            Assert.That(state.WeaponLevels["hwando"], Is.EqualTo(1));
+            Assert.That(state.SupportLevels["talisman"], Is.EqualTo(1));
+            Assert.That(state.UnlockedIds.Contains("hwando_evolution"), Is.False);
+            Assert.That(state.AcquiredEvolutionIds.Contains("hwando_evolution"), Is.False);
+            Assert.That(UpgradeSelector.Select(state, 11), Is.EqualTo(expectedOffers));
+        }
+
+        [Test]
+        public void DamageRequestHasStructuralValueCompatibility()
+        {
+            var first = new DamageRequest(8, 2, true, 1.5f);
+            var second = new DamageRequest(8, 2, true, 1.5f);
+            var (baseDamage, flatBonus, isCritical, multiplier) = first;
+
+            Assert.That(first, Is.EqualTo(second));
+            Assert.That(first == second, Is.True);
+            Assert.That(first != second, Is.False);
+            Assert.That((baseDamage, flatBonus, isCritical, multiplier), Is.EqualTo((8, 2, true, 1.5f)));
+        }
+
         private static UpgradeState State(
             IReadOnlyDictionary<string, int> weapons = null,
             IReadOnlyDictionary<string, int> supports = null,
-            ISet<string> unlocked = null) =>
+            ISet<string> unlocked = null,
+            ISet<string> acquired = null) =>
             new(
                 weapons ?? new Dictionary<string, int>(),
                 supports ?? new Dictionary<string, int>(),
-                unlocked ?? new HashSet<string>());
+                unlocked ?? new HashSet<string>(),
+                acquired ?? new HashSet<string>());
     }
 }

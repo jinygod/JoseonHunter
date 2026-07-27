@@ -91,5 +91,50 @@ only for upgrade IDs, with an `ISet<string>` constructor overload for ordinary
 
 ## Commit
 
-`c1362988584ee503eae6c24e58f563a6b1a5269f` (`feat: add deterministic patrol combat rules`;
-the hash changes once below only to record itself in this report).
+Initial delivery commit: `feat: add deterministic patrol combat rules`. The exact
+current commit hash is provided by the task handoff, rather than self-referentially
+rewriting this tracked report.
+
+## Review fix round 1
+
+### RED/GREEN evidence
+
+New tests were added before implementation and run with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1 -Filter JoseonHunter.Tests.EditMode.CombatRuleTests
+```
+
+RED was a compile failure for the intentionally absent API: `UpgradeState` lacked
+the four-argument acquired-evolution constructor and `AcquiredEvolutionIds`, while
+`DamageRequest` lacked `Deconstruct`, `==`, and `!=` (`CS1729`, `CS1061`, `CS8129`,
+and `CS0019`). After the minimal implementation, the same focused suite was GREEN:
+18/18 passed.
+
+Additional verification:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1 -Filter JoseonHunter.Tests.EditMode.RunRuleTests
+# Passed: 13/13
+
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1 -Filter JoseonHunter.Tests.EditMode
+# Passed: 136/136, failed: 0, skipped: 0
+```
+
+### Changes
+
+- Upgrade selection now throws `InvalidOperationException` with the stable diagnostic
+  `At least three distinct eligible upgrades are required.` whenever fewer than three
+  distinct valid candidates exist. This treats an exhausted offer state as invalid;
+  it never returns a partial offer list.
+- `UpgradeState` accepts an acquired-evolution ID snapshot in a new four-argument
+  overload, retaining the previous three-argument overload with an empty acquired
+  set. Acquired evolutions are excluded even if unlocked and otherwise eligible.
+- All input dictionaries and sets are copied at construction. Public properties expose
+  read-only dictionary/set interfaces backed by private snapshots, so callers cannot
+  mutate the source collections after construction to change selection behavior.
+- `DamageRequest` now has C#9-compatible structural value behavior (`IEquatable`,
+  object equality, hash code, equality operators, and four-value deconstruction).
+  `UpgradeState` intentionally remains reference-equality only: its role is an
+  immutable snapshot input object, and structural equality across four collections
+  would add API/ordering policy not required by this first-release contract.

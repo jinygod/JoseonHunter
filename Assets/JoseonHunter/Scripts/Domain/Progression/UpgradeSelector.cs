@@ -16,6 +16,12 @@ namespace JoseonHunter.Domain.Progression
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
 
+            var eligible = EligibleOffers(state).ToList();
+            if (eligible.Count < 3)
+            {
+                throw new InvalidOperationException("At least three distinct eligible upgrades are required.");
+            }
+
             var random = new Random(seed);
             var offers = new List<UpgradeOffer>(3);
             var ownedWeapons = WeaponIds
@@ -28,7 +34,7 @@ namespace JoseonHunter.Domain.Progression
                 offers.Add(ownedWeapons[random.Next(ownedWeapons.Count)]);
             }
 
-            var eligible = EligibleOffers(state)
+            eligible = eligible
                 .Where(offer => !offers.Any(selected => selected.Id == offer.Id))
                 .ToList();
             Shuffle(eligible, random);
@@ -59,6 +65,7 @@ namespace JoseonHunter.Domain.Progression
             foreach (var evolution in Evolutions)
             {
                 if (state.UnlockedIds.Contains(evolution.Id) &&
+                    !state.AcquiredEvolutionIds.Contains(evolution.Id) &&
                     state.WeaponLevels.TryGetValue(evolution.RequiredWeaponId, out var level) && level >= MaxLevel)
                 {
                     yield return new UpgradeOffer(evolution.Id, UpgradeKind.Evolution, 1);

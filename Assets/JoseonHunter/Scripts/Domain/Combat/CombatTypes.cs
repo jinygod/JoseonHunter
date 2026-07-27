@@ -2,7 +2,7 @@ using System;
 
 namespace JoseonHunter.Domain.Combat
 {
-    public readonly struct DamageRequest
+    public readonly struct DamageRequest : IEquatable<DamageRequest>
     {
         public DamageRequest(int baseDamage, int flatBonus, bool isCritical, float multiplier)
         {
@@ -16,6 +16,23 @@ namespace JoseonHunter.Domain.Combat
         public int FlatBonus { get; }
         public bool IsCritical { get; }
         public float Multiplier { get; }
+
+        public bool Equals(DamageRequest other) =>
+            BaseDamage == other.BaseDamage && FlatBonus == other.FlatBonus &&
+            IsCritical == other.IsCritical && Multiplier.Equals(other.Multiplier);
+
+        public override bool Equals(object obj) => obj is DamageRequest other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(BaseDamage, FlatBonus, IsCritical, Multiplier);
+        public static bool operator ==(DamageRequest left, DamageRequest right) => left.Equals(right);
+        public static bool operator !=(DamageRequest left, DamageRequest right) => !left.Equals(right);
+
+        public void Deconstruct(out int baseDamage, out int flatBonus, out bool isCritical, out float multiplier)
+        {
+            baseDamage = BaseDamage;
+            flatBonus = FlatBonus;
+            isCritical = IsCritical;
+            multiplier = Multiplier;
+        }
     }
 
     public readonly struct DamageResult : IEquatable<DamageResult>
