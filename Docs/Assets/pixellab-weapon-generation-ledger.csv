@@ -1,0 +1,4 @@
+timestamp,job_id,tool,prompt_revision,cost,status,remaining_generations,asset_path
+2026-07-27T23:47:00+09:00,,get_balance,weapon-style-lock-v1,0,baseline_active_tier1,2000,
+2026-07-27T23:48:00+09:00,a7953428-b82b-4314-a8d7-cd67318ba295,create_image_pixen,weapon-style-lock-v1,1,rejected_opaque_tile_board,1999,
+2026-07-27T23:50:00+09:00,2af2757c-f8d8-45f0-acec-0301842139b1,create_image_pixen,weapon-style-lock-v2,1,approved_preflight_pass,1998,ArtSource/Pixel/Weapons/style-lock/style-lock.png
