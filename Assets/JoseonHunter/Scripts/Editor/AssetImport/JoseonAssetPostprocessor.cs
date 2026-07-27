@@ -14,6 +14,8 @@ namespace JoseonHunter.Editor.AssetImport
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
+        private const string StaticSpriteRuntimeRoot =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/";
 
         private void OnPreprocessTexture()
         {
@@ -28,6 +30,13 @@ namespace JoseonHunter.Editor.AssetImport
             texture.mipmapEnabled = false;
             texture.spritePixelsPerUnit = 32f;
             texture.alphaIsTransparency = true;
+            if (assetPath.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal))
+            {
+                texture.spriteImportMode = SpriteImportMode.Single;
+                SetSingleSpritePivot(texture, new Vector2(0.5f, 0.125f));
+                texture.textureCompression = TextureImporterCompression.Uncompressed;
+                return;
+            }
             if (assetPath.StartsWith(CharacterRuntimeRoot, System.StringComparison.Ordinal) &&
                 assetPath.EndsWith(".png", System.StringComparison.OrdinalIgnoreCase) &&
                 IsCharacterSheet(assetPath))
@@ -65,6 +74,15 @@ namespace JoseonHunter.Editor.AssetImport
                 };
             }
             return sprites;
+        }
+
+        private static void SetSingleSpritePivot(TextureImporter texture, Vector2 pivot)
+        {
+            var settings = new TextureImporterSettings();
+            texture.ReadTextureSettings(settings);
+            settings.spriteAlignment = (int)SpriteAlignment.Custom;
+            settings.spritePivot = pivot;
+            texture.SetTextureSettings(settings);
         }
 
         private static bool IsCharacterSheet(string path)

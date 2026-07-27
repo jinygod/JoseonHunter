@@ -13,6 +13,8 @@ namespace JoseonHunter.Tests.EditMode
             "Assets/JoseonHunter/Audio/SFX/import-profile-test-sfx.wav";
         private const string FrontFacingFixturePath =
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/import_profile_test.png";
+        private const string StaticSpriteFixturePath =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/import_profile_test.png";
 
         [SetUp]
         public void SetUp()
@@ -20,6 +22,7 @@ namespace JoseonHunter.Tests.EditMode
             CreateMonoWaveFixture(MusicFixturePath);
             CreateMonoWaveFixture(SfxFixturePath);
             CreateTextureFixture(FrontFacingFixturePath, 256, 192);
+            CreateTextureFixture(StaticSpriteFixturePath, 64, 64);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
         }
 
@@ -29,11 +32,32 @@ namespace JoseonHunter.Tests.EditMode
             AssetDatabase.DeleteAsset(MusicFixturePath);
             AssetDatabase.DeleteAsset(SfxFixturePath);
             AssetDatabase.DeleteAsset(FrontFacingFixturePath);
+            AssetDatabase.DeleteAsset(StaticSpriteFixturePath);
+            DeleteEmptyDirectory("Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes");
+            DeleteEmptyDirectory("Assets/JoseonHunter/Art/StaticSprites/Runtime");
+            DeleteEmptyDirectory("Assets/JoseonHunter/Art/StaticSprites");
             DeleteEmptyDirectory("Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing");
             DeleteEmptyDirectory("Assets/JoseonHunter/Audio/Music");
             DeleteEmptyDirectory("Assets/JoseonHunter/Audio/SFX");
             DeleteEmptyDirectory("Assets/JoseonHunter/Audio");
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        [Test]
+        public void StaticSpriteRuntimeUsesSingleCustomPivotImportProfile()
+        {
+            AssetDatabase.ImportAsset(StaticSpriteFixturePath, ImportAssetOptions.ForceSynchronousImport);
+            var texture = AssetImporter.GetAtPath(StaticSpriteFixturePath) as TextureImporter;
+            Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Single));
+            var settings = new TextureImporterSettings();
+            texture.ReadTextureSettings(settings);
+            Assert.That(settings.spriteAlignment, Is.EqualTo((int)SpriteAlignment.Custom));
+            Assert.That(settings.spritePivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+            Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(texture.mipmapEnabled, Is.False);
+            Assert.That(texture.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
+            Assert.That(texture.spritePixelsPerUnit, Is.EqualTo(32f));
+            Assert.That(texture.GetPlatformTextureSettings("Android").overridden, Is.False);
         }
 
         [Test]
