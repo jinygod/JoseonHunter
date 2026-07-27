@@ -6,6 +6,7 @@
     "JoseonHunter.Content",
     "JoseonHunter.Runtime",
     "Unity.InputSystem",
+    "Unity.TextMeshPro",
     "Unity.RenderPipelines.Universal.Runtime"
   ],
   "autoReferenced": false
