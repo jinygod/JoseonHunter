@@ -64,6 +64,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (projectile.RemainingLifetime <= 0f || projectile.ImpactCount >= projectile.MaxImpacts)
                 {
                     Release(projectile.Visual);
+                    runtime.DamageService.RetireAttack(projectile.Attack.InstanceId);
                     active.RemoveAt(index);
                 }
             }
@@ -71,7 +72,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            foreach (var projectile in active) Release(projectile.Visual);
+            foreach (var projectile in active)
+            {
+                Release(projectile.Visual);
+                runtime.DamageService.RetireAttack(projectile.Attack.InstanceId);
+            }
             active.Clear();
         }
 

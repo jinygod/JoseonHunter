@@ -216,6 +216,63 @@ namespace JoseonHunter.Tests.EditMode
             });
         }
 
+        [Test]
+        public void PiercingLinearProjectileHitsOnlyThreeAlignedTargetsThenRetires()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var linear = new LinearProjectileExecutor(runtime);
+            var targets = new[]
+            {
+                new TestTarget(1, new Float2(1f, 0f), mask), new TestTarget(2, new Float2(2f, 0f), mask),
+                new TestTarget(3, new Float2(3f, 0f), mask), new TestTarget(4, new Float2(4f, 0f), mask)
+            };
+            foreach (var target in targets) registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+            var context = new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1);
+            linear.Launch(context, new LinearProjectileSpec(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f),
+                WeaponId.GakgungShot, new Float2(0f, 0f), new Float2(1f, 0f), 10f, 1f, 10, 999, "Pierce Test"));
+
+            linear.Tick(0.5f, context);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(events, Has.Count.EqualTo(3));
+                Assert.That(targets[3].Health, Is.EqualTo(100));
+                Assert.That(linear.ActiveCount, Is.Zero);
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void CompletedLinearAttacksAreRetiredInsteadOfAccumulating()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var linear = new LinearProjectileExecutor(runtime);
+            var target = new TestTarget(1, new Float2(1f, 0f), mask, health: 2000);
+            registry.Register(target);
+            var context = new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1);
+
+            for (var index = 0; index < 100; index++)
+            {
+                linear.Launch(context, new LinearProjectileSpec(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f),
+                    WeaponId.GakgungShot, new Float2(0f, 0f), new Float2(1f, 0f), 10f, 0.1f, 1, 1, "Retire Test"));
+                linear.Tick(0.1f, context);
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.Health, Is.EqualTo(1900));
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+            });
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
@@ -254,9 +311,9 @@ namespace JoseonHunter.Tests.EditMode
         private sealed class TestTarget : ICombatTarget
         {
             private readonly PixelHitMask mask;
-            public TestTarget(int runtimeId, Float2 position, PixelHitMask mask, bool isBoss = false, bool isElite = false, float threatScore = 0f)
+            public TestTarget(int runtimeId, Float2 position, PixelHitMask mask, bool isBoss = false, bool isElite = false, float threatScore = 0f, int health = 100)
             {
-                RuntimeId = runtimeId; WorldPosition = position; this.mask = mask; Health = 100;
+                RuntimeId = runtimeId; WorldPosition = position; this.mask = mask; Health = health;
                 IsBoss = isBoss; IsElite = isElite; ThreatScore = threatScore;
             }
             public int RuntimeId { get; }

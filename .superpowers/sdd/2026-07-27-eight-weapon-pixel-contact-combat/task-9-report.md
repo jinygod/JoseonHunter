@@ -20,3 +20,9 @@ Validation: scoped `git diff --check` passed. Unity tests were intentionally not
 
 - Replaced clipped high-speed travel with a per-projectile simulation-time debt. Each tick processes at most the 64-sample budget, carries the remaining time forward, and decrements lifetime only for the swept segment.
 - Added full-range high-speed, all-three-executor ID, competing-cluster seam, and explicit active/pool/impact cap tests.
+
+## Review fix round 3
+
+- Added `CombatDamageService.RetireAttack`, `ClearAttacks`, and a tracked-count diagnostic.
+- Linear projectiles and flying blades retire their unique attack records only after permanent return; runtime reset clears any remaining records.
+- Added actual three-hit piercing and repeated completed-attack retirement coverage.

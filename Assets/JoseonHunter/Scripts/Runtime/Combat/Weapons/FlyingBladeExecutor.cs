@@ -67,6 +67,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (blade.Returned)
                 {
                     Release(blade.Visual);
+                    runtime.DamageService.RetireAttack(blade.Attack.InstanceId);
                     active.RemoveAt(index);
                 }
             }
@@ -74,7 +75,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            foreach (var blade in active) Release(blade.Visual);
+            foreach (var blade in active)
+            {
+                Release(blade.Visual);
+                runtime.DamageService.RetireAttack(blade.Attack.InstanceId);
+            }
             active.Clear();
             cooldown = 0f;
             MaximumDistanceFromLaunch = 0f;

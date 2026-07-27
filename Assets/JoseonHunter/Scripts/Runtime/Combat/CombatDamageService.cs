@@ -47,6 +47,12 @@ namespace JoseonHunter.Runtime.Combat
         }
 
         public event Action<ConfirmedDamageEvent> DamageConfirmed;
+        public int TrackedAttackCount => attacks.Count;
+
+        /// <summary>Forgets a completed attack after its executor has permanently stopped producing contacts.</summary>
+        public bool RetireAttack(int attackInstanceId) => attackInstanceId > 0 && attacks.Remove(attackInstanceId);
+
+        public void ClearAttacks() => attacks.Clear();
 
         public bool TryApply(in WeaponDamageRequest request, out ConfirmedDamageEvent confirmed)
         {

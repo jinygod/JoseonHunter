@@ -75,6 +75,7 @@ namespace JoseonHunter.Runtime.Combat
         {
             simulationTick = 0;
             foreach (var executor in executors) executor.Reset();
+            DamageService.ClearAttacks();
         }
     }
 }
