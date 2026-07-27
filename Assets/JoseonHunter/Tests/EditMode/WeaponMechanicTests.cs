@@ -112,40 +112,49 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void WeaponExecutorsAllocateDistinctAttackInstanceIds()
+        public void FlyingBladeGakgungAndSingijeonAllocateDistinctAttackInstanceIds()
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
             var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var blade = new FlyingBladeExecutor(runtime, 10f, 10f, 2f, 2f, 1);
             var bow = new GakgungExecutor(runtime, 10f, 10f, 2f, 10f, 1);
             var volley = new SingijeonExecutor(runtime, 10f, 10f, 2f, 10f, 1, 1);
-            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+            registry.Register(new TestTarget(1, new Float2(0.2f, 0f), mask));
             var events = new List<ConfirmedDamageEvent>();
             damage.DamageConfirmed += events.Add;
             var context = new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1);
 
+            blade.Tick(0.1f, context);
             bow.Tick(0.1f, context);
             volley.Tick(0.1f, context);
 
-            Assert.That(events, Has.Count.EqualTo(2));
+            Assert.That(events, Has.Count.EqualTo(3));
             Assert.That(events[0].AttackInstanceId, Is.Not.EqualTo(events[1].AttackInstanceId));
+            Assert.That(events[0].AttackInstanceId, Is.Not.EqualTo(events[2].AttackInstanceId));
+            Assert.That(events[1].AttackInstanceId, Is.Not.EqualTo(events[2].AttackInstanceId));
         }
 
         [Test]
-        public void LinearProjectileSweepsAcrossThinTargetInsteadOfTunneling()
+        public void HighSpeedProjectileEventuallySweepsItsFullRangeWithoutEarlyExpiry()
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
             var runtime = new WeaponRuntimeController(registry, damage, mask);
-            var bow = new GakgungExecutor(runtime, 10f, 10f, 10f, 100f, 1);
-            var target = new TestTarget(1, new Float2(1f, 0f), mask);
+            var bow = new GakgungExecutor(runtime, 10f, 10f, 100f, 1000f, 1);
+            var target = new TestTarget(1, new Float2(100f, 0f), mask);
             registry.Register(target);
 
-            bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            for (var tick = 1; tick <= 4; tick++)
+                bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.That(target.Health, Is.EqualTo(90));
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.Health, Is.EqualTo(90));
+                Assert.That(bow.ActiveProjectileCount, Is.Zero);
+            });
         }
 
         [Test]
@@ -158,15 +167,21 @@ namespace JoseonHunter.Tests.EditMode
             var singijeon = new SingijeonExecutor(runtime, 10f, 10f, 2f, 10f, 1, 1);
             registry.Register(new TestTarget(1, new Float2(-1f, 0.05f), mask));
             registry.Register(new TestTarget(2, new Float2(-1f, -0.05f), mask));
-            registry.Register(new TestTarget(3, new Float2(1f, 0f), mask));
+            registry.Register(new TestTarget(3, new Float2(-1f, 0f), mask));
+            registry.Register(new TestTarget(4, new Float2(1f, 0.05f), mask));
+            registry.Register(new TestTarget(5, new Float2(1f, -0.05f), mask));
 
             singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
 
-            Assert.That(singijeon.LastDirection.X, Is.LessThan(0f));
+            Assert.Multiple(() =>
+            {
+                Assert.That(singijeon.LastDirectionBucket, Is.EqualTo(6));
+                Assert.That(singijeon.LastDirection.X, Is.LessThan(0f));
+            });
         }
 
         [Test]
-        public void SingijeonCapsLanesAndKeepsLevelFiveAtThreeBoundedRows()
+        public void SingijeonAndLinearProjectilesCapLanesActivePoolAndImpacts()
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
@@ -181,7 +196,23 @@ namespace JoseonHunter.Tests.EditMode
             {
                 Assert.That(singijeon.LaneCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount));
                 Assert.That(singijeon.LastLaunchCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
-                Assert.That(singijeon.ActiveProjectileCount, Is.LessThanOrEqualTo(LinearProjectileExecutor.MaxActiveProjectiles));
+                Assert.That(singijeon.ActiveProjectileCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
+            });
+
+            var linear = new LinearProjectileExecutor(runtime);
+            var context = new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2);
+            var requested = new LinearProjectileSpec(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f),
+                WeaponId.GakgungShot, new Float2(0f, 0f), new Float2(1f, 0f), 1f, 0.01f, 1, 999, "Cap Test");
+            for (var index = 0; index < LinearProjectileExecutor.MaxActiveProjectiles + 10; index++) linear.Launch(context, requested);
+            Assert.That(linear.ActiveCount, Is.EqualTo(LinearProjectileExecutor.MaxActiveProjectiles));
+            linear.Tick(0.01f, context);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(requested.MaxImpacts, Is.EqualTo(LinearProjectileExecutor.MaxImpactsPerProjectile));
+                Assert.That(linear.ActiveCount, Is.Zero);
+                Assert.That(linear.ReturnedToPoolCount, Is.EqualTo(LinearProjectileExecutor.MaxActiveProjectiles));
+                Assert.That(linear.PooledCount, Is.LessThanOrEqualTo(LinearProjectileExecutor.MaxPooledProjectiles));
             });
         }
 

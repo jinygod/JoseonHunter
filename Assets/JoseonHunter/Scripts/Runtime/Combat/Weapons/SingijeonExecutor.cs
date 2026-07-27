@@ -33,6 +33,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastLaunchCount { get; private set; }
         public int ActiveProjectileCount => projectiles.ActiveCount;
         public Float2 LastDirection { get; private set; }
+        public int LastDirectionBucket { get; private set; } = -1;
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -47,7 +48,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            cooldown = 0f; LastLaunchCount = 0; LastDirection = default; projectiles.Reset();
+            cooldown = 0f; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; projectiles.Reset();
         }
 
         private bool TryFindDensestDirection(Float2 origin, out Float2 direction)
@@ -72,6 +73,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
             }
             if (highestCount == 0) { direction = default; return false; }
+            LastDirectionBucket = selectedBucket;
             var radians = selectedBucket * BucketDegrees * Mathf.Deg2Rad;
             direction = new Float2(Mathf.Cos(radians), Mathf.Sin(radians));
             return true;

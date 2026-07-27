@@ -15,3 +15,8 @@ Validation: scoped `git diff --check` passed. Unity tests were intentionally not
 - Normalized Singijeon angular buckets cyclically across the ±180-degree seam.
 - Capped lanes at 6, active and pooled projectiles at 32 each, and per-projectile impacts at 3; level five remains exactly three rows.
 - Added focused mechanics tests for ID isolation, tunneling, angular-wrap density, and level-five caps.
+
+## Review fix round 2
+
+- Replaced clipped high-speed travel with a per-projectile simulation-time debt. Each tick processes at most the 64-sample budget, carries the remaining time forward, and decrements lifetime only for the swept segment.
+- Added full-range high-speed, all-three-executor ID, competing-cluster seam, and explicit active/pool/impact cap tests.
