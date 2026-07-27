@@ -2,4 +2,8 @@
 
 ## HEROES AND PICKUPS COMPLETE — FULL BATCH PENDING
 
-The board presents each pending source at native 64×64, an 8× nearest-neighbor light-background check, and an 8× dark-background check. Short hashes, per-source selected generation cost, and batch usage are visible. The board intentionally excludes enemy and runtime entries pending Task 3.
+The board presents each pending source at native 64×64, an 8× nearest-neighbor light-background check, and an 8× dark-background check. Labels, short hashes, per-asset selected cost/attempt, and total usage have a dedicated non-overlapping footer region.
+
+## Generation chronology
+
+Pixflux job 7d411… was launched before the subsequent no-Pixflux ruling, later timed out, and was never selected. After that ruling, no Pixflux call was made. All selected replacement pickups (coin, experience spirit flame, and treasure chest) use Pixen. Complete per-asset attempt history is retained in provenance.

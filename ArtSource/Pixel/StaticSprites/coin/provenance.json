@@ -9,5 +9,28 @@
     "jobId":  "b87df0d2-cafd-42d6-96fa-c9f5bea3ed87",
     "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to PNG/top-left bottom anchor y=56.",
     "status":  "pending",
-    "operation":  "Pixen 64x64 transparent object-only override"
+    "operation":  "Pixen 64x64 transparent object-only override",
+    "attempts":  [
+                     {
+                         "jobId":  "202728e8-7343-4f14-a90c-e44e6f304ad2",
+                         "result":  "rejected_humanoid",
+                         "tool":  "Pixflux"
+                     },
+                     {
+                         "jobId":  "a64e58ab-da3f-4ae1-889d-f98ebd3cc748",
+                         "result":  "rejected_humanoid",
+                         "tool":  "Pixen"
+                     },
+                     {
+                         "jobId":  "7d411f6d-b230-49f4-a325-2e5054826265",
+                         "result":  "pre_ruling_timeout_never_selected",
+                         "tool":  "Pixflux"
+                     },
+                     {
+                         "jobId":  "b87df0d2-cafd-42d6-96fa-c9f5bea3ed87",
+                         "result":  "selected_object_only",
+                         "tool":  "Pixen"
+                     }
+                 ],
+    "chronology":  "Pixflux 7d411f6d-b230-49f4-a325-2e5054826265 was launched before the no-Pixflux ruling, timed out, and was never selected. After the ruling no Pixflux call occurred; selected replacement is Pixen."
 }

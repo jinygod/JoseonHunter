@@ -9,5 +9,18 @@
     "jobId":  "3a00223a-c20b-4a18-b272-17fa9637aa9c",
     "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to PNG/top-left bottom anchor y=56.",
     "status":  "pending",
-    "operation":  "Pixen 64x64 transparent object-only override"
+    "operation":  "Pixen 64x64 transparent object-only override",
+    "attempts":  [
+                     {
+                         "jobId":  "1881bdc2-6dc7-44b1-b6a9-b04d3248a71c",
+                         "result":  "rejected_humanoid",
+                         "tool":  "Pixflux"
+                     },
+                     {
+                         "jobId":  "3a00223a-c20b-4a18-b272-17fa9637aa9c",
+                         "result":  "selected_object_only",
+                         "tool":  "Pixen"
+                     }
+                 ],
+    "chronology":  "Pixflux 7d411f6d-b230-49f4-a325-2e5054826265 was launched before the no-Pixflux ruling, timed out, and was never selected. After the ruling no Pixflux call occurred; selected replacement is Pixen."
 }
