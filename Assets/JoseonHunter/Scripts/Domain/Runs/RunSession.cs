@@ -100,11 +100,14 @@ namespace JoseonHunter.Domain.Runs
             foreach (var boss in profile.Bosses)
             {
                 if (boss.IsFinal)
-                    return boss.SpawnSeconds < profile.DurationSeconds && !defeatedBosses.Contains(boss.BossId);
+                    return !IsUntimedFinalFight(boss) && !defeatedBosses.Contains(boss.BossId);
             }
 
             return false;
         }
+
+        private bool IsUntimedFinalFight(BossScheduleEntry finalBoss) =>
+            finalBoss.SpawnSeconds >= profile.DurationSeconds;
 
         private RunTick CreateTick(string bossWarningId, string bossSpawnId) => new RunTick(
             clock.ElapsedSeconds,

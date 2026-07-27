@@ -147,6 +147,12 @@ namespace JoseonHunter.Tests.EditMode
             {
                 true, false, true, false, true, false
             }));
+            Assert.That(ticks.Select(tick => tick.Outcome), Is.EqualTo(new[]
+            {
+                RunOutcome.InProgress, RunOutcome.InProgress, RunOutcome.InProgress,
+                RunOutcome.InProgress, RunOutcome.InProgress, RunOutcome.InProgress
+            }));
+            Assert.That(ticks[5].NormalWavesStopped, Is.True);
         }
 
         [Test]
