@@ -24,6 +24,22 @@ namespace JoseonHunter.Tests.EditMode
             "dokkaebi", "bandit", "fallen_general", "coin", "experience_spirit_flame", "treasure_chest"
         };
 
+        private static readonly ExpectedEntry[] ExpectedEntries =
+        {
+            new("rookie_constable", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/rookie_constable.png"),
+            new("shaman", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/shaman.png"),
+            new("mountain_hunter", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/mountain_hunter.png"),
+            new("plague_rat", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/plague_rat.png"),
+            new("vengeful_spirit", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/vengeful_spirit.png"),
+            new("sakkat_specter", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/sakkat_specter.png"),
+            new("dokkaebi", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/dokkaebi.png"),
+            new("bandit", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/bandit.png"),
+            new("fallen_general", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Bosses/fallen_general.png"),
+            new("coin", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png"),
+            new("experience_spirit_flame", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/experience_spirit_flame.png"),
+            new("treasure_chest", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/treasure_chest.png")
+        };
+
         [Test]
         public void CatalogContainsExactlyTheApprovedStaticSpriteEntries()
         {
@@ -46,6 +62,24 @@ namespace JoseonHunter.Tests.EditMode
             {
                 Assert.That(entry.prefab.GetComponentsInChildren<SpriteRenderer>(true), Has.Length.EqualTo(1), entry.id);
                 Assert.That(entry.prefab.GetComponentsInChildren<StaticSpriteMotionPresenter>(true), Has.Length.EqualTo(1), entry.id);
+                Assert.That(entry.prefab.GetComponent<SpriteRenderer>().sprite, Is.SameAs(entry.sprite), entry.id);
+            }
+        }
+
+        [Test]
+        public void CatalogEntriesUseTheExactApprovedRuntimeSpriteAndPrefabPaths()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<StaticSpriteCatalog>(CatalogPath);
+
+            Assert.That(catalog, Is.Not.Null);
+            foreach (var expected in ExpectedEntries)
+            {
+                Assert.That(catalog.TryGet(expected.Id, out var entry), Is.True, expected.Id);
+                Assert.That(AssetDatabase.GetAssetPath(entry.sprite), Is.EqualTo(expected.SpritePath), expected.Id);
+                Assert.That(
+                    AssetDatabase.GetAssetPath(entry.prefab),
+                    Is.EqualTo("Assets/JoseonHunter/Prefabs/StaticSprites/" + expected.Id + ".prefab"),
+                    expected.Id);
             }
         }
 
@@ -63,6 +97,15 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(proof.gameObject.activeSelf, Is.False);
                 Assert.That(proof.childCount, Is.EqualTo(ExpectedIds.Length));
                 CollectionAssert.AreEquivalent(ExpectedIds, proof.Cast<Transform>().Select(child => child.name));
+                var catalog = AssetDatabase.LoadAssetAtPath<StaticSpriteCatalog>(CatalogPath);
+                foreach (var child in proof.Cast<Transform>())
+                {
+                    Assert.That(catalog.TryGet(child.name, out var entry), Is.True, child.name);
+                    Assert.That(
+                        PrefabUtility.GetCorrespondingObjectFromSource(child.gameObject),
+                        Is.SameAs(entry.prefab),
+                        child.name);
+                }
             }
             finally
             {
@@ -94,6 +137,18 @@ namespace JoseonHunter.Tests.EditMode
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        private readonly struct ExpectedEntry
+        {
+            public ExpectedEntry(string id, string spritePath)
+            {
+                Id = id;
+                SpritePath = spritePath;
+            }
+
+            public string Id { get; }
+            public string SpritePath { get; }
         }
     }
 }
