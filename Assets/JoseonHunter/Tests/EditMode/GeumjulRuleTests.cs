@@ -283,6 +283,26 @@ namespace JoseonHunter.Tests.EditMode
             }).IsValid, Is.False);
         }
 
+        [Test]
+        public void ResolverRejectsNonFiniteTargetPositions()
+        {
+            var resolver = new SealResolver();
+
+            var nanError = Assert.Throws<System.ArgumentException>(
+                () => resolver.Resolve(SquareLoop(), new[]
+                {
+                    new TargetPoint(1, new Float2(float.NaN, 1f), false)
+                }));
+            var infinityError = Assert.Throws<System.ArgumentException>(
+                () => resolver.Resolve(SquareLoop(), new[]
+                {
+                    new TargetPoint(2, new Float2(1f, float.PositiveInfinity), false)
+                }));
+
+            Assert.That(nanError.ParamName, Is.EqualTo("targets"));
+            Assert.That(infinityError.ParamName, Is.EqualTo("targets"));
+        }
+
         private static LoopResult SquareLoop() => new LoopDetector().TryClose(Points((0, 0), (2, 0), (2, 2), (0, 2), (0, 0)));
 
         private static List<TrailPoint> Points(params (float x, float y)[] values)
