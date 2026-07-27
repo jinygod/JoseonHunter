@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using JoseonHunter.Domain.Combat;
 
 namespace JoseonHunter.Domain.Progression
 {
     public static class UpgradeSelector
     {
         private const int MaxLevel = 5;
-        private static readonly string[] WeaponIds = { "hwando", "shaman_charm", "hunter_bow" };
+        private static readonly string[] WeaponIds = WeaponRoster.All.Select(id => id.Value).ToArray();
         private static readonly string[] SupportIds = { "talisman", "boots", "warding_bell" };
-        private static readonly Evolution[] Evolutions = { new("hwando_evolution", "hwando") };
+        private static readonly Evolution[] Evolutions = { new("hwando_evolution", WeaponId.HwandoFlyingBlade.Value) };
 
         public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed)
         {
