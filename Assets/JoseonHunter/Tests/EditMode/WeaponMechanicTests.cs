@@ -501,6 +501,68 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Lightning), Is.EqualTo(4));
         }
 
+        [Test]
+        public void ThunderBombDealsDamageOnlyWhenItsExpandingPixelRingReachesTheTarget()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bomb = new ThunderBombExecutor(runtime, 10f, 10f, 3f, 0.1f, 0.1f, 1f, 1);
+            var target = new TestTarget(1, new Float2(1.3f, 0f), mask); registry.Register(target);
+            registry.Register(new TestTarget(2, new Float2(0f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            bomb.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            bomb.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
+            bomb.Tick(0.06f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
+            Assert.That(events, Is.Empty, "Fuse completion and an undersized ring must not deal center damage.");
+
+            bomb.Tick(0.12f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 4));
+            Assert.Multiple(() =>
+            {
+                Assert.That(events, Has.Count.EqualTo(2));
+                Assert.That(events[0].Phase, Is.EqualTo(ContactPhase.Blast));
+                Assert.That(target.Health, Is.EqualTo(90));
+            });
+        }
+
+        [Test]
+        public void FrostFieldSlowsTicksFreezesDecaysAndExpiresItsOldestFieldAtCapacity()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var frost = new FrostFlaskExecutor(runtime, 10f, 10f, 2f, 0.1f, 2f, 1f, 1, 1);
+            var target = new TestTarget(1, new Float2(0.4f, 0f), mask); registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            frost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            frost.Tick(0.25f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
+            frost.Tick(0.25f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
+            frost.Tick(0.25f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 4));
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.SlowApplications, Is.GreaterThan(0));
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Tick), Is.EqualTo(3));
+                Assert.That(target.FreezeCount, Is.EqualTo(1));
+            });
+
+            target.MoveTo(new Float2(4f, 0f));
+            frost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 5));
+            frost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 6));
+            target.MoveTo(new Float2(0.4f, 0f));
+            var capacityFrost = new FrostFlaskExecutor(runtime, 10f, 0.1f, 2f, 0.1f, 2f, 1f, 1, 1);
+            capacityFrost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 7));
+            capacityFrost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 8));
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.LastSlowStrength, Is.Zero);
+                Assert.That(target.LastSlowDecay, Is.GreaterThan(0f));
+                Assert.That(capacityFrost.ExpiredFieldCount, Is.EqualTo(1));
+                Assert.That(capacityFrost.ActiveFieldCount, Is.EqualTo(1));
+            });
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
@@ -536,7 +598,7 @@ namespace JoseonHunter.Tests.EditMode
             public WeaponExecutionContext Context(int tick) => new WeaponExecutionContext(new Float2(0f, 0f), PresentationRoot, null, 0, tick);
         }
 
-        private sealed class TestTarget : ICombatTarget
+        private sealed class TestTarget : ICombatTarget, IFrostStatusTarget
         {
             private PixelHitMask mask;
             public TestTarget(int runtimeId, Float2 position, PixelHitMask mask, bool isBoss = false, bool isElite = false, float threatScore = 0f, int health = 100)
@@ -552,12 +614,18 @@ namespace JoseonHunter.Tests.EditMode
             public float ThreatScore { get; }
             public Float2 WorldPosition { get; private set; }
             public int KnockbackCount { get; private set; }
+            public int SlowApplications { get; private set; }
+            public int FreezeCount { get; private set; }
+            public float LastSlowStrength { get; private set; }
+            public float LastSlowDecay { get; private set; }
             public PixelHitMask HurtMask => mask;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
             public void MoveTo(Float2 position) => WorldPosition = position;
             public void SetHurtMask(PixelHitMask value) => mask = value;
             public void ApplyResolvedDamage(int damage) => Health -= damage;
             public void ApplyKnockback(Float2 direction, float force) => KnockbackCount++;
+            public void ApplyFrostSlow(float strength, float decaySeconds) { SlowApplications++; LastSlowStrength = strength; LastSlowDecay = decaySeconds; }
+            public void ApplyFreeze(float durationSeconds) => FreezeCount++;
         }
     }
 }
