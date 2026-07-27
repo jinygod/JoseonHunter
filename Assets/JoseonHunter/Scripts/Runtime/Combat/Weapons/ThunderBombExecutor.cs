@@ -64,6 +64,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             bombs.Clear(); cooldown = 0f; LastState = ThunderBombState.Complete; LastLandingPosition = default;
         }
 
+        public void Dispose() => Reset();
+
         private void Advance(Bomb bomb, float step, in WeaponExecutionContext context)
         {
             switch (bomb.State)

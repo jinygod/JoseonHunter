@@ -81,6 +81,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastLaunchCount = 0; TotalLaunchedTalismanCount = 0; lastContactPhases.Clear();
         }
 
+        public void Dispose() => Reset();
+
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
             // Hop count is each talisman's sequential chain length; the master form always starts up to three independent seals.

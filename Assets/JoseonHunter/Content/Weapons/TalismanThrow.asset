@@ -15,7 +15,7 @@ MonoBehaviour:
   - {weaponId: talisman_throw, level: 3, baseDamage: 12, cooldownSeconds: .62, range: 6.5, projectileCount: 1, speed: 13, durationSeconds: .2, pierce: 1, chainCount: 3, knockback: 0, slowFraction: 0, criticalChance: 0}
   - {weaponId: talisman_throw, level: 4, baseDamage: 14, cooldownSeconds: .58, range: 7, projectileCount: 1, speed: 14, durationSeconds: .2, pierce: 1, chainCount: 4, knockback: 0, slowFraction: 0, criticalChance: 0}
   - {weaponId: talisman_throw, level: 5, baseDamage: 16, cooldownSeconds: .54, range: 7, projectileCount: 1, speed: 14, durationSeconds: .2, pierce: 1, chainCount: 5, knockback: 0, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000003, type: 3}]
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000003, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000003, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000003, type: 3}]
   binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000003, type: 3}]
   activeFrameWindows: []
   poolCapacity: 4

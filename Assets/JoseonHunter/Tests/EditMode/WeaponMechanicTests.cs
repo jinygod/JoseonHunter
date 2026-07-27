@@ -785,6 +785,21 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(diagonalTarget.Health, Is.EqualTo(90), "A 45-degree finite segment must preserve its PPU32 endpoint-aligned mask geometry.");
         }
 
+        [Test]
+        public void RuntimeDisposeDisposesRegisteredExecutorForLevelReplacement()
+        {
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), PixelHitMask.FromRows("1"));
+            var executor = new DisposeProbeExecutor();
+            runtime.Register(executor);
+
+            runtime.Dispose();
+
+            Assert.That(executor.DisposeCount, Is.EqualTo(1));
+            runtime.Dispose();
+            Assert.That(executor.DisposeCount, Is.EqualTo(1), "A repeated teardown must not dispose presentation pools twice.");
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
@@ -818,6 +833,14 @@ namespace JoseonHunter.Tests.EditMode
             public List<ConfirmedDamageEvent> Events { get; }
             private Transform PresentationRoot { get; }
             public WeaponExecutionContext Context(int tick) => new WeaponExecutionContext(new Float2(0f, 0f), PresentationRoot, null, 0, tick);
+        }
+
+        private sealed class DisposeProbeExecutor : IWeaponExecutor
+        {
+            public int DisposeCount { get; private set; }
+            public void Tick(float deltaTime, in WeaponExecutionContext context) { }
+            public void Reset() { }
+            public void Dispose() => DisposeCount++;
         }
 
         private sealed class TestTarget : ICombatTarget, IFrostStatusTarget

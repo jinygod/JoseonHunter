@@ -46,6 +46,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             cooldown = 0f; LastLaunchCount = 0; LastSelectedTargetRuntimeId = 0; projectiles.Reset();
         }
 
+        public void Dispose() => projectiles.Dispose();
+
         private bool TrySelectTarget(out ICombatTarget selected)
         {
             selected = null;

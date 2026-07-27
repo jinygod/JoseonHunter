@@ -80,6 +80,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             active.Clear();
         }
 
+        /// <summary>Terminal cleanup for a containing executor; pooled visuals must not survive runtime replacement.</summary>
+        public void Dispose()
+        {
+            Reset();
+            while (pool.Count > 0)
+            {
+                var visual = pool.Pop();
+                if (visual != null) UnityEngine.Object.Destroy(visual);
+            }
+            masksBySprite.Clear();
+        }
+
         private void SweepDamageContacts(Projectile projectile, Float2 previousPosition, in WeaponExecutionContext context)
         {
             var renderer = projectile.Visual.GetComponent<SpriteRenderer>();

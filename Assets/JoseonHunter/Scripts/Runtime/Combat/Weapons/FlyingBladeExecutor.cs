@@ -85,6 +85,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             MaximumDistanceFromLaunch = 0f;
         }
 
+        public void Dispose()
+        {
+            Reset();
+            while (pool.Count > 0)
+            {
+                var visual = pool.Pop();
+                if (visual != null) UnityEngine.Object.Destroy(visual);
+            }
+            masksBySprite.Clear();
+        }
+
         private bool TryFindTarget(Float2 owner, out ICombatTarget target)
         {
             target = null;

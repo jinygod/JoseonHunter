@@ -51,6 +51,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             cooldown = 0f; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; projectiles.Reset();
         }
 
+        public void Dispose() => projectiles.Dispose();
+
         private bool TryFindDensestDirection(Float2 origin, out Float2 direction)
         {
             targets.Clear(); runtime.Targets.CopyTo(targets);

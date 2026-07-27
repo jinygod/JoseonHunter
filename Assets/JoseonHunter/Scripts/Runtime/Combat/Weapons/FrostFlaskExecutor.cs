@@ -73,6 +73,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
         }
 
+        public void Dispose() => Reset();
+
         private void Advance(Field field, float step, in WeaponExecutionContext context)
         {
             field.Age += step;

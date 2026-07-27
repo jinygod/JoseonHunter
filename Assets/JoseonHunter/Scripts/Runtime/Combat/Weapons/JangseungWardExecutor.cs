@@ -75,6 +75,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
         }
 
+        public void Dispose() => Reset();
+
         private void PlaceSet(Float2 center)
         {
             if (sets.Count >= SetCapacity)

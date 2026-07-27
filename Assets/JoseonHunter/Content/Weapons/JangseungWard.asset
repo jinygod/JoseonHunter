@@ -15,7 +15,7 @@ MonoBehaviour:
   - {weaponId: jangseung_ward, level: 3, baseDamage: 14, cooldownSeconds: 1.04, range: 3.8, projectileCount: 3, speed: 0, durationSeconds: 0, pierce: 2, chainCount: 0, knockback: 1.4, slowFraction: 0, criticalChance: 0}
   - {weaponId: jangseung_ward, level: 4, baseDamage: 16, cooldownSeconds: .96, range: 4.2, projectileCount: 3, speed: 0, durationSeconds: 0, pierce: 3, chainCount: 0, knockback: 1.6, slowFraction: 0, criticalChance: 0}
   - {weaponId: jangseung_ward, level: 5, baseDamage: 18, cooldownSeconds: .88, range: 4.6, projectileCount: 4, speed: 0, durationSeconds: 0, pierce: 4, chainCount: 0, knockback: 1.8, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000005, type: 3}]
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000005, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000005, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000005, type: 3}]
   binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000005, type: 3}]
   activeFrameWindows: []
   poolCapacity: 4

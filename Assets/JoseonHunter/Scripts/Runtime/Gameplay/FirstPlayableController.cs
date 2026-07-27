@@ -214,7 +214,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnDestroy()
         {
-            weaponRuntime?.Reset();
+            weaponRuntime?.Dispose();
+            weaponRuntime = null;
             if (solidSprite != null)
             {
                 Destroy(solidSprite);
@@ -334,7 +335,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ResetRun()
         {
-            weaponRuntime?.Reset();
+            weaponRuntime?.Dispose();
+            weaponRuntime = null;
             if (runtimeObjects != null)
             {
                 Destroy(runtimeObjects.gameObject);
@@ -862,7 +864,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void RebuildWeaponExecutorsForLevel()
         {
             if (weaponRuntime == null) return;
-            weaponRuntime.Reset();
+            weaponRuntime.Dispose();
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);

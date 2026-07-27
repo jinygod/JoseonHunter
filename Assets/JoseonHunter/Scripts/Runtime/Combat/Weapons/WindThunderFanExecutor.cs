@@ -64,6 +64,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastWindContactCount = 0; LastLightningContactCount = 0; LastLightningSimulationTick = -1;
         }
 
+        public void Dispose() => Reset();
+
         private void StartCast()
         {
             cooldown = CooldownSeconds; marked.Clear(); gustIndex = 0; LastWindContactCount = 0; LastLightningContactCount = 0;

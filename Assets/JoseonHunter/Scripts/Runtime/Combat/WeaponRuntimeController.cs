@@ -8,7 +8,7 @@ using UnityEngine;
 namespace JoseonHunter.Runtime.Combat
 {
     /// <summary>Owns weapon cooldowns and provides the small executor seam used by every runtime weapon.</summary>
-    public interface IWeaponExecutor
+    public interface IWeaponExecutor : IDisposable
     {
         void Tick(float deltaTime, in WeaponExecutionContext context);
         void Reset();
@@ -51,6 +51,7 @@ namespace JoseonHunter.Runtime.Combat
         private int nextAttackInstanceId = 1;
         private Func<WeaponId, Sprite> spriteResolver;
         private Func<WeaponId, PixelHitMask> maskResolver;
+        private bool disposed;
 
         public WeaponRuntimeController(CombatTargetRegistry targets, CombatDamageService damageService, PixelHitMask bladeMask)
         {
@@ -72,6 +73,7 @@ namespace JoseonHunter.Runtime.Combat
 
         public void Register(IWeaponExecutor executor)
         {
+            if (disposed) throw new ObjectDisposedException(nameof(WeaponRuntimeController));
             if (executor == null) throw new ArgumentNullException(nameof(executor));
             executors.Add(executor);
         }
@@ -81,7 +83,7 @@ namespace JoseonHunter.Runtime.Combat
 
         public void Tick(float deltaTime, Vector2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder)
         {
-            if (deltaTime < 0f || presentationRoot == null) return;
+            if (disposed || deltaTime < 0f || presentationRoot == null) return;
             simulationTick++;
             var context = new WeaponExecutionContext(
                 new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, maskResolver, sortingOrder, simulationTick);
@@ -90,9 +92,22 @@ namespace JoseonHunter.Runtime.Combat
 
         public void Reset()
         {
+            if (disposed) return;
             simulationTick = 0;
             foreach (var executor in executors) executor.Reset();
             DamageService.ClearAttacks();
+        }
+
+        /// <summary>Terminal cleanup for a runtime replacement: executors release presentation objects and retire attacks.</summary>
+        public void Dispose()
+        {
+            if (disposed) return;
+            disposed = true;
+            foreach (var executor in executors) executor.Dispose();
+            executors.Clear();
+            DamageService.ClearAttacks();
+            spriteResolver = null;
+            maskResolver = null;
         }
     }
 }
