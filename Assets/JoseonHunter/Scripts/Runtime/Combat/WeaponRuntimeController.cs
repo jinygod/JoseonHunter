@@ -16,12 +16,19 @@ namespace JoseonHunter.Runtime.Combat
 
     public readonly struct WeaponExecutionContext
     {
+        public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder, int simulationTick)
+            : this(ownerPosition, presentationRoot, bladeSprite, null, null, sortingOrder, simulationTick) { }
+
         public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, Func<WeaponId, Sprite> spriteResolver, int sortingOrder, int simulationTick)
+            : this(ownerPosition, presentationRoot, bladeSprite, spriteResolver, null, sortingOrder, simulationTick) { }
+
+        public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, Func<WeaponId, Sprite> spriteResolver, Func<WeaponId, PixelHitMask> maskResolver, int sortingOrder, int simulationTick)
         {
             OwnerPosition = ownerPosition;
             PresentationRoot = presentationRoot;
             BladeSprite = bladeSprite;
             this.spriteResolver = spriteResolver;
+            this.maskResolver = maskResolver;
             SortingOrder = sortingOrder;
             SimulationTick = simulationTick;
         }
@@ -30,7 +37,9 @@ namespace JoseonHunter.Runtime.Combat
         public Transform PresentationRoot { get; }
         public Sprite BladeSprite { get; }
         private readonly Func<WeaponId, Sprite> spriteResolver;
+        private readonly Func<WeaponId, PixelHitMask> maskResolver;
         public Sprite SpriteFor(WeaponId weaponId) => spriteResolver?.Invoke(weaponId) ?? BladeSprite;
+        public PixelHitMask MaskFor(WeaponId weaponId) => maskResolver?.Invoke(weaponId);
         public int SortingOrder { get; }
         public int SimulationTick { get; }
     }
@@ -41,6 +50,7 @@ namespace JoseonHunter.Runtime.Combat
         private int simulationTick;
         private int nextAttackInstanceId = 1;
         private Func<WeaponId, Sprite> spriteResolver;
+        private Func<WeaponId, PixelHitMask> maskResolver;
 
         public WeaponRuntimeController(CombatTargetRegistry targets, CombatDamageService damageService, PixelHitMask bladeMask)
         {
@@ -67,13 +77,14 @@ namespace JoseonHunter.Runtime.Combat
         }
 
         public void SetSpriteResolver(Func<WeaponId, Sprite> resolver) => spriteResolver = resolver;
+        public void SetMaskResolver(Func<WeaponId, PixelHitMask> resolver) => maskResolver = resolver;
 
         public void Tick(float deltaTime, Vector2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder)
         {
             if (deltaTime < 0f || presentationRoot == null) return;
             simulationTick++;
             var context = new WeaponExecutionContext(
-                new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, sortingOrder, simulationTick);
+                new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, maskResolver, sortingOrder, simulationTick);
             foreach (var executor in executors) executor.Tick(deltaTime, context);
         }
 

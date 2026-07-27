@@ -33,7 +33,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (active.Count >= MaxActiveProjectiles) return false;
             var visual = Acquire(context, spec.WeaponId, spec.VisualName);
             visual.transform.position = new Vector3(spec.Position.X, spec.Position.Y, 0f);
-            active.Add(new Projectile(spec, visual, ResolveMask(visual.GetComponent<SpriteRenderer>())));
+            active.Add(new Projectile(spec, visual, context.MaskFor(spec.WeaponId) ?? ResolveMask(visual.GetComponent<SpriteRenderer>())));
             return true;
         }
 

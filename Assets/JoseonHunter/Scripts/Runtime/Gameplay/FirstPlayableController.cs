@@ -350,6 +350,7 @@ namespace JoseonHunter.Runtime.Gameplay
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             elapsed = 0f;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
@@ -686,6 +687,13 @@ namespace JoseonHunter.Runtime.Gameplay
                 : solidSprite;
         }
 
+        private PixelHitMask ResolveWeaponMask(WeaponId id)
+        {
+            if (weaponCatalog == null || !weaponCatalog.TryGet(id, out var definition)) return null;
+            var masks = weaponMasks.GetMasks(definition);
+            return masks.Count == 0 ? null : masks[0];
+        }
+
         private void ApplyEnemyDamage(EnemyState enemy, float damage)
         {
             if (enemy == null || enemy.Object == null)
@@ -857,6 +865,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.Reset();
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             registeredWeaponIds.Clear();
             weaponMasks.Load(weaponCatalog);
             RegisterCatalogWeapons();

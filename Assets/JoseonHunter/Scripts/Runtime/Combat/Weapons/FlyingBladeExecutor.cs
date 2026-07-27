@@ -117,7 +117,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 visual.transform.position = new Vector3(launch.X, launch.Y, 0f);
                 active.Add(new Blade(
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
-                    launch, endpoint, stagger, visual, ResolveMask(visual.GetComponent<SpriteRenderer()), Range));
+                    launch, endpoint, stagger, visual, context.MaskFor(WeaponId.HwandoFlyingBlade) ?? ResolveMask(visual.GetComponent<SpriteRenderer>()), Range));
             }
         }
 
