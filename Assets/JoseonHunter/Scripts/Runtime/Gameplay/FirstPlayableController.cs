@@ -24,6 +24,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private Transform runtimeObjects;
         private GameObject player;
         private SpriteRenderer playerRenderer;
+        private Transform playerHealthFill;
         private LineRenderer geumjulRenderer;
         private Texture2D solidTexture;
         private Sprite solidSprite;
@@ -67,6 +68,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public float ContactDamage;
             public float NextContactTime;
             public bool IsBoss;
+            public Transform HealthFill;
         }
 
         private sealed class PickupState
@@ -244,8 +246,9 @@ namespace JoseonHunter.Runtime.Gameplay
                 Vector2.zero,
                 10,
                 runtimeObjects);
-            player.transform.localScale = Vector3.one * 1.25f;
+            player.transform.localScale = Vector3.one * 0.3125f;
             playerRenderer = player.GetComponent<SpriteRenderer>();
+            playerHealthFill = CreateHealthBar(player.transform);
             if (playerSprite == null)
             {
                 playerRenderer.color = new Color(0.18f, 0.38f, 0.72f);
@@ -312,10 +315,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 playerRenderer.flipX = true;
             }
 
-            var bob = movement.sqrMagnitude > 0.01f
-                ? Mathf.Sin(Time.time * 12f) * 0.035f
-                : 0f;
-            playerRenderer.transform.localPosition = new Vector3(0f, bob, 0f);
+            UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
         }
 
         private void UpdateCamera()
@@ -367,12 +367,14 @@ namespace JoseonHunter.Runtime.Gameplay
 
             var renderer = enemyObject.GetComponent<SpriteRenderer>();
             var health = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
-            enemyObject.transform.localScale = Vector3.one * (isBoss ? 2.1f : UnityEngine.Random.Range(0.92f, 1.16f));
+            enemyObject.transform.localScale = Vector3.one *
+                                               (isBoss ? 0.525f : UnityEngine.Random.Range(0.23f, 0.29f));
             if (chosenSprite == null)
             {
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
             }
 
+            var healthFill = CreateHealthBar(enemyObject.transform);
             enemies.Add(new EnemyState
             {
                 Object = enemyObject,
@@ -381,7 +383,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 MaximumHealth = health,
                 Speed = isBoss ? 2.25f : Mathf.Lerp(1.55f, 2.65f, elapsed / TestDuration),
                 ContactDamage = isBoss ? 24f : 10f,
-                IsBoss = isBoss
+                IsBoss = isBoss,
+                HealthFill = healthFill
             });
         }
 
@@ -414,6 +417,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     contactInvulnerability <= 0f)
                 {
                     playerHealth = Mathf.Max(0f, playerHealth - enemy.ContactDamage);
+                    UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
                     contactInvulnerability = 0.55f;
                     StartCoroutine(FlashPlayer());
                     if (playerHealth <= 0f)
@@ -494,6 +498,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
             enemy.Health -= damage;
             enemy.Renderer.color = Color.white;
+            UpdateHealthBar(enemy.HealthFill, enemy.Health / enemy.MaximumHealth);
             if (enemy.Health > 0f)
             {
                 return;
@@ -528,7 +533,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 position,
                 6,
                 runtimeObjects);
-            pickupObject.transform.localScale = Vector3.one * (isCoin ? 0.65f : 0.55f);
+            pickupObject.transform.localScale = Vector3.one * (isCoin ? 0.18f : 0.14f);
             if (sprite == null)
             {
                 pickupObject.GetComponent<SpriteRenderer>().color =
@@ -773,6 +778,43 @@ namespace JoseonHunter.Runtime.Gameplay
             return result;
         }
 
+        private Transform CreateHealthBar(Transform owner)
+        {
+            var root = new GameObject("Health Bar").transform;
+            root.SetParent(owner, false);
+            root.localPosition = new Vector3(0f, -1.25f, 0f);
+            root.localRotation = Quaternion.identity;
+
+            var background = new GameObject("Background");
+            background.transform.SetParent(root, false);
+            background.transform.localScale = new Vector3(2.2f, 0.24f, 1f);
+            var backgroundRenderer = background.AddComponent<SpriteRenderer>();
+            backgroundRenderer.sprite = solidSprite;
+            backgroundRenderer.color = new Color(0.16f, 0.12f, 0.12f, 0.92f);
+            backgroundRenderer.sortingOrder = 20;
+
+            var fill = new GameObject("Fill").transform;
+            fill.SetParent(root, false);
+            fill.localScale = new Vector3(2f, 0.14f, 1f);
+            var fillRenderer = fill.gameObject.AddComponent<SpriteRenderer>();
+            fillRenderer.sprite = solidSprite;
+            fillRenderer.color = new Color(0.24f, 0.86f, 0.34f);
+            fillRenderer.sortingOrder = 21;
+            return fill;
+        }
+
+        private static void UpdateHealthBar(Transform fill, float normalizedHealth)
+        {
+            if (fill == null)
+            {
+                return;
+            }
+
+            var ratio = Mathf.Clamp01(normalizedHealth);
+            fill.localScale = new Vector3(2f * ratio, 0.14f, 1f);
+            fill.localPosition = new Vector3(-1f + ratio, 0f, -0.01f);
+        }
+
         private void OnGUI()
         {
             var scale = Mathf.Min(Screen.width / 1080f, Screen.height / 1920f);
@@ -788,9 +830,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var centered = new GUIStyle(box) { alignment = TextAnchor.MiddleCenter };
             var button = new GUIStyle(GUI.skin.button) { fontSize = 30, wordWrap = true };
 
-            GUI.Box(new Rect(35f, 35f, 560f, 74f),
-                $"체력  {Mathf.CeilToInt(playerHealth)} / {Mathf.CeilToInt(playerMaxHealth)}", box);
-            GUI.Box(new Rect(35f, 120f, 560f, 64f),
+            GUI.Box(new Rect(35f, 35f, 560f, 64f),
                 $"레벨 {level}    경험 {experience}/{experienceToNext}    엽전 {coins}", box);
             GUI.Box(new Rect(805f, 35f, 240f, 84f),
                 $"{Mathf.CeilToInt(Mathf.Max(0f, TestDuration - elapsed)):00}초", centered);
@@ -800,17 +840,6 @@ namespace JoseonHunter.Runtime.Gameplay
             if (!bossSpawned && elapsed >= BossWarningTime)
             {
                 GUI.Box(new Rect(165f, 250f, 750f, 100f), "⚠ 타락한 장수가 다가옵니다!", centered);
-            }
-
-            if (bossAlive)
-            {
-                var boss = enemies.Find(value => value.IsBoss);
-                if (boss != null)
-                {
-                    GUI.Box(new Rect(165f, 225f, 750f, 94f),
-                        $"타락한 장수  {Mathf.CeilToInt(boss.Health)} / {Mathf.CeilToInt(boss.MaximumHealth)}",
-                        centered);
-                }
             }
 
             if (upgradeOpen)
