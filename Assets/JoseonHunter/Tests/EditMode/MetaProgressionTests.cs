@@ -67,6 +67,22 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void EvolutionResetRejectsCoinOverflowWithoutChangingState()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = int.MaxValue;
+            data.EvolutionNodeRanks["node_01"] = 1;
+            data.EvolutionSpentCoins["node_01"] = 1;
+
+            var result = new EvolutionBoard(data).Reset();
+
+            Assert.That(result.Error, Is.EqualTo(ProgressionError.InvalidAmount));
+            Assert.That(data.Coins, Is.EqualTo(int.MaxValue));
+            Assert.That(data.EvolutionNodeRanks["node_01"], Is.EqualTo(1));
+            Assert.That(data.EvolutionSpentCoins["node_01"], Is.EqualTo(1));
+        }
+
+        [Test]
         public void InvestigationGivesUniqueCluesAndUnlocksMilestonesOnce()
         {
             var data = SaveDataV1.CreateDefaults();
