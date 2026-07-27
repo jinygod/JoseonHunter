@@ -54,6 +54,22 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void StartingLoadoutAlwaysReceivesAnUnownedWeaponOffer()
+        {
+            var state = State(weapons: new Dictionary<string, int> { ["hwando_flying_blade"] = 1 });
+
+            for (var seed = 0; seed < 100; seed++)
+            {
+                var offers = UpgradeSelector.Select(state, seed);
+
+                Assert.That(
+                    offers.Any(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1),
+                    Is.True,
+                    $"Seed {seed} did not offer a new weapon.");
+            }
+        }
+
+        [Test]
         public void MaxedAndLockedEvolutionsNeverAppear()
         {
             var state = State(

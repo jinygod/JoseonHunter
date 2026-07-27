@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
@@ -26,6 +27,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly List<PickupState> pickups = new List<PickupState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
+        private readonly List<UpgradeOffer> upgradeOfferData = new List<UpgradeOffer>();
+        private readonly Dictionary<string, int> weaponLevels = new Dictionary<string, int>();
+        private readonly Dictionary<string, int> supportLevels = new Dictionary<string, int>();
+        private readonly HashSet<string> unlockedUpgradeIds = new HashSet<string>();
         private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
         private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
@@ -49,9 +54,6 @@ namespace JoseonHunter.Runtime.Gameplay
         private float playerHealth;
         private float playerMaxHealth;
         private float moveSpeed;
-        // Legacy offer labels remain presentation-only until the progression catalog owns their selection.
-        private float attackDamage;
-        private float attackCooldownMultiplier;
         private float pickupRadius;
         private float geumjulDamage;
         private float contactInvulnerability;
@@ -349,6 +351,11 @@ namespace JoseonHunter.Runtime.Gameplay
             pickups.Clear();
             trail.Clear();
             upgradeOffers.Clear();
+            upgradeOfferData.Clear();
+            weaponLevels.Clear();
+            weaponLevels.Add(WeaponId.HwandoFlyingBlade.Value, 1);
+            supportLevels.Clear();
+            unlockedUpgradeIds.Clear();
             combatTargets = new CombatTargetRegistry();
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
@@ -666,9 +673,10 @@ namespace JoseonHunter.Runtime.Gameplay
             if (errors.Count != 0) throw new InvalidOperationException(string.Join("; ", errors));
             foreach (var id in WeaponRoster.All)
             {
+                if (!weaponLevels.TryGetValue(id.Value, out var ownedLevel)) continue;
                 if (!weaponCatalog.TryGet(id, out var definition) || definition.Levels.Count != 5)
                     throw new InvalidOperationException($"Gameplay catalog is missing '{id}'.");
-                var data = definition.Levels[Mathf.Clamp(level - 1, 0, 4)];
+                var data = definition.Levels[Mathf.Clamp(ownedLevel - 1, 0, 4)];
                 IWeaponExecutor executor;
                 if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount);
                 else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level);
@@ -859,7 +867,6 @@ namespace JoseonHunter.Runtime.Gameplay
             experience -= experienceToNext;
             level++;
             experienceToNext = 7 + level * 4;
-            RebuildWeaponExecutorsForLevel();
             OpenUpgrade();
         }
 
@@ -879,47 +886,80 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             upgradeOpen = true;
             upgradeOffers.Clear();
-            var available = new List<string>
+            upgradeOfferData.Clear();
+            var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds);
+            var selected = UpgradeSelector.Select(state, level * 397 ^ kills);
+            foreach (var offer in selected)
             {
-                "환도 단련|공격력 +25%",
-                "쾌속 발도|공격 간격 -15%",
-                "경공술|이동속도 +12%",
-                "호신 부적|최대 체력 +20",
-                "혼불 자석|습득 범위 +0.7",
-                "금줄 강화|봉인 피해 +35%"
-            };
-
-            while (upgradeOffers.Count < 3)
-            {
-                var pick = available[UnityEngine.Random.Range(0, available.Count)];
-                if (!upgradeOffers.Contains(pick))
-                {
-                    upgradeOffers.Add(pick);
-                }
+                upgradeOfferData.Add(offer);
+                upgradeOffers.Add(FormatUpgradeOffer(offer));
             }
         }
 
         private void ChooseUpgrade(int index)
         {
-            if (!upgradeOpen || index < 0 || index >= upgradeOffers.Count)
+            if (!upgradeOpen || index < 0 || index >= upgradeOfferData.Count)
             {
                 return;
             }
 
-            var choice = upgradeOffers[index];
-            if (choice.StartsWith("환도", StringComparison.Ordinal)) attackDamage *= 1.25f;
-            else if (choice.StartsWith("쾌속", StringComparison.Ordinal)) attackCooldownMultiplier = Mathf.Max(0.38f, attackCooldownMultiplier * 0.85f);
-            else if (choice.StartsWith("경공", StringComparison.Ordinal)) moveSpeed *= 1.12f;
-            else if (choice.StartsWith("호신", StringComparison.Ordinal))
+            var offer = upgradeOfferData[index];
+            if (offer.Kind == UpgradeKind.Weapon)
+            {
+                weaponLevels[offer.Id] = offer.NextLevel;
+                RebuildWeaponExecutorsForLevel();
+            }
+            else if (offer.Kind == UpgradeKind.Support)
+            {
+                supportLevels[offer.Id] = offer.NextLevel;
+                ApplySupportUpgrade(offer.Id);
+            }
+
+            upgradeOpen = false;
+            upgradeOffers.Clear();
+            upgradeOfferData.Clear();
+        }
+
+        private static string FormatUpgradeOffer(UpgradeOffer offer)
+        {
+            if (offer.Kind == UpgradeKind.Weapon)
+            {
+                var prefix = offer.NextLevel == 1 ? "[신규]" : "[강화]";
+                var detail = offer.NextLevel == 1 ? "새 무기 획득" : $"레벨 {offer.NextLevel} 효과 적용";
+                return $"{prefix} {WeaponDisplayName(offer.Id)}|{detail}";
+            }
+
+            switch (offer.Id)
+            {
+                case "talisman": return "[지원] 호신부적|최대 체력 +20";
+                case "boots": return "[지원] 경쾌한 버선|이동속도 +12%";
+                case "warding_bell": return "[지원] 수호 방울|획득 범위 +0.7";
+                default: return $"[지원] {offer.Id}|레벨 {offer.NextLevel}";
+            }
+        }
+
+        private static string WeaponDisplayName(string id)
+        {
+            if (id == WeaponId.HwandoFlyingBlade.Value) return "환도 비검";
+            if (id == WeaponId.GakgungShot.Value) return "각궁";
+            if (id == WeaponId.TalismanThrow.Value) return "주술 부적";
+            if (id == WeaponId.ThunderCrashBomb.Value) return "벽력탄";
+            if (id == WeaponId.JangseungWard.Value) return "장승진";
+            if (id == WeaponId.SingijeonVolley.Value) return "신기전";
+            if (id == WeaponId.FrostFlask.Value) return "서리병";
+            if (id == WeaponId.WindThunderFan.Value) return "풍뢰선";
+            return id;
+        }
+
+        private void ApplySupportUpgrade(string id)
+        {
+            if (id == "talisman")
             {
                 playerMaxHealth += 20f;
                 playerHealth = Mathf.Min(playerMaxHealth, playerHealth + 20f);
             }
-            else if (choice.StartsWith("혼불", StringComparison.Ordinal)) pickupRadius += 0.7f;
-            else if (choice.StartsWith("금줄", StringComparison.Ordinal)) geumjulDamage *= 1.35f;
-
-            upgradeOpen = false;
-            upgradeOffers.Clear();
+            else if (id == "boots") moveSpeed *= 1.12f;
+            else if (id == "warding_bell") pickupRadius += 0.7f;
         }
 
         private void UpdateGeumjul(float delta)

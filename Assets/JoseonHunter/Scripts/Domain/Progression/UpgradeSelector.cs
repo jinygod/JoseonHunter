@@ -38,6 +38,18 @@ namespace JoseonHunter.Domain.Progression
             eligible = eligible
                 .Where(offer => !offers.Any(selected => selected.Id == offer.Id))
                 .ToList();
+
+            var unownedWeapons = eligible
+                .Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1)
+                .ToList();
+            if (unownedWeapons.Count > 0)
+            {
+                offers.Add(unownedWeapons[random.Next(unownedWeapons.Count)]);
+                eligible = eligible
+                    .Where(offer => !offers.Any(selected => selected.Id == offer.Id))
+                    .ToList();
+            }
+
             Shuffle(eligible, random);
 
             foreach (var offer in eligible)
