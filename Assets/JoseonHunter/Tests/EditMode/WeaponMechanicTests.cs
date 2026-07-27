@@ -587,6 +587,28 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void FrostResetRemovesEveryActiveFieldSourceAndRetiresItsAttacks()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var frost = new FrostFlaskExecutor(runtime, 10f, 0.2f, 2f, 0.1f, 2f, 1f, 2, 1);
+            var target = new TestTarget(1, new Float2(0.4f, 0f), mask); registry.Register(target);
+
+            for (var tick = 1; tick <= 4; tick++) frost.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, tick));
+            Assert.That(target.ActiveSlowSourceCount, Is.EqualTo(2));
+
+            frost.Reset();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.ActiveSlowSourceCount, Is.Zero);
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+                Assert.That(frost.ActiveFieldCount, Is.Zero);
+            });
+        }
+
+        [Test]
         public void ThunderBombLargeBlastStepSweepsAnIntermediateRingContact()
         {
             var mask = PixelHitMask.FromRows("1");

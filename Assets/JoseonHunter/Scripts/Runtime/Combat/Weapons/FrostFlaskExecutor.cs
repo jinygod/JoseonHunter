@@ -65,7 +65,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            foreach (var field in fields) Retire(field);
+            // Reset is a terminal cleanup path too: every live field must release only its own status source.
+            foreach (var field in fields) CleanupFieldStatus(field);
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
         }
 
@@ -138,8 +139,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Expire(Field field)
         {
             if (field.Expired) return;
-            foreach (var id in field.Inside) if (runtime.Targets.TryGet(id, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
+            CleanupFieldStatus(field);
             field.Expired = true; Retire(field); ExpiredFieldCount++;
+        }
+
+        private void CleanupFieldStatus(Field field)
+        {
+            if (field == null || field.Expired) return;
+            foreach (var id in field.Inside)
+                if (runtime.Targets.TryGet(id, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
+            Retire(field);
         }
 
         private void Retire(Field field) => runtime.DamageService.RetireAttack(field.Attack.InstanceId);
