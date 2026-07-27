@@ -15,7 +15,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
         private float cooldown;
-        private int nextAttackInstanceId = 1;
 
         public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount)
         {
@@ -112,7 +111,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var visual = Acquire(context);
                 visual.transform.position = new Vector3(launch.X, launch.Y, 0f);
                 active.Add(new Blade(
-                    new AttackInstance(nextAttackInstanceId++, RepeatHitPolicy.OncePerPhase, 0f),
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
                     launch, endpoint, stagger, visual, ResolveMask(visual.GetComponent<SpriteRenderer()), Range));
             }
         }

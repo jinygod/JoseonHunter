@@ -36,6 +36,7 @@ namespace JoseonHunter.Runtime.Combat
     {
         private readonly List<IWeaponExecutor> executors = new List<IWeaponExecutor>();
         private int simulationTick;
+        private int nextAttackInstanceId = 1;
 
         public WeaponRuntimeController(CombatTargetRegistry targets, CombatDamageService damageService, PixelHitMask bladeMask)
         {
@@ -47,6 +48,13 @@ namespace JoseonHunter.Runtime.Combat
         public CombatTargetRegistry Targets { get; }
         public CombatDamageService DamageService { get; }
         public PixelHitMask BladeMask { get; }
+
+        /// <summary>Allocates attack IDs across every executor sharing this combat runtime.</summary>
+        public int AllocateAttackInstanceId()
+        {
+            if (nextAttackInstanceId == int.MaxValue) throw new InvalidOperationException("Attack instance ID space exhausted.");
+            return nextAttackInstanceId++;
+        }
 
         public void Register(IWeaponExecutor executor)
         {

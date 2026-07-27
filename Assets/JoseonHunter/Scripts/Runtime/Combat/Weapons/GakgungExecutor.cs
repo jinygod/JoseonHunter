@@ -12,7 +12,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly LinearProjectileExecutor projectiles;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
-        private int nextAttackInstanceId = 1;
 
         public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level)
         {
@@ -82,7 +81,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             var shotDirection = Rotate(direction, degrees);
             projectiles.Launch(context, new LinearProjectileSpec(
-                new AttackInstance(nextAttackInstanceId++, RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot,
+                new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot,
                 context.OwnerPosition, shotDirection, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), impacts, "Gakgung Arrow"));
         }
 

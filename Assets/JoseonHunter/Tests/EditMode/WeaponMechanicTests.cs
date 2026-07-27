@@ -111,6 +111,80 @@ namespace JoseonHunter.Tests.EditMode
             });
         }
 
+        [Test]
+        public void WeaponExecutorsAllocateDistinctAttackInstanceIds()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bow = new GakgungExecutor(runtime, 10f, 10f, 2f, 10f, 1);
+            var volley = new SingijeonExecutor(runtime, 10f, 10f, 2f, 10f, 1, 1);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+            var context = new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1);
+
+            bow.Tick(0.1f, context);
+            volley.Tick(0.1f, context);
+
+            Assert.That(events, Has.Count.EqualTo(2));
+            Assert.That(events[0].AttackInstanceId, Is.Not.EqualTo(events[1].AttackInstanceId));
+        }
+
+        [Test]
+        public void LinearProjectileSweepsAcrossThinTargetInsteadOfTunneling()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bow = new GakgungExecutor(runtime, 10f, 10f, 10f, 100f, 1);
+            var target = new TestTarget(1, new Float2(1f, 0f), mask);
+            registry.Register(target);
+
+            bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+
+            Assert.That(target.Health, Is.EqualTo(90));
+        }
+
+        [Test]
+        public void SingijeonClustersDirectionsAcrossThePlusMinus180DegreeWrap()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var singijeon = new SingijeonExecutor(runtime, 10f, 10f, 2f, 10f, 1, 1);
+            registry.Register(new TestTarget(1, new Float2(-1f, 0.05f), mask));
+            registry.Register(new TestTarget(2, new Float2(-1f, -0.05f), mask));
+            registry.Register(new TestTarget(3, new Float2(1f, 0f), mask));
+
+            singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+
+            Assert.That(singijeon.LastDirection.X, Is.LessThan(0f));
+        }
+
+        [Test]
+        public void SingijeonCapsLanesAndKeepsLevelFiveAtThreeBoundedRows()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var singijeon = new SingijeonExecutor(runtime, 10f, 10f, 2f, 10f, 999, 5);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+
+            singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(singijeon.LaneCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount));
+                Assert.That(singijeon.LastLaunchCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
+                Assert.That(singijeon.ActiveProjectileCount, Is.LessThanOrEqualTo(LinearProjectileExecutor.MaxActiveProjectiles));
+            });
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");

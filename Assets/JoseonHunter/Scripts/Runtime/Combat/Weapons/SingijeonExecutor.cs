@@ -9,18 +9,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     public sealed class SingijeonExecutor : IWeaponExecutor
     {
         private const float BucketDegrees = 30f;
+        private const int BucketCount = 12;
+        public const int MaxLaneCount = 6;
         private readonly WeaponRuntimeController runtime;
         private readonly LinearProjectileExecutor projectiles;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
-        private int nextAttackInstanceId = 1;
 
         public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             projectiles = new LinearProjectileExecutor(runtime);
             BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds);
-            Range = Mathf.Max(0.01f, range); Speed = Mathf.Max(0.01f, speed); LaneCount = Mathf.Max(1, laneCount); Level = Mathf.Clamp(level, 1, 5);
+            Range = Mathf.Max(0.01f, range); Speed = Mathf.Max(0.01f, speed); LaneCount = Mathf.Clamp(laneCount, 1, MaxLaneCount); Level = Mathf.Clamp(level, 1, 5);
         }
 
         public float BaseDamage { get; }
@@ -58,7 +59,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (target == null || !target.IsAlive) continue;
                 var x = target.WorldPosition.X - origin.X; var y = target.WorldPosition.Y - origin.Y;
                 if (x * x + y * y < 0.0001f) continue;
-                var bucket = Mathf.FloorToInt((Mathf.Atan2(y, x) * Mathf.Rad2Deg + BucketDegrees * 0.5f) / BucketDegrees);
+                var rawBucket = Mathf.FloorToInt((Mathf.Atan2(y, x) * Mathf.Rad2Deg + BucketDegrees * 0.5f) / BucketDegrees);
+                var bucket = ((rawBucket % BucketCount) + BucketCount) % BucketCount;
                 counts.TryGetValue(bucket, out var count); counts[bucket] = count + 1;
             }
             var selectedBucket = 0; var highestCount = 0;
@@ -89,7 +91,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var position = new Float2(context.OwnerPosition.X + perpendicular.X * laneOffset * 0.12f - direction.X * rowOffset,
                     context.OwnerPosition.Y + perpendicular.Y * laneOffset * 0.12f - direction.Y * rowOffset);
                 projectiles.Launch(context, new LinearProjectileSpec(
-                    new AttackInstance(nextAttackInstanceId++, RepeatHitPolicy.OncePerInstance, 0f), WeaponId.SingijeonVolley,
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.SingijeonVolley,
                     position, direction, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), 1, "Singijeon Rocket"));
             }
         }

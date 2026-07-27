@@ -9,6 +9,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     /// <summary>Shared straight-line projectile simulation; weapon executors retain all targeting and volley policy.</summary>
     public sealed class LinearProjectileExecutor
     {
+        public const int MaxActiveProjectiles = 32;
+        public const int MaxPooledProjectiles = 32;
+        public const int MaxImpactsPerProjectile = 3;
+        private const int MaxSweepSteps = 64;
         private readonly WeaponRuntimeController runtime;
         private readonly List<Projectile> active = new List<Projectile>();
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
@@ -23,11 +27,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveCount => active.Count;
         public int ReturnedToPoolCount { get; private set; }
 
-        public void Launch(in WeaponExecutionContext context, in LinearProjectileSpec spec)
+        public bool Launch(in WeaponExecutionContext context, in LinearProjectileSpec spec)
         {
+            if (active.Count >= MaxActiveProjectiles) return false;
             var visual = Acquire(context, spec.VisualName);
             visual.transform.position = new Vector3(spec.Position.X, spec.Position.Y, 0f);
             active.Add(new Projectile(spec, visual, ResolveMask(visual.GetComponent<SpriteRenderer>())));
+            return true;
         }
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -36,11 +42,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 var projectile = active[index];
                 projectile.RemainingLifetime -= deltaTime;
+                var previousPosition = projectile.Position;
+                var renderer = projectile.Visual.GetComponent<SpriteRenderer>();
+                var scale = renderer.transform.lossyScale;
+                var pixelWorldSize = Mathf.Min(Mathf.Abs(scale.x), Mathf.Abs(scale.y)) / projectile.Mask.PixelsPerUnit;
+                var maxSafeTravel = Mathf.Max(0.01f, pixelWorldSize * 0.5f) * MaxSweepSteps;
+                var travel = Mathf.Min(projectile.Speed * deltaTime, maxSafeTravel);
                 projectile.Position = new Float2(
-                    projectile.Position.X + projectile.Direction.X * projectile.Speed * deltaTime,
-                    projectile.Position.Y + projectile.Direction.Y * projectile.Speed * deltaTime);
+                    previousPosition.X + projectile.Direction.X * travel,
+                    previousPosition.Y + projectile.Direction.Y * travel);
                 projectile.Visual.transform.position = new Vector3(projectile.Position.X, projectile.Position.Y, 0f);
-                TryDamageContacts(projectile, context);
+                SweepDamageContacts(projectile, previousPosition, context);
                 if (projectile.RemainingLifetime <= 0f || projectile.ImpactCount >= projectile.MaxImpacts)
                 {
                     Release(projectile.Visual);
@@ -55,20 +67,32 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             active.Clear();
         }
 
-        private void TryDamageContacts(Projectile projectile, in WeaponExecutionContext context)
+        private void SweepDamageContacts(Projectile projectile, Float2 previousPosition, in WeaponExecutionContext context)
         {
             var renderer = projectile.Visual.GetComponent<SpriteRenderer>();
-            var attackTransform = TransformFor(renderer, projectile.Position);
             runtime.Targets.CopyTo(targets);
-            foreach (var target in targets)
+            var deltaX = projectile.Position.X - previousPosition.X;
+            var deltaY = projectile.Position.Y - previousPosition.Y;
+            var distance = Mathf.Sqrt(deltaX * deltaX + deltaY * deltaY);
+            var scale = renderer.transform.lossyScale;
+            var pixelWorldSize = Mathf.Min(Mathf.Abs(scale.x), Mathf.Abs(scale.y)) / projectile.Mask.PixelsPerUnit;
+            var stepSize = Mathf.Max(0.01f, pixelWorldSize * 0.5f);
+            var steps = Mathf.Clamp(Mathf.CeilToInt(distance / stepSize), 1, MaxSweepSteps);
+            for (var step = 0; step <= steps; step++)
             {
-                if (target == null || !target.IsAlive || target.HurtMask == null) continue;
-                if (!PixelMaskContactService.TryFindContact(projectile.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                if (!runtime.DamageService.TryApply(
-                        WeaponDamageRequest.Create(projectile.Attack, projectile.WeaponId, target, projectile.Damage, false, contact, ContactPhase.Direct, context.SimulationTick),
-                        out _)) continue;
-                projectile.ImpactCount++;
-                if (projectile.ImpactCount >= projectile.MaxImpacts) return;
+                var fraction = step / (float)steps;
+                var sample = new Float2(previousPosition.X + deltaX * fraction, previousPosition.Y + deltaY * fraction);
+                var attackTransform = TransformFor(renderer, sample);
+                foreach (var target in targets)
+                {
+                    if (target == null || !target.IsAlive || target.HurtMask == null) continue;
+                    if (!PixelMaskContactService.TryFindContact(projectile.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                    if (!runtime.DamageService.TryApply(
+                            WeaponDamageRequest.Create(projectile.Attack, projectile.WeaponId, target, projectile.Damage, false, contact, ContactPhase.Direct, context.SimulationTick),
+                            out _)) continue;
+                    projectile.ImpactCount++;
+                    if (projectile.ImpactCount >= projectile.MaxImpacts) return;
+                }
             }
         }
 
@@ -89,7 +113,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (visual == null) return;
             visual.SetActive(false);
-            pool.Push(visual);
+            if (pool.Count < MaxPooledProjectiles) pool.Push(visual);
+            else UnityEngine.Object.Destroy(visual);
             ReturnedToPoolCount++;
         }
 
@@ -138,7 +163,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             Attack = attack ?? throw new ArgumentNullException(nameof(attack));
             WeaponId = weaponId; Position = position; Direction = direction; Speed = Mathf.Max(0.01f, speed);
-            Lifetime = Mathf.Max(0.01f, lifetime); Damage = Mathf.Max(1, damage); MaxImpacts = Mathf.Max(1, maxImpacts);
+            Lifetime = Mathf.Max(0.01f, lifetime); Damage = Mathf.Max(1, damage); MaxImpacts = Mathf.Clamp(maxImpacts, 1, LinearProjectileExecutor.MaxImpactsPerProjectile);
             VisualName = string.IsNullOrEmpty(visualName) ? "Linear Projectile" : visualName;
         }
         public AttackInstance Attack { get; }
