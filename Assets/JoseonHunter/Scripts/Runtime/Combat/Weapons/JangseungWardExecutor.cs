@@ -191,7 +191,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!segmentMask.IsActive(sourceX, sourceY)) continue;
                 var bit = y * width + x; packed[bit >> 5] |= 1u << (bit & 31);
             }
-            cached = new PixelHitMask(width, height, new Vector2(intervalCount * 0.5f, height * 0.5f), pixelsPerUnit, packed);
+            cached = new PixelHitMask(width, height, new Vector2(intervalCount * 0.5f, Mathf.Floor(height * 0.5f)), pixelsPerUnit, packed);
             stretchedSegmentMasks.Add(key, cached);
             return cached;
         }

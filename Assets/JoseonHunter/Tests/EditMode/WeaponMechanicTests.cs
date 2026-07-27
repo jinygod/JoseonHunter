@@ -40,7 +40,7 @@ namespace JoseonHunter.Tests.EditMode
 
             for (var tick = 1; tick <= 50; tick++) fixture.Executor.Tick(0.1f, fixture.Context(tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(Count(fixture.Events, ContactPhase.Outbound), Is.EqualTo(1));
                 Assert.That(Count(fixture.Events, ContactPhase.Inbound), Is.EqualTo(1));
@@ -57,7 +57,7 @@ namespace JoseonHunter.Tests.EditMode
 
             fixture.Executor.Tick(0.01f, fixture.Context(1));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(fixture.Executor.LastVolleyLaunchCount, Is.EqualTo(3));
                 Assert.That(fixture.Executor.ActiveBladeCount, Is.EqualTo(3));
@@ -81,7 +81,7 @@ namespace JoseonHunter.Tests.EditMode
             boss.MoveTo(new Float2(1f, 4f));
             for (var tick = 2; tick < 20; tick++) bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(bow.LastSelectedTargetRuntimeId, Is.EqualTo(2));
                 Assert.That(bow.LastLaunchCount, Is.EqualTo(1));
@@ -104,7 +104,7 @@ namespace JoseonHunter.Tests.EditMode
 
             singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(singijeon.LastDirection.X, Is.GreaterThan(0f));
                 Assert.That(singijeon.LastLaunchCount, Is.EqualTo(3));
@@ -151,7 +151,7 @@ namespace JoseonHunter.Tests.EditMode
             for (var tick = 1; tick <= 4; tick++)
                 bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.Health, Is.EqualTo(90));
                 Assert.That(bow.ActiveProjectileCount, Is.Zero);
@@ -174,7 +174,7 @@ namespace JoseonHunter.Tests.EditMode
 
             singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(singijeon.LastDirectionBucket, Is.EqualTo(6));
                 Assert.That(singijeon.LastDirection.X, Is.LessThan(0f));
@@ -193,7 +193,7 @@ namespace JoseonHunter.Tests.EditMode
 
             singijeon.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(singijeon.LaneCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount));
                 Assert.That(singijeon.LastLaunchCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
@@ -208,7 +208,7 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(linear.ActiveCount, Is.EqualTo(LinearProjectileExecutor.MaxActiveProjectiles));
             linear.Tick(0.01f, context);
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(requested.MaxImpacts, Is.EqualTo(LinearProjectileExecutor.MaxImpactsPerProjectile));
                 Assert.That(linear.ActiveCount, Is.Zero);
@@ -239,7 +239,7 @@ namespace JoseonHunter.Tests.EditMode
 
             linear.Tick(0.5f, context);
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events, Has.Count.EqualTo(3));
                 Assert.That(targets[3].Health, Is.EqualTo(100));
@@ -267,7 +267,7 @@ namespace JoseonHunter.Tests.EditMode
                 linear.Tick(0.1f, context);
             }
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.Health, Is.EqualTo(1900));
                 Assert.That(damage.TrackedAttackCount, Is.Zero);
@@ -290,7 +290,7 @@ namespace JoseonHunter.Tests.EditMode
 
             for (var tick = 1; tick <= 12; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events[0].Phase, Is.EqualTo(ContactPhase.Direct));
                 Assert.That(events[1].Phase, Is.EqualTo(ContactPhase.Attach));
@@ -333,7 +333,7 @@ namespace JoseonHunter.Tests.EditMode
 
             for (var tick = 1; tick <= 3; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Attach), Is.EqualTo(3));
                 Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Blast), Is.EqualTo(3));
@@ -357,7 +357,7 @@ namespace JoseonHunter.Tests.EditMode
             for (var tick = 1; tick <= 4; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
             var bursts = events.Where(confirmed => confirmed.Phase == ContactPhase.Blast).ToArray();
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(bursts, Has.Length.EqualTo(3));
                 Assert.That(bursts.Select(confirmed => confirmed.AttackInstanceId).Distinct().Count(), Is.EqualTo(1));
@@ -379,7 +379,7 @@ namespace JoseonHunter.Tests.EditMode
             registry.Register(new TestTarget(1, new Float2(0.2f, 0f), nonOverlappingHurtMask));
 
             talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(talisman.ActiveCastCount, Is.Zero);
                 Assert.That(damage.TrackedAttackCount, Is.Zero);
@@ -389,7 +389,7 @@ namespace JoseonHunter.Tests.EditMode
 
             talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(talisman.ActiveCastCount, Is.Zero);
                 Assert.That(damage.TrackedAttackCount, Is.Zero);
@@ -417,7 +417,7 @@ namespace JoseonHunter.Tests.EditMode
             talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
             for (var tick = 4; tick <= 6; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events.Any(confirmed => confirmed.Phase == ContactPhase.Seal && confirmed.TargetRuntimeId == 1), Is.False);
                 Assert.That(events.Any(confirmed => confirmed.Phase == ContactPhase.Blast && confirmed.TargetRuntimeId == 1), Is.False);
@@ -444,7 +444,7 @@ namespace JoseonHunter.Tests.EditMode
             failedTransfer.SetHurtMask(noContactMask);
             for (var tick = 4; tick <= 7; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events.Any(confirmed => confirmed.TargetRuntimeId == 2), Is.False);
                 Assert.That(events.Any(confirmed => confirmed.TargetRuntimeId == 3 && confirmed.Phase == ContactPhase.Direct), Is.True);
@@ -471,7 +471,7 @@ namespace JoseonHunter.Tests.EditMode
             fan.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
             fan.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(first.KnockbackCount, Is.EqualTo(1));
                 Assert.That(second.KnockbackCount, Is.EqualTo(1));
@@ -518,7 +518,7 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(events, Is.Empty, "Fuse completion and an undersized ring must not deal center damage.");
 
             bomb.Tick(0.12f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 4));
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events, Has.Count.EqualTo(2));
                 Assert.That(events[0].Phase, Is.EqualTo(ContactPhase.Blast));
@@ -540,7 +540,7 @@ namespace JoseonHunter.Tests.EditMode
             frost.Tick(0.25f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
             frost.Tick(0.25f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
             frost.Tick(0.25f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 4));
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.SlowApplications, Is.GreaterThan(0));
                 Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Tick), Is.EqualTo(3));
@@ -554,7 +554,7 @@ namespace JoseonHunter.Tests.EditMode
             var capacityFrost = new FrostFlaskExecutor(runtime, 10f, 0.1f, 2f, 0.1f, 2f, 1f, 1, 1);
             capacityFrost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 7));
             capacityFrost.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 8));
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.LastSlowStrength, Is.Zero);
                 Assert.That(target.LastSlowDecay, Is.GreaterThan(0f));
@@ -571,14 +571,14 @@ namespace JoseonHunter.Tests.EditMode
             target.ApplyFrostSlow(101, 0.6f);
             target.ApplyFrostSlow(202, 0.35f);
             target.RemoveFrostSlow(101, 0.35f);
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.LastSlowStrength, Is.EqualTo(0.35f));
                 Assert.That(target.ActiveSlowSourceCount, Is.EqualTo(1));
             });
 
             target.RemoveFrostSlow(202, 0.35f);
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.LastSlowStrength, Is.Zero);
                 Assert.That(target.ActiveSlowSourceCount, Is.Zero);
@@ -600,7 +600,7 @@ namespace JoseonHunter.Tests.EditMode
 
             frost.Reset();
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.ActiveSlowSourceCount, Is.Zero);
                 Assert.That(damage.TrackedAttackCount, Is.Zero);
@@ -623,7 +623,7 @@ namespace JoseonHunter.Tests.EditMode
 
             frost.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.ActiveSlowSourceCount, Is.Zero);
                 Assert.That(damage.TrackedAttackCount, Is.Zero);
@@ -675,7 +675,7 @@ namespace JoseonHunter.Tests.EditMode
             target.MoveTo(new Float2(0.3f, -0.5f));
             ward.Tick(0.3f, new WeaponExecutionContext(default, root.transform, null, 0, 7));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(events.Count, Is.EqualTo(2));
                 Assert.That(events.All(confirmed => confirmed.Phase == ContactPhase.BoundaryCrossing), Is.True);
@@ -694,7 +694,7 @@ namespace JoseonHunter.Tests.EditMode
             ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
             ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(ward.ActiveWardSetCount, Is.EqualTo(1));
                 Assert.That(ward.EvictedWardSetCount, Is.EqualTo(1));
@@ -712,7 +712,7 @@ namespace JoseonHunter.Tests.EditMode
 
             ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
 
-            Assert.Multiple(() =>
+            NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(ward.ActiveWardSetCount, Is.EqualTo(1));
                 Assert.That(ward.ActivePostCount, Is.EqualTo(4));

@@ -103,21 +103,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private bool SweepRing(Bomb bomb, float desiredRadius, in WeaponExecutionContext context)
         {
             if (desiredRadius <= bomb.SweptRadius) return true;
-            // Half a final ring-mask pixel per sample guarantees an intermediate radius is tested; the cap carries remaining radius to following ticks.
             var radialStep = Mathf.Max(0.01f, BlastRadius / 16f);
             var end = Mathf.Min(desiredRadius, bomb.SweptRadius + radialStep * MaxRingSweepSamples);
-            var samples = Mathf.Clamp(Mathf.CeilToInt((end - bomb.SweptRadius) / radialStep), 1, MaxRingSweepSamples);
             runtime.Targets.CopyTo(targets);
-            for (var sample = 1; sample <= samples; sample++)
+            foreach (var target in targets)
             {
-                var radius = Mathf.Lerp(bomb.SweptRadius, end, sample / (float)samples);
-                var transform = new PixelMaskTransform(bomb.Landing, 0, false, new Vector2(Mathf.Max(0.01f, radius * 2f), Mathf.Max(0.01f, radius * 2f)));
-                foreach (var target in targets)
-                {
-                    if (target == null || !target.IsAlive || target.HurtMask == null) continue;
-                    if (!PixelMaskContactService.TryFindContact(ringMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
-                }
+                if (target == null || !target.IsAlive || target.HurtMask == null) continue;
+                var radius = Mathf.Sqrt(DistanceSquared(bomb.Landing, target.WorldPosition));
+                if (radius <= bomb.SweptRadius + 0.0001f || radius > end + 0.0001f) continue;
+                var scale = Mathf.Max(0.01f, radius * 2f);
+                var transform = new PixelMaskTransform(bomb.Landing, 0, false, new Vector2(scale, scale));
+                if (!PixelMaskContactService.TryFindContact(ringMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
             }
             bomb.SweptRadius = end;
             return bomb.SweptRadius + 0.0001f >= desiredRadius;

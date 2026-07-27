@@ -75,9 +75,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveGust(in WeaponExecutionContext context)
         {
-            var direction = Level == 5 ? CardinalDirections[gustIndex] : DangerousDirection(context.OwnerPosition);
+            var ownerPosition = context.OwnerPosition;
+            var direction = Level == 5 ? CardinalDirections[gustIndex] : DangerousDirection(ownerPosition);
             runtime.Targets.CopyTo(targets);
-            targets.Sort((left, right) => CompareDanger(context.OwnerPosition, left, right));
+            targets.Sort((left, right) => CompareDanger(ownerPosition, left, right));
             foreach (var target in targets)
             {
                 if (marked.Count >= MarkedTargetCap || target == null || !target.IsAlive || marked.Contains(target)) continue;
@@ -115,8 +116,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return false;
         }
 
-        private bool TryGustContact(ICombatTarget target, out Float2 contact) => target.HurtMask != null &&
-            PixelMaskContactService.TryFindContact(runtime.BladeMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out contact);
+        private bool TryGustContact(ICombatTarget target, out Float2 contact)
+        {
+            contact = default;
+            return target.HurtMask != null &&
+                PixelMaskContactService.TryFindContact(runtime.BladeMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out contact);
+        }
 
         private bool IsInsideCone(Float2 origin, Float2 direction, Float2 position)
         {

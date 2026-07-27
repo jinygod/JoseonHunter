@@ -65,6 +65,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private int level;
         private int coins;
         private int kills;
+        private int nextCombatTargetRuntimeId;
         private bool bossSpawned;
         private bool bossAlive;
         private bool upgradeOpen;
@@ -372,6 +373,7 @@ namespace JoseonHunter.Runtime.Gameplay
             RegisterCatalogWeapons();
             coins = 0;
             kills = 0;
+            nextCombatTargetRuntimeId = 1;
             bossSpawned = false;
             bossAlive = false;
             upgradeOpen = false;
@@ -530,7 +532,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 ContactDamage = isBoss ? 24f : 10f,
                 IsBoss = isBoss
             };
-            state.CombatTarget = new PrototypeCombatTarget(this, state, enemyObject.GetInstanceID());
+            state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
         }
@@ -583,7 +585,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 ContactDamage = 0f,
                 IsTreasure = true
             };
-            state.CombatTarget = new PrototypeCombatTarget(this, state, chestObject.GetInstanceID());
+            state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
         }

@@ -141,8 +141,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
 
-            if (cast.State == TalismanState.Flying)
-                Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
+            Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
             Apply(cast, cast.Target, contact, ContactPhase.Attach, context.SimulationTick);
             cast.State = TalismanState.Attached;
         }
@@ -232,8 +231,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return selected != null;
         }
 
-        private bool TryContact(ICombatTarget target, out Float2 contact) =>
-            target != null && target.HurtMask != null && PixelMaskContactService.TryFindContact(runtime.BladeMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out contact);
+        private bool TryContact(ICombatTarget target, out Float2 contact)
+        {
+            contact = default;
+            return target != null && target.HurtMask != null &&
+                PixelMaskContactService.TryFindContact(runtime.BladeMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out contact);
+        }
 
         private bool Apply(TalismanCast cast, ICombatTarget target, Float2 contact, ContactPhase phase, int tick, int multiplier = 1)
         {

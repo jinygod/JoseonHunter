@@ -52,10 +52,18 @@ namespace JoseonHunter.Runtime.Combat
             var rect = sprite.textureRect;
             var width = Mathf.RoundToInt(rect.width);
             var height = Mathf.RoundToInt(rect.height);
-            var pixels = sprite.texture.GetPixels32(Mathf.RoundToInt(rect.x), Mathf.RoundToInt(rect.y), width, height);
-            var packed = new uint[(pixels.Length + 31) / 32];
-            for (var index = 0; index < pixels.Length; index++)
-                if (pixels[index].a != 0) packed[index >> 5] |= 1u << (index & 31);
+            var texturePixels = sprite.texture.GetPixels32();
+            var packed = new uint[(width * height + 31) / 32];
+            var textureWidth = sprite.texture.width;
+            var startX = Mathf.RoundToInt(rect.x);
+            var startY = Mathf.RoundToInt(rect.y);
+            for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x++)
+            {
+                var index = y * width + x;
+                if (texturePixels[(startY + y) * textureWidth + startX + x].a != 0)
+                    packed[index >> 5] |= 1u << (index & 31);
+            }
             return new PixelHitMask(width, height, sprite.pivot, sprite.pixelsPerUnit, packed);
         }
 
