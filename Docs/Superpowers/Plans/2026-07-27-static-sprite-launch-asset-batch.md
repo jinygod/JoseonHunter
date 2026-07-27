@@ -65,7 +65,9 @@ PNG RGBA32, JSON manifests, NUnit
 - Consumes: a batch manifest, source directories, and an optional runtime root.
 - Produces:
   `StaticSpriteBatchContract.Validate(string manifestPath, string sourceRoot,
-  string runtimeRoot, bool requireRuntime)` and
+  string runtimeRoot, bool requireRuntime)`,
+  `StaticSpriteBatchContract.ValidateAsset(string assetId,
+  string sourceDirectory)`, and
   `StaticSpriteBatchValidationResult(IReadOnlyList<string> Errors, int AssetCount)`.
 
 - [ ] **Step 1: Write failing contract tests**
@@ -139,6 +141,10 @@ public static class StaticSpriteBatchContract
         string sourceRoot,
         string runtimeRoot,
         bool requireRuntime);
+
+    public static IReadOnlyList<string> ValidateAsset(
+        string assetId,
+        string sourceDirectory);
 }
 ```
 
@@ -327,8 +333,8 @@ powershell -NoProfile -ExecutionPolicy Bypass `
   -SourceRoot ArtSource/Pixel/StaticSprites
 ```
 
-During partial production, invoke the contract with an explicit list of
-completed IDs so missing later entries are the only suppressed errors. Never
+During partial production, invoke `ValidateAsset` separately for every completed
+ID. Do not run the twelve-entry batch result as a partial pass, and never
 suppress image-format, anchor, hash, or secret findings.
 
 - [ ] **Step 6: Create the partial review board**
@@ -733,4 +739,3 @@ git add Assets/JoseonHunter/Scripts/Content/StaticSpriteCatalog.cs `
   Assets/JoseonHunter/Tests/EditMode/StaticSpriteContentTests.cs.meta
 git commit -m "feat: bind static launch sprite content"
 ```
-
