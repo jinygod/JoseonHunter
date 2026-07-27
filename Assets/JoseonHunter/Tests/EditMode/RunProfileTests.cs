@@ -90,6 +90,7 @@ namespace JoseonHunter.Tests.EditMode
         {
             var session = new RunSession(RunProfile.Production15Minutes());
             session.Advance(300f);
+            session.Advance(0f);
 
             var outcome = session.MarkBossDefeated("boss_first");
 
@@ -98,12 +99,54 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void DefeatingAnUnspawnedBossIsIgnored()
+        {
+            var session = new RunSession(RunProfile.Production15Minutes());
+
+            Assert.That(session.MarkBossDefeated("boss_first"), Is.EqualTo(RunOutcome.InProgress));
+            Assert.That(session.MarkBossDefeated("boss_final"), Is.EqualTo(RunOutcome.InProgress));
+            Assert.That(session.Advance(300f).BossWarningId, Is.EqualTo("boss_first"));
+            Assert.That(session.Advance(0f).BossSpawnId, Is.EqualTo("boss_first"));
+            Assert.That(session.MarkBossDefeated("boss_first"), Is.EqualTo(RunOutcome.InProgress));
+        }
+
+        [Test]
         public void DefeatingTheFinalBossWins()
         {
             var session = new RunSession(RunProfile.Production15Minutes());
             session.Advance(900f);
+            session.Advance(0f);
+            session.Advance(0f);
+            session.Advance(0f);
+            session.Advance(0f);
+            session.Advance(0f);
 
             Assert.That(session.MarkBossDefeated("boss_final"), Is.EqualTo(RunOutcome.Victory));
+        }
+
+        [Test]
+        public void LargeDeltaQueuesEveryCrossedTransitionInChronologicalOrder()
+        {
+            var session = new RunSession(RunProfile.Production15Minutes());
+
+            var ticks = new[]
+            {
+                session.Advance(900f),
+                session.Advance(0f),
+                session.Advance(0f),
+                session.Advance(0f),
+                session.Advance(0f),
+                session.Advance(0f)
+            };
+
+            Assert.That(ticks.Select(tick => tick.BossWarningId ?? tick.BossSpawnId), Is.EqualTo(new[]
+            {
+                "boss_first", "boss_first", "boss_second", "boss_second", "boss_final", "boss_final"
+            }));
+            Assert.That(ticks.Select(tick => tick.BossWarningId != null), Is.EqualTo(new[]
+            {
+                true, false, true, false, true, false
+            }));
         }
 
         [Test]
@@ -112,6 +155,11 @@ namespace JoseonHunter.Tests.EditMode
             var session = new RunSession(RunProfile.Production15Minutes());
 
             var tick = session.Advance(900f);
+            session.Advance(0f);
+            session.Advance(0f);
+            session.Advance(0f);
+            session.Advance(0f);
+            tick = session.Advance(0f);
 
             Assert.That(tick.NormalWavesStopped, Is.True);
             Assert.That(WaveSchedule.For(RunPhase.Boss, tick).ActiveCap, Is.EqualTo(0));

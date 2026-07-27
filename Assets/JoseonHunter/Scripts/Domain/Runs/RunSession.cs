@@ -36,9 +36,11 @@ namespace JoseonHunter.Domain.Runs
     {
         private readonly RunProfile profile;
         private readonly RunClock clock;
-        private readonly HashSet<string> emittedWarnings = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> queuedWarnings = new HashSet<string>(StringComparer.Ordinal);
+        private readonly HashSet<string> queuedSpawns = new HashSet<string>(StringComparer.Ordinal);
         private readonly HashSet<string> emittedSpawns = new HashSet<string>(StringComparer.Ordinal);
         private readonly HashSet<string> defeatedBosses = new HashSet<string>(StringComparer.Ordinal);
+        private readonly Queue<PendingTransition> pendingTransitions = new Queue<PendingTransition>();
         private RunOutcome outcome;
 
         public RunSession(RunProfile profile)
@@ -57,21 +59,16 @@ namespace JoseonHunter.Domain.Runs
                 return CreateTick(null, null);
 
             clock.Advance(deltaSeconds);
-            string bossWarningId = null;
-            string bossSpawnId = null;
-
-            foreach (var boss in profile.Bosses)
-            {
-                if (clock.ElapsedSeconds >= boss.WarningSeconds && emittedWarnings.Add(boss.BossId))
-                    bossWarningId = boss.BossId;
-                if (clock.ElapsedSeconds >= boss.SpawnSeconds && emittedSpawns.Add(boss.BossId))
-                    bossSpawnId = boss.BossId;
-            }
+            QueueCrossedTransitions();
+            var transition = pendingTransitions.Count > 0 ? pendingTransitions.Dequeue() : default;
+            if (transition.IsSpawn) emittedSpawns.Add(transition.BossId);
 
             if (clock.ElapsedSeconds >= profile.DurationSeconds && HasTimedOut())
                 outcome = RunOutcome.DefeatTimeout;
 
-            return CreateTick(bossWarningId, bossSpawnId);
+            return CreateTick(
+                transition.IsWarning ? transition.BossId : null,
+                transition.IsSpawn ? transition.BossId : null);
         }
 
         public RunOutcome MarkBossDefeated(string bossId)
@@ -83,6 +80,7 @@ namespace JoseonHunter.Domain.Runs
             {
                 if (!string.Equals(boss.BossId, bossId, StringComparison.Ordinal)) continue;
 
+                if (!emittedSpawns.Contains(bossId)) return outcome;
                 defeatedBosses.Add(bossId);
                 if (boss.IsFinal) outcome = RunOutcome.Victory;
                 return outcome;
@@ -124,6 +122,56 @@ namespace JoseonHunter.Domain.Runs
             }
 
             return false;
+        }
+
+        private void QueueCrossedTransitions()
+        {
+            while (TryFindNextCrossedTransition(out var transition))
+            {
+                pendingTransitions.Enqueue(transition);
+                if (transition.IsWarning) queuedWarnings.Add(transition.BossId);
+                else queuedSpawns.Add(transition.BossId);
+            }
+        }
+
+        private bool TryFindNextCrossedTransition(out PendingTransition next)
+        {
+            next = default;
+            var found = false;
+            foreach (var boss in profile.Bosses)
+            {
+                if (clock.ElapsedSeconds >= boss.WarningSeconds && !queuedWarnings.Contains(boss.BossId))
+                    ChooseEarlier(new PendingTransition(boss.BossId, boss.WarningSeconds, true), ref next, ref found);
+                if (clock.ElapsedSeconds >= boss.SpawnSeconds && !queuedSpawns.Contains(boss.BossId))
+                    ChooseEarlier(new PendingTransition(boss.BossId, boss.SpawnSeconds, false), ref next, ref found);
+            }
+
+            return found;
+        }
+
+        private static void ChooseEarlier(PendingTransition candidate, ref PendingTransition current, ref bool found)
+        {
+            if (!found || candidate.Seconds < current.Seconds ||
+                (candidate.Seconds == current.Seconds && candidate.IsWarning && !current.IsWarning))
+            {
+                current = candidate;
+                found = true;
+            }
+        }
+
+        private readonly struct PendingTransition
+        {
+            public PendingTransition(string bossId, float seconds, bool isWarning)
+            {
+                BossId = bossId;
+                Seconds = seconds;
+                IsWarning = isWarning;
+            }
+
+            public string BossId { get; }
+            public float Seconds { get; }
+            public bool IsWarning { get; }
+            public bool IsSpawn => !IsWarning;
         }
     }
 }
