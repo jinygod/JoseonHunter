@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Content.Weapons;
-using JoseonHunter.Presentation.Combat;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
@@ -40,7 +39,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private CombatTargetRegistry combatTargets;
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
-        private DamageNumberPool damageNumberPool;
+        private readonly WeaponPixelMaskCatalog weaponMasks = new WeaponPixelMaskCatalog();
         private readonly List<WeaponId> registeredWeaponIds = new List<WeaponId>();
         private Texture2D solidTexture;
         private Sprite solidSprite;
@@ -80,7 +79,6 @@ namespace JoseonHunter.Runtime.Gameplay
         public CombatDamageService CombatDamageService => combatDamageService;
         public WeaponRuntimeController WeaponRuntime => weaponRuntime;
         public IReadOnlyList<WeaponId> RegisteredWeaponIds => registeredWeaponIds;
-        public DamageNumberPool DamageNumberPool => damageNumberPool;
 
         public bool IsBossCombatTarget(int runtimeId)
         {
@@ -352,14 +350,6 @@ namespace JoseonHunter.Runtime.Gameplay
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
-            registeredWeaponIds.Clear();
-            RegisterCatalogWeapons();
-            var combatRoot = new GameObject("CombatRoot");
-            combatRoot.transform.SetParent(runtimeObjects, false);
-            damageNumberPool = combatRoot.AddComponent<DamageNumberPool>();
-            damageNumberPool.Bind(combatDamageService);
-            damageNumberPool.SetBossTargetPredicate(IsBossCombatTarget);
-
             elapsed = 0f;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
@@ -374,6 +364,9 @@ namespace JoseonHunter.Runtime.Gameplay
             experience = 0;
             experienceToNext = 8;
             level = 1;
+            registeredWeaponIds.Clear();
+            weaponMasks.Load(weaponCatalog);
+            RegisterCatalogWeapons();
             coins = 0;
             kills = 0;
             bossSpawned = false;
@@ -854,7 +847,19 @@ namespace JoseonHunter.Runtime.Gameplay
             experience -= experienceToNext;
             level++;
             experienceToNext = 7 + level * 4;
+            RebuildWeaponExecutorsForLevel();
             OpenUpgrade();
+        }
+
+        private void RebuildWeaponExecutorsForLevel()
+        {
+            if (weaponRuntime == null) return;
+            weaponRuntime.Reset();
+            weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
+            weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            registeredWeaponIds.Clear();
+            weaponMasks.Load(weaponCatalog);
+            RegisterCatalogWeapons();
         }
 
         private void OpenUpgrade()

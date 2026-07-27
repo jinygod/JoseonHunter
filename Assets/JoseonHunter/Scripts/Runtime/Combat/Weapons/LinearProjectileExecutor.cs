@@ -31,7 +31,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool Launch(in WeaponExecutionContext context, in LinearProjectileSpec spec)
         {
             if (active.Count >= MaxActiveProjectiles) return false;
-            var visual = Acquire(context, spec.VisualName);
+            var visual = Acquire(context, spec.WeaponId, spec.VisualName);
             visual.transform.position = new Vector3(spec.Position.X, spec.Position.Y, 0f);
             active.Add(new Projectile(spec, visual, ResolveMask(visual.GetComponent<SpriteRenderer>())));
             return true;
@@ -109,12 +109,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
 
-        private GameObject Acquire(in WeaponExecutionContext context, string visualName)
+        private GameObject Acquire(in WeaponExecutionContext context, WeaponId weaponId, string visualName)
         {
             var visual = pool.Count > 0 ? pool.Pop() : new GameObject(visualName);
             visual.transform.SetParent(context.PresentationRoot, false);
             var renderer = visual.GetComponent<SpriteRenderer>() ?? visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = context.SpriteFor(spec.WeaponId);
+            renderer.sprite = context.SpriteFor(weaponId);
             renderer.sortingOrder = context.SortingOrder;
             renderer.color = Color.white;
             visual.transform.localScale = Vector3.one;
