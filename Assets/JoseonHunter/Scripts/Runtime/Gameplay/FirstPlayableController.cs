@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Presentation.Combat;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -23,7 +24,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly List<PickupState> pickups = new List<PickupState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
-        private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(3, 3, Vector2.one, 3f, new[] { 0x1ffu });
+        private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
+        private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
         private Camera gameplayCamera;
         private Transform flatField;
@@ -36,6 +38,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
         private FlyingBladeExecutor flyingBlade;
+        private DamageNumberPool damageNumberPool;
         private Texture2D solidTexture;
         private Sprite solidSprite;
         private Vector2 touchStart;
@@ -107,8 +110,8 @@ namespace JoseonHunter.Runtime.Gameplay
                     return new Float2(position.x, position.y);
                 }
             }
-            public PixelHitMask HurtMask => owner.prototypeCombatMask;
-            public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
+            public PixelHitMask HurtMask => owner.MaskFor(state.Renderer);
+            public PixelMaskTransform HurtMaskTransform => owner.TransformFor(state.Renderer, WorldPosition);
             public void ApplyResolvedDamage(int damage) => owner.DamageEnemy(state, damage);
             public void ApplyKnockback(Float2 direction, float force) { }
         }
@@ -139,6 +142,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnDestroy()
         {
+            weaponRuntime?.Reset();
+            ReleaseDamageNumberPool();
             if (solidSprite != null)
             {
                 Destroy(solidSprite);
@@ -258,6 +263,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ResetRun()
         {
+            weaponRuntime?.Reset();
+            ReleaseDamageNumberPool();
             if (runtimeObjects != null)
             {
                 Destroy(runtimeObjects.gameObject);
@@ -274,6 +281,15 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             flyingBlade = new FlyingBladeExecutor(weaponRuntime, 12f, 0.42f, 4.5f, 10f, 1);
             weaponRuntime.Register(flyingBlade);
+            var damageNumbers = new GameObject("Damage Number Pool");
+            damageNumbers.transform.SetParent(runtimeObjects, false);
+            damageNumberPool = damageNumbers.AddComponent<DamageNumberPool>();
+            damageNumberPool.SetBossTargetPredicate(runtimeId =>
+            {
+                var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
+                return enemy != null && enemy.IsBoss;
+            });
+            damageNumberPool.Bind(combatDamageService);
 
             elapsed = 0f;
             playerMaxHealth = 100f;
@@ -911,6 +927,40 @@ namespace JoseonHunter.Runtime.Gameplay
             runEnded = true;
             victory = didWin;
             movement = Vector2.zero;
+        }
+
+        private PixelHitMask MaskFor(SpriteRenderer renderer)
+        {
+            if (renderer == null || renderer.sprite == null) return prototypeCombatMask;
+            if (hurtMasksBySprite.TryGetValue(renderer.sprite, out var mask)) return mask;
+            try
+            {
+                mask = PixelHitMask.FromSprite(renderer.sprite);
+            }
+            catch (UnityException)
+            {
+                mask = PixelHitMask.OpaqueSpriteRect(renderer.sprite);
+            }
+            hurtMasksBySprite.Add(renderer.sprite, mask);
+            return mask;
+        }
+
+        private PixelMaskTransform TransformFor(SpriteRenderer renderer, Float2 position)
+        {
+            if (renderer == null) return PixelMaskTransform.Translation(position.X, position.Y);
+            var scale = renderer.transform.lossyScale;
+            return new PixelMaskTransform(
+                position,
+                Mathf.RoundToInt(renderer.transform.eulerAngles.z),
+                renderer.flipX,
+                new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y)));
+        }
+
+        private void ReleaseDamageNumberPool()
+        {
+            if (damageNumberPool == null) return;
+            damageNumberPool.Unbind();
+            damageNumberPool = null;
         }
 
         private GameObject CreateSpriteObject(

@@ -45,6 +45,31 @@ namespace JoseonHunter.Runtime.Combat
             return new PixelHitMask(texture.width, texture.height, pivotPixel, pixelsPerUnit, packed);
         }
 
+        /// <summary>Builds a mask in the same texture rectangle, pivot, and pixels-per-unit used by a SpriteRenderer.</summary>
+        public static PixelHitMask FromSprite(Sprite sprite)
+        {
+            if (sprite == null) throw new ArgumentNullException(nameof(sprite));
+            var rect = sprite.textureRect;
+            var width = Mathf.RoundToInt(rect.width);
+            var height = Mathf.RoundToInt(rect.height);
+            var pixels = sprite.texture.GetPixels32(Mathf.RoundToInt(rect.x), Mathf.RoundToInt(rect.y), width, height);
+            var packed = new uint[(pixels.Length + 31) / 32];
+            for (var index = 0; index < pixels.Length; index++)
+                if (pixels[index].a != 0) packed[index >> 5] |= 1u << (index & 31);
+            return new PixelHitMask(width, height, sprite.pivot, sprite.pixelsPerUnit, packed);
+        }
+
+        public static PixelHitMask OpaqueSpriteRect(Sprite sprite)
+        {
+            if (sprite == null) throw new ArgumentNullException(nameof(sprite));
+            var rect = sprite.textureRect;
+            var width = Mathf.RoundToInt(rect.width);
+            var height = Mathf.RoundToInt(rect.height);
+            var packed = new uint[(width * height + 31) / 32];
+            for (var index = 0; index < width * height; index++) packed[index >> 5] |= 1u << (index & 31);
+            return new PixelHitMask(width, height, sprite.pivot, sprite.pixelsPerUnit, packed);
+        }
+
         public static PixelHitMask FromRows(params string[] rows)
         {
             if (rows == null || rows.Length == 0 || string.IsNullOrEmpty(rows[0])) throw new ArgumentException("At least one non-empty row is required.", nameof(rows));

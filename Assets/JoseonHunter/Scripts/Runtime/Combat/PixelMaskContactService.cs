@@ -1,19 +1,26 @@
 using System;
 using JoseonHunter.Domain.Geumjul;
+using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat
 {
     public readonly struct PixelMaskTransform
     {
         public PixelMaskTransform(Float2 position, int rotationDegrees = 0, bool flipX = false, int scale = 1)
+            : this(position, rotationDegrees, flipX, new Vector2(scale, scale))
         {
-            if (scale <= 0) throw new ArgumentOutOfRangeException(nameof(scale));
+        }
+
+        public PixelMaskTransform(Float2 position, int rotationDegrees, bool flipX, Vector2 scale)
+        {
+            if (scale.x <= 0f || scale.y <= 0f || float.IsNaN(scale.x) || float.IsNaN(scale.y) ||
+                float.IsInfinity(scale.x) || float.IsInfinity(scale.y)) throw new ArgumentOutOfRangeException(nameof(scale));
             Position = position; RotationDegrees = rotationDegrees; FlipX = flipX; Scale = scale;
         }
         public Float2 Position { get; }
         public int RotationDegrees { get; }
         public bool FlipX { get; }
-        public int Scale { get; }
+        public Vector2 Scale { get; }
         public static PixelMaskTransform Identity => new PixelMaskTransform(new Float2(0f, 0f));
         public static PixelMaskTransform Translation(float x, float y) => new PixelMaskTransform(new Float2(x, y));
     }
@@ -39,8 +46,8 @@ namespace JoseonHunter.Runtime.Combat
 
         private static Float2 ToWorld(PixelHitMask mask, PixelMaskTransform transform, int x, int y)
         {
-            var localX = (x - mask.PivotPixel.x) * transform.Scale / mask.PixelsPerUnit;
-            var localY = (y - mask.PivotPixel.y) * transform.Scale / mask.PixelsPerUnit;
+            var localX = (x - mask.PivotPixel.x) * transform.Scale.x / mask.PixelsPerUnit;
+            var localY = (y - mask.PivotPixel.y) * transform.Scale.y / mask.PixelsPerUnit;
             if (transform.FlipX) localX = -localX;
             Rotate(localX, localY, transform.RotationDegrees, out var rotatedX, out var rotatedY);
             return new Float2(transform.Position.X + rotatedX, transform.Position.Y + rotatedY);
@@ -52,8 +59,8 @@ namespace JoseonHunter.Runtime.Combat
             var y = world.Y - transform.Position.Y;
             Rotate(x, y, -transform.RotationDegrees, out x, out y);
             if (transform.FlipX) x = -x;
-            var sourceX = RoundToNearest(x * mask.PixelsPerUnit / transform.Scale + mask.PivotPixel.x);
-            var sourceY = RoundToNearest(y * mask.PixelsPerUnit / transform.Scale + mask.PivotPixel.y);
+            var sourceX = RoundToNearest(x * mask.PixelsPerUnit / transform.Scale.x + mask.PivotPixel.x);
+            var sourceY = RoundToNearest(y * mask.PixelsPerUnit / transform.Scale.y + mask.PivotPixel.y);
             // Rounding here is the deterministic nearest-neighbor fallback for non-quarter rotations.
             return mask.IsActive(sourceX, sourceY);
         }

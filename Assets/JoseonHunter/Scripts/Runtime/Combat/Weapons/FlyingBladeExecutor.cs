@@ -13,6 +13,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<Blade> active = new List<Blade>();
         private readonly List<ICombatTarget> targetBuffer = new List<ICombatTarget>();
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
+        private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
         private float cooldown;
         private int nextAttackInstanceId = 1;
 
@@ -36,6 +37,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Range { get; private set; }
         public float Speed { get; private set; }
         public int BladeCount { get; private set; }
+        public int ActiveBladeCount => active.Count;
+        public int PooledBladeCount => pool.Count;
+        public int LastVolleyLaunchCount { get; private set; }
+        public int ReturnedToPoolCount { get; private set; }
+        public float MaximumDistanceFromLaunch { get; private set; }
+        public int DelayedBladeCount
+        {
+            get
+            {
+                var count = 0;
+                foreach (var blade in active) if (blade.Delay > 0f) count++;
+                return count;
+            }
+        }
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -63,6 +78,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var blade in active) Release(blade.Visual);
             active.Clear();
             cooldown = 0f;
+            MaximumDistanceFromLaunch = 0f;
         }
 
         private bool TryFindTarget(Float2 owner, out ICombatTarget target)
@@ -89,12 +105,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var targetDistance = Mathf.Sqrt(toTarget.X * toTarget.X + toTarget.Y * toTarget.Y);
             var direction = targetDistance > 0.001f ? new Float2(toTarget.X / targetDistance, toTarget.Y / targetDistance) : new Float2(1f, 0f);
             var endpoint = new Float2(launch.X + direction.X * Mathf.Min(Range, targetDistance), launch.Y + direction.Y * Mathf.Min(Range, targetDistance));
+            LastVolleyLaunchCount = BladeCount;
             for (var index = 0; index < BladeCount; index++)
             {
                 var stagger = index * 0.1f;
+                var visual = Acquire(context);
+                visual.transform.position = new Vector3(launch.X, launch.Y, 0f);
                 active.Add(new Blade(
                     new AttackInstance(nextAttackInstanceId++, RepeatHitPolicy.OncePerPhase, 0f),
-                    launch, endpoint, stagger, Acquire(context), Range));
+                    launch, endpoint, stagger, visual, ResolveMask(visual.GetComponent<SpriteRenderer()), Range));
             }
         }
 
@@ -136,17 +155,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
 
             blade.Visual.transform.position = new Vector3(blade.Position.X, blade.Position.Y, 0f);
+            var launchDelta = Subtract(blade.Position, blade.Start);
+            MaximumDistanceFromLaunch = Mathf.Max(MaximumDistanceFromLaunch, Mathf.Sqrt(launchDelta.X * launchDelta.X + launchDelta.Y * launchDelta.Y));
             TryDamageContacts(blade, context, contactPhase);
         }
 
         private void TryDamageContacts(Blade blade, in WeaponExecutionContext context, ContactPhase phase)
         {
-            var attackTransform = PixelMaskTransform.Translation(blade.Position.X, blade.Position.Y);
+            var attackTransform = TransformFor(blade.Visual.GetComponent<SpriteRenderer>(), blade.Position);
             runtime.Targets.CopyTo(targetBuffer);
             foreach (var target in targetBuffer)
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
-                if (!PixelMaskContactService.TryFindContact(runtime.BladeMask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                if (!PixelMaskContactService.TryFindContact(blade.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 runtime.DamageService.TryApply(
                     WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage), false, contact, phase, context.SimulationTick),
                     out _);
@@ -161,7 +182,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             renderer.sprite = context.BladeSprite;
             renderer.color = new Color(1f, 0.9f, 0.35f, 1f);
             renderer.sortingOrder = context.SortingOrder;
-            visual.transform.localScale = Vector3.one * 0.18f;
+            visual.transform.localScale = Vector3.one;
             visual.SetActive(true);
             return visual;
         }
@@ -171,6 +192,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (visual == null) return;
             visual.SetActive(false);
             pool.Push(visual);
+            ReturnedToPoolCount++;
         }
 
         private static Float2 ClampToRange(Float2 origin, Float2 candidate, float range)
@@ -182,11 +204,39 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private static Float2 Subtract(Float2 left, Float2 right) => new Float2(left.X - right.X, left.Y - right.Y);
 
+        private PixelHitMask ResolveMask(SpriteRenderer renderer)
+        {
+            if (renderer == null || renderer.sprite == null) return runtime.BladeMask;
+            if (masksBySprite.TryGetValue(renderer.sprite, out var mask)) return mask;
+            try
+            {
+                mask = PixelHitMask.FromSprite(renderer.sprite);
+            }
+            catch (UnityException)
+            {
+                // Imported prototype sprites are not guaranteed readable; retain their exact world rect as an opaque fallback.
+                mask = PixelHitMask.OpaqueSpriteRect(renderer.sprite);
+            }
+            masksBySprite.Add(renderer.sprite, mask);
+            return mask;
+        }
+
+        private static PixelMaskTransform TransformFor(SpriteRenderer renderer, Float2 position)
+        {
+            var transform = renderer.transform;
+            var scale = transform.lossyScale;
+            return new PixelMaskTransform(
+                position,
+                Mathf.RoundToInt(transform.eulerAngles.z),
+                renderer.flipX,
+                new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y)));
+        }
+
         private sealed class Blade
         {
-            public Blade(AttackInstance attack, Float2 start, Float2 end, float delay, GameObject visual, float range)
+            public Blade(AttackInstance attack, Float2 start, Float2 end, float delay, GameObject visual, PixelHitMask mask, float range)
             {
-                Attack = attack; Start = start; End = end; Delay = delay; Visual = visual; Range = range;
+                Attack = attack; Start = start; End = end; Delay = delay; Visual = visual; Mask = mask; Range = range;
                 Position = start;
                 Distance = Mathf.Sqrt((end.X - start.X) * (end.X - start.X) + (end.Y - start.Y) * (end.Y - start.Y));
             }
@@ -195,6 +245,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public Float2 End { get; }
             public float Delay { get; set; }
             public GameObject Visual { get; }
+            public PixelHitMask Mask { get; }
             public float Range { get; }
             public float Distance { get; }
             public Float2 Position { get; set; }

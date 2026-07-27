@@ -56,6 +56,13 @@ namespace JoseonHunter.Presentation.Combat
             Subscribe();
         }
 
+        public void Unbind()
+        {
+            Unsubscribe();
+            damageService = null;
+            Clear();
+        }
+
         public void SetBossTargetPredicate(Func<int, bool> predicate)
         {
             isBossTarget = predicate;
