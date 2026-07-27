@@ -8,7 +8,7 @@
     "rawOutput":  "raw-provider-output-fix2.png",
     "jobId":  "c0e55d72-4312-42d4-8a9f-5e50c5ec5b8a",
     "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to PNG/top-left bottom anchor y=56.",
-    "status":  "pending",
+    "status":  "approved",
     "operation":  "Pixen 64x64 transparent object-only override",
     "attempts":  [
                      {

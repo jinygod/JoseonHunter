@@ -9,5 +9,5 @@
   "jobId": "81a1d9c6-5ad2-4def-ad47-244e5b0f08a7",
   "cost": "1 generation",
   "normalization": "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to bounds center x=32 and maximum opaque y=56.",
-  "status": "pending"
+  "status": "approved"
 }

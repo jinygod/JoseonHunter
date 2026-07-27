@@ -9,5 +9,5 @@
   "jobId": "058da3f5-098d-43c7-b4e6-0c7ee1849a9e",
   "cost": "1 generation",
   "normalization": "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to bounds center x=32 and maximum opaque y=56. Fix round 1 deterministic identity edit: exposed face pixels (22,12),(25-28,12),(22-28,13),(23-28,14),(24,15),(28,15),(25-27,16) changed from #E9B6A3 to cool #B2AEB0; eye pixels (23,12),(24,12),(29,12) changed from #F2CC5B to pale-cream glow #F4F1EF.",
-  "status": "pending"
+  "status": "approved"
 }

@@ -14,6 +14,8 @@ namespace JoseonHunter.Editor.AssetProduction
         private const string GameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
         private const string CatalogPath = "Assets/JoseonHunter/Content/StaticSpriteCatalog.asset";
         private const string PrefabFolder = "Assets/JoseonHunter/Prefabs/StaticSprites";
+        private const int ProofColumns = 4;
+        private const float ProofSpacing = 3f;
 
         private static readonly ContentDefinition[] Definitions =
         {
@@ -175,11 +177,13 @@ namespace JoseonHunter.Editor.AssetProduction
                 var proof = new GameObject("StaticSpriteLaunchProof");
                 proof.transform.SetParent(world, false);
                 proof.SetActive(false);
-                foreach (var entry in entries)
+                for (var index = 0; index < entries.Count; index++)
                 {
+                    var entry = entries[index];
                     var instance = (GameObject)PrefabUtility.InstantiatePrefab(entry.prefab, gameplayScene);
                     instance.name = entry.id;
                     instance.transform.SetParent(proof.transform, false);
+                    instance.transform.localPosition = ProofPosition(index, entries.Count);
                 }
 
                 EditorSceneManager.MarkSceneDirty(gameplayScene);
@@ -193,6 +197,13 @@ namespace JoseonHunter.Editor.AssetProduction
                 }
             }
         }
+
+        private static Vector3 ProofPosition(int index, int total)
+        {
+            var columns = Mathf.Min(ProofColumns, total); var rows = Mathf.CeilToInt(total / (float)columns);
+            return new Vector3((index % columns - (columns - 1) * 0.5f) * ProofSpacing, ((rows - 1) * 0.5f - index / columns) * ProofSpacing, 0f);
+        }
+
 
         private static Transform FindWorld(Scene gameplayScene)
         {

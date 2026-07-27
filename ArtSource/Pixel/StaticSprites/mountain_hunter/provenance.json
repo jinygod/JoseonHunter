@@ -7,6 +7,6 @@
     "rawOutput":  "raw-provider-output.png",
     "jobId":  "e744f917-daa1-4e19-8c89-1409a880d627",
     "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to bounds center x=32 and maximum opaque y=56.",
-    "status":  "pending",
+    "status":  "approved",
     "operation":  "Pixflux 64x64 transparent"
 }

@@ -9,7 +9,13 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class StaticSpriteBatchContractTests
     {
         private const string FixtureRoot = "Temp/StaticSpriteBatchContractTests";
-        private static readonly string[] Ids = { "rookie_constable", "shaman", "mountain_hunter", "plague_rat", "vengeful_spirit", "sakkat_specter", "dokkaebi", "bandit", "fallen_general", "coin", "experience_spirit_flame", "treasure_chest" };
+        private static readonly FixtureAsset[] Assets =
+        {
+            new("rookie_constable", "hero", "Heroes/rookie_constable.png"), new("shaman", "hero", "Heroes/shaman.png"), new("mountain_hunter", "hero", "Heroes/mountain_hunter.png"),
+            new("plague_rat", "enemy", "Enemies/plague_rat.png"), new("vengeful_spirit", "enemy", "Enemies/vengeful_spirit.png"), new("sakkat_specter", "enemy", "Enemies/sakkat_specter.png"),
+            new("dokkaebi", "enemy", "Enemies/dokkaebi.png"), new("bandit", "enemy", "Enemies/bandit.png"), new("fallen_general", "boss", "Bosses/fallen_general.png"),
+            new("coin", "pickup", "Pickups/coin.png"), new("experience_spirit_flame", "pickup", "Pickups/experience_spirit_flame.png"), new("treasure_chest", "pickup", "Pickups/treasure_chest.png")
+        };
 
         [SetUp] public void SetUp() => Directory.CreateDirectory(FixtureRoot);
         [TearDown] public void TearDown() { if (Directory.Exists(FixtureRoot)) Directory.Delete(FixtureRoot, true); }
@@ -65,15 +71,34 @@ namespace JoseonHunter.Tests.EditMode
         [Test] public void ValidateRejectsSourceHashMismatch() { var root = CreateFixture(); ReplaceManifest(root, "\"sha256\":\"\"", "\"sha256\":\"deadbeef\""); Assert.That(Validate(root).Errors, Does.Contain("source hash mismatch")); }
         [Test] public void ValidateRejectsRuntimeByteMismatchWhenRequired() { var root = CreateFixture(); var runtime = Path.Combine(root, "runtime"); Directory.CreateDirectory(Path.Combine(runtime, "Heroes")); File.Copy(Path.Combine(root, "rookie_constable", "sprite.png"), Path.Combine(runtime, "Heroes", "rookie_constable.png")); File.WriteAllBytes(Path.Combine(runtime, "Heroes", "rookie_constable.png"), new byte[] { 1 }); Assert.That(StaticSpriteBatchContract.Validate(Path.Combine(root, "batch.json"), root, runtime, true).Errors, Does.Contain("runtime byte mismatch")); }
 
+        [TestCase("shaman", "role", "enemy")]
+        [TestCase("plague_rat", "sourcePath", "shaman/sprite.png")]
+        [TestCase("fallen_general", "runtimePath", "Enemies/fallen_general.png")]
+        public void ValidateRejectsWrongCanonicalRoleOrPath(string id, string property, string value)
+        {
+            var root = CreateFixture(); var asset = Asset(id);
+            ReplaceManifest(root, "\"id\":\"" + id + "\",\"role\":\"" + asset.Role + "\",\"sourcePath\":\"" + id + "/sprite.png\",\"runtimePath\":\"" + asset.RuntimePath + "\"", "\"id\":\"" + id + "\",\"role\":\"" + (property == "role" ? value : asset.Role) + "\",\"sourcePath\":\"" + (property == "sourcePath" ? value : id + "/sprite.png") + "\",\"runtimePath\":\"" + (property == "runtimePath" ? value : asset.RuntimePath) + "\"");
+            Assert.That(Validate(root).Errors, Does.Contain("invalid canonical mapping"));
+        }
+
+        [Test]
+        public void ValidateRejectsApprovedManifestAssetWithPendingProvenance()
+        {
+            var root = CreateFixture("approved");
+            Assert.That(Validate(root).Errors, Does.Contain("provenance approval mismatch"));
+        }
+
         private static StaticSpriteBatchValidationResult Validate(string root) => StaticSpriteBatchContract.Validate(Path.Combine(root, "batch.json"), root, "", false);
         private static void ReplaceManifest(string root, string find, string replace) => File.WriteAllText(Path.Combine(root, "batch.json"), File.ReadAllText(Path.Combine(root, "batch.json")).Replace(find, replace));
-        private static string CreateFixture()
+        private static string CreateFixture(string approvalStatus = "pending")
         {
             var root = Path.Combine(FixtureRoot, Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
             var assets = "";
-            foreach (var id in Ids) { Directory.CreateDirectory(Path.Combine(root, id)); WriteSprite(Path.Combine(root, id, "sprite.png"), TextureFormat.RGBA32); File.WriteAllText(Path.Combine(root, id, "palette.png"), "palette"); File.WriteAllText(Path.Combine(root, id, "prompt.md"), "prompt"); File.WriteAllText(Path.Combine(root, id, "provenance.json"), "{\"jobId\":\"valid-job\"}"); assets += (assets.Length == 0 ? "" : ",") + "{\"id\":\"" + id + "\",\"role\":\"hero\",\"sourcePath\":\"" + id + "/sprite.png\",\"runtimePath\":\"Heroes/" + id + ".png\",\"width\":64,\"height\":64,\"footAnchor\":[32,56],\"pivot\":[0.5,0.125],\"pixelsPerUnit\":32,\"approvalStatus\":\"pending\",\"sha256\":\"\"}"; }
+            foreach (var asset in Assets) { Directory.CreateDirectory(Path.Combine(root, asset.Id)); WriteSprite(Path.Combine(root, asset.Id, "sprite.png"), TextureFormat.RGBA32); File.WriteAllText(Path.Combine(root, asset.Id, "palette.png"), "palette"); File.WriteAllText(Path.Combine(root, asset.Id, "prompt.md"), "prompt"); File.WriteAllText(Path.Combine(root, asset.Id, "provenance.json"), "{\"jobId\":\"valid-job\",\"status\":\"pending\"}"); assets += (assets.Length == 0 ? "" : ",") + "{\"id\":\"" + asset.Id + "\",\"role\":\"" + asset.Role + "\",\"sourcePath\":\"" + asset.Id + "/sprite.png\",\"runtimePath\":\"" + asset.RuntimePath + "\",\"width\":64,\"height\":64,\"footAnchor\":[32,56],\"pivot\":[0.5,0.125],\"pixelsPerUnit\":32,\"approvalStatus\":\"" + approvalStatus + "\",\"sha256\":\"\"}"; }
             File.WriteAllText(Path.Combine(root, "batch.json"), "{\"schemaVersion\":1,\"promptRevision\":\"static-launch-v1\",\"assets\":[" + assets + "]}"); return root;
         }
+        private static FixtureAsset Asset(string id) { foreach (var asset in Assets) if (asset.Id == id) return asset; throw new ArgumentOutOfRangeException(nameof(id)); }
+        private readonly struct FixtureAsset { public FixtureAsset(string id, string role, string runtimePath) { Id = id; Role = role; RuntimePath = runtimePath; } public string Id { get; } public string Role { get; } public string RuntimePath { get; } }
         private static void WriteSprite(string path, TextureFormat format, Color32? color = null, int x = 32, int y = 56, int colors = 1)
         {
             var texture = new Texture2D(64, 64, format, false); texture.SetPixels32(new Color32[64 * 64]);

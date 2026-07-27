@@ -23,6 +23,12 @@ namespace JoseonHunter.Editor.AssetProduction
             "rookie_constable", "shaman", "mountain_hunter", "plague_rat", "vengeful_spirit", "sakkat_specter",
             "dokkaebi", "bandit", "fallen_general", "coin", "experience_spirit_flame", "treasure_chest"
         };
+        private static readonly IReadOnlyDictionary<string, CanonicalAsset> CanonicalAssets = new Dictionary<string, CanonicalAsset>(StringComparer.Ordinal)
+        {
+            ["rookie_constable"] = new("hero", "rookie_constable/sprite.png", "Heroes/rookie_constable.png"), ["shaman"] = new("hero", "shaman/sprite.png", "Heroes/shaman.png"), ["mountain_hunter"] = new("hero", "mountain_hunter/sprite.png", "Heroes/mountain_hunter.png"),
+            ["plague_rat"] = new("enemy", "plague_rat/sprite.png", "Enemies/plague_rat.png"), ["vengeful_spirit"] = new("enemy", "vengeful_spirit/sprite.png", "Enemies/vengeful_spirit.png"), ["sakkat_specter"] = new("enemy", "sakkat_specter/sprite.png", "Enemies/sakkat_specter.png"), ["dokkaebi"] = new("enemy", "dokkaebi/sprite.png", "Enemies/dokkaebi.png"), ["bandit"] = new("enemy", "bandit/sprite.png", "Enemies/bandit.png"),
+            ["fallen_general"] = new("boss", "fallen_general/sprite.png", "Bosses/fallen_general.png"), ["coin"] = new("pickup", "coin/sprite.png", "Pickups/coin.png"), ["experience_spirit_flame"] = new("pickup", "experience_spirit_flame/sprite.png", "Pickups/experience_spirit_flame.png"), ["treasure_chest"] = new("pickup", "treasure_chest/sprite.png", "Pickups/treasure_chest.png")
+        };
         private static readonly Regex SensitivePattern = new(@"api[_-]?key|token|secret|bearer", RegexOptions.IgnoreCase);
         private static readonly Regex UuidPattern = new(@"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", RegexOptions.IgnoreCase);
 
@@ -42,9 +48,11 @@ namespace JoseonHunter.Editor.AssetProduction
                 if (asset == null || string.IsNullOrWhiteSpace(asset.id)) { errors.Add("missing id"); continue; }
                 if (!seen.Add(asset.id)) errors.Add("duplicate id");
                 if (!ExpectedIds.Contains(asset.id)) errors.Add("unexpected asset id");
+                ValidateCanonicalMapping(asset, errors);
                 ValidateMetadata(asset, errors);
                 var sourceDirectory = Path.Combine(sourceRoot ?? string.Empty, SourceDirectory(asset.sourcePath));
                 errors.AddRange(ValidateAsset(asset.id, sourceDirectory));
+                ValidateProvenanceApproval(asset, sourceDirectory, errors);
                 var sourcePath = Path.Combine(sourceRoot ?? string.Empty, asset.sourcePath ?? string.Empty);
                 if (!string.IsNullOrWhiteSpace(asset.sha256) && !string.Equals(asset.sha256.ToLowerInvariant(), Sha256(sourcePath), StringComparison.Ordinal)) errors.Add("source hash mismatch");
                 if (requireRuntime && !FilesEqual(sourcePath, Path.Combine(runtimeRoot ?? string.Empty, asset.runtimePath ?? string.Empty))) errors.Add("runtime byte mismatch");
@@ -95,6 +103,24 @@ namespace JoseonHunter.Editor.AssetProduction
             if (ToVector2(asset.pivot) != Pivot) errors.Add("invalid pivot");
             if (asset.pixelsPerUnit != 32) errors.Add("invalid pixels per unit");
             if (string.IsNullOrWhiteSpace(asset.sourcePath) || string.IsNullOrWhiteSpace(asset.runtimePath)) errors.Add("missing asset path");
+        }
+        private static void ValidateCanonicalMapping(Asset asset, List<string> errors)
+        {
+            if (!CanonicalAssets.TryGetValue(asset.id, out var canonical)) return;
+            if (!string.Equals(asset.role, canonical.Role, StringComparison.Ordinal) || !string.Equals(asset.sourcePath, canonical.SourcePath, StringComparison.Ordinal) || !string.Equals(asset.runtimePath, canonical.RuntimePath, StringComparison.Ordinal)) errors.Add("invalid canonical mapping");
+        }
+        private static void ValidateProvenanceApproval(Asset asset, string sourceDirectory, List<string> errors)
+        {
+            var provenancePath = Path.Combine(sourceDirectory, "provenance.json");
+            if (!File.Exists(provenancePath)) return;
+            try
+            {
+                var provenance = JObject.Parse(File.ReadAllText(provenancePath));
+                var provenanceAssetId = provenance.Value<string>("assetId");
+                if (!string.IsNullOrWhiteSpace(provenanceAssetId) && !string.Equals(provenanceAssetId, asset.id, StringComparison.Ordinal)) errors.Add("provenance asset id mismatch");
+                if (string.Equals(asset.approvalStatus, "approved", StringComparison.Ordinal) && !string.Equals(provenance.Value<string>("status"), "approved", StringComparison.Ordinal)) errors.Add("provenance approval mismatch");
+            }
+            catch { errors.Add("invalid provenance"); }
         }
         private static void ValidatePixels(Texture2D texture, List<string> errors)
         {
@@ -164,5 +190,6 @@ namespace JoseonHunter.Editor.AssetProduction
         private static bool HasCommandLineSwitch(string name) { foreach (var argument in Environment.GetCommandLineArgs()) if (argument == name) return true; return false; }
         [Serializable] private sealed class Manifest { public int schemaVersion; public string promptRevision; public Asset[] assets; }
         [Serializable] private sealed class Asset { public string id; public string role; public string sourcePath; public string runtimePath; public int width; public int height; public int[] footAnchor; public float[] pivot; public int pixelsPerUnit; public string approvalStatus; public string sha256; }
+        private readonly struct CanonicalAsset { public CanonicalAsset(string role, string sourcePath, string runtimePath) { Role = role; SourcePath = sourcePath; RuntimePath = runtimePath; } public string Role { get; } public string SourcePath { get; } public string RuntimePath { get; } }
     }
 }

@@ -97,6 +97,14 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(proof.gameObject.activeSelf, Is.False);
                 Assert.That(proof.childCount, Is.EqualTo(ExpectedIds.Length));
                 CollectionAssert.AreEquivalent(ExpectedIds, proof.Cast<Transform>().Select(child => child.name));
+                var expectedPositions = new[]
+                {
+                    new Vector3(-4.5f, 3f, 0f), new Vector3(-1.5f, 3f, 0f), new Vector3(1.5f, 3f, 0f), new Vector3(4.5f, 3f, 0f),
+                    new Vector3(-4.5f, 0f, 0f), new Vector3(-1.5f, 0f, 0f), new Vector3(1.5f, 0f, 0f), new Vector3(4.5f, 0f, 0f),
+                    new Vector3(-4.5f, -3f, 0f), new Vector3(-1.5f, -3f, 0f), new Vector3(1.5f, -3f, 0f), new Vector3(4.5f, -3f, 0f)
+                };
+                CollectionAssert.AreEqual(expectedPositions, proof.Cast<Transform>().Select(child => child.localPosition));
+                Assert.That(proof.Cast<Transform>().Select(child => child.localPosition).Distinct().Count(), Is.EqualTo(ExpectedIds.Length));
                 var catalog = AssetDatabase.LoadAssetAtPath<StaticSpriteCatalog>(CatalogPath);
                 foreach (var child in proof.Cast<Transform>())
                 {
