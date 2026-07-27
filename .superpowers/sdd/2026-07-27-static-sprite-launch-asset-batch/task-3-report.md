@@ -81,3 +81,27 @@ run its no-runtime route and the contract reported the explicit full-batch PASS.
 
 Pending at report write time; Task 3 source, board, review, and report files
 are to be committed as `art: prepare static launch batch review`.
+
+## Fix round 1 - fallen general identity and board typography
+
+No PixelLab call or retry was made. The deterministic local edit retained the
+existing normalized fallen-general silhouette, armor, weapon, anchor, and hard
+alpha. It changed exactly 23 exposed face pixels from warm `#E9B6A3` to cool
+desaturated `#B2AEB0`: `(22,12)`, `(25-28,12)`, `(22-28,13)`, `(23-28,14)`,
+`(24,15)`, `(28,15)`, `(25-27,16)`. It changed exactly three eye pixels,
+`(23,12)`, `(24,12)`, `(29,12)`, from yellow `#F2CC5B` to high-contrast
+pale-cream `#F4F1EF`. All replacement colors already belong to the approved
+constable palette. New final SHA-256:
+`4c0b9549e0f16b7feedeb0b46be0d40b92c6eaa28d45b6913fa79fd8d14c91e5`.
+
+Native and 8x inspection now read as a cool gray undead face with conspicuous
+pale eyes, while the original armor, crested helmet, red sash, and polearm
+remain intact. `fallen_general` direct validation passed with explicit
+`Static sprite asset preflight passed: fallen_general`; the full 12-entry
+preflight re-ran and passed with `Static sprite batch preflight passed.`
+
+The review board was rebuilt at the same `4200x4850` dimensions using ASCII
+technical labels only: `64x64`, `8x LIGHT CHECK`, `8x DARK CHECK`, and hyphen
+separators. Full-board inspection found no visible question marks,
+multiplication glyphs, em dashes, mojibake, clipping, or overlap. The review
+markdown was rewritten using the same ASCII-only terminology.

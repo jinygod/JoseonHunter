@@ -166,7 +166,7 @@
                                      0.125
                                  ],
                        "role":  "boss",
-                       "sha256":  "fd391d97af803126dd7f57497c3e1891f545541c34c476c6b5183c35fb3446f6",
+                       "sha256":  "4c0b9549e0f16b7feedeb0b46be0d40b92c6eaa28d45b6913fa79fd8d14c91e5",
                        "runtimePath":  "Bosses/fallen_general.png",
                        "width":  64,
                        "approvalStatus":  "pending",
