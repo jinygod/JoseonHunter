@@ -6,3 +6,4 @@
 - A focused C# compile of the Task 6 presentation surface plus its current combat dependencies completed without errors (the stale referenced assemblies produced expected duplicate-type warnings during this isolated check).
 - Static review found an existing EditMode compilation failure in `WeaponContentTests` for missing `JoseonHunter.Content.Weapons` types.
 - Unity 6's installed `com.unity.ugui` package embeds TextMeshPro; the presentation asmdef now explicitly references `Unity.TextMeshPro`.
+- Review fix: aggregation windows are now enforced when events arrive, retaining an expired aggregate for the next flush; Thunder Crash Bomb uses the lightning-violet accent.

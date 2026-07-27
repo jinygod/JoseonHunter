@@ -27,6 +27,7 @@ namespace JoseonHunter.Domain.Combat
     {
         private readonly float aggregationWindow;
         private readonly Dictionary<AggregationKey, PendingDamage> pending = new Dictionary<AggregationKey, PendingDamage>();
+        private readonly List<DamageNumberDisplay> ready = new List<DamageNumberDisplay>();
 
         public DamageNumberAccumulator(float aggregationWindow = 0.25f)
         {
@@ -45,6 +46,13 @@ namespace JoseonHunter.Domain.Combat
             var key = new AggregationKey(confirmed.AttackInstanceId, confirmed.TargetRuntimeId, confirmed.WeaponId);
             if (pending.TryGetValue(key, out var existing))
             {
+                if (time >= existing.StartTime + aggregationWindow)
+                {
+                    ready.Add(existing.ToDisplay());
+                    pending[key] = new PendingDamage(confirmed, time);
+                    return;
+                }
+
                 existing.Add(confirmed);
                 pending[key] = existing;
                 return;
@@ -57,20 +65,25 @@ namespace JoseonHunter.Domain.Combat
         {
             if (!IsFinite(time)) throw new ArgumentOutOfRangeException(nameof(time));
 
-            var ready = new List<DamageNumberDisplay>();
+            var flushed = new List<DamageNumberDisplay>(ready);
+            ready.Clear();
             var expired = new List<AggregationKey>();
             foreach (var entry in pending)
             {
                 if (time < entry.Value.StartTime + aggregationWindow) continue;
-                ready.Add(entry.Value.ToDisplay());
+                flushed.Add(entry.Value.ToDisplay());
                 expired.Add(entry.Key);
             }
 
             foreach (var key in expired) pending.Remove(key);
-            return ready.Count == 0 ? Array.Empty<DamageNumberDisplay>() : ready.ToArray();
+            return flushed.Count == 0 ? Array.Empty<DamageNumberDisplay>() : flushed.ToArray();
         }
 
-        public void Clear() => pending.Clear();
+        public void Clear()
+        {
+            pending.Clear();
+            ready.Clear();
+        }
 
         private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 

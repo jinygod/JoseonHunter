@@ -122,9 +122,9 @@ namespace JoseonHunter.Presentation.Combat
 
         private static Color AccentFor(WeaponId weaponId)
         {
-            if (weaponId.Equals(WeaponId.ThunderCrashBomb) || weaponId.Equals(WeaponId.SingijeonVolley)) return Ember;
+            if (weaponId.Equals(WeaponId.SingijeonVolley)) return Ember;
+            if (weaponId.Equals(WeaponId.ThunderCrashBomb) || weaponId.Equals(WeaponId.WindThunderFan)) return Violet;
             if (weaponId.Equals(WeaponId.FrostFlask)) return Cyan;
-            if (weaponId.Equals(WeaponId.WindThunderFan)) return Violet;
             if (weaponId.Equals(WeaponId.TalismanThrow) || weaponId.Equals(WeaponId.JangseungWard)) return Gold;
             return Ivory;
         }
