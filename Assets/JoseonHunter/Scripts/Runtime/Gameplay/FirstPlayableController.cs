@@ -73,7 +73,6 @@ namespace JoseonHunter.Runtime.Gameplay
             public float NextContactTime;
             public bool IsBoss;
             public bool IsTreasure;
-            public Transform HealthFill;
         }
 
         private enum PickupKind
@@ -236,7 +235,7 @@ namespace JoseonHunter.Runtime.Gameplay
             elapsed = 0f;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
-            moveSpeed = 4.8f;
+            moveSpeed = 2.4f;
             attackDamage = 12f;
             attackInterval = 0.42f;
             attackTimer = 0.1f;
@@ -400,17 +399,15 @@ namespace JoseonHunter.Runtime.Gameplay
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
             }
 
-            var healthFill = CreateHealthBar(enemyObject.transform);
             enemies.Add(new EnemyState
             {
                 Object = enemyObject,
                 Renderer = renderer,
                 Health = health,
                 MaximumHealth = health,
-                Speed = isBoss ? 2.25f : Mathf.Lerp(1.55f, 2.65f, elapsed / TestDuration),
+                Speed = isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration),
                 ContactDamage = isBoss ? 24f : 10f,
-                IsBoss = isBoss,
-                HealthFill = healthFill
+                IsBoss = isBoss
             });
         }
 
@@ -460,8 +457,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 MaximumHealth = 75f,
                 Speed = 0f,
                 ContactDamage = 0f,
-                IsTreasure = true,
-                HealthFill = CreateHealthBar(chestObject.transform)
+                IsTreasure = true
             });
         }
 
@@ -580,7 +576,6 @@ namespace JoseonHunter.Runtime.Gameplay
 
             enemy.Health -= damage;
             enemy.Renderer.color = Color.white;
-            UpdateHealthBar(enemy.HealthFill, enemy.Health / enemy.MaximumHealth);
             if (enemy.Health > 0f)
             {
                 return;
@@ -978,6 +973,33 @@ namespace JoseonHunter.Runtime.Gameplay
             if (!bossSpawned && elapsed >= BossWarningTime)
             {
                 GUI.Box(new Rect(165f, 250f, 750f, 100f), "⚠ 타락한 장수가 다가옵니다!", centered);
+            }
+
+            if (bossAlive)
+            {
+                var boss = enemies.Find(value => value.IsBoss && value.Object != null);
+                if (boss != null)
+                {
+                    GUI.Box(new Rect(155f, 135f, 770f, 112f), string.Empty, centered);
+                    GUI.Label(new Rect(180f, 145f, 720f, 42f), "타락한 장수", centered);
+
+                    var previousColor = GUI.color;
+                    GUI.color = new Color(0.12f, 0.08f, 0.08f, 0.95f);
+                    GUI.DrawTexture(new Rect(195f, 194f, 690f, 24f), solidTexture);
+                    GUI.color = new Color(0.82f, 0.16f, 0.18f, 1f);
+                    GUI.DrawTexture(
+                        new Rect(
+                            198f,
+                            197f,
+                            684f * Mathf.Clamp01(boss.Health / boss.MaximumHealth),
+                            18f),
+                        solidTexture);
+                    GUI.color = previousColor;
+                    GUI.Label(
+                        new Rect(195f, 187f, 690f, 38f),
+                        $"{Mathf.CeilToInt(boss.Health)} / {Mathf.CeilToInt(boss.MaximumHealth)}",
+                        centered);
+                }
             }
 
             if (magnetMessageTimer > 0f)
