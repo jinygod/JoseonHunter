@@ -28,3 +28,7 @@ Root cause: the contract compared Unity bottom-origin pixel y directly to the PN
 ## Per-asset CLI rerun
 Added Tools/Assets/Test-StaticSpriteAssetValidation.ps1 without -quit, and its argument test passed. Initial no-quit loop timed out because success did not call EditorApplication.Exit(0); the CLI method was corrected to own both success and failure exits. Rerun was prevented by three batch Unity processes spawned by the first timeout retaining the project; they did not terminate within this task. No false six-pass assertion is recorded. The route command, unique log names, and PASS marker assertion are ready for rerun once the project lock clears.
 
+
+## Final validation evidence
+2026-07-27: Tools/Assets/Test-StaticSpriteAssetValidation.ps1 (no -quit) completed 6/6 with exit code 0 and explicit Static sprite asset preflight passed log markers for rookie_constable, shaman, mountain_hunter, coin, experience_spirit_flame, and treasure_chest. Fresh full EditMode results: total=, passed=, failed=, skipped=, XML Logs/task2-fresh-editmode-results.xml.
+
