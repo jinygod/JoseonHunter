@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
@@ -273,6 +274,122 @@ namespace JoseonHunter.Tests.EditMode
             });
         }
 
+        [Test]
+        public void TalismanSequencesDirectAttachAndSealBeforeUniqueTransfersThenBursts()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 10f, 3f, 20f, 3, 1);
+            var first = new TestTarget(1, new Float2(0.2f, 0f), mask);
+            var second = new TestTarget(2, new Float2(0.4f, 0f), mask);
+            var third = new TestTarget(3, new Float2(0.6f, 0f), mask);
+            registry.Register(first); registry.Register(second); registry.Register(third);
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            for (var tick = 1; tick <= 12; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(events[0].Phase, Is.EqualTo(ContactPhase.Direct));
+                Assert.That(events[1].Phase, Is.EqualTo(ContactPhase.Attach));
+                Assert.That(events[2].Phase, Is.EqualTo(ContactPhase.Seal));
+                Assert.That(events.Select(confirmed => confirmed.TargetRuntimeId).Distinct().Count(), Is.EqualTo(3));
+                Assert.That(events[events.Count - 1].Phase, Is.EqualTo(ContactPhase.Blast));
+                Assert.That(talisman.ActiveCastCount, Is.Zero);
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void TalismanSafelyBurstsOnceWhenNoTransferTargetExists()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 10f, 2f, 20f, 5, 1);
+            registry.Register(new TestTarget(1, new Float2(0.2f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            for (var tick = 1; tick <= 5; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Blast), Is.EqualTo(1));
+            Assert.That(talisman.LastFinalBurstCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void LevelFiveTalismansHoldSeveralSealsThenResolveOneBindingBurst()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 10f, 2f, 20f, 1, 5);
+            registry.Register(new TestTarget(1, new Float2(0.2f, 0f), mask)); registry.Register(new TestTarget(2, new Float2(0.4f, 0f), mask));
+            registry.Register(new TestTarget(3, new Float2(0.6f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            for (var tick = 1; tick <= 3; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Attach), Is.EqualTo(3));
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Blast), Is.EqualTo(3));
+                Assert.That(events.Where(confirmed => confirmed.Phase == ContactPhase.Blast).Select(confirmed => confirmed.SimulationTick).Distinct().Count(), Is.EqualTo(1));
+                Assert.That(talisman.LastFinalBurstCount, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
+        public void WindThunderFanKnocksBackWindContactsBeforeSimultaneousMarkedLightning()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 2f, 3f, 2, 1);
+            var first = new TestTarget(1, new Float2(0.5f, 0f), mask, threatScore: 10f);
+            var second = new TestTarget(2, new Float2(0.8f, 0.1f), mask, threatScore: 5f);
+            var outside = new TestTarget(3, new Float2(-0.5f, 0f), mask, threatScore: 0f);
+            registry.Register(first); registry.Register(second); registry.Register(outside);
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            fan.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            fan.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
+            fan.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(first.KnockbackCount, Is.EqualTo(1));
+                Assert.That(second.KnockbackCount, Is.EqualTo(1));
+                Assert.That(outside.KnockbackCount, Is.Zero);
+                Assert.That(events.Take(2).All(confirmed => confirmed.Phase == ContactPhase.Wind), Is.True);
+                Assert.That(events.Skip(2).All(confirmed => confirmed.Phase == ContactPhase.Lightning && confirmed.SimulationTick == 3), Is.True);
+                Assert.That(events.Skip(2).Select(confirmed => confirmed.TargetRuntimeId), Is.EquivalentTo(new[] { 1, 2 }));
+                Assert.That(fan.LastLightningSimulationTick, Is.EqualTo(3));
+            });
+        }
+
+        [Test]
+        public void LevelFiveFanEmitsFourCardinalGustsBeforeOneBoundedEcho()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 2f, 1f, 4, 5);
+            registry.Register(new TestTarget(1, new Float2(0.5f, 0f), mask)); registry.Register(new TestTarget(2, new Float2(0f, 0.5f), mask));
+            registry.Register(new TestTarget(3, new Float2(-0.5f, 0f), mask)); registry.Register(new TestTarget(4, new Float2(0f, -0.5f), mask));
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            for (var tick = 1; tick <= 6; tick++) fan.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Wind), Is.EqualTo(4));
+            Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Lightning), Is.EqualTo(4));
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
@@ -323,11 +440,12 @@ namespace JoseonHunter.Tests.EditMode
             public bool IsElite { get; }
             public float ThreatScore { get; }
             public Float2 WorldPosition { get; private set; }
+            public int KnockbackCount { get; private set; }
             public PixelHitMask HurtMask => mask;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
             public void MoveTo(Float2 position) => WorldPosition = position;
             public void ApplyResolvedDamage(int damage) => Health -= damage;
-            public void ApplyKnockback(Float2 direction, float force) { }
+            public void ApplyKnockback(Float2 direction, float force) => KnockbackCount++;
         }
     }
 }
