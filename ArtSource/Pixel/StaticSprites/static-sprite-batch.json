@@ -1,0 +1,234 @@
+{
+    "schemaVersion":  1,
+    "assets":  [
+                   {
+                       "sourcePath":  "rookie_constable/sprite.png",
+                       "height":  64,
+                       "id":  "rookie_constable",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "hero",
+                       "sha256":  "",
+                       "runtimePath":  "Heroes/rookie_constable.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "shaman/sprite.png",
+                       "height":  64,
+                       "id":  "shaman",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "hero",
+                       "sha256":  "456ff3a519698f923a811aeb1a201b1212a5382c01dd73aa80b9f0f093576377",
+                       "runtimePath":  "Heroes/shaman.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "mountain_hunter/sprite.png",
+                       "height":  64,
+                       "id":  "mountain_hunter",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "hero",
+                       "sha256":  "1ec8fc16c0be08e3cba752260b5f1465c8aaa2896f415503349037a7e241ad5c",
+                       "runtimePath":  "Heroes/mountain_hunter.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "plague_rat/sprite.png",
+                       "height":  64,
+                       "id":  "plague_rat",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "enemy",
+                       "sha256":  "",
+                       "runtimePath":  "Enemies/plague_rat.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "vengeful_spirit/sprite.png",
+                       "height":  64,
+                       "id":  "vengeful_spirit",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "enemy",
+                       "sha256":  "",
+                       "runtimePath":  "Enemies/vengeful_spirit.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "sakkat_specter/sprite.png",
+                       "height":  64,
+                       "id":  "sakkat_specter",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "enemy",
+                       "sha256":  "",
+                       "runtimePath":  "Enemies/sakkat_specter.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "dokkaebi/sprite.png",
+                       "height":  64,
+                       "id":  "dokkaebi",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "enemy",
+                       "sha256":  "",
+                       "runtimePath":  "Enemies/dokkaebi.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "bandit/sprite.png",
+                       "height":  64,
+                       "id":  "bandit",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "enemy",
+                       "sha256":  "",
+                       "runtimePath":  "Enemies/bandit.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "fallen_general/sprite.png",
+                       "height":  64,
+                       "id":  "fallen_general",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "boss",
+                       "sha256":  "",
+                       "runtimePath":  "Bosses/fallen_general.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "coin/sprite.png",
+                       "height":  64,
+                       "id":  "coin",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "pickup",
+                       "sha256":  "3cc33d5c62bcd8617e5224e21583fbd262561a1dac8206593086a48a00076fe8",
+                       "runtimePath":  "Pickups/coin.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "experience_spirit_flame/sprite.png",
+                       "height":  64,
+                       "id":  "experience_spirit_flame",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "pickup",
+                       "sha256":  "aa396c9d33806ed1768228aafd704f537fd28d796c5d01a91edaa53a02fc9660",
+                       "runtimePath":  "Pickups/experience_spirit_flame.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   },
+                   {
+                       "sourcePath":  "treasure_chest/sprite.png",
+                       "height":  64,
+                       "id":  "treasure_chest",
+                       "footAnchor":  [
+                                          32,
+                                          56
+                                      ],
+                       "pivot":  [
+                                     0.5,
+                                     0.125
+                                 ],
+                       "role":  "pickup",
+                       "sha256":  "68218fa18e7570007ac4337a72b7c1ba0648b5403847c57f84d26f0621e7bfe6",
+                       "runtimePath":  "Pickups/treasure_chest.png",
+                       "width":  64,
+                       "approvalStatus":  "pending",
+                       "pixelsPerUnit":  32
+                   }
+               ],
+    "promptRevision":  "static-launch-v1"
+}

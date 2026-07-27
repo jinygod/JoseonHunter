@@ -1,0 +1,9 @@
+{
+    "generationConsumedForStaticBatch":  0,
+    "provider":  "PixelLab",
+    "normalization":  "Byte-for-byte copy of approved normalized base.png.",
+    "sourceSha256":  "1ddb67dbb86eff92243bfca5ffaa3afb54afb532ad2e32d4924bb13ffd994c7f",
+    "sourcePath":  "ArtSource/Pixel/Characters/front-facing/rookie-constable/base.png",
+    "status":  "pending",
+    "originalProvenance":  "ArtSource/Pixel/Characters/front-facing/rookie-constable/provenance.json"
+}

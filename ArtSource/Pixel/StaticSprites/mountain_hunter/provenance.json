@@ -1,0 +1,12 @@
+{
+    "generationConsumedForStaticBatch":  1,
+    "outputSha256":  "1ec8fc16c0be08e3cba752260b5f1465c8aaa2896f415503349037a7e241ad5c",
+    "mcpTool":  "mcp__pixellab__create_image_pixflux",
+    "provider":  "PixelLab",
+    "rawOutputSha256":  "b335e96aced010bb3b70d1156341f116eea8c875de20993a5631a9e1f209799c",
+    "rawOutput":  "raw-provider-output.png",
+    "jobId":  "e744f917-daa1-4e19-8c89-1409a880d627",
+    "normalization":  "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to bounds center x=32 and maximum opaque y=56.",
+    "status":  "pending",
+    "operation":  "Pixflux 64x64 transparent"
+}
