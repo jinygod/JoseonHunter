@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
-using JoseonHunter.Presentation.Combat;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -38,7 +37,6 @@ namespace JoseonHunter.Runtime.Gameplay
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
         private FlyingBladeExecutor flyingBlade;
-        private DamageNumberPool damageNumberPool;
         private Texture2D solidTexture;
         private Sprite solidSprite;
         private Vector2 touchStart;
@@ -71,6 +69,15 @@ namespace JoseonHunter.Runtime.Gameplay
         private const float TestDuration = 60f;
         private const float BossWarningTime = 45f;
         private const float BossSpawnTime = 50f;
+
+        /// <summary>Read-only combat event source for presentation components.</summary>
+        public CombatDamageService CombatDamageService => combatDamageService;
+
+        public bool IsBossCombatTarget(int runtimeId)
+        {
+            var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
+            return enemy != null && enemy.IsBoss;
+        }
 
         private sealed class EnemyState
         {
@@ -143,7 +150,6 @@ namespace JoseonHunter.Runtime.Gameplay
         private void OnDestroy()
         {
             weaponRuntime?.Reset();
-            ReleaseDamageNumberPool();
             if (solidSprite != null)
             {
                 Destroy(solidSprite);
@@ -264,7 +270,6 @@ namespace JoseonHunter.Runtime.Gameplay
         private void ResetRun()
         {
             weaponRuntime?.Reset();
-            ReleaseDamageNumberPool();
             if (runtimeObjects != null)
             {
                 Destroy(runtimeObjects.gameObject);
@@ -281,15 +286,6 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             flyingBlade = new FlyingBladeExecutor(weaponRuntime, 12f, 0.42f, 4.5f, 10f, 1);
             weaponRuntime.Register(flyingBlade);
-            var damageNumbers = new GameObject("Damage Number Pool");
-            damageNumbers.transform.SetParent(runtimeObjects, false);
-            damageNumberPool = damageNumbers.AddComponent<DamageNumberPool>();
-            damageNumberPool.SetBossTargetPredicate(runtimeId =>
-            {
-                var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
-                return enemy != null && enemy.IsBoss;
-            });
-            damageNumberPool.Bind(combatDamageService);
 
             elapsed = 0f;
             playerMaxHealth = 100f;
@@ -954,13 +950,6 @@ namespace JoseonHunter.Runtime.Gameplay
                 Mathf.RoundToInt(renderer.transform.eulerAngles.z),
                 renderer.flipX,
                 new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y)));
-        }
-
-        private void ReleaseDamageNumberPool()
-        {
-            if (damageNumberPool == null) return;
-            damageNumberPool.Unbind();
-            damageNumberPool = null;
         }
 
         private GameObject CreateSpriteObject(
