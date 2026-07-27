@@ -52,21 +52,24 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (cooldown <= 0f && TryFindCrowd(context.OwnerPosition, out var landing))
             {
                 cooldown = CooldownSeconds;
-                if (fields.Count >= FieldCapacity) Expire(fields[0]);
+                if (fields.Count >= FieldCapacity)
+                {
+                    Expire(fields[0]);
+                    fields.RemoveAt(0);
+                }
                 fields.Add(new Field(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, TickInterval), context.OwnerPosition, landing));
             }
             for (var index = fields.Count - 1; index >= 0; index--)
             {
                 var field = fields[index]; Advance(field, step, context);
-                if (!field.Expired) continue;
-                fields.RemoveAt(index);
+                if (field.Expired) { fields.RemoveAt(index); continue; }
             }
         }
 
         public void Reset()
         {
             // Reset is a terminal cleanup path too: every live field must release only its own status source.
-            foreach (var field in fields) CleanupFieldStatus(field);
+            foreach (var field in fields) { CleanupFieldStatus(field); Retire(field); }
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
         }
 
@@ -140,7 +143,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (field.Expired) return;
             CleanupFieldStatus(field);
-            field.Expired = true; Retire(field); ExpiredFieldCount++;
+            Retire(field); field.Expired = true; ExpiredFieldCount++;
         }
 
         private void CleanupFieldStatus(Field field)
@@ -148,10 +151,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (field == null || field.Expired) return;
             foreach (var id in field.Inside)
                 if (runtime.Targets.TryGet(id, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
-            Retire(field);
         }
 
-        private void Retire(Field field) => runtime.DamageService.RetireAttack(field.Attack.InstanceId);
+        private void Retire(Field field)
+        {
+            if (field == null || field.AttackRetired) return;
+            runtime.DamageService.RetireAttack(field.Attack.InstanceId);
+            field.AttackRetired = true;
+        }
         private static Float2 Lerp(Float2 left, Float2 right, float progress) => new Float2(Mathf.Lerp(left.X, right.X, progress), Mathf.Lerp(left.Y, right.Y, progress));
         private static PixelHitMask CreateDiskMask() => CreateCircleMask(17, 64);
         private static PixelHitMask CreateSpikeMask() => CreateCircleMask(9, 16);
@@ -180,6 +187,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float NextDamageAge { get; set; }
             public bool Active { get; set; }
             public bool Expired { get; set; }
+            public bool AttackRetired { get; set; }
             public Dictionary<int, float> Residence { get; } = new Dictionary<int, float>();
             public HashSet<int> Frozen { get; } = new HashSet<int>();
             public HashSet<int> Inside { get; } = new HashSet<int>();

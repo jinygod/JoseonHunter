@@ -7,6 +7,7 @@
 - Added deterministic EditMode coverage for delayed bomb-ring damage and frost slow/tick/freeze/exit/capacity behavior.
 - Review follow-up: frost effects are keyed by field attack ID, so one field's exit/eviction only clears its own slow source; prototype enemies aggregate the strongest active slow and timed freezes. Ring expansion now sweeps intermediate radii in bounded samples and carries excess work to later ticks.
 - Reset follow-up: every active frost field releases its own target slow source before its attack is retired and state is cleared.
+- Capacity follow-up: the evicted oldest field is retired and removed before field simulation continues, preventing same-tick reapplication.
 
 ## Validation
 

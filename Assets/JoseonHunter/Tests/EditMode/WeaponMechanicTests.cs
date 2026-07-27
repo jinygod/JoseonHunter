@@ -609,6 +609,29 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void FrostCapacityEvictionRemovesTheOldestSourceBeforeThatTickCanAdvanceIt()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var frost = new FrostFlaskExecutor(runtime, 10f, 0.2f, 2f, 0.1f, 2f, 1f, 1, 1);
+            var target = new TestTarget(1, new Float2(0.4f, 0f), mask); registry.Register(target);
+
+            frost.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            frost.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            Assert.That(target.ActiveSlowSourceCount, Is.EqualTo(1));
+
+            frost.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(target.ActiveSlowSourceCount, Is.Zero);
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+                Assert.That(frost.ActiveFieldCount, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
         public void ThunderBombLargeBlastStepSweepsAnIntermediateRingContact()
         {
             var mask = PixelHitMask.FromRows("1");
