@@ -1,5 +1,5 @@
 {
-  "status": "pending",
+  "status": "pending_movement_approval",
   "provider": "PixelLab",
   "mcp_tool": "mcp__pixellab__create_image_pixflux",
   "model_or_operation": "Pixflux",
@@ -24,15 +24,15 @@
     "destination_offset": [2, 0],
     "purpose": "Preserve the raw provider output while placing the normalized foot-contact row at y=56 without clipping."
   },
-  "generation_count": 2,
+  "generation_count": 3,
   "generation_budget": 6,
   "balance_before": {
     "generations_used": 0,
     "generations_remaining": 40
   },
   "balance_after": {
-    "generations_used": 2,
-    "generations_remaining": 38
+    "generations_used": 3,
+    "generations_remaining": 37
   },
   "attempts": [
     {
@@ -54,6 +54,27 @@
     "opaque_center_x": 31.5,
     "opaque_max_y": 56,
     "bottom_centered": true
+  },
+  "movement": {
+    "tool": "mcp__pixellab__animate_image",
+    "operation": "animate_image",
+    "job_id": "054aca37-6359-4a13-bca7-e3fbc3065bc6",
+    "frame_count": 4,
+    "dimensions": [64, 64],
+    "transparent_background": true,
+    "generation_cost": 1,
+    "normalization": "Whole-frame integer y translation to opaque bottom y=56 plus exact nearest-color mapping to the approved base palette; no redraw or invented pixels.",
+    "frame_sha256": {
+      "move-00.png": "82622045EBDBEBF601C76A203FA4722162F0FF0892BF63D973483B6A2DEE5974",
+      "move-01.png": "6244098F7E18EB6152718E02D7D5D316FC8721CF060511C60B30B22D602661C2",
+      "move-02.png": "9055DA9E78DD4CB6644648508FA48FC36EBC3E0D69765FBD65C8E48C1A48673A",
+      "move-03.png": "C2802B7EA38A09C333ED332994BC232982DB7DF89D028A3321B688667B4D5471"
+    },
+    "abandoned_unconsumed_edit_job": {
+      "tool": "mcp__pixellab__edit_image",
+      "job_id": "585c01c7-233d-4c9b-9f98-7481904946d0",
+      "reason": "Tool quoted approximately 20 generations, exceeding the six-generation pilot budget. Authoritative balance remained 3 used / 37 remaining; job was not polled, downloaded, or used."
+    }
   },
   "runtime_imported": false
 }
