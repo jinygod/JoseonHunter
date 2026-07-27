@@ -37,6 +37,8 @@ namespace JoseonHunter.Domain.Combat
         {
             if (candidates == null) throw new ArgumentNullException(nameof(candidates));
             if (candidates.Count == 0) return null;
+            if (!Enum.IsDefined(typeof(WeaponTargeting), targeting))
+                throw new ArgumentOutOfRangeException(nameof(targeting), targeting, "Unknown weapon targeting mode.");
 
             var selected = candidates[0];
             for (var index = 1; index < candidates.Count; index++)
