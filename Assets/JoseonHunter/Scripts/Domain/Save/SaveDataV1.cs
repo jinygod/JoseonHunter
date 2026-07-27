@@ -27,6 +27,8 @@ namespace JoseonHunter.Domain.Save
         public bool AccessibilityEnabled;
         public float AudioVolume = 1f;
         public List<string> FirstSolutionFlags = new List<string>();
+        public List<string> SelectableInvestigationPolicies = new List<string>();
+        public string SelectedInvestigationPolicy;
 
         public static SaveDataV1 CreateDefaults()
         {
@@ -58,7 +60,7 @@ namespace JoseonHunter.Domain.Save
                 ClaimedInvestigationMilestones = new List<int>(ClaimedInvestigationMilestones), MonsterCompendiumEntries = new List<string>(MonsterCompendiumEntries),
                 UnlockedHeroes = new List<string>(UnlockedHeroes), UnlockedDifficulties = new List<string>(UnlockedDifficulties),
                 UnlockedRecipes = new List<string>(UnlockedRecipes), UnlockedAppearances = new List<string>(UnlockedAppearances),
-                FirstSolutionFlags = new List<string>(FirstSolutionFlags)
+                FirstSolutionFlags = new List<string>(FirstSolutionFlags), SelectableInvestigationPolicies = new List<string>(SelectableInvestigationPolicies), SelectedInvestigationPolicy = SelectedInvestigationPolicy
             };
             return copy;
         }
@@ -71,7 +73,7 @@ namespace JoseonHunter.Domain.Save
             EvolutionNodeRanks = copy.EvolutionNodeRanks; EvolutionSpentCoins = copy.EvolutionSpentCoins; InvestigationClues = copy.InvestigationClues; ClaimedInvestigationMilestones = copy.ClaimedInvestigationMilestones;
             MonsterCompendiumEntries = copy.MonsterCompendiumEntries; UnlockedHeroes = copy.UnlockedHeroes; UnlockedDifficulties = copy.UnlockedDifficulties;
             UnlockedRecipes = copy.UnlockedRecipes; UnlockedAppearances = copy.UnlockedAppearances; BestPatrolResults = copy.BestPatrolResults;
-            TutorialCompleted = copy.TutorialCompleted; AccessibilityEnabled = copy.AccessibilityEnabled; AudioVolume = copy.AudioVolume; FirstSolutionFlags = copy.FirstSolutionFlags;
+            TutorialCompleted = copy.TutorialCompleted; AccessibilityEnabled = copy.AccessibilityEnabled; AudioVolume = copy.AudioVolume; FirstSolutionFlags = copy.FirstSolutionFlags; SelectableInvestigationPolicies = copy.SelectableInvestigationPolicies; SelectedInvestigationPolicy = copy.SelectedInvestigationPolicy;
         }
     }
 }
