@@ -11,7 +11,7 @@ namespace JoseonHunter.Editor.AssetProduction
     {
         private static readonly HashSet<string> ValidBatches = new HashSet<string>
         {
-            "characters", "enemies", "weapons_vfx", "stage", "ui", "audio", "store"
+            "characters", "enemies", "weapons_vfx", "stage", "ui", "audio", "store", "static_launch"
         };
 
         private static readonly Regex ApprovedSha256 = new Regex("^[0-9a-f]{64}$", RegexOptions.Compiled);

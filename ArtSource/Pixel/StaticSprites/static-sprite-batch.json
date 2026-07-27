@@ -17,7 +17,7 @@
                        "sha256":  "1ddb67dbb86eff92243bfca5ffaa3afb54afb532ad2e32d4924bb13ffd994c7f",
                        "runtimePath":  "Heroes/rookie_constable.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -36,7 +36,7 @@
                        "sha256":  "456ff3a519698f923a811aeb1a201b1212a5382c01dd73aa80b9f0f093576377",
                        "runtimePath":  "Heroes/shaman.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -55,7 +55,7 @@
                        "sha256":  "1ec8fc16c0be08e3cba752260b5f1465c8aaa2896f415503349037a7e241ad5c",
                        "runtimePath":  "Heroes/mountain_hunter.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -74,7 +74,7 @@
                        "sha256":  "71e070fd365401f6f0d90b295ef060808de93395d2c0acd85376dfdf940b3e12",
                        "runtimePath":  "Enemies/plague_rat.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -93,7 +93,7 @@
                        "sha256":  "09c43ad06efeef949699fc9704c2588ed001b208b279a25845cbca2dd223f681",
                        "runtimePath":  "Enemies/vengeful_spirit.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -112,7 +112,7 @@
                        "sha256":  "d4afb787d7eaa2553298c83b728d167baa2611eadeb52dab42cc6d44e377a092",
                        "runtimePath":  "Enemies/sakkat_specter.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -131,7 +131,7 @@
                        "sha256":  "8bc12a8e3c762d7a0200d6c1723a2f0517c6cd25cf8693cb6ffdfa92fada7a8d",
                        "runtimePath":  "Enemies/dokkaebi.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -150,7 +150,7 @@
                        "sha256":  "0560e21796d393d9b1c55c0d02129c0395ca2cec90989ffc90bc72eb87cb1148",
                        "runtimePath":  "Enemies/bandit.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -169,7 +169,7 @@
                        "sha256":  "4c0b9549e0f16b7feedeb0b46be0d40b92c6eaa28d45b6913fa79fd8d14c91e5",
                        "runtimePath":  "Bosses/fallen_general.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -188,7 +188,7 @@
                        "sha256":  "0d9a9440ba69d4d08769e1c16d87c528ff2a8a6354f9a4920776cdd9a3d12ce6",
                        "runtimePath":  "Pickups/coin.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -207,7 +207,7 @@
                        "sha256":  "0eb10ab69ad4389812a01d9cbc15153676409d4bf71c4249a689f3207ab51154",
                        "runtimePath":  "Pickups/experience_spirit_flame.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    },
                    {
@@ -226,7 +226,7 @@
                        "sha256":  "78d83f01271d49288a2ef490eb1ef3c2bf56356ce020e63848ab657831afda03",
                        "runtimePath":  "Pickups/treasure_chest.png",
                        "width":  64,
-                       "approvalStatus":  "pending",
+                       "approvalStatus":  "approved",
                        "pixelsPerUnit":  32
                    }
                ],

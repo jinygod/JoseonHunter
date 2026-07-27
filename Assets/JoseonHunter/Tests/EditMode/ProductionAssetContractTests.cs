@@ -66,6 +66,22 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ValidateAcceptsStaticLaunchAlongsideAllRequiredBatches()
+        {
+            Assert.That(Validate(
+                    Entry("characters", "characters"),
+                    Entry("enemies", "enemies"),
+                    Entry("weapons", "weapons_vfx"),
+                    Entry("stage", "stage"),
+                    Entry("ui", "ui"),
+                    Entry("audio", "audio", width: 0, height: 0, frameCount: 0,
+                        pivotX: 0f, pivotY: 0f, pixelsPerUnit: 0),
+                    Entry("store", "store"),
+                    Entry("static", "static_launch")),
+                Is.Empty);
+        }
+
+        [Test]
         public void ValidateReportsMissingRequiredBatch()
         {
             Assert.That(Validate(

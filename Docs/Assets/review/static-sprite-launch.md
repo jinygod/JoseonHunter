@@ -1,13 +1,17 @@
 # Static Sprite Launch Review
 
-## PENDING BATCH APPROVAL
+## APPROVED BATCH
 
-The consolidated board contains all twelve pending launch sources: three
+The user approved the consolidated twelve-asset static sprite launch batch on
+2026-07-27. The approved sources are now copied byte-identically to the
+runtime static-sprite paths and recorded in the production and rights ledgers.
+
+The consolidated board contains all twelve approved launch sources: three
 heroes, five normal enemies, one boss, and three pickups. Every asset is shown
 at literal native `64x64` size and as an exact `8x` nearest-neighbor (`512x512`)
-check on both light and dark grounds. Runtime copies, production manifest
-records, prefabs, and scene bindings are intentionally absent until explicit
-batch approval.
+check on both light and dark grounds. Runtime copies and production-manifest
+records are now present. Prefabs and scene bindings remain intentionally absent
+from this asset-import task.
 
 ## Source preflight
 
