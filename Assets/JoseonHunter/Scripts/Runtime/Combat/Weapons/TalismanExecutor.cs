@@ -164,7 +164,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void ResolveSeal(TalismanCast cast, in WeaponExecutionContext context)
         {
             if (!IsCurrentTargetValid(cast.Target)) { ResolveNoTarget(cast, context); return; }
-            if (TryContact(cast.Target, out var contact)) Apply(cast, cast.Target, contact, ContactPhase.Seal, context.SimulationTick);
+            // A five-color binding may include only seals that were both pixel-confirmed and accepted by the damage service.
+            if (!TryContact(cast.Target, out var contact) || !Apply(cast, cast.Target, contact, ContactPhase.Seal, context.SimulationTick))
+            {
+                ResolveFailedContact(cast);
+                return;
+            }
             cast.CompletedHops++;
             if (cast.CompletedHops >= HopCount || !TryFindNearestLegal(cast.Target.WorldPosition, cast.ReservedTargets, out var next))
             {
@@ -180,6 +185,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
             cast.Target = next;
             cast.ReservedTargets.Add(next.RuntimeId);
+            cast.AttemptedTargets.Add(next.RuntimeId);
             cast.State = TalismanState.Transferring;
         }
 

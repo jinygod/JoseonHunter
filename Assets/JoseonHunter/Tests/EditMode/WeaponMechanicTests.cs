@@ -398,6 +398,62 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void LevelFiveBindingExcludesTargetWhoseSealCannotBeConfirmed()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var noContactMask = PixelHitMask.FromRows("0");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 10f, 2f, 20f, 1, 5);
+            var failedSeal = new TestTarget(1, new Float2(0.2f, 0f), mask);
+            registry.Register(failedSeal); registry.Register(new TestTarget(2, new Float2(0.4f, 0f), mask));
+            registry.Register(new TestTarget(3, new Float2(0.6f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
+            failedSeal.SetHurtMask(noContactMask);
+            talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 3));
+            for (var tick = 4; tick <= 6; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(events.Any(confirmed => confirmed.Phase == ContactPhase.Seal && confirmed.TargetRuntimeId == 1), Is.False);
+                Assert.That(events.Any(confirmed => confirmed.Phase == ContactPhase.Blast && confirmed.TargetRuntimeId == 1), Is.False);
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Blast), Is.EqualTo(2));
+            });
+        }
+
+        [Test]
+        public void FailedTransferContactSkipsTheAttemptedTargetAndMovesToAnotherLegalTarget()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var noContactMask = PixelHitMask.FromRows("0");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 10f, 2f, 20f, 2, 1);
+            var first = new TestTarget(1, new Float2(0.2f, 0f), mask);
+            var failedTransfer = new TestTarget(2, new Float2(0.4f, 0f), mask);
+            var replacement = new TestTarget(3, new Float2(0.6f, 0f), mask);
+            registry.Register(first); registry.Register(failedTransfer); registry.Register(replacement);
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            for (var tick = 1; tick <= 3; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+            failedTransfer.SetHurtMask(noContactMask);
+            for (var tick = 4; tick <= 7; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(events.Any(confirmed => confirmed.TargetRuntimeId == 2), Is.False);
+                Assert.That(events.Any(confirmed => confirmed.TargetRuntimeId == 3 && confirmed.Phase == ContactPhase.Direct), Is.True);
+                Assert.That(events.Count(confirmed => confirmed.TargetRuntimeId == 3 && confirmed.Phase == ContactPhase.Blast), Is.EqualTo(1));
+                Assert.That(talisman.ActiveCastCount, Is.Zero);
+            });
+        }
+
+        [Test]
         public void WindThunderFanKnocksBackWindContactsBeforeSimultaneousMarkedLightning()
         {
             var mask = PixelHitMask.FromRows("1");
@@ -482,7 +538,7 @@ namespace JoseonHunter.Tests.EditMode
 
         private sealed class TestTarget : ICombatTarget
         {
-            private readonly PixelHitMask mask;
+            private PixelHitMask mask;
             public TestTarget(int runtimeId, Float2 position, PixelHitMask mask, bool isBoss = false, bool isElite = false, float threatScore = 0f, int health = 100)
             {
                 RuntimeId = runtimeId; WorldPosition = position; this.mask = mask; Health = health;
@@ -499,6 +555,7 @@ namespace JoseonHunter.Tests.EditMode
             public PixelHitMask HurtMask => mask;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
             public void MoveTo(Float2 position) => WorldPosition = position;
+            public void SetHurtMask(PixelHitMask value) => mask = value;
             public void ApplyResolvedDamage(int damage) => Health -= damage;
             public void ApplyKnockback(Float2 direction, float force) => KnockbackCount++;
         }
