@@ -77,7 +77,7 @@ namespace JoseonHunter.Tests.EditMode
         private static void WriteSprite(string path, TextureFormat format, Color32? color = null, int x = 32, int y = 56, int colors = 1)
         {
             var texture = new Texture2D(64, 64, format, false); texture.SetPixels32(new Color32[64 * 64]);
-            for (var index = 0; index < colors; index++) texture.SetPixel(x + index % 7, y - index / 7, color ?? new Color32((byte)(index + 1), 2, 3, 255));
+            for (var index = 0; index < colors; index++) texture.SetPixel(x + index % 7, 63 - (y - index / 7), color ?? new Color32((byte)(index + 1), 2, 3, 255));
             File.WriteAllBytes(path, texture.EncodeToPNG()); UnityEngine.Object.DestroyImmediate(texture);
         }
     }

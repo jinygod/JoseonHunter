@@ -8,5 +8,5 @@ Readable at native scale. Create a new design; do not reproduce any commercial
 character, logo, costume, or source pixels. One subject only, no text, no
 frame, no scenery, no attack pose.
 
-Rugged cute Joseon mountain hunter in brown and forest-green
+MOUNTAIN HUNTER: Rugged cute Joseon mountain hunter in brown and forest-green
 practical clothing, compact horn bow and small quiver, warm determined face.

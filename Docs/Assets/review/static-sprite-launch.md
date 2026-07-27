@@ -2,4 +2,4 @@
 
 ## HEROES AND PICKUPS COMPLETE — FULL BATCH PENDING
 
-Six native 64×64 sources are shown on light/dark review board, enlarged 8× nearest-neighbor. All are pending approval. PixelLab usage: five new one-generation Pixflux jobs; reused rookie constable: zero. Balance 37 → 32 remaining.
+The board presents each pending source at native 64×64, an 8× nearest-neighbor light-background check, and an 8× dark-background check. Short hashes, per-source selected generation cost, and batch usage are visible. The board intentionally excludes enemy and runtime entries pending Task 3.

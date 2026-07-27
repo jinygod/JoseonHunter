@@ -8,5 +8,5 @@ Readable at native scale. Create a new design; do not reproduce any commercial
 character, logo, costume, or source pixels. One subject only, no text, no
 frame, no scenery, no attack pose.
 
-Friendly but capable young Joseon shaman in ivory and muted-red ritual
+SHAMAN: Friendly but capable young Joseon shaman in ivory and muted-red ritual
 clothing, small ritual fan and one paper charm, black hair tied simply.

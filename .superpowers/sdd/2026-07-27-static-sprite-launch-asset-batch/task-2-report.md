@@ -12,3 +12,15 @@ Created sources and metadata; generated review board. Per-source technical condi
 
 ## Self-review / concerns
 All five new assets use only 1-generation operations; no pro/20+ operation. Partial board is marked full-batch pending. Concern: source contract validation needs Task 3 entries for full-manifest success; Task 2 intentionally does not create them.
+
+## Fix round 1 status — needs context
+
+The first text-only pickup retry (`coin`, Pixen job `a64e58ab-da3f-4ae1-889d-f98ebd3cc748`) completed but was rejected after visual review because it still depicted a humanoid instead of a yeopjeon coin. The next text-only Pixflux retry (`coin`, job `7d411f6d-b230-49f4-a325-2e5054826265`) is unresolved: repeated polls report `processing 95%`, `eta ~0s`, with no image result. No subsequent job was launched. PixelLab's live balance at this checkpoint is `29 used / 11 remaining` on the 40-generation trial; this includes activity beyond the originally recorded Task 2 five-generation batch. Controller context is needed to decide whether to keep polling or classify/cancel the stuck provider job before spending further attempts.
+
+## Fix round 1 completion
+Object-only override used Pixen only for selected fixes: coin b87df0d2-cafd-42d6-96fa-c9f5bea3ed87, flame c0e55d72-4312-42d4-8a9f-5e50c5ec5b8a, chest 3a00223a-c20b-4a18-b272-17fa9637aa9c. Rejected: original humanoid pickup jobs 202728e8-7343-4f14-a90c-e44e6f304ad2, 061021ba-0a27-49d8-9546-c02bedf11073, 1881bdc2-6dc7-44b1-b6a9-b04d3248a71c; text-only humanoid retry a64e58ab-da3f-4ae1-889d-f98ebd3cc748; and failed Pixflux queue job 7d411f6d-b230-49f4-a325-2e5054826265. Selected output identities were visually inspected before normalization. Live balance after fixes will be recorded with validation evidence.
+
+
+## Contract coordinate fix and validation
+Root cause: the contract compared Unity bottom-origin pixel y directly to the PNG/top-left foot anchor. ValidatePixels now converts with 	opY = CanvasSize - 1 - y before computing maxY; the EditMode fixture helper now writes top-origin coordinates. Focused StaticSpriteBatchContractTests command returned exit code 0. The added direct CLI method was invoked for rookie_constable, but this Unity batch invocation exited before method execution (log contains only startup/return 1); no individual pass claim is made. The prior direct invocation did reach the method and demonstrated the old false invalid maximum opaque y failure for the byte-identical approved constable.
+

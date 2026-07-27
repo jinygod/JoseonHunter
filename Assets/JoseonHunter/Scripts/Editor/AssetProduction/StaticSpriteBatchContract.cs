@@ -78,6 +78,16 @@ namespace JoseonHunter.Editor.AssetProduction
             EditorApplication.Exit(1);
         }
 
+        public static void ValidateAssetFromCommandLine()
+        {
+            var assetId = CommandLineValue("-staticSpriteAssetId");
+            var sourceDirectory = CommandLineValue("-staticSpriteSourceDirectory");
+            var errors = ValidateAsset(assetId, sourceDirectory);
+            if (errors.Count == 0) { Debug.Log("Static sprite asset preflight passed: " + assetId); return; }
+            Debug.LogError("Static sprite asset preflight failed: " + assetId + ": " + string.Join("; ", errors));
+            EditorApplication.Exit(1);
+        }
+
         private static void ValidateMetadata(Asset asset, List<string> errors)
         {
             if (asset.width != CanvasSize || asset.height != CanvasSize) errors.Add("invalid dimensions");
@@ -97,7 +107,7 @@ namespace JoseonHunter.Editor.AssetProduction
             for (var y = 0; y < CanvasSize; y++) for (var x = 0; x < CanvasSize; x++)
             {
                 var pixel = pixels[y * CanvasSize + x]; if (pixel.a != byte.MaxValue) continue;
-                colors.Add(pixel); minX = Math.Min(minX, x); maxX = Math.Max(maxX, x); maxY = Math.Max(maxY, y);
+                colors.Add(pixel); minX = Math.Min(minX, x); maxX = Math.Max(maxX, x); maxY = Math.Max(maxY, CanvasSize - 1 - y);
             }
             if (semi) errors.Add("semi-transparent pixel");
             if (pixels[0].a != 0 || pixels[CanvasSize - 1].a != 0 || pixels[CanvasSize * (CanvasSize - 1)].a != 0 || pixels[^1].a != 0) errors.Add("opaque corner");
