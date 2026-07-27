@@ -16,4 +16,8 @@
 ## Compatibility
 
 - Existing `DamageResolver.Resolve` behaviour is unchanged. `TryResolve` is the validating entry point used by the authoritative Runtime service.
-- The no-registry constructor supports the plan's minimal authority example. Production wiring supplies `CombatTargetRegistry`, which requires the request target to be the currently registered instance.
+- `CombatDamageService` requires a non-null `CombatTargetRegistry`; every target must be the currently registered instance.
+
+## Fix round 1
+
+- Removed the nullable-registry authority bypass and added coverage for constructor, unregistered target, unconfirmed contact, negative multiplier, rounded overflow, and the existing zero-multiplier minimum-damage rule.

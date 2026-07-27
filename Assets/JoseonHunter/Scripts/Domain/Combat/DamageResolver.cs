@@ -13,21 +13,21 @@ namespace JoseonHunter.Domain.Combat
 
         public static bool TryResolve(in DamageRequest request, out DamageResult result)
         {
-            if (request.BaseDamage < 0 || request.FlatBonus < 0 || !IsFinite(request.Multiplier))
+            if (request.BaseDamage < 0 || request.FlatBonus < 0 || request.Multiplier < 0f || !IsFinite(request.Multiplier))
             {
                 result = default;
                 return false;
             }
 
             var damage = ((double)request.BaseDamage + request.FlatBonus) * request.Multiplier;
-            if (double.IsNaN(damage) || double.IsInfinity(damage) || damage > int.MaxValue)
+            var roundedDamage = Math.Round(damage, MidpointRounding.AwayFromZero);
+            if (double.IsNaN(roundedDamage) || double.IsInfinity(roundedDamage) || roundedDamage < int.MinValue || roundedDamage > int.MaxValue)
             {
                 result = default;
                 return false;
             }
 
-            var roundedDamage = (int)Math.Round(damage, MidpointRounding.AwayFromZero);
-            result = new DamageResult(Math.Max(1, roundedDamage), request.IsCritical);
+            result = new DamageResult(Math.Max(1, (int)roundedDamage), request.IsCritical);
             return true;
         }
 

@@ -11,7 +11,9 @@ namespace JoseonHunter.Tests.EditMode
         public void ConfirmedHitMutatesHealthOnceAndPublishesExactResolvedDamage()
         {
             var target = new FakeCombatTarget(7, 40);
-            var service = new CombatDamageService();
+            var registry = new CombatTargetRegistry();
+            registry.Register(target);
+            var service = new CombatDamageService(registry);
             ConfirmedDamageEvent published = default;
             service.DamageConfirmed += value => published = value;
             var request = WeaponDamageRequest.Create(12, WeaponId.HwandoFlyingBlade, target, 9, false, new Float2(3f, 4f), ContactPhase.Outbound, 44);
@@ -44,10 +46,25 @@ namespace JoseonHunter.Tests.EditMode
             var registry = new CombatTargetRegistry();
             var target = new FakeCombatTarget(7, 40);
             var service = new CombatDamageService(registry);
-            var request = WeaponDamageRequest.Create(new AttackInstance(12, RepeatHitPolicy.OncePerPhase, 0f), WeaponId.HwandoFlyingBlade, target, 9, false, new Float2(3f, 4f), ContactPhase.Outbound, 44, false);
+            var request = WeaponDamageRequest.Create(new AttackInstance(12, RepeatHitPolicy.OncePerPhase, 0f), WeaponId.HwandoFlyingBlade, target, 9, false, new Float2(3f, 4f), ContactPhase.Outbound, 44);
 
             Assert.That(service.TryApply(request, out _), Is.False);
             Assert.That(target.Health, Is.EqualTo(40));
+
+            registry.Register(target);
+            var unconfirmed = WeaponDamageRequest.Create(new AttackInstance(13, RepeatHitPolicy.OncePerPhase, 0f), WeaponId.HwandoFlyingBlade, target, 9, false, new Float2(3f, 4f), ContactPhase.Outbound, 44, false);
+            Assert.That(service.TryApply(unconfirmed, out _), Is.False);
+            Assert.That(target.Health, Is.EqualTo(40));
+        }
+
+        [Test]
+        public void ServiceRequiresARegistryAndDamageResolutionRejectsInvalidNumbers()
+        {
+            Assert.That(() => new CombatDamageService(null), Throws.ArgumentNullException);
+            Assert.That(DamageResolver.TryResolve(new DamageRequest(1, 0, false, -1f), out _), Is.False);
+            Assert.That(DamageResolver.TryResolve(new DamageRequest(int.MaxValue, 0, false, 2f), out _), Is.False);
+            Assert.That(DamageResolver.TryResolve(new DamageRequest(0, 0, false, 0f), out var zeroMultiplier), Is.True);
+            Assert.That(zeroMultiplier.FinalDamage, Is.EqualTo(1));
         }
 
         private sealed class FakeCombatTarget : ICombatTarget

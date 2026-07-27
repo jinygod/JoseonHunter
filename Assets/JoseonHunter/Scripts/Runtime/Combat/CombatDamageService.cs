@@ -41,9 +41,9 @@ namespace JoseonHunter.Runtime.Combat
         private readonly CombatTargetRegistry targetRegistry;
         private readonly Dictionary<int, AttackInstance> attacks = new Dictionary<int, AttackInstance>();
 
-        public CombatDamageService(CombatTargetRegistry targetRegistry = null)
+        public CombatDamageService(CombatTargetRegistry targetRegistry)
         {
-            this.targetRegistry = targetRegistry;
+            this.targetRegistry = targetRegistry ?? throw new ArgumentNullException(nameof(targetRegistry));
         }
 
         public event Action<ConfirmedDamageEvent> DamageConfirmed;
@@ -64,7 +64,7 @@ namespace JoseonHunter.Runtime.Combat
         }
 
         private bool HasValidTarget(ICombatTarget target) =>
-            target != null && target.IsAlive && target.Health > 0 && (targetRegistry == null || targetRegistry.Contains(target));
+            target != null && target.IsAlive && target.Health > 0 && targetRegistry.Contains(target);
 
         private AttackInstance GetAttack(AttackInstance requestAttack)
         {
