@@ -1,0 +1,21 @@
+%YAML 1.1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
+  m_Name: TalismanThrow
+  id: talisman_throw
+  targeting: 2
+  geometry: 2
+  contactPhase: 3
+  element: 1
+  repeatHitPolicy: 1
+  levels:
+  - {weaponId: talisman_throw, level: 1, baseDamage: 8, cooldownSeconds: .7, range: 6, projectileCount: 1, speed: 12, durationSeconds: .2, pierce: 1, chainCount: 1, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: talisman_throw, level: 2, baseDamage: 10, cooldownSeconds: .66, range: 6, projectileCount: 1, speed: 12, durationSeconds: .2, pierce: 1, chainCount: 2, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: talisman_throw, level: 3, baseDamage: 12, cooldownSeconds: .62, range: 6.5, projectileCount: 1, speed: 13, durationSeconds: .2, pierce: 1, chainCount: 3, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: talisman_throw, level: 4, baseDamage: 14, cooldownSeconds: .58, range: 7, projectileCount: 1, speed: 14, durationSeconds: .2, pierce: 1, chainCount: 4, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: talisman_throw, level: 5, baseDamage: 16, cooldownSeconds: .54, range: 7, projectileCount: 1, speed: 14, durationSeconds: .2, pierce: 1, chainCount: 5, knockback: 0, slowFraction: 0, criticalChance: 0}
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000003, type: 3}]
+  binaryMaskSourceReferences: []
+  activeFrameWindows: []
+  poolCapacity: 4

@@ -16,11 +16,12 @@ namespace JoseonHunter.Runtime.Combat
 
     public readonly struct WeaponExecutionContext
     {
-        public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder, int simulationTick)
+        public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, Func<WeaponId, Sprite> spriteResolver, int sortingOrder, int simulationTick)
         {
             OwnerPosition = ownerPosition;
             PresentationRoot = presentationRoot;
             BladeSprite = bladeSprite;
+            this.spriteResolver = spriteResolver;
             SortingOrder = sortingOrder;
             SimulationTick = simulationTick;
         }
@@ -28,6 +29,8 @@ namespace JoseonHunter.Runtime.Combat
         public Float2 OwnerPosition { get; }
         public Transform PresentationRoot { get; }
         public Sprite BladeSprite { get; }
+        private readonly Func<WeaponId, Sprite> spriteResolver;
+        public Sprite SpriteFor(WeaponId weaponId) => spriteResolver?.Invoke(weaponId) ?? BladeSprite;
         public int SortingOrder { get; }
         public int SimulationTick { get; }
     }
@@ -37,6 +40,7 @@ namespace JoseonHunter.Runtime.Combat
         private readonly List<IWeaponExecutor> executors = new List<IWeaponExecutor>();
         private int simulationTick;
         private int nextAttackInstanceId = 1;
+        private Func<WeaponId, Sprite> spriteResolver;
 
         public WeaponRuntimeController(CombatTargetRegistry targets, CombatDamageService damageService, PixelHitMask bladeMask)
         {
@@ -62,12 +66,14 @@ namespace JoseonHunter.Runtime.Combat
             executors.Add(executor);
         }
 
+        public void SetSpriteResolver(Func<WeaponId, Sprite> resolver) => spriteResolver = resolver;
+
         public void Tick(float deltaTime, Vector2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder)
         {
             if (deltaTime < 0f || presentationRoot == null) return;
             simulationTick++;
             var context = new WeaponExecutionContext(
-                new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, sortingOrder, simulationTick);
+                new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, sortingOrder, simulationTick);
             foreach (var executor in executors) executor.Tick(deltaTime, context);
         }
 

@@ -1,0 +1,21 @@
+%YAML 1.1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
+  m_Name: WindThunderFan
+  id: wind_thunder_fan
+  targeting: 7
+  geometry: 7
+  contactPhase: 8
+  element: 4
+  repeatHitPolicy: 1
+  levels:
+  - {weaponId: wind_thunder_fan, level: 1, baseDamage: 8, cooldownSeconds: 1, range: 4, projectileCount: 1, speed: 0, durationSeconds: 0, pierce: 0, chainCount: 2, knockback: 1, slowFraction: 0, criticalChance: 0}
+  - {weaponId: wind_thunder_fan, level: 2, baseDamage: 10, cooldownSeconds: .92, range: 4.4, projectileCount: 1, speed: 0, durationSeconds: 0, pierce: 0, chainCount: 3, knockback: 1.2, slowFraction: 0, criticalChance: 0}
+  - {weaponId: wind_thunder_fan, level: 3, baseDamage: 12, cooldownSeconds: .84, range: 4.8, projectileCount: 1, speed: 0, durationSeconds: 0, pierce: 0, chainCount: 4, knockback: 1.4, slowFraction: 0, criticalChance: 0}
+  - {weaponId: wind_thunder_fan, level: 4, baseDamage: 14, cooldownSeconds: .76, range: 5.2, projectileCount: 1, speed: 0, durationSeconds: 0, pierce: 0, chainCount: 5, knockback: 1.6, slowFraction: 0, criticalChance: 0}
+  - {weaponId: wind_thunder_fan, level: 5, baseDamage: 16, cooldownSeconds: .68, range: 5.6, projectileCount: 4, speed: 0, durationSeconds: 0, pierce: 0, chainCount: 6, knockback: 1.8, slowFraction: 0, criticalChance: 0}
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000008, type: 3}]
+  binaryMaskSourceReferences: []
+  activeFrameWindows: []
+  poolCapacity: 6

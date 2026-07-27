@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
+  m_Name: GakgungShot
+  id: gakgung_shot
+  targeting: 1
+  geometry: 1
+  contactPhase: 2
+  element: 0
+  repeatHitPolicy: 0
+  levels:
+  - {weaponId: gakgung_shot, level: 1, baseDamage: 10, cooldownSeconds: .55, range: 7, projectileCount: 1, speed: 15, durationSeconds: .2, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: gakgung_shot, level: 2, baseDamage: 12, cooldownSeconds: .52, range: 7.5, projectileCount: 1, speed: 16, durationSeconds: .2, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: gakgung_shot, level: 3, baseDamage: 14, cooldownSeconds: .49, range: 8, projectileCount: 1, speed: 17, durationSeconds: .2, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: gakgung_shot, level: 4, baseDamage: 16, cooldownSeconds: .46, range: 8.5, projectileCount: 1, speed: 18, durationSeconds: .2, pierce: 2, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: gakgung_shot, level: 5, baseDamage: 18, cooldownSeconds: .43, range: 9, projectileCount: 3, speed: 19, durationSeconds: .2, pierce: 3, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000002, type: 3}]
+  binaryMaskSourceReferences: []
+  activeFrameWindows: []
+  poolCapacity: 3

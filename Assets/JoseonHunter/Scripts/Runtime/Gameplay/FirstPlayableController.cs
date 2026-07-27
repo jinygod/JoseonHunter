@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Combat;
+using JoseonHunter.Content.Weapons;
+using JoseonHunter.Presentation.Combat;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
@@ -18,6 +21,7 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite experienceSprite;
         [SerializeField] private Sprite coinSprite;
         [SerializeField] private Sprite treasureChestSprite;
+        [SerializeField] private WeaponCatalogAsset weaponCatalog;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<PickupState> pickups = new List<PickupState>();
@@ -36,7 +40,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private CombatTargetRegistry combatTargets;
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
-        private FlyingBladeExecutor flyingBlade;
+        private DamageNumberPool damageNumberPool;
+        private readonly List<WeaponId> registeredWeaponIds = new List<WeaponId>();
         private Texture2D solidTexture;
         private Sprite solidSprite;
         private Vector2 touchStart;
@@ -45,6 +50,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private float playerHealth;
         private float playerMaxHealth;
         private float moveSpeed;
+        // Legacy offer labels remain presentation-only until the progression catalog owns their selection.
         private float attackDamage;
         private float attackCooldownMultiplier;
         private float pickupRadius;
@@ -72,6 +78,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
         /// <summary>Read-only combat event source for presentation components.</summary>
         public CombatDamageService CombatDamageService => combatDamageService;
+        public WeaponRuntimeController WeaponRuntime => weaponRuntime;
+        public IReadOnlyList<WeaponId> RegisteredWeaponIds => registeredWeaponIds;
+        public DamageNumberPool DamageNumberPool => damageNumberPool;
 
         public bool IsBossCombatTarget(int runtimeId)
         {
@@ -174,7 +183,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
             public PixelHitMask HurtMask => owner.MaskFor(state.Renderer);
             public PixelMaskTransform HurtMaskTransform => owner.TransformFor(state.Renderer, WorldPosition);
-            public void ApplyResolvedDamage(int damage) => owner.DamageEnemy(state, damage);
+            public void ApplyResolvedDamage(int damage) => owner.ApplyEnemyDamage(state, damage);
             public void ApplyKnockback(Float2 direction, float force) { }
             public void ApplyFrostSlow(int sourceId, float strength) => state.ApplyFrostSlow(sourceId, strength);
             public void RemoveFrostSlow(int sourceId, float decaySeconds) => state.RemoveFrostSlow(sourceId, decaySeconds);
@@ -342,15 +351,19 @@ namespace JoseonHunter.Runtime.Gameplay
             combatTargets = new CombatTargetRegistry();
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
-            flyingBlade = new FlyingBladeExecutor(weaponRuntime, 12f, 0.42f, 4.5f, 10f, 1);
-            weaponRuntime.Register(flyingBlade);
+            weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            registeredWeaponIds.Clear();
+            RegisterCatalogWeapons();
+            var combatRoot = new GameObject("CombatRoot");
+            combatRoot.transform.SetParent(runtimeObjects, false);
+            damageNumberPool = combatRoot.AddComponent<DamageNumberPool>();
+            damageNumberPool.Bind(combatDamageService);
+            damageNumberPool.SetBossTargetPredicate(IsBossCombatTarget);
 
             elapsed = 0f;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
             moveSpeed = 2.4f;
-            attackDamage = 12f;
-            attackCooldownMultiplier = 1f;
             pickupRadius = 2.2f;
             geumjulDamage = 38f;
             spawnTimer = 0.2f;
@@ -645,18 +658,42 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
-            // Prototype bridge: production content binding can replace these values with WeaponLevelData.
-            var weaponLevel = Mathf.Clamp(level, 1, 5);
-            flyingBlade.Reconfigure(
-                attackDamage * (1f + (weaponLevel - 1) * 0.12f),
-                Mathf.Max(0.16f, (0.42f - (weaponLevel - 1) * 0.035f) * attackCooldownMultiplier),
-                4.5f + (weaponLevel - 1) * 0.4f,
-                10f + (weaponLevel - 1) * 0.8f,
-                weaponLevel >= 5 ? 3 : 1);
             weaponRuntime.Tick(delta, player.transform.position, runtimeObjects, solidSprite, 15);
         }
 
-        private void DamageEnemy(EnemyState enemy, float damage)
+        private void RegisterCatalogWeapons()
+        {
+            if (weaponCatalog == null) throw new InvalidOperationException("Gameplay requires the eight-weapon catalog.");
+            var errors = weaponCatalog.ValidateLaunchRoster();
+            if (errors.Count != 0) throw new InvalidOperationException(string.Join("; ", errors));
+            foreach (var id in WeaponRoster.All)
+            {
+                if (!weaponCatalog.TryGet(id, out var definition) || definition.Levels.Count != 5)
+                    throw new InvalidOperationException($"Gameplay catalog is missing '{id}'.");
+                var data = definition.Levels[Mathf.Clamp(level - 1, 0, 4)];
+                IWeaponExecutor executor;
+                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount);
+                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level);
+                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level);
+                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level);
+                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level);
+                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level);
+                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level);
+                else throw new InvalidOperationException($"No executor is available for '{id}'.");
+                weaponRuntime.Register(executor);
+                registeredWeaponIds.Add(id);
+            }
+        }
+
+        private Sprite ResolveWeaponSprite(WeaponId id)
+        {
+            return weaponCatalog != null && weaponCatalog.TryGet(id, out var definition) && definition.PresentationSprites.Count > 0
+                ? definition.PresentationSprites[0]
+                : solidSprite;
+        }
+
+        private void ApplyEnemyDamage(EnemyState enemy, float damage)
         {
             if (enemy == null || enemy.Object == null)
             {
@@ -930,7 +967,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 if (enemy.Object != null && PointInPolygon(enemy.Object.transform.position, polygon))
                 {
-                    DamageEnemy(enemy, enemy.IsBoss ? geumjulDamage * 0.35f : geumjulDamage);
+                    ApplyEnemyDamage(enemy, enemy.IsBoss ? geumjulDamage * 0.35f : geumjulDamage);
                 }
             }
 

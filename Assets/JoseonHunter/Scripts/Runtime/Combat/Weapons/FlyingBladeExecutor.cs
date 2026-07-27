@@ -183,7 +183,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var visual = pool.Count > 0 ? pool.Pop() : new GameObject("Hwando Flying Blade");
             visual.transform.SetParent(context.PresentationRoot, false);
             var renderer = visual.GetComponent<SpriteRenderer>() ?? visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = context.BladeSprite;
+            renderer.sprite = context.SpriteFor(WeaponId.HwandoFlyingBlade);
             renderer.color = new Color(1f, 0.9f, 0.35f, 1f);
             renderer.sortingOrder = context.SortingOrder;
             visual.transform.localScale = Vector3.one;

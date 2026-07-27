@@ -1,0 +1,21 @@
+%YAML 1.1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
+  m_Name: SingijeonVolley
+  id: singijeon_volley
+  targeting: 5
+  geometry: 5
+  contactPhase: 2
+  element: 3
+  repeatHitPolicy: 0
+  levels:
+  - {weaponId: singijeon_volley, level: 1, baseDamage: 9, cooldownSeconds: .9, range: 7, projectileCount: 2, speed: 11, durationSeconds: 0, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: singijeon_volley, level: 2, baseDamage: 11, cooldownSeconds: .84, range: 7.4, projectileCount: 3, speed: 12, durationSeconds: 0, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: singijeon_volley, level: 3, baseDamage: 13, cooldownSeconds: .78, range: 7.8, projectileCount: 3, speed: 13, durationSeconds: 0, pierce: 2, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: singijeon_volley, level: 4, baseDamage: 15, cooldownSeconds: .72, range: 8.2, projectileCount: 4, speed: 14, durationSeconds: 0, pierce: 2, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: singijeon_volley, level: 5, baseDamage: 17, cooldownSeconds: .66, range: 8.6, projectileCount: 5, speed: 15, durationSeconds: 0, pierce: 3, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000006, type: 3}]
+  binaryMaskSourceReferences: []
+  activeFrameWindows: []
+  poolCapacity: 8

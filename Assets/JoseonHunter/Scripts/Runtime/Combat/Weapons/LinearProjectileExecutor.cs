@@ -114,7 +114,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var visual = pool.Count > 0 ? pool.Pop() : new GameObject(visualName);
             visual.transform.SetParent(context.PresentationRoot, false);
             var renderer = visual.GetComponent<SpriteRenderer>() ?? visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = context.BladeSprite;
+            renderer.sprite = context.SpriteFor(spec.WeaponId);
             renderer.sortingOrder = context.SortingOrder;
             renderer.color = Color.white;
             visual.transform.localScale = Vector3.one;

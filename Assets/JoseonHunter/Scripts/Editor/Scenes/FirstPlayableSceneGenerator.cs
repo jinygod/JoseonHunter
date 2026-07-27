@@ -45,6 +45,8 @@ namespace JoseonHunter.Editor.Scenes
                 "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png");
             AssignSprite(serialized, "treasureChestSprite",
                 "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/treasure_chest.png");
+            serialized.FindProperty("weaponCatalog").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<JoseonHunter.Content.Weapons.WeaponCatalogAsset>("Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset");
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, GameplayScenePath);
