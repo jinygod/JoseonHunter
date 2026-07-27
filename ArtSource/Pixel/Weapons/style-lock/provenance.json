@@ -1,0 +1,37 @@
+{
+  "provider": "PixelLab",
+  "tool": "create_image_pixen",
+  "approvedPromptRevision": "weapon-style-lock-v2",
+  "approvedJobId": "2af2757c-f8d8-45f0-acec-0301842139b1",
+  "rejectedJobIds": [
+    {
+      "jobId": "a7953428-b82b-4314-a8d7-cd67318ba295",
+      "promptRevision": "weapon-style-lock-v1",
+      "reason": "Opaque grey tile board and border violated transparent free-floating sprite contract."
+    }
+  ],
+  "canvas": {
+    "width": 128,
+    "height": 128,
+    "transparent": true
+  },
+  "settings": {
+    "detail": "medium detail",
+    "outline": "single color outline",
+    "view": "high top-down"
+  },
+  "validation": {
+    "alphaValues": [0, 255],
+    "partialAlphaPixels": 0,
+    "opaquePixelCount": 3237,
+    "transparentPixelCount": 13147,
+    "objectsSeparated": true,
+    "lightBackgroundReadable": true,
+    "darkBackgroundReadable": true,
+    "hanYeonhwaScaleReviewed": true,
+    "status": "approved"
+  },
+  "sha256": "AAB374CAB672E046BB7CB9A3C9B1E97A83C8BDFBBC093973E65F46D20AC9BE6D",
+  "subscriptionGenerationCost": 2,
+  "remainingGenerationsAfterApproval": 1998
+}

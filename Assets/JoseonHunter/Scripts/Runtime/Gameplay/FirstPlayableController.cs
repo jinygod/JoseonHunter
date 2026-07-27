@@ -1,5 +1,10 @@
 using System;
 using System.Collections.Generic;
+using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Combat;
+using JoseonHunter.Content.Weapons;
+using JoseonHunter.Runtime.Combat;
+using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,11 +20,14 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite experienceSprite;
         [SerializeField] private Sprite coinSprite;
         [SerializeField] private Sprite treasureChestSprite;
+        [SerializeField] private WeaponCatalogAsset weaponCatalog;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<PickupState> pickups = new List<PickupState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
+        private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
+        private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
         private Camera gameplayCamera;
         private Transform flatField;
@@ -28,6 +36,11 @@ namespace JoseonHunter.Runtime.Gameplay
         private SpriteRenderer playerRenderer;
         private Transform playerHealthFill;
         private LineRenderer geumjulRenderer;
+        private CombatTargetRegistry combatTargets;
+        private CombatDamageService combatDamageService;
+        private WeaponRuntimeController weaponRuntime;
+        private readonly WeaponPixelMaskCatalog weaponMasks = new WeaponPixelMaskCatalog();
+        private readonly List<WeaponId> registeredWeaponIds = new List<WeaponId>();
         private Texture2D solidTexture;
         private Sprite solidSprite;
         private Vector2 touchStart;
@@ -36,9 +49,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private float playerHealth;
         private float playerMaxHealth;
         private float moveSpeed;
+        // Legacy offer labels remain presentation-only until the progression catalog owns their selection.
         private float attackDamage;
-        private float attackInterval;
-        private float attackTimer;
+        private float attackCooldownMultiplier;
         private float pickupRadius;
         private float geumjulDamage;
         private float contactInvulnerability;
@@ -52,6 +65,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private int level;
         private int coins;
         private int kills;
+        private int nextCombatTargetRuntimeId;
         private bool bossSpawned;
         private bool bossAlive;
         private bool upgradeOpen;
@@ -61,6 +75,17 @@ namespace JoseonHunter.Runtime.Gameplay
         private const float TestDuration = 60f;
         private const float BossWarningTime = 45f;
         private const float BossSpawnTime = 50f;
+
+        /// <summary>Read-only combat event source for presentation components.</summary>
+        public CombatDamageService CombatDamageService => combatDamageService;
+        public WeaponRuntimeController WeaponRuntime => weaponRuntime;
+        public IReadOnlyList<WeaponId> RegisteredWeaponIds => registeredWeaponIds;
+
+        public bool IsBossCombatTarget(int runtimeId)
+        {
+            var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
+            return enemy != null && enemy.IsBoss;
+        }
 
         private sealed class EnemyState
         {
@@ -73,6 +98,95 @@ namespace JoseonHunter.Runtime.Gameplay
             public float NextContactTime;
             public bool IsBoss;
             public bool IsTreasure;
+            public ICombatTarget CombatTarget;
+            private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
+            private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
+            private readonly List<int> statusSourceScratch = new List<int>();
+            private float slowDecayRemaining;
+            private float slowDecayStartMultiplier = 1f;
+
+            public void ApplyFrostSlow(int sourceId, float strength)
+            {
+                frostSlowSources[sourceId] = Mathf.Clamp01(strength);
+                slowDecayRemaining = 0f;
+            }
+
+            public void RemoveFrostSlow(int sourceId, float decaySeconds)
+            {
+                var previousMultiplier = SlowMultiplier();
+                if (!frostSlowSources.Remove(sourceId) || frostSlowSources.Count != 0) return;
+                slowDecayStartMultiplier = previousMultiplier;
+                slowDecayRemaining = Mathf.Max(0f, decaySeconds);
+            }
+
+            public void ApplyFreeze(int sourceId, float durationSeconds) => freezeSources[sourceId] = Mathf.Max(freezeSources.TryGetValue(sourceId, out var remaining) ? remaining : 0f, Mathf.Max(0f, durationSeconds));
+
+            public void TickStatuses(float delta)
+            {
+                statusSourceScratch.Clear();
+                foreach (var source in freezeSources) statusSourceScratch.Add(source.Key);
+                for (var index = statusSourceScratch.Count - 1; index >= 0; index--)
+                {
+                    var sourceId = statusSourceScratch[index];
+                    var remaining = freezeSources[sourceId] - delta;
+                    if (remaining <= 0f) freezeSources.Remove(sourceId);
+                    else freezeSources[sourceId] = remaining;
+                }
+                slowDecayRemaining = Mathf.Max(0f, slowDecayRemaining - delta);
+            }
+
+            public float MovementMultiplier
+            {
+                get
+                {
+                    if (freezeSources.Count > 0) return 0f;
+                    if (frostSlowSources.Count > 0) return SlowMultiplier();
+                    return slowDecayRemaining <= 0f ? 1f : Mathf.Lerp(1f, slowDecayStartMultiplier, slowDecayRemaining / 0.35f);
+                }
+            }
+
+            private float SlowMultiplier()
+            {
+                var multiplier = 1f;
+                foreach (var source in frostSlowSources) multiplier = Mathf.Min(multiplier, source.Value);
+                return multiplier;
+            }
+        }
+
+        private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget
+        {
+            private readonly FirstPlayableController owner;
+            private readonly EnemyState state;
+            private readonly int runtimeId;
+
+            public PrototypeCombatTarget(FirstPlayableController owner, EnemyState state, int runtimeId)
+            {
+                this.owner = owner;
+                this.state = state;
+                this.runtimeId = runtimeId;
+            }
+
+            public int RuntimeId => runtimeId;
+            public bool IsAlive => state.Object != null && state.Health > 0f;
+            public int Health => Mathf.CeilToInt(Mathf.Max(0f, state.Health));
+            public bool IsBoss => state.IsBoss;
+            public bool IsElite => false;
+            public float ThreatScore => state.IsBoss ? 100f : 0f;
+            public Float2 WorldPosition
+            {
+                get
+                {
+                    var position = state.Object == null ? Vector2.zero : (Vector2)state.Object.transform.position;
+                    return new Float2(position.x, position.y);
+                }
+            }
+            public PixelHitMask HurtMask => owner.MaskFor(state.Renderer);
+            public PixelMaskTransform HurtMaskTransform => owner.TransformFor(state.Renderer, WorldPosition);
+            public void ApplyResolvedDamage(int damage) => owner.ApplyEnemyDamage(state, damage);
+            public void ApplyKnockback(Float2 direction, float force) { }
+            public void ApplyFrostSlow(int sourceId, float strength) => state.ApplyFrostSlow(sourceId, strength);
+            public void RemoveFrostSlow(int sourceId, float decaySeconds) => state.RemoveFrostSlow(sourceId, decaySeconds);
+            public void ApplyFreeze(int sourceId, float durationSeconds) => state.ApplyFreeze(sourceId, durationSeconds);
         }
 
         private enum PickupKind
@@ -101,6 +215,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnDestroy()
         {
+            weaponRuntime?.Dispose();
+            weaponRuntime = null;
             if (solidSprite != null)
             {
                 Destroy(solidSprite);
@@ -220,6 +336,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ResetRun()
         {
+            weaponRuntime?.Dispose();
+            weaponRuntime = null;
             if (runtimeObjects != null)
             {
                 Destroy(runtimeObjects.gameObject);
@@ -231,14 +349,15 @@ namespace JoseonHunter.Runtime.Gameplay
             pickups.Clear();
             trail.Clear();
             upgradeOffers.Clear();
-
+            combatTargets = new CombatTargetRegistry();
+            combatDamageService = new CombatDamageService(combatTargets);
+            weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
+            weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             elapsed = 0f;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
             moveSpeed = 2.4f;
-            attackDamage = 12f;
-            attackInterval = 0.42f;
-            attackTimer = 0.1f;
             pickupRadius = 2.2f;
             geumjulDamage = 38f;
             spawnTimer = 0.2f;
@@ -249,8 +368,12 @@ namespace JoseonHunter.Runtime.Gameplay
             experience = 0;
             experienceToNext = 8;
             level = 1;
+            registeredWeaponIds.Clear();
+            weaponMasks.Load(weaponCatalog);
+            RegisterCatalogWeapons();
             coins = 0;
             kills = 0;
+            nextCombatTargetRuntimeId = 1;
             bossSpawned = false;
             bossAlive = false;
             upgradeOpen = false;
@@ -399,7 +522,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
             }
 
-            enemies.Add(new EnemyState
+            var state = new EnemyState
             {
                 Object = enemyObject,
                 Renderer = renderer,
@@ -408,7 +531,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 Speed = isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration),
                 ContactDamage = isBoss ? 24f : 10f,
                 IsBoss = isBoss
-            });
+            };
+            state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
+            combatTargets.Register(state.CombatTarget);
+            enemies.Add(state);
         }
 
         private void UpdateTreasureSpawning(float delta)
@@ -449,7 +575,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 renderer.color = new Color(0.72f, 0.40f, 0.12f);
             }
 
-            enemies.Add(new EnemyState
+            var state = new EnemyState
             {
                 Object = chestObject,
                 Renderer = renderer,
@@ -458,7 +584,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 Speed = 0f,
                 ContactDamage = 0f,
                 IsTreasure = true
-            });
+            };
+            state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
+            combatTargets.Register(state.CombatTarget);
+            enemies.Add(state);
         }
 
         private void SpawnBoss()
@@ -476,6 +605,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 var enemy = enemies[index];
                 if (enemy.Object == null)
                 {
+                    combatTargets.Unregister(enemy.CombatTarget);
                     enemies.RemoveAt(index);
                     continue;
                 }
@@ -485,9 +615,11 @@ namespace JoseonHunter.Runtime.Gameplay
                     continue;
                 }
 
+                enemy.TickStatuses(delta);
+
                 var enemyPosition = (Vector2)enemy.Object.transform.position;
                 var direction = (playerPosition - enemyPosition).normalized;
-                enemy.Object.transform.position = enemyPosition + direction * (enemy.Speed * delta);
+                enemy.Object.transform.position = enemyPosition + direction * (enemy.Speed * enemy.MovementMultiplier * delta);
                 enemy.Renderer.flipX = direction.x < 0f;
 
                 var hitDistance = enemy.IsBoss ? 0.85f : 0.55f;
@@ -519,55 +651,54 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateAttack(float delta)
         {
-            attackTimer -= delta;
-            if (attackTimer > 0f || enemies.Count == 0)
+            if (weaponRuntime == null || player == null)
             {
                 return;
             }
 
-            attackTimer = attackInterval;
-            EnemyState target = null;
-            var bestDistance = 8f;
-            var playerPosition = (Vector2)player.transform.position;
-            foreach (var enemy in enemies)
-            {
-                var distance = Vector2.Distance(playerPosition, enemy.Object.transform.position);
-                if (distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    target = enemy;
-                }
-            }
-
-            if (target == null)
-            {
-                return;
-            }
-
-            ShowHwandoStrike(playerPosition, target.Object.transform.position);
-            DamageEnemy(target, attackDamage);
+            weaponRuntime.Tick(delta, player.transform.position, runtimeObjects, solidSprite, 15);
         }
 
-        private void ShowHwandoStrike(Vector2 from, Vector2 to)
+        private void RegisterCatalogWeapons()
         {
-            var slash = new GameObject("Hwando Slash");
-            slash.transform.SetParent(runtimeObjects, false);
-            var line = slash.AddComponent<LineRenderer>();
-            line.material = new Material(Shader.Find("Sprites/Default"));
-            line.positionCount = 3;
-            var middle = Vector2.Lerp(from, to, 0.72f) + Vector2.Perpendicular(to - from).normalized * 0.3f;
-            line.SetPosition(0, from);
-            line.SetPosition(1, middle);
-            line.SetPosition(2, to);
-            line.startWidth = 0.16f;
-            line.endWidth = 0.03f;
-            line.startColor = new Color(1f, 0.92f, 0.45f);
-            line.endColor = Color.white;
-            line.sortingOrder = 15;
-            Destroy(slash, 0.11f);
+            if (weaponCatalog == null) throw new InvalidOperationException("Gameplay requires the eight-weapon catalog.");
+            var errors = weaponCatalog.ValidateLaunchRoster();
+            if (errors.Count != 0) throw new InvalidOperationException(string.Join("; ", errors));
+            foreach (var id in WeaponRoster.All)
+            {
+                if (!weaponCatalog.TryGet(id, out var definition) || definition.Levels.Count != 5)
+                    throw new InvalidOperationException($"Gameplay catalog is missing '{id}'.");
+                var data = definition.Levels[Mathf.Clamp(level - 1, 0, 4)];
+                IWeaponExecutor executor;
+                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount);
+                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level);
+                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level);
+                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level);
+                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level);
+                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level);
+                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level);
+                else throw new InvalidOperationException($"No executor is available for '{id}'.");
+                weaponRuntime.Register(executor);
+                registeredWeaponIds.Add(id);
+            }
         }
 
-        private void DamageEnemy(EnemyState enemy, float damage)
+        private Sprite ResolveWeaponSprite(WeaponId id)
+        {
+            return weaponCatalog != null && weaponCatalog.TryGet(id, out var definition) && definition.PresentationSprites.Count > 0
+                ? definition.PresentationSprites[0]
+                : solidSprite;
+        }
+
+        private PixelHitMask ResolveWeaponMask(WeaponId id)
+        {
+            if (weaponCatalog == null || !weaponCatalog.TryGet(id, out var definition)) return null;
+            var masks = weaponMasks.GetMasks(definition);
+            return masks.Count == 0 ? null : masks[0];
+        }
+
+        private void ApplyEnemyDamage(EnemyState enemy, float damage)
         {
             if (enemy == null || enemy.Object == null)
             {
@@ -584,6 +715,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var wasBoss = enemy.IsBoss;
             var wasTreasure = enemy.IsTreasure;
             var deathPosition = enemy.Object.transform.position;
+            combatTargets.Unregister(enemy.CombatTarget);
             enemies.Remove(enemy);
             Destroy(enemy.Object);
             if (wasTreasure)
@@ -727,7 +859,20 @@ namespace JoseonHunter.Runtime.Gameplay
             experience -= experienceToNext;
             level++;
             experienceToNext = 7 + level * 4;
+            RebuildWeaponExecutorsForLevel();
             OpenUpgrade();
+        }
+
+        private void RebuildWeaponExecutorsForLevel()
+        {
+            if (weaponRuntime == null) return;
+            weaponRuntime.Dispose();
+            weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
+            weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            weaponRuntime.SetMaskResolver(ResolveWeaponMask);
+            registeredWeaponIds.Clear();
+            weaponMasks.Load(weaponCatalog);
+            RegisterCatalogWeapons();
         }
 
         private void OpenUpgrade()
@@ -763,7 +908,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
             var choice = upgradeOffers[index];
             if (choice.StartsWith("환도", StringComparison.Ordinal)) attackDamage *= 1.25f;
-            else if (choice.StartsWith("쾌속", StringComparison.Ordinal)) attackInterval = Mathf.Max(0.16f, attackInterval * 0.85f);
+            else if (choice.StartsWith("쾌속", StringComparison.Ordinal)) attackCooldownMultiplier = Mathf.Max(0.38f, attackCooldownMultiplier * 0.85f);
             else if (choice.StartsWith("경공", StringComparison.Ordinal)) moveSpeed *= 1.12f;
             else if (choice.StartsWith("호신", StringComparison.Ordinal))
             {
@@ -840,7 +985,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 if (enemy.Object != null && PointInPolygon(enemy.Object.transform.position, polygon))
                 {
-                    DamageEnemy(enemy, enemy.IsBoss ? geumjulDamage * 0.35f : geumjulDamage);
+                    ApplyEnemyDamage(enemy, enemy.IsBoss ? geumjulDamage * 0.35f : geumjulDamage);
                 }
             }
 
@@ -893,6 +1038,33 @@ namespace JoseonHunter.Runtime.Gameplay
             runEnded = true;
             victory = didWin;
             movement = Vector2.zero;
+        }
+
+        private PixelHitMask MaskFor(SpriteRenderer renderer)
+        {
+            if (renderer == null || renderer.sprite == null) return prototypeCombatMask;
+            if (hurtMasksBySprite.TryGetValue(renderer.sprite, out var mask)) return mask;
+            try
+            {
+                mask = PixelHitMask.FromSprite(renderer.sprite);
+            }
+            catch (UnityException)
+            {
+                mask = PixelHitMask.OpaqueSpriteRect(renderer.sprite);
+            }
+            hurtMasksBySprite.Add(renderer.sprite, mask);
+            return mask;
+        }
+
+        private PixelMaskTransform TransformFor(SpriteRenderer renderer, Float2 position)
+        {
+            if (renderer == null) return PixelMaskTransform.Translation(position.X, position.Y);
+            var scale = renderer.transform.lossyScale;
+            return new PixelMaskTransform(
+                position,
+                Mathf.RoundToInt(renderer.transform.eulerAngles.z),
+                renderer.flipX,
+                new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y)));
         }
 
         private GameObject CreateSpriteObject(

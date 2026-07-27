@@ -44,25 +44,25 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void OwnedNonMaxWeaponAppearsInThreeOffers()
         {
-            var state = State(weapons: new Dictionary<string, int> { ["hwando"] = 1 });
+            var state = State(weapons: new Dictionary<string, int> { ["hwando_flying_blade"] = 1 });
 
             var offers = UpgradeSelector.Select(state, 17);
 
             Assert.That(offers, Has.Count.EqualTo(3));
             Assert.That(offers.Select(offer => offer.Id), Is.Unique);
-            Assert.That(offers, Does.Contain(new UpgradeOffer("hwando", UpgradeKind.Weapon, 2)));
+            Assert.That(offers, Does.Contain(new UpgradeOffer("hwando_flying_blade", UpgradeKind.Weapon, 2)));
         }
 
         [Test]
         public void MaxedAndLockedEvolutionsNeverAppear()
         {
             var state = State(
-                weapons: new Dictionary<string, int> { ["hwando"] = 5 },
-                supports: new Dictionary<string, int> { ["talisman"] = 5 });
+                weapons: MaxedLaunchWeapons(),
+                supports: new Dictionary<string, int> { ["talisman"] = 4 });
 
             var offers = UpgradeSelector.Select(state, 17);
 
-            Assert.That(offers.Any(offer => offer.Id == "hwando"), Is.False);
+            Assert.That(offers.Any(offer => offer.Id == "hwando_flying_blade"), Is.False);
             Assert.That(offers.Any(offer => offer.Kind == UpgradeKind.Evolution), Is.False);
         }
 
@@ -83,7 +83,9 @@ namespace JoseonHunter.Tests.EditMode
             var state = State(
                 weapons: new Dictionary<string, int>
                 {
-                    ["hwando"] = 5, ["shaman_charm"] = 5, ["hunter_bow"] = 5
+                    ["hwando_flying_blade"] = 5, ["gakgung_shot"] = 5, ["talisman_throw"] = 5,
+                    ["thunder_crash_bomb"] = 5, ["jangseung_ward"] = 5, ["singijeon_volley"] = 5,
+                    ["frost_flask"] = 5, ["wind_thunder_fan"] = 5
                 },
                 supports: new Dictionary<string, int>
                 {
@@ -101,7 +103,9 @@ namespace JoseonHunter.Tests.EditMode
             var state = State(
                 weapons: new Dictionary<string, int>
                 {
-                    ["hwando"] = 5, ["shaman_charm"] = 5, ["hunter_bow"] = 5
+                    ["hwando_flying_blade"] = 5, ["gakgung_shot"] = 5, ["talisman_throw"] = 5,
+                    ["thunder_crash_bomb"] = 5, ["jangseung_ward"] = 5, ["singijeon_volley"] = 5,
+                    ["frost_flask"] = 5, ["wind_thunder_fan"] = 5
                 },
                 supports: new Dictionary<string, int>
                 {
@@ -117,7 +121,7 @@ namespace JoseonHunter.Tests.EditMode
         public void AcquiredUnlockedEvolutionNeverAppearsWhenThreeAlternativesExist()
         {
             var state = State(
-                weapons: new Dictionary<string, int> { ["hwando"] = 5 },
+                weapons: MaxedLaunchWeapons(),
                 unlocked: new HashSet<string> { "hwando_evolution" },
                 acquired: new HashSet<string> { "hwando_evolution" });
 
@@ -130,19 +134,19 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void UpgradeStateSnapshotsCallerCollections()
         {
-            var weapons = new Dictionary<string, int> { ["hwando"] = 1 };
+            var weapons = new Dictionary<string, int> { ["hwando_flying_blade"] = 1 };
             var supports = new Dictionary<string, int> { ["talisman"] = 1 };
             var unlocked = new HashSet<string>();
             var acquired = new HashSet<string>();
             var state = new UpgradeState(weapons, supports, unlocked, acquired);
             var expectedOffers = UpgradeSelector.Select(state, 11);
 
-            weapons["hwando"] = 5;
+            weapons["hwando_flying_blade"] = 5;
             supports["talisman"] = 5;
             unlocked.Add("hwando_evolution");
             acquired.Add("hwando_evolution");
 
-            Assert.That(state.WeaponLevels["hwando"], Is.EqualTo(1));
+            Assert.That(state.WeaponLevels["hwando_flying_blade"], Is.EqualTo(1));
             Assert.That(state.SupportLevels["talisman"], Is.EqualTo(1));
             Assert.That(state.UnlockedIds.Contains("hwando_evolution"), Is.False);
             Assert.That(state.AcquiredEvolutionIds.Contains("hwando_evolution"), Is.False);
@@ -172,5 +176,13 @@ namespace JoseonHunter.Tests.EditMode
                 supports ?? new Dictionary<string, int>(),
                 unlocked ?? new HashSet<string>(),
                 acquired ?? new HashSet<string>());
+
+        private static IReadOnlyDictionary<string, int> MaxedLaunchWeapons() =>
+            new Dictionary<string, int>
+            {
+                ["hwando_flying_blade"] = 5, ["gakgung_shot"] = 5, ["talisman_throw"] = 5,
+                ["thunder_crash_bomb"] = 5, ["jangseung_ward"] = 5, ["singijeon_volley"] = 5,
+                ["frost_flask"] = 5, ["wind_thunder_fan"] = 5
+            };
     }
 }

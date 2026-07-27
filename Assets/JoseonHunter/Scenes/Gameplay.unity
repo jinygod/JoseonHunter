@@ -238,6 +238,7 @@ MonoBehaviour:
   experienceSprite: {fileID: 21300000, guid: 5c0857d1d85a6c04f9bffef2fec1dcc8, type: 3}
   coinSprite: {fileID: 21300000, guid: 426b6a3b7c3a8f145bcefcf4520c422e, type: 3}
   treasureChestSprite: {fileID: 21300000, guid: 8aa0ede2ce7b58e48a84cd323a8dc2f5, type: 3}
+  weaponCatalog: {fileID: 11400000, guid: 14000000000000000000000000000009, type: 2}
 --- !u!4 &1725235309
 Transform:
   m_ObjectHideFlags: 0

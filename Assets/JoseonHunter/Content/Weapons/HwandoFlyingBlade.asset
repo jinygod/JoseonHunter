@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
+  m_Name: HwandoFlyingBlade
+  id: hwando_flying_blade
+  targeting: 0
+  geometry: 0
+  contactPhase: 0
+  element: 0
+  repeatHitPolicy: 1
+  levels:
+  - {weaponId: hwando_flying_blade, level: 1, baseDamage: 12, cooldownSeconds: .42, range: 4.5, projectileCount: 1, speed: 10, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: hwando_flying_blade, level: 2, baseDamage: 14, cooldownSeconds: .39, range: 4.8, projectileCount: 1, speed: 11, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: hwando_flying_blade, level: 3, baseDamage: 16, cooldownSeconds: .36, range: 5.1, projectileCount: 1, speed: 12, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: hwando_flying_blade, level: 4, baseDamage: 18, cooldownSeconds: .33, range: 5.4, projectileCount: 1, speed: 13, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: hwando_flying_blade, level: 5, baseDamage: 20, cooldownSeconds: .30, range: 5.8, projectileCount: 3, speed: 14, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000001, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000001, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000001, type: 3}]
+  binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000001, type: 3}]
+  activeFrameWindows: []
+  poolCapacity: 3

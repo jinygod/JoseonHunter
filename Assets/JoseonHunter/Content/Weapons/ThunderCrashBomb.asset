@@ -1,0 +1,21 @@
+%YAML 1.1
+--- !u!114 &11400000
+MonoBehaviour:
+  m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
+  m_Name: ThunderCrashBomb
+  id: thunder_crash_bomb
+  targeting: 3
+  geometry: 3
+  contactPhase: 5
+  element: 4
+  repeatHitPolicy: 0
+  levels:
+  - {weaponId: thunder_crash_bomb, level: 1, baseDamage: 18, cooldownSeconds: 1.1, range: 6, projectileCount: 1, speed: 0, durationSeconds: .35, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: thunder_crash_bomb, level: 2, baseDamage: 22, cooldownSeconds: 1.02, range: 6.4, projectileCount: 1, speed: 0, durationSeconds: .36, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: thunder_crash_bomb, level: 3, baseDamage: 26, cooldownSeconds: .94, range: 6.8, projectileCount: 1, speed: 0, durationSeconds: .38, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: thunder_crash_bomb, level: 4, baseDamage: 30, cooldownSeconds: .86, range: 7.2, projectileCount: 1, speed: 0, durationSeconds: .4, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  - {weaponId: thunder_crash_bomb, level: 5, baseDamage: 34, cooldownSeconds: .78, range: 7.6, projectileCount: 2, speed: 0, durationSeconds: .42, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
+  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000004, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000004, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000004, type: 3}]
+  binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000004, type: 3}]
+  activeFrameWindows: []
+  poolCapacity: 2
