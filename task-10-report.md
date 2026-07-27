@@ -7,14 +7,17 @@ fix for level-five talisman cast isolation.
   `Transferring` → `Complete` lifecycle, pixel-gated direct/attach/seal
   contacts, per-cast target reservations, a terminal no-target burst, and
   level-five three-talisman binding bursts. A level-five cast cannot relaunch
-  while its active seals own the pending binding resolution.
+  while its active seals own the pending binding resolution. Failed pixel
+  contact releases its reservation, tries one unattempted legal target, or
+  retires without a binding burst when no seal was confirmed.
 - Wind Thunder Fan uses `WindActive` → `EchoDelay` → `LightningResolve` →
   `Complete`, applies knockback before confirmed wind damage, marks only
   pixel-contacted cone targets, and resolves all lightning marks in the same
   simulation tick. Level five performs four cardinal gusts before one echo.
 - Added deterministic EditMode mechanic coverage for sequencing, unique
   transfers, terminal bursts, wind-before-lightning, simultaneous lightning,
-  four-gust level-five behavior, and short-cooldown talisman cast isolation.
+  four-gust level-five behavior, short-cooldown talisman cast isolation, and
+  live non-overlapping-mask completion/relaunch behavior.
 
 Validation was limited to static diff inspection as requested; Unity and broad
 test runs were not launched.

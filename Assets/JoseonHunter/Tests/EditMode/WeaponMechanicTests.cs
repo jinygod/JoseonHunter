@@ -368,6 +368,36 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void LevelFiveNonOverlappingLiveTargetCompletesAndCanLaunchAgain()
+        {
+            var attackMask = PixelHitMask.FromRows("1");
+            var nonOverlappingHurtMask = PixelHitMask.FromRows("0");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, attackMask);
+            var talisman = new TalismanExecutor(runtime, 10f, 0.01f, 2f, 20f, 1, 5);
+            registry.Register(new TestTarget(1, new Float2(0.2f, 0f), nonOverlappingHurtMask));
+
+            talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+            Assert.Multiple(() =>
+            {
+                Assert.That(talisman.ActiveCastCount, Is.Zero);
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+                Assert.That(talisman.LastFinalBurstCount, Is.Zero);
+                Assert.That(talisman.TotalLaunchedTalismanCount, Is.EqualTo(1));
+            });
+
+            talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 2));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(talisman.ActiveCastCount, Is.Zero);
+                Assert.That(damage.TrackedAttackCount, Is.Zero);
+                Assert.That(talisman.TotalLaunchedTalismanCount, Is.EqualTo(2));
+            });
+        }
+
+        [Test]
         public void WindThunderFanKnocksBackWindContactsBeforeSimultaneousMarkedLightning()
         {
             var mask = PixelHitMask.FromRows("1");

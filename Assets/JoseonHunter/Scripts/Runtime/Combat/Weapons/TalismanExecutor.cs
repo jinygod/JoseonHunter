@@ -34,6 +34,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int HopCount { get; }
         public int Level { get; }
         public int ActiveCastCount => active.Count;
+        public int LastLaunchCount { get; private set; }
+        public int TotalLaunchedTalismanCount { get; private set; }
         public TalismanState LastState { get; private set; } = TalismanState.Complete;
         public int LastFinalBurstCount { get; private set; }
         public IReadOnlyList<ContactPhase> LastContactPhases => lastContactPhases;
@@ -59,7 +61,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
                 active.RemoveAt(index);
             }
-            if (Level == 5 && active.Count == 0 && bindingTargets.Count > 0) ResolveBindingBurst(context);
+            if (Level == 5 && active.Count == 0)
+            {
+                if (bindingTargets.Count > 0) ResolveBindingBurst(context);
+                else if (bindingAttack != null)
+                {
+                    runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
+                    bindingAttack = null;
+                }
+            }
         }
 
         public void Reset()
@@ -67,7 +77,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var cast in active) runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
             active.Clear(); bindingTargets.Clear();
             if (bindingAttack != null) runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
-            bindingAttack = null; cooldown = 0f; LastState = TalismanState.Complete; LastFinalBurstCount = 0; lastContactPhases.Clear();
+            bindingAttack = null; cooldown = 0f; LastState = TalismanState.Complete; LastFinalBurstCount = 0;
+            LastLaunchCount = 0; TotalLaunchedTalismanCount = 0; lastContactPhases.Clear();
         }
 
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
@@ -78,14 +89,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             bindingTargets.Clear();
             bindingAttack = Level == 5 ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null;
             var launchReservations = new HashSet<int>();
+            LastLaunchCount = 0;
             for (var index = 0; index < simultaneous; index++)
             {
                 if (index > 0 && !TryFindNearestLegal(context.OwnerPosition, launchReservations, out target)) break;
                 // Each talisman has its own reservations and hit memory, while IDs remain globally allocated by the runtime.
                 var cast = new TalismanCast(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f), context.OwnerPosition, target, HopCount);
                 cast.ReservedTargets.Add(target.RuntimeId);
+                cast.AttemptedTargets.Add(target.RuntimeId);
                 launchReservations.Add(target.RuntimeId);
                 active.Add(cast);
+                LastLaunchCount++;
+                TotalLaunchedTalismanCount++;
             }
         }
 
@@ -118,12 +133,32 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var step = Mathf.Min(distance, Speed * deltaTime);
             cast.Position = distance <= ArrivalDistance ? cast.Target.WorldPosition : new Float2(cast.Position.X + delta.X / distance * step, cast.Position.Y + delta.Y / distance * step);
             if (Length(Subtract(cast.Target.WorldPosition, cast.Position)) > ArrivalDistance) return;
-            if (!PixelMaskContactService.TryFindContact(runtime.BladeMask, PixelMaskTransform.Translation(cast.Position.X, cast.Position.Y), cast.Target.HurtMask, cast.Target.HurtMaskTransform, out var contact)) return;
+            if (!TryContact(cast.Target, out var contact))
+            {
+                ResolveFailedContact(cast);
+                return;
+            }
 
             if (cast.State == TalismanState.Flying)
                 Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
             Apply(cast, cast.Target, contact, ContactPhase.Attach, context.SimulationTick);
             cast.State = TalismanState.Attached;
+        }
+
+        private void ResolveFailedContact(TalismanCast cast)
+        {
+            // A live target without overlapping active pixels is not an attached target. Do not reserve it forever or wait at its position.
+            cast.ReservedTargets.Remove(cast.Target.RuntimeId);
+            if (cast.CompletedHops < HopCount && TryFindNearestLegal(cast.Position, cast.AttemptedTargets, out var next))
+            {
+                cast.Target = next;
+                cast.ReservedTargets.Add(next.RuntimeId);
+                cast.AttemptedTargets.Add(next.RuntimeId);
+                cast.State = TalismanState.Transferring;
+                return;
+            }
+
+            cast.State = TalismanState.Complete;
         }
 
         private void ResolveSeal(TalismanCast cast, in WeaponExecutionContext context)
@@ -215,6 +250,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public int CompletedHops { get; set; }
             public float SealRemaining { get; set; }
             public HashSet<int> ReservedTargets { get; } = new HashSet<int>();
+            public HashSet<int> AttemptedTargets { get; } = new HashSet<int>();
             public TalismanState State { get; set; } = TalismanState.Flying;
         }
     }
