@@ -16,7 +16,7 @@ timestamp,job_id,tool,prompt_revision,cost,status,remaining_generations,asset_pa
 2026-07-28T00:45:00+09:00,b6a3e098-60b1-4323-95c9-5385c937a9dc,create_image_pixflux,gakgung-secondary-v1,1,approved,1984,ArtSource/Pixel/Weapons/gakgung_shot/secondary-parts.png
 2026-07-28T00:45:00+09:00,490567b7-2c0d-443a-9e4b-19fc9536350a,create_image_pixflux,talisman-secondary-v1,1,approved,1984,ArtSource/Pixel/Weapons/talisman_throw/secondary-parts.png
 2026-07-28T00:45:00+09:00,0c8c9ee0-7043-4654-9344-f81944eff6c1,create_image_pixflux,bomb-secondary-v1,1,approved,1984,ArtSource/Pixel/Weapons/thunder_crash_bomb/secondary-parts.png
-2026-07-28T01:00:00+09:00,1a4a83b0-d984-48f0-aaa7-f04681ab002f,create_image_pixflux,jangseung-secondary-v1,1,approved,1980,ArtSource/Pixel/Weapons/jangseung_ward/secondary-parts.png
+2026-07-28T01:00:00+09:00,1a4a83b0-d984-48f0-aaa7-f04681ab002f,create_image_pixflux,jangseung-secondary-v1,1,rejected_ui_panel_shape,1980,
 2026-07-28T01:00:00+09:00,6667c65b-6166-47e7-a0ce-b7fa845de339,create_image_pixflux,singijeon-secondary-v1,1,approved,1980,ArtSource/Pixel/Weapons/singijeon_volley/secondary-parts.png
 2026-07-28T01:00:00+09:00,4c2dbab8-9f76-48dd-bb16-2c1f399ee44d,create_image_pixflux,frost-secondary-v1,1,approved,1980,ArtSource/Pixel/Weapons/frost_flask/secondary-parts.png
 2026-07-28T01:00:00+09:00,a302b4e8-33e5-4602-bad1-e988314f8926,create_image_pixflux,fan-secondary-v1,1,rejected_wrong_subject,1980,
@@ -31,3 +31,4 @@ timestamp,job_id,tool,prompt_revision,cost,status,remaining_generations,asset_pa
 2026-07-28T01:50:00+09:00,03345c03-d27b-446d-a8b2-5b5f3482d5a4,create_image_pixflux,hwando-secondary-v2,1,approved,1970,ArtSource/Pixel/Weapons/hwando_flying_blade/secondary-parts.png
 2026-07-28T01:50:00+09:00,a4f5040b-a121-4030-9271-a323f2a57309,create_image_pixflux,fan-secondary-v2,1,rejected_panels_and_text,1970,
 2026-07-28T02:11:00+09:00,,local_nearest_neighbor,fan-secondary-local-v1,0,approved_from_style_lock,1970,ArtSource/Pixel/Weapons/wind_thunder_fan/secondary-parts.png
+2026-07-28T02:15:00+09:00,,local_nearest_neighbor,jangseung-secondary-local-v1,0,approved_from_representative_and_style_lock,1970,ArtSource/Pixel/Weapons/jangseung_ward/secondary-parts.png
