@@ -42,7 +42,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             cooldown -= Mathf.Max(0f, deltaTime);
-            if (cooldown <= 0f && TryFindNearestLegal(context.OwnerPosition, null, out var target))
+            // A level-five cast owns its shared five-color binding state until every seal has resolved.
+            // Do not let a short cooldown clear or reuse that state underneath active talismans.
+            if (cooldown <= 0f && (Level != 5 || active.Count == 0) && TryFindNearestLegal(context.OwnerPosition, null, out var target))
             {
                 cooldown = CooldownSeconds;
                 Launch(context, target);
@@ -70,7 +72,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
-            var simultaneous = Level == 5 ? Mathf.Min(3, HopCount) : 1;
+            // Hop count is each talisman's sequential chain length; the master form always starts up to three independent seals.
+            var simultaneous = Level == 5 ? 3 : 1;
             LastFinalBurstCount = 0; lastContactPhases.Clear();
             bindingTargets.Clear();
             bindingAttack = Level == 5 ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null;

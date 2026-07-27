@@ -343,6 +343,31 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void LevelFiveShortCooldownDoesNotMixAnActiveBindingCastWithItsNextCast()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 0.01f, 2f, 20f, 1, 5);
+            registry.Register(new TestTarget(1, new Float2(0.2f, 0f), mask)); registry.Register(new TestTarget(2, new Float2(0.4f, 0f), mask));
+            registry.Register(new TestTarget(3, new Float2(0.6f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            for (var tick = 1; tick <= 4; tick++) talisman.Tick(0.2f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+
+            var bursts = events.Where(confirmed => confirmed.Phase == ContactPhase.Blast).ToArray();
+            Assert.Multiple(() =>
+            {
+                Assert.That(bursts, Has.Length.EqualTo(3));
+                Assert.That(bursts.Select(confirmed => confirmed.AttackInstanceId).Distinct().Count(), Is.EqualTo(1));
+                Assert.That(bursts.Select(confirmed => confirmed.SimulationTick).Distinct(), Is.EqualTo(new[] { 3 }));
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Attach && confirmed.SimulationTick == 1), Is.EqualTo(3));
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Attach && confirmed.SimulationTick == 4), Is.EqualTo(3));
+            });
+        }
+
+        [Test]
         public void WindThunderFanKnocksBackWindContactsBeforeSimultaneousMarkedLightning()
         {
             var mask = PixelHitMask.FromRows("1");
