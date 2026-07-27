@@ -24,3 +24,7 @@ Object-only override used Pixen only for selected fixes: coin b87df0d2-cafd-42d6
 ## Contract coordinate fix and validation
 Root cause: the contract compared Unity bottom-origin pixel y directly to the PNG/top-left foot anchor. ValidatePixels now converts with 	opY = CanvasSize - 1 - y before computing maxY; the EditMode fixture helper now writes top-origin coordinates. Focused StaticSpriteBatchContractTests command returned exit code 0. The added direct CLI method was invoked for rookie_constable, but this Unity batch invocation exited before method execution (log contains only startup/return 1); no individual pass claim is made. The prior direct invocation did reach the method and demonstrated the old false invalid maximum opaque y failure for the byte-identical approved constable.
 
+
+## Per-asset CLI rerun
+Added Tools/Assets/Test-StaticSpriteAssetValidation.ps1 without -quit, and its argument test passed. Initial no-quit loop timed out because success did not call EditorApplication.Exit(0); the CLI method was corrected to own both success and failure exits. Rerun was prevented by three batch Unity processes spawned by the first timeout retaining the project; they did not terminate within this task. No false six-pass assertion is recorded. The route command, unique log names, and PASS marker assertion are ready for rerun once the project lock clears.
+

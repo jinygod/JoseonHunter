@@ -83,7 +83,7 @@ namespace JoseonHunter.Editor.AssetProduction
             var assetId = CommandLineValue("-staticSpriteAssetId");
             var sourceDirectory = CommandLineValue("-staticSpriteSourceDirectory");
             var errors = ValidateAsset(assetId, sourceDirectory);
-            if (errors.Count == 0) { Debug.Log("Static sprite asset preflight passed: " + assetId); return; }
+            if (errors.Count == 0) { Debug.Log("Static sprite asset preflight passed: " + assetId); EditorApplication.Exit(0); return; }
             Debug.LogError("Static sprite asset preflight failed: " + assetId + ": " + string.Join("; ", errors));
             EditorApplication.Exit(1);
         }
