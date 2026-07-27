@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Runtime.Combat;
+using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -20,6 +23,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly List<PickupState> pickups = new List<PickupState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
+        private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(3, 3, Vector2.one, 3f, new[] { 0x1ffu });
 
         private Camera gameplayCamera;
         private Transform flatField;
@@ -28,6 +32,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private SpriteRenderer playerRenderer;
         private Transform playerHealthFill;
         private LineRenderer geumjulRenderer;
+        private CombatTargetRegistry combatTargets;
+        private CombatDamageService combatDamageService;
+        private WeaponRuntimeController weaponRuntime;
+        private FlyingBladeExecutor flyingBlade;
         private Texture2D solidTexture;
         private Sprite solidSprite;
         private Vector2 touchStart;
@@ -37,8 +45,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private float playerMaxHealth;
         private float moveSpeed;
         private float attackDamage;
-        private float attackInterval;
-        private float attackTimer;
+        private float attackCooldownMultiplier;
         private float pickupRadius;
         private float geumjulDamage;
         private float contactInvulnerability;
@@ -73,6 +80,37 @@ namespace JoseonHunter.Runtime.Gameplay
             public float NextContactTime;
             public bool IsBoss;
             public bool IsTreasure;
+            public ICombatTarget CombatTarget;
+        }
+
+        private sealed class PrototypeCombatTarget : ICombatTarget
+        {
+            private readonly FirstPlayableController owner;
+            private readonly EnemyState state;
+            private readonly int runtimeId;
+
+            public PrototypeCombatTarget(FirstPlayableController owner, EnemyState state, int runtimeId)
+            {
+                this.owner = owner;
+                this.state = state;
+                this.runtimeId = runtimeId;
+            }
+
+            public int RuntimeId => runtimeId;
+            public bool IsAlive => state.Object != null && state.Health > 0f;
+            public int Health => Mathf.CeilToInt(Mathf.Max(0f, state.Health));
+            public Float2 WorldPosition
+            {
+                get
+                {
+                    var position = state.Object == null ? Vector2.zero : (Vector2)state.Object.transform.position;
+                    return new Float2(position.x, position.y);
+                }
+            }
+            public PixelHitMask HurtMask => owner.prototypeCombatMask;
+            public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
+            public void ApplyResolvedDamage(int damage) => owner.DamageEnemy(state, damage);
+            public void ApplyKnockback(Float2 direction, float force) { }
         }
 
         private enum PickupKind
@@ -231,14 +269,18 @@ namespace JoseonHunter.Runtime.Gameplay
             pickups.Clear();
             trail.Clear();
             upgradeOffers.Clear();
+            combatTargets = new CombatTargetRegistry();
+            combatDamageService = new CombatDamageService(combatTargets);
+            weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
+            flyingBlade = new FlyingBladeExecutor(weaponRuntime, 12f, 0.42f, 4.5f, 10f, 1);
+            weaponRuntime.Register(flyingBlade);
 
             elapsed = 0f;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
             moveSpeed = 2.4f;
             attackDamage = 12f;
-            attackInterval = 0.42f;
-            attackTimer = 0.1f;
+            attackCooldownMultiplier = 1f;
             pickupRadius = 2.2f;
             geumjulDamage = 38f;
             spawnTimer = 0.2f;
@@ -399,7 +441,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
             }
 
-            enemies.Add(new EnemyState
+            var state = new EnemyState
             {
                 Object = enemyObject,
                 Renderer = renderer,
@@ -408,7 +450,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 Speed = isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration),
                 ContactDamage = isBoss ? 24f : 10f,
                 IsBoss = isBoss
-            });
+            };
+            state.CombatTarget = new PrototypeCombatTarget(this, state, enemyObject.GetInstanceID());
+            combatTargets.Register(state.CombatTarget);
+            enemies.Add(state);
         }
 
         private void UpdateTreasureSpawning(float delta)
@@ -449,7 +494,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 renderer.color = new Color(0.72f, 0.40f, 0.12f);
             }
 
-            enemies.Add(new EnemyState
+            var state = new EnemyState
             {
                 Object = chestObject,
                 Renderer = renderer,
@@ -458,7 +503,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 Speed = 0f,
                 ContactDamage = 0f,
                 IsTreasure = true
-            });
+            };
+            state.CombatTarget = new PrototypeCombatTarget(this, state, chestObject.GetInstanceID());
+            combatTargets.Register(state.CombatTarget);
+            enemies.Add(state);
         }
 
         private void SpawnBoss()
@@ -476,6 +524,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 var enemy = enemies[index];
                 if (enemy.Object == null)
                 {
+                    combatTargets.Unregister(enemy.CombatTarget);
                     enemies.RemoveAt(index);
                     continue;
                 }
@@ -519,52 +568,20 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateAttack(float delta)
         {
-            attackTimer -= delta;
-            if (attackTimer > 0f || enemies.Count == 0)
+            if (weaponRuntime == null || player == null)
             {
                 return;
             }
 
-            attackTimer = attackInterval;
-            EnemyState target = null;
-            var bestDistance = 8f;
-            var playerPosition = (Vector2)player.transform.position;
-            foreach (var enemy in enemies)
-            {
-                var distance = Vector2.Distance(playerPosition, enemy.Object.transform.position);
-                if (distance < bestDistance)
-                {
-                    bestDistance = distance;
-                    target = enemy;
-                }
-            }
-
-            if (target == null)
-            {
-                return;
-            }
-
-            ShowHwandoStrike(playerPosition, target.Object.transform.position);
-            DamageEnemy(target, attackDamage);
-        }
-
-        private void ShowHwandoStrike(Vector2 from, Vector2 to)
-        {
-            var slash = new GameObject("Hwando Slash");
-            slash.transform.SetParent(runtimeObjects, false);
-            var line = slash.AddComponent<LineRenderer>();
-            line.material = new Material(Shader.Find("Sprites/Default"));
-            line.positionCount = 3;
-            var middle = Vector2.Lerp(from, to, 0.72f) + Vector2.Perpendicular(to - from).normalized * 0.3f;
-            line.SetPosition(0, from);
-            line.SetPosition(1, middle);
-            line.SetPosition(2, to);
-            line.startWidth = 0.16f;
-            line.endWidth = 0.03f;
-            line.startColor = new Color(1f, 0.92f, 0.45f);
-            line.endColor = Color.white;
-            line.sortingOrder = 15;
-            Destroy(slash, 0.11f);
+            // Prototype bridge: production content binding can replace these values with WeaponLevelData.
+            var weaponLevel = Mathf.Clamp(level, 1, 5);
+            flyingBlade.Reconfigure(
+                attackDamage * (1f + (weaponLevel - 1) * 0.12f),
+                Mathf.Max(0.16f, (0.42f - (weaponLevel - 1) * 0.035f) * attackCooldownMultiplier),
+                4.5f + (weaponLevel - 1) * 0.4f,
+                10f + (weaponLevel - 1) * 0.8f,
+                weaponLevel >= 5 ? 3 : 1);
+            weaponRuntime.Tick(delta, player.transform.position, runtimeObjects, solidSprite, 15);
         }
 
         private void DamageEnemy(EnemyState enemy, float damage)
@@ -584,6 +601,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var wasBoss = enemy.IsBoss;
             var wasTreasure = enemy.IsTreasure;
             var deathPosition = enemy.Object.transform.position;
+            combatTargets.Unregister(enemy.CombatTarget);
             enemies.Remove(enemy);
             Destroy(enemy.Object);
             if (wasTreasure)
@@ -763,7 +781,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
             var choice = upgradeOffers[index];
             if (choice.StartsWith("환도", StringComparison.Ordinal)) attackDamage *= 1.25f;
-            else if (choice.StartsWith("쾌속", StringComparison.Ordinal)) attackInterval = Mathf.Max(0.16f, attackInterval * 0.85f);
+            else if (choice.StartsWith("쾌속", StringComparison.Ordinal)) attackCooldownMultiplier = Mathf.Max(0.38f, attackCooldownMultiplier * 0.85f);
             else if (choice.StartsWith("경공", StringComparison.Ordinal)) moveSpeed *= 1.12f;
             else if (choice.StartsWith("호신", StringComparison.Ordinal))
             {
