@@ -6,11 +6,21 @@ namespace JoseonHunter.Domain.Runs
     {
         private float elapsedSeconds;
 
+        public RunClock(float maximumSeconds = 240f)
+        {
+            if (float.IsNaN(maximumSeconds) || float.IsInfinity(maximumSeconds) || maximumSeconds <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(maximumSeconds), "Run clock maximum must be finite and positive.");
+            MaximumSeconds = maximumSeconds;
+        }
+
+        public float ElapsedSeconds => elapsedSeconds;
+        public float MaximumSeconds { get; }
+
         public RunPhase Advance(float deltaSeconds)
         {
             if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds))
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), "Run clock delta must be finite.");
-            elapsedSeconds = Math.Max(0f, elapsedSeconds + deltaSeconds);
+            elapsedSeconds = Math.Min(MaximumSeconds, Math.Max(0f, elapsedSeconds + deltaSeconds));
             return ToPhase(elapsedSeconds);
         }
 

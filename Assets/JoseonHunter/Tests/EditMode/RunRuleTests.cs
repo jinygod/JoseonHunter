@@ -29,6 +29,16 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(clock.Advance(180f), Is.EqualTo(RunPhase.Boss));
         }
 
+        [Test]
+        public void ClockRetainsElapsedSecondsForRunSessionConsumers()
+        {
+            var clock = new RunClock();
+
+            clock.Advance(45f);
+
+            Assert.That(clock.ElapsedSeconds, Is.EqualTo(45f));
+        }
+
         [TestCase(RunPhase.WaveOne, 28)]
         [TestCase(RunPhase.WaveTwo, 36)]
         [TestCase(RunPhase.WaveThree, 48)]
@@ -50,6 +60,12 @@ namespace JoseonHunter.Tests.EditMode
             {
                 Assert.That(WaveSchedule.For(phase).ContentIds, Is.Not.Empty);
             }
+        }
+
+        [Test]
+        public void StoppedRunWavesHaveNoActiveEnemyCap()
+        {
+            Assert.That(WaveSchedule.For(RunPhase.Boss, true).ActiveCap, Is.EqualTo(0));
         }
     }
 }

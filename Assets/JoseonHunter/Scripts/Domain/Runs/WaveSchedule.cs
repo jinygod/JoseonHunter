@@ -22,6 +22,12 @@ namespace JoseonHunter.Domain.Runs
 
     public static class WaveSchedule
     {
+        public static WaveDefinition For(RunPhase phase, bool normalWavesStopped) =>
+            normalWavesStopped ? Definition(0) : For(phase);
+
+        public static WaveDefinition For(RunPhase phase, RunTick tick) =>
+            For(phase, tick.NormalWavesStopped);
+
         public static WaveDefinition For(RunPhase phase) => phase switch
         {
             RunPhase.WaveOne => Definition(28, "plague_rat"),
