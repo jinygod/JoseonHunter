@@ -8,6 +8,8 @@ namespace JoseonHunter.Domain.Runs
 
         public RunPhase Advance(float deltaSeconds)
         {
+            if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds))
+                throw new ArgumentOutOfRangeException(nameof(deltaSeconds), "Run clock delta must be finite.");
             elapsedSeconds = Math.Max(0f, elapsedSeconds + deltaSeconds);
             return ToPhase(elapsedSeconds);
         }

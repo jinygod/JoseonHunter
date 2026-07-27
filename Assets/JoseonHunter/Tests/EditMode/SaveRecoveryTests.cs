@@ -51,6 +51,27 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void SavingAfterBackupRecoveryPreservesTheValidBackup()
+        {
+            var repository = new JsonSaveRepository(directory);
+            var first = SaveDataV1.CreateDefaults(); first.Coins = 7;
+            var second = SaveDataV1.CreateDefaults(); second.Coins = 12;
+            repository.Save(first);
+            repository.Save(second);
+            var currentPath = Path.Combine(directory, "progression.json");
+            File.WriteAllText(currentPath, "corrupt");
+            var recovered = repository.Load();
+            recovered.Data.Coins = 8;
+
+            Assert.That(repository.Save(recovered.Data).Success, Is.True);
+            File.WriteAllText(currentPath, "corrupt again");
+            var recoveredAgain = repository.Load();
+
+            Assert.That(recoveredAgain.Source, Is.EqualTo(LoadSource.Backup));
+            Assert.That(recoveredAgain.Data.Coins, Is.EqualTo(7));
+        }
+
+        [Test]
         public void CorruptCurrentAndBackupLoadsSafeDefaults()
         {
             var repository = new JsonSaveRepository(directory);

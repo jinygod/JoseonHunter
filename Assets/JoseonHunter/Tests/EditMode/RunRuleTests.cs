@@ -19,6 +19,16 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(clock.Advance(seconds), Is.EqualTo(expected));
         }
 
+        [Test]
+        public void ClockRejectsNonFiniteDeltaWithoutPoisoningElapsedTime()
+        {
+            var clock = new RunClock();
+
+            Assert.That(() => clock.Advance(float.NaN), Throws.InstanceOf<System.ArgumentOutOfRangeException>());
+            Assert.That(() => clock.Advance(float.PositiveInfinity), Throws.InstanceOf<System.ArgumentOutOfRangeException>());
+            Assert.That(clock.Advance(180f), Is.EqualTo(RunPhase.Boss));
+        }
+
         [TestCase(RunPhase.WaveOne, 28)]
         [TestCase(RunPhase.WaveTwo, 36)]
         [TestCase(RunPhase.WaveThree, 48)]

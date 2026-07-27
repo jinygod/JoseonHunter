@@ -50,7 +50,9 @@ namespace JoseonHunter.Infrastructure.Save
                 var envelope = new SaveEnvelope { payload = payload, checksum = SaveChecksum.ForCanonicalPayload(payload) };
                 writeAllText(temporary, JsonUtility.ToJson(envelope));
                 if (!TryLoad(temporary, out _)) return new SaveResult(false, SaveError.Corrupt);
-                replaceTemporary(temporary, current, backup);
+                var currentIsValid = TryLoad(current, out _);
+                var backupIsValid = TryLoad(backup, out _);
+                replaceTemporary(temporary, current, currentIsValid || !backupIsValid ? backup : null);
                 return new SaveResult(true, SaveError.None);
             }
             catch (IOException exception)

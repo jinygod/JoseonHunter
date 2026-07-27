@@ -37,6 +37,20 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void SpiritBoundQualityRejectsFurtherUpgradeWithoutSpendingFragments()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.EquipmentQualities["weapon_01"] = 3;
+            data.EquipmentFragments["weapon_01"] = 10;
+
+            var result = new EquipmentProgression(data).UpgradeQuality("weapon_01", 3);
+
+            Assert.That(result.Error, Is.EqualTo(ProgressionError.MaximumReached));
+            Assert.That(data.EquipmentQualities["weapon_01"], Is.EqualTo(3));
+            Assert.That(data.EquipmentFragments["weapon_01"], Is.EqualTo(10));
+        }
+
+        [Test]
         public void EvolutionHasTwelveNodesAndFreeResetRefundsSpentCoins()
         {
             var data = SaveDataV1.CreateDefaults(); data.Coins = 10;
