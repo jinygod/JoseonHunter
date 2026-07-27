@@ -1,10 +1,38 @@
 # Static Sprite Launch Review
 
-## HEROES AND PICKUPS COMPLETE — FULL BATCH PENDING
+## PENDING BATCH APPROVAL
 
-The board presents each pending source at native 64×64, an 8× nearest-neighbor light-background check, and an 8× dark-background check. Labels, short hashes, per-asset selected cost/attempt, and total usage have a dedicated non-overlapping footer region.
+The consolidated board contains all twelve pending launch sources: three
+heroes, five normal enemies, one boss, and three pickups. Every asset is shown
+at literal native `64×64` size and as an exact `8×` nearest-neighbor (`512×512`)
+check on both light and dark grounds. Runtime copies, production manifest
+records, prefabs, and scene bindings are intentionally absent until explicit
+batch approval.
 
-## Generation chronology
+## Source preflight
 
-Pixflux job 7d411… was launched before the subsequent no-Pixflux ruling, later timed out, and was never selected. After that ruling, no Pixflux call was made. All selected replacement pickups (coin, experience spirit flame, and treasure chest) use Pixen. Complete per-asset attempt history is retained in provenance.
-Board layout fix round 3: selected provider/cost/attempt data now appears only in a dedicated table below both image rows (y=2320..2530), with a separate accounting footer at y=2550..2700; no later image panel can cover the table.
+All twelve entries pass the static-source contract: `64×64` RGBA, hard alpha,
+transparent corners, at most 48 opaque colors, centered silhouette, and the
+top-origin maximum opaque `y=56` foot anchor. New enemy/boss sources passed
+direct per-asset validation; the full twelve-entry preflight passed afterward.
+
+## Generation accounting
+
+The authoritative trial balance before Task 3 was `32 used / 8 remaining`.
+Task 3 used exactly six sequential one-generation PixelLab Pixen operations,
+one for each enemy/boss candidate, and did not call Pixflux. The resulting
+balance is `38 used / 2 remaining`. The board's bottom table preserves each
+asset's selected provider and cost; detailed non-secret job identifiers are
+stored with the six new sources.
+
+The older pre-ruling Pixflux timeout remains documented in the pickup attempt
+records. Its UUID was removed from free-text chronology only because the source
+contract deliberately rejects UUID-like values outside `jobId` fields; the
+attempt record still retains the actual job identifier.
+
+## Board inspection
+
+`static-sprite-launch-board.png` is `4200×4850` pixels. It was inspected at
+full width and overview scale: role rows, card labels, native sprites, light /
+dark checks, and the dedicated non-overlapping source-preflight/accounting
+footer are present without clipping. The board is ready for visual review.

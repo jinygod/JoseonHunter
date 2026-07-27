@@ -1,0 +1,13 @@
+{
+  "generationConsumedForStaticBatch": 1,
+  "outputSha256": "09c43ad06efeef949699fc9704c2588ed001b208b279a25845cbca2dd223f681",
+  "rawOutputSha256": "07aac43e832fefd755a615783e7d5a5b5704a8ce24e730477c73a88e63451113",
+  "rawOutput": "raw-provider-output.png",
+  "mcpTool": "mcp__pixellab__create_image_pixen",
+  "provider": "PixelLab",
+  "operation": "Pixen 64x64 transparent",
+  "jobId": "4266ece7-8679-4b9e-b2af-6afd253675fe",
+  "cost": "1 generation",
+  "normalization": "Hard-alpha threshold at 128; exact approved rookie_constable palette extraction with nearest-color mapping; integer translation to bounds center x=32 and maximum opaque y=56.",
+  "status": "pending"
+}

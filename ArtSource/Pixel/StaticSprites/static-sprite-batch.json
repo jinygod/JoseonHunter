@@ -71,7 +71,7 @@
                                      0.125
                                  ],
                        "role":  "enemy",
-                       "sha256":  "",
+                       "sha256":  "71e070fd365401f6f0d90b295ef060808de93395d2c0acd85376dfdf940b3e12",
                        "runtimePath":  "Enemies/plague_rat.png",
                        "width":  64,
                        "approvalStatus":  "pending",
@@ -90,7 +90,7 @@
                                      0.125
                                  ],
                        "role":  "enemy",
-                       "sha256":  "",
+                       "sha256":  "09c43ad06efeef949699fc9704c2588ed001b208b279a25845cbca2dd223f681",
                        "runtimePath":  "Enemies/vengeful_spirit.png",
                        "width":  64,
                        "approvalStatus":  "pending",
@@ -109,7 +109,7 @@
                                      0.125
                                  ],
                        "role":  "enemy",
-                       "sha256":  "",
+                       "sha256":  "d4afb787d7eaa2553298c83b728d167baa2611eadeb52dab42cc6d44e377a092",
                        "runtimePath":  "Enemies/sakkat_specter.png",
                        "width":  64,
                        "approvalStatus":  "pending",
@@ -128,7 +128,7 @@
                                      0.125
                                  ],
                        "role":  "enemy",
-                       "sha256":  "",
+                       "sha256":  "8bc12a8e3c762d7a0200d6c1723a2f0517c6cd25cf8693cb6ffdfa92fada7a8d",
                        "runtimePath":  "Enemies/dokkaebi.png",
                        "width":  64,
                        "approvalStatus":  "pending",
@@ -147,7 +147,7 @@
                                      0.125
                                  ],
                        "role":  "enemy",
-                       "sha256":  "",
+                       "sha256":  "0560e21796d393d9b1c55c0d02129c0395ca2cec90989ffc90bc72eb87cb1148",
                        "runtimePath":  "Enemies/bandit.png",
                        "width":  64,
                        "approvalStatus":  "pending",
@@ -166,7 +166,7 @@
                                      0.125
                                  ],
                        "role":  "boss",
-                       "sha256":  "",
+                       "sha256":  "fd391d97af803126dd7f57497c3e1891f545541c34c476c6b5183c35fb3446f6",
                        "runtimePath":  "Bosses/fallen_general.png",
                        "width":  64,
                        "approvalStatus":  "pending",
