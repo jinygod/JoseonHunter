@@ -1,0 +1,79 @@
+using System;
+using System.Collections.Generic;
+using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Geumjul;
+
+namespace JoseonHunter.Runtime.Combat
+{
+    public readonly struct WeaponDamageRequest
+    {
+        private WeaponDamageRequest(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, DamageRequest damageRequest, Float2 contactPoint, bool hasConfirmedContact, ContactPhase phase, int simulationTick)
+        {
+            AttackInstance = attackInstance;
+            WeaponId = weaponId;
+            Target = target;
+            DamageRequest = damageRequest;
+            ContactPoint = contactPoint;
+            HasConfirmedContact = hasConfirmedContact;
+            Phase = phase;
+            SimulationTick = simulationTick;
+        }
+
+        public AttackInstance AttackInstance { get; }
+        public int AttackInstanceId => AttackInstance == null ? 0 : AttackInstance.InstanceId;
+        public WeaponId WeaponId { get; }
+        public ICombatTarget Target { get; }
+        public DamageRequest DamageRequest { get; }
+        public Float2 ContactPoint { get; }
+        public bool HasConfirmedContact { get; }
+        public ContactPhase Phase { get; }
+        public int SimulationTick { get; }
+
+        public static WeaponDamageRequest Create(int attackInstanceId, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick) =>
+            Create(new AttackInstance(attackInstanceId, RepeatHitPolicy.OncePerPhase, 0f), weaponId, target, baseDamage, critical, contactPoint, phase, simulationTick);
+
+        public static WeaponDamageRequest Create(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick, bool hasConfirmedContact = true) =>
+            new WeaponDamageRequest(attackInstance, weaponId, target, new DamageRequest(baseDamage, 0, critical, 1f), contactPoint, hasConfirmedContact, phase, simulationTick);
+    }
+
+    public sealed class CombatDamageService
+    {
+        private readonly CombatTargetRegistry targetRegistry;
+        private readonly Dictionary<int, AttackInstance> attacks = new Dictionary<int, AttackInstance>();
+
+        public CombatDamageService(CombatTargetRegistry targetRegistry = null)
+        {
+            this.targetRegistry = targetRegistry;
+        }
+
+        public event Action<ConfirmedDamageEvent> DamageConfirmed;
+
+        public bool TryApply(in WeaponDamageRequest request, out ConfirmedDamageEvent confirmed)
+        {
+            confirmed = default;
+            if (!HasValidTarget(request.Target) || !request.HasConfirmedContact || !IsFinite(request.ContactPoint) || request.AttackInstance == null) return false;
+            if (!DamageResolver.TryResolve(request.DamageRequest, out var result)) return false;
+
+            var attack = GetAttack(request.AttackInstance);
+            if (!attack.TryRecordHit(request.Target.RuntimeId, request.Phase, request.SimulationTick)) return false;
+
+            request.Target.ApplyResolvedDamage(result.FinalDamage);
+            confirmed = new ConfirmedDamageEvent(attack.InstanceId, request.WeaponId, request.Target.RuntimeId, result, request.ContactPoint, request.Phase, request.SimulationTick);
+            DamageConfirmed?.Invoke(confirmed);
+            return true;
+        }
+
+        private bool HasValidTarget(ICombatTarget target) =>
+            target != null && target.IsAlive && target.Health > 0 && (targetRegistry == null || targetRegistry.Contains(target));
+
+        private AttackInstance GetAttack(AttackInstance requestAttack)
+        {
+            if (attacks.TryGetValue(requestAttack.InstanceId, out var attack)) return attack;
+            attacks.Add(requestAttack.InstanceId, requestAttack);
+            return requestAttack;
+        }
+
+        private static bool IsFinite(Float2 point) =>
+            !float.IsNaN(point.X) && !float.IsInfinity(point.X) && !float.IsNaN(point.Y) && !float.IsInfinity(point.Y);
+    }
+}
