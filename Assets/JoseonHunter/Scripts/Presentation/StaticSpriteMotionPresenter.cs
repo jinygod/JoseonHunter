@@ -66,7 +66,7 @@ namespace JoseonHunter.Presentation
         private Quaternion originalLocalRotation;
         private Vector3 originalLocalScale;
         private Color originalColor;
-        private float hitElapsed;
+        private float hitElapsed = HitDuration;
         private float deathElapsed;
         private bool isDying;
 

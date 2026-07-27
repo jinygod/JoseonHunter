@@ -9,6 +9,20 @@ namespace JoseonHunter.Tests.PlayMode
     public sealed class StaticSpriteMotionPresenterTests
     {
         [UnityTest]
+        public IEnumerator InitialFramesPreserveTheOriginalColorWithoutShowingHit()
+        {
+            var gameObject = CreatePresenter(out var renderer, out _);
+            var originalColor = renderer.color;
+
+            yield return null;
+            yield return null;
+
+            Assert.That(renderer.color, Is.EqualTo(originalColor));
+
+            Object.Destroy(gameObject);
+        }
+
+        [UnityTest]
         public IEnumerator SetVelocityUpdatesFacingAndMovingOrIdleOffset()
         {
             var gameObject = CreatePresenter(out var renderer, out var presenter);
