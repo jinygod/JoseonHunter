@@ -137,5 +137,20 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(File.ReadAllText(Path.Combine(leftDirectory, "progression.json")), Is.EqualTo(File.ReadAllText(Path.Combine(rightDirectory, "progression.json"))));
         }
+
+        [Test]
+        public void InvestigationPolicyAvailabilityAndSelectionRoundTrip()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.SelectableInvestigationPolicies.Add("next_patrol_focus");
+            data.SelectedInvestigationPolicy = "next_patrol_focus";
+            var repository = new JsonSaveRepository(directory);
+
+            Assert.That(repository.Save(data).Success, Is.True);
+            var loaded = repository.Load().Data;
+
+            Assert.That(loaded.SelectableInvestigationPolicies, Is.EqualTo(new[] { "next_patrol_focus" }));
+            Assert.That(loaded.SelectedInvestigationPolicy, Is.EqualTo("next_patrol_focus"));
+        }
     }
 }
