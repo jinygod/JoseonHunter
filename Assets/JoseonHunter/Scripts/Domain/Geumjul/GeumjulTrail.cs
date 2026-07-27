@@ -23,6 +23,8 @@ namespace JoseonHunter.Domain.Geumjul
 
         public void Add(TrailPoint point)
         {
+            if (!IsFinite(point.Position.X) || !IsFinite(point.Position.Y) || !IsFinite(point.Time)) throw new ArgumentException("Trail points must contain finite coordinates and time.", nameof(point));
+            if (points.Count > 0 && point.Time < points[points.Count - 1].Time) throw new ArgumentException("Trail point time cannot move backwards.", nameof(point));
             points.Add(point);
             TrimExpired(point.Time);
             TrimLength();
@@ -31,7 +33,19 @@ namespace JoseonHunter.Domain.Geumjul
 
         private void TrimExpired(float currentTime)
         {
-            while (points.Count > 0 && currentTime - points[0].Time > LifetimeSeconds) points.RemoveAt(0);
+            var cutoff = currentTime - LifetimeSeconds;
+            while (points.Count > 1 && points[0].Time < cutoff)
+            {
+                var first = points[0];
+                var second = points[1];
+                if (second.Time > cutoff)
+                {
+                    var factor = (cutoff - first.Time) / (second.Time - first.Time);
+                    points[0] = new TrailPoint(Lerp(first.Position, second.Position, factor), cutoff);
+                    return;
+                }
+                points.RemoveAt(0);
+            }
         }
 
         private void TrimLength()
@@ -68,5 +82,6 @@ namespace JoseonHunter.Domain.Geumjul
         }
 
         private static Float2 Lerp(Float2 first, Float2 second, float factor) => new Float2(first.X + (second.X - first.X) * factor, first.Y + (second.Y - first.Y) * factor);
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

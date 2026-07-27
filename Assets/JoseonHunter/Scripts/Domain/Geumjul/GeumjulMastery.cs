@@ -44,6 +44,12 @@ namespace JoseonHunter.Domain.Geumjul
         public SealBranch ActiveBranch { get; }
         public bool RequiresBranchChoice => SuccessfulClosures >= 14 && SuccessfulClosures < 20 && ActiveBranch == SealBranch.None;
         public IReadOnlyList<SealBranch> AvailableBranches => SuccessfulClosures >= 14 && SuccessfulClosures < 20 ? ChoiceBranches : NoBranches;
-        public MasteryState WithSelectedBranch(SealBranch branch) => new MasteryState(SuccessfulClosures, branch);
+        public MasteryState WithSelectedBranch(SealBranch branch)
+        {
+            if (SuccessfulClosures >= 20) throw new InvalidOperationException("Five-Color Barrier does not allow branch selection.");
+            if (SuccessfulClosures < 14) throw new InvalidOperationException("A branch cannot be selected before fourteen successful closures.");
+            if (ActiveBranch != SealBranch.None) throw new InvalidOperationException("A branch has already been selected.");
+            return new MasteryState(SuccessfulClosures, branch);
+        }
     }
 }

@@ -16,7 +16,7 @@ namespace JoseonHunter.Domain.Geumjul
         public LoopResult TryClose(IReadOnlyList<TrailPoint> points)
         {
             if (points == null) throw new ArgumentNullException(nameof(points));
-            if (points.Count < 4 || HasZeroLengthSegment(points)) return Invalid();
+            if (points.Count < 4 || HasNonFiniteData(points) || HasZeroLengthSegment(points)) return Invalid();
 
             var polygon = CloseNearFirstPoint(points) ?? CloseAtIntersection(points);
             if (polygon == null || !HasThreeUniqueVertices(polygon)) return Invalid();
@@ -38,6 +38,7 @@ namespace JoseonHunter.Domain.Geumjul
 
             var polygon = new List<Float2>();
             for (var index = 0; index < points.Count - 1; index++) polygon.Add(points[index].Position);
+            if (SquaredDistance(first, last) > Epsilon * Epsilon) polygon.Add(last);
             return polygon;
         }
 
@@ -45,14 +46,30 @@ namespace JoseonHunter.Domain.Geumjul
         {
             var finalStart = points[points.Count - 2].Position;
             var finalEnd = points[points.Count - 1].Position;
+            var bestIndex = -1;
+            var bestFinalFactor = float.PositiveInfinity;
+            var bestIntersection = default(Float2);
             for (var index = 0; index < points.Count - 3; index++)
             {
-                if (!TryIntersect(points[index].Position, points[index + 1].Position, finalStart, finalEnd, out var intersection)) continue;
-                var polygon = new List<Float2> { intersection };
-                for (var vertex = index + 1; vertex <= points.Count - 2; vertex++) polygon.Add(points[vertex].Position);
-                return polygon;
+                if (!TryIntersect(points[index].Position, points[index + 1].Position, finalStart, finalEnd, out var intersection, out var finalFactor)) continue;
+                if (finalFactor < bestFinalFactor - Epsilon || (Math.Abs(finalFactor - bestFinalFactor) <= Epsilon && index > bestIndex))
+                {
+                    bestIndex = index;
+                    bestFinalFactor = finalFactor;
+                    bestIntersection = intersection;
+                }
             }
-            return null;
+            if (bestIndex < 0) return null;
+            var polygon = new List<Float2> { bestIntersection };
+            for (var vertex = bestIndex + 1; vertex <= points.Count - 2; vertex++) polygon.Add(points[vertex].Position);
+            return polygon;
+        }
+
+        private static bool HasNonFiniteData(IReadOnlyList<TrailPoint> points)
+        {
+            for (var index = 0; index < points.Count; index++)
+                if (!IsFinite(points[index].Position.X) || !IsFinite(points[index].Position.Y) || !IsFinite(points[index].Time)) return true;
+            return false;
         }
 
         private static bool HasZeroLengthSegment(IReadOnlyList<TrailPoint> points)
@@ -99,23 +116,24 @@ namespace JoseonHunter.Domain.Geumjul
             return dx * dx + dy * dy;
         }
 
-        private static bool TryIntersect(Float2 firstStart, Float2 firstEnd, Float2 secondStart, Float2 secondEnd, out Float2 intersection)
+        private static bool TryIntersect(Float2 firstStart, Float2 firstEnd, Float2 secondStart, Float2 secondEnd, out Float2 intersection, out float secondFactor)
         {
             var firstX = firstEnd.X - firstStart.X;
             var firstY = firstEnd.Y - firstStart.Y;
             var secondX = secondEnd.X - secondStart.X;
             var secondY = secondEnd.Y - secondStart.Y;
             var denominator = firstX * secondY - firstY * secondX;
-            if (Math.Abs(denominator) <= Epsilon) { intersection = default; return false; }
+            if (Math.Abs(denominator) <= Epsilon) { intersection = default; secondFactor = 0f; return false; }
             var relativeX = secondStart.X - firstStart.X;
             var relativeY = secondStart.Y - firstStart.Y;
             var firstFactor = (relativeX * secondY - relativeY * secondX) / denominator;
-            var secondFactor = (relativeX * firstY - relativeY * firstX) / denominator;
+            secondFactor = (relativeX * firstY - relativeY * firstX) / denominator;
             if (firstFactor < -Epsilon || firstFactor > 1f + Epsilon || secondFactor < -Epsilon || secondFactor > 1f + Epsilon) { intersection = default; return false; }
             intersection = new Float2(firstStart.X + firstFactor * firstX, firstStart.Y + firstFactor * firstY);
             return true;
         }
 
         private static LoopResult Invalid() => new LoopResult(false, Array.Empty<Float2>(), 0f, 0f);
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

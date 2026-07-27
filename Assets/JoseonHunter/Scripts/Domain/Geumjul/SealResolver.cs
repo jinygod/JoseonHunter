@@ -25,11 +25,13 @@ namespace JoseonHunter.Domain.Geumjul
         public IReadOnlyList<SealHit> Resolve(LoopResult loop, IReadOnlyList<TargetPoint> targets)
         {
             if (targets == null) throw new ArgumentNullException(nameof(targets));
+            if (mastery.RequiresBranchChoice) throw new InvalidOperationException("A Fire Mark or Ice Bind branch must be selected before resolving seals.");
             var hits = new List<SealHit>();
             if (!loop.IsValid) return hits.AsReadOnly();
             for (var index = 0; index < targets.Count; index++)
             {
                 var target = targets[index];
+                if (!IsFinite(target.Position.X) || !IsFinite(target.Position.Y)) throw new ArgumentException("Target positions must be finite.", nameof(targets));
                 if (!IsStrictlyInside(loop.Polygon, target.Position)) continue;
                 var damage = target.IsBoss ? mastery.BaseDamage * 35 / 100 : mastery.BaseDamage;
                 hits.Add(new SealHit(target.TargetId, damage, target.IsBoss ? 0f : 1.2f, mastery.ActiveBranch));
@@ -58,5 +60,7 @@ namespace JoseonHunter.Domain.Geumjul
             if (Math.Abs(cross) > EdgeTolerance) return false;
             return point.X >= Math.Min(first.X, second.X) - EdgeTolerance && point.X <= Math.Max(first.X, second.X) + EdgeTolerance && point.Y >= Math.Min(first.Y, second.Y) - EdgeTolerance && point.Y <= Math.Max(first.Y, second.Y) + EdgeTolerance;
         }
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }
