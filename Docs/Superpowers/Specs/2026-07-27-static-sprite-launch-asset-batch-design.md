@@ -1,7 +1,7 @@
 # Joseon Hunter Static Sprite Launch Asset Batch Design
 
 **Date:** 2026-07-27  
-**Status:** Approved design, pending written-spec review  
+**Status:** Approved
 **Supersedes:** The requirement to ship per-character walk, idle, and death
 sprite frames in the PixelLab front-facing character pilot
 
