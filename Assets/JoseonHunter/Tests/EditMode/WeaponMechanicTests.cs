@@ -648,6 +648,74 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(target.Health, Is.EqualTo(90));
         }
 
+        [Test]
+        public void JangseungWardDamagesOnlyAConfirmedBoundaryCrossingAndRequiresLeaveBeforeReentry()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 3f, 1);
+            var target = new TestTarget(1, new Float2(0f, -0.5f), mask); registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
+
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            target.MoveTo(new Float2(0.2f, -0.4f));
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            Assert.That(events, Is.Empty, "Movement on one side must not become area damage.");
+
+            target.MoveTo(new Float2(0.2f, 0.5f));
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
+            target.MoveTo(new Float2(0.3f, 0f));
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 4));
+            target.MoveTo(new Float2(0.3f, -0.5f));
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 5));
+            target.MoveTo(new Float2(0.3f, 0.5f));
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 6));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(events.Count, Is.EqualTo(2));
+                Assert.That(events.All(confirmed => confirmed.Phase == ContactPhase.BoundaryCrossing), Is.True);
+                Assert.That(target.KnockbackCount, Is.EqualTo(2));
+            });
+        }
+
+        [Test]
+        public void JangseungWardEvictsTheOldestFiniteSetAndRetiresItsAttack()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 0.1f, 1f, 2, 1, 0f, 1);
+
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ward.ActiveWardSetCount, Is.EqualTo(1));
+                Assert.That(ward.EvictedWardSetCount, Is.EqualTo(1));
+                Assert.That(damage.TrackedAttackCount, Is.Zero, "Unhit ward attacks must not become tracked and evicted attacks are retired either way.");
+            });
+        }
+
+        [Test]
+        public void LevelFiveJangseungMaintainsFourCardinalPosts()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry(); var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 2, 0f, 5);
+
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(ward.ActiveWardSetCount, Is.EqualTo(1));
+                Assert.That(ward.ActivePostCount, Is.EqualTo(4));
+            });
+        }
+
         private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
         {
             var mask = PixelHitMask.FromRows("1");
