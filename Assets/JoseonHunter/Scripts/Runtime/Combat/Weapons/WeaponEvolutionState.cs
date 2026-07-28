@@ -45,20 +45,37 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (executor == null) throw new ArgumentNullException(nameof(executor));
             switch (executor)
             {
-                case FlyingBladeExecutor flyingBlade: return EmptyTelemetry(flyingBlade.IsEvolved);
-                case GakgungExecutor gakgung: return EmptyTelemetry(gakgung.IsEvolved);
-                case TalismanExecutor talisman: return EmptyTelemetry(talisman.IsEvolved);
-                case ThunderBombExecutor thunderBomb: return EmptyTelemetry(thunderBomb.IsEvolved);
-                case JangseungWardExecutor jangseungWard: return EmptyTelemetry(jangseungWard.IsEvolved);
-                case SingijeonExecutor singijeon: return EmptyTelemetry(singijeon.IsEvolved);
-                case FrostFlaskExecutor frostFlask: return EmptyTelemetry(frostFlask.IsEvolved);
-                case WindThunderFanExecutor windThunderFan: return EmptyTelemetry(windThunderFan.IsEvolved);
-                default: return EmptyTelemetry(executor is IWeaponEvolutionProfile profile && profile.IsEvolved);
+                case FlyingBladeExecutor value:
+                    return Snapshot(WeaponId.HwandoFlyingBlade, "FlyingBlade", value.IsEvolved, value.ActiveBladeCount > 0 ? "Active" : "Idle", value.LastVolleyLaunchCount, value.ActiveBladeCount, value.LastVolleyLaunchCount, 0, 0f);
+                case GakgungExecutor value:
+                    return Snapshot(WeaponId.GakgungShot, "Gakgung", value.IsEvolved, value.LastSelectedTargetRuntimeId > 0 ? "Tracking" : "Idle", value.LastLaunchCount, value.ActiveProjectileCount, value.LastLaunchCount, 0, 0f);
+                case TalismanExecutor value:
+                    return Snapshot(WeaponId.TalismanThrow, "Talisman", value.IsEvolved, value.LastState.ToString(), value.TotalLaunchedTalismanCount, value.ActiveCastCount, value.LastLaunchCount, value.LastFinalBurstCount, 0f, value.LastContactPhases);
+                case ThunderBombExecutor value:
+                    return Snapshot(WeaponId.ThunderCrashBomb, "ThunderBomb", value.IsEvolved, value.LastState.ToString(), value.ActiveBombCount, value.Level, value.ActiveBombCount, 0, value.BlastRadius);
+                case JangseungWardExecutor value:
+                    return Snapshot(WeaponId.JangseungWard, "JangseungWard", value.IsEvolved, value.ActiveWardSetCount > 0 ? "Active" : "Idle", value.ActiveWardSetCount, value.ActivePostCount, value.ActivePostCount, value.EvictedWardSetCount, value.Radius);
+                case SingijeonExecutor value:
+                    return Snapshot(WeaponId.SingijeonVolley, "Singijeon", value.IsEvolved, value.LastDirectionBucket >= 0 ? "Volley" : "Idle", value.LastLaunchCount, value.ActiveProjectileCount, value.LastLaunchCount, value.LastDirectionBucket, value.Range);
+                case FrostFlaskExecutor value:
+                    return Snapshot(WeaponId.FrostFlask, "FrostFlask", value.IsEvolved, value.ActiveFieldCount > 0 ? "Field" : "Idle", value.ActiveFieldCount, value.ExpiredFieldCount, value.ActiveFieldCount, value.ExpiredFieldCount, value.Duration);
+                case WindThunderFanExecutor value:
+                    return Snapshot(WeaponId.WindThunderFan, "WindThunderFan", value.IsEvolved, value.State.ToString(), value.LastWindContactCount, value.LastLightningContactCount, value.LastWindContactCount, value.LastLightningContactCount, value.Range);
+                default:
+                    return Snapshot(default, executor.GetType().Name, executor is IWeaponEvolutionProfile profile && profile.IsEvolved, "Unknown", 0, 0, 0, 0, 0f);
             }
         }
 
-        private static EvolutionTelemetry EmptyTelemetry(bool isEvolved) =>
-            new EvolutionTelemetry(0, 0f, Array.Empty<string>(), Array.Empty<string>(), 0, 0, 0f, false, isEvolved);
+        private static EvolutionTelemetry Snapshot(WeaponId weaponId, string executorKind, bool isEvolved, string state, int primaryCount, int secondaryCount, int scoutProjectileCount, int focusProjectileCount, float fieldDuration, IReadOnlyList<ContactPhase> contactPhases = null) =>
+            new EvolutionTelemetry(0, 0f, new[] { state }, ContactPhaseNames(contactPhases), scoutProjectileCount, focusProjectileCount, fieldDuration, false, isEvolved, weaponId, executorKind, state, primaryCount, secondaryCount);
+
+        private static IReadOnlyList<string> ContactPhaseNames(IReadOnlyList<ContactPhase> phases)
+        {
+            if (phases == null || phases.Count == 0) return Array.Empty<string>();
+            var result = new string[phases.Count];
+            for (var index = 0; index < phases.Count; index++) result[index] = phases[index].ToString();
+            return result;
+        }
     }
 
     public readonly struct EvolutionTelemetry
@@ -67,7 +84,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             int lastProjectileMaximumImpacts, float lastProjectileScale,
             IReadOnlyList<string> stateOrder, IReadOnlyList<string> volleyKinds,
             int scoutProjectileCount, int focusProjectileCount, float fieldDuration,
-            bool allStoredTargetsResolvedOnce, bool isEvolved = false)
+            bool allStoredTargetsResolvedOnce, bool isEvolved = false, WeaponId weaponId = default,
+            string executorKind = "", string currentState = "", int primaryObservedCount = 0, int secondaryObservedCount = 0)
         {
             LastProjectileMaximumImpacts = lastProjectileMaximumImpacts;
             LastProjectileScale = lastProjectileScale;
@@ -78,6 +96,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             FieldDuration = fieldDuration;
             AllStoredTargetsResolvedOnce = allStoredTargetsResolvedOnce;
             IsEvolved = isEvolved;
+            WeaponId = weaponId;
+            ExecutorKind = executorKind;
+            CurrentState = currentState;
+            PrimaryObservedCount = primaryObservedCount;
+            SecondaryObservedCount = secondaryObservedCount;
         }
 
         public int LastProjectileMaximumImpacts { get; }
@@ -89,6 +112,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float FieldDuration { get; }
         public bool AllStoredTargetsResolvedOnce { get; }
         public bool IsEvolved { get; }
+        public WeaponId WeaponId { get; }
+        public string ExecutorKind { get; }
+        public string CurrentState { get; }
+        public int PrimaryObservedCount { get; }
+        public int SecondaryObservedCount { get; }
     }
 #endif
 }

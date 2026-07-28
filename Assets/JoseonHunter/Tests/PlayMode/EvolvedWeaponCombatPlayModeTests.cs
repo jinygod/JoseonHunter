@@ -36,21 +36,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(second.DisposeCount, Is.EqualTo(0));
         }
 
-        [Test]
-        public void Evolved_factory_registers_unique_evolved_executor_for_every_weapon()
+        [UnityTest]
+        public IEnumerator Evolved_factory_adapts_live_telemetry_for_every_weapon()
         {
             var executors = new HashSet<IWeaponExecutor>();
             foreach (var weaponId in WeaponRoster.All)
             {
                 using (var rig = EvolvedWeaponTestRig.For(weaponId))
                 {
+                    rig.AddTarget(new Vector2(1f, 0f));
+                    yield return rig.AdvanceSeconds(0.6f);
                     var registered = rig.Runtime.ExecutorForTests(weaponId);
+                    var telemetry = EvolvedExecutorFactory.ReadTelemetry(registered);
 
                     Assert.That(registered, Is.SameAs(rig.Executor));
                     Assert.That(rig.Runtime.IsEvolvedForTests(weaponId), Is.True);
                     Assert.That(rig.Runtime.RegistrationCountForTests(weaponId), Is.EqualTo(1));
                     Assert.That(rig.Runtime.RegisteredExecutorSlotCountForTests, Is.EqualTo(1));
-                    Assert.That(rig.Telemetry.IsEvolved, Is.True);
+                    Assert.That(telemetry.WeaponId, Is.EqualTo(weaponId));
+                    Assert.That(telemetry.IsEvolved, Is.True);
+                    Assert.That(telemetry.ExecutorKind, Is.Not.Empty);
+                    Assert.That(telemetry.CurrentState, Is.Not.Empty);
+                    Assert.That(telemetry.PrimaryObservedCount, Is.GreaterThan(0));
                     Assert.That(executors.Add(registered), Is.True);
                 }
             }

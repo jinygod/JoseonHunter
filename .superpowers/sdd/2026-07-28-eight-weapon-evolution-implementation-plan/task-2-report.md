@@ -17,3 +17,9 @@ The controller evolution test now captures the normal pre-choice runtime and exe
 `WeaponRuntimeController.Register(WeaponId, ...)` now rejects duplicate weapon IDs before modifying its executor list. Test-only slot counts expose the actual executor collection, and coverage verifies a rejected duplicate is neither ticked nor disposed as a registered slot.
 
 Completed `EvolvedWeaponTestRig` with a real registry, damage service, runtime, root object, combat targets, confirmed-event observations, cast/time advancement, and cleanup. Added test-only unified `EvolutionTelemetry` and the all-eight factory reader. Default telemetry remains intentionally neutral until the executor-specific evolution tasks add their real counters; it reports the real evolved profile flag without synthesizing combat events. Unity test infrastructure was not retried.
+
+## Fix Round 3
+
+`ReadTelemetry` is now an eight-type adapter over real executor state: live launch/active/contact/field/ward counters, state, duration/range values, and target-selection direction are copied into a stable snapshot. Each snapshot also identifies the concrete executor and canonical weapon ID, plus the actual evolved profile. Fields whose corresponding future evolution mechanic does not exist remain neutral rather than fabricated.
+
+The all-eight rig test now adds a registered legal target, advances the actual executor, and verifies the resulting live telemetry discriminator, evolved flag, state, and an observed count or non-idle state for every weapon. Unity test infrastructure was not retried.
