@@ -25,6 +25,8 @@ namespace JoseonHunter.Presentation.UI
         private int weaponSignature = int.MinValue;
         private bool waitingForRewardReveal;
         private bool waitingForChoiceClose;
+        private ProgressionRewardEvent pendingReward;
+        private bool hasPendingReward;
 
         public FirstPlayableController BoundController => boundController;
         public RectTransform SafeAreaContainer => safeAreaContainer;
@@ -141,6 +143,8 @@ namespace JoseonHunter.Presentation.UI
         {
             waitingForRewardReveal = true;
             waitingForChoiceClose = true;
+            pendingReward = reward;
+            hasPendingReward = true;
             if (reward.Kind != ProgressionRewardKind.Support)
             {
                 var state = boundController.UiState;
@@ -149,12 +153,6 @@ namespace JoseonHunter.Presentation.UI
                 weaponRack.Pulse(reward.WeaponId, reward.NewLevel, reward.AffixResult?.NewPotentials.Count ?? 0);
             }
 
-            // Weapon selections already have a complete affix result; the generic card would
-            // duplicate that reveal and hold the next queued choice unnecessarily.
-            if (reward.Kind != ProgressionRewardKind.Support && reward.Kind != ProgressionRewardKind.Evolution && reward.AffixResult != null)
-                affixReveal?.Play(reward.AffixResult);
-            else
-                rewardReveal?.Play(reward);
         }
 
         private void CloseRewardReveal()
@@ -163,13 +161,27 @@ namespace JoseonHunter.Presentation.UI
             waitingForChoiceClose = false;
             rewardReveal?.HideImmediately();
             affixReveal?.HideImmediately();
+            hasPendingReward = false;
             weaponRack?.ResetPulses();
         }
 
         private void NotifyUpgradePresentationClosed()
         {
             waitingForChoiceClose = false;
+            PlayPendingRewardAfterChoiceClose();
             NotifyUpgradeWhenPresentationComplete();
+        }
+
+        private void PlayPendingRewardAfterChoiceClose()
+        {
+            if (!hasPendingReward) return;
+            var reward = pendingReward;
+            hasPendingReward = false;
+            // Weapon selections use only the affix reel. Support/evolution keep their existing reveal.
+            if (reward.Kind != ProgressionRewardKind.Support && reward.Kind != ProgressionRewardKind.Evolution && reward.AffixResult != null)
+                affixReveal.Play(reward.AffixResult);
+            else
+                rewardReveal.Play(reward);
         }
 
         private void OnRewardRevealCompleted()

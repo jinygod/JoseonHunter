@@ -52,6 +52,12 @@ namespace JoseonHunter.Content.Weapons
 
         [SerializeField] private RarityFrame[] rarityFrames;
         [SerializeField] private PotentialPresentation[] potentials;
+        [Header("PixelLab slot-kit slices")]
+        [SerializeField] private Sprite reelFrame;
+        [SerializeField] private Sprite emptyLineFrame;
+        [SerializeField] private Sprite jackpotBurst1;
+        [SerializeField] private Sprite jackpotBurst2;
+        [SerializeField] private Sprite jackpotBurst3;
 
         public Sprite SpriteForAffix(WeaponAffixTier tier) =>
             (rarityFrames ?? Array.Empty<RarityFrame>()).FirstOrDefault(frame => frame.Matches(tier)).Sprite;
@@ -61,6 +67,13 @@ namespace JoseonHunter.Content.Weapons
 
         public Texture2D MaskForPotential(WeaponPotentialId potentialId) =>
             (potentials ?? Array.Empty<PotentialPresentation>()).FirstOrDefault(entry => entry.Matches(potentialId)).HitMask;
+
+        public Sprite ReelFrame => reelFrame;
+        public Sprite EmptyLineFrame => emptyLineFrame;
+        public Sprite JackpotBurstFor(int lines) => lines == 1 ? jackpotBurst1 : lines == 2 ? jackpotBurst2 : jackpotBurst3;
+
+        public bool HasRequiredUiSprites => reelFrame != null && emptyLineFrame != null &&
+            jackpotBurst1 != null && jackpotBurst2 != null && jackpotBurst3 != null;
 
         public bool TryGetPotentialPresentation(WeaponPotentialId potentialId, out PotentialPresentation presentation)
         {
@@ -75,6 +88,10 @@ namespace JoseonHunter.Content.Weapons
             var errors = new List<string>();
             foreach (var tier in new[] { WeaponAffixTier.Standard, WeaponAffixTier.High, WeaponAffixTier.Perfect })
                 if (SpriteForAffix(tier) == null) errors.Add($"missing rarity frame for {tier}");
+            if (reelFrame == null) errors.Add("missing PixelLab reel frame");
+            if (emptyLineFrame == null) errors.Add("missing PixelLab empty-line frame");
+            if (jackpotBurst1 == null || jackpotBurst2 == null || jackpotBurst3 == null)
+                errors.Add("missing PixelLab jackpot burst frame");
 
             foreach (var potential in requiredPotentialIds ?? Array.Empty<WeaponPotentialId>())
             {
@@ -89,6 +106,16 @@ namespace JoseonHunter.Content.Weapons
         {
             rarityFrames = frames;
             potentials = potentialEntries;
+        }
+
+        public void SetSlotKitForImport(Sprite importedReelFrame, Sprite importedEmptyLineFrame,
+            Sprite importedBurst1, Sprite importedBurst2, Sprite importedBurst3)
+        {
+            reelFrame = importedReelFrame;
+            emptyLineFrame = importedEmptyLineFrame;
+            jackpotBurst1 = importedBurst1;
+            jackpotBurst2 = importedBurst2;
+            jackpotBurst3 = importedBurst3;
         }
     }
 }

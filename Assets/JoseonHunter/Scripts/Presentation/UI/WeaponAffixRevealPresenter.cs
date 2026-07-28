@@ -16,6 +16,7 @@ namespace JoseonHunter.Presentation.UI
         private GameObject root;
         private CanvasGroup group;
         private Image frame;
+        private Image reelFrame;
         private Image burst;
         private TextMeshProUGUI title;
         private TextMeshProUGUI detail;
@@ -29,6 +30,7 @@ namespace JoseonHunter.Presentation.UI
 
         public bool IsRevealing => routine != null;
         public WeaponAffixRollResult LastCompletedResult { get; private set; }
+        public bool IsTensionActive => activeResult != null && (activeResult.General.Tier != WeaponAffixTier.Standard || activeResult.NewPotentials.Count > 0);
         public event Action RevealCompleted;
 
         public void Play(WeaponAffixRollResult result)
@@ -43,15 +45,21 @@ namespace JoseonHunter.Presentation.UI
             title.text = TierName(result.General.Tier) + " AFFINITY";
             detail.text = Describe(result.General);
             var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
-            frame.sprite = catalog != null ? catalog.SpriteForAffix(result.General.Tier) : null;
-            frame.enabled = frame.sprite != null;
-            burst.sprite = catalog != null && result.NewPotentials.Count > 0 ? catalog.SpriteForAffix(WeaponAffixTier.Perfect) : null;
-            burst.enabled = burst.sprite != null && result.NewPotentials.Count > 0;
+            if (catalog == null || !catalog.HasRequiredUiSprites)
+            {
+                Debug.LogError("Weapon affix reveal requires the imported PixelLab slot-kit catalog.", this);
+                Complete();
+                return;
+            }
+            reelFrame.sprite = catalog.ReelFrame;
+            frame.sprite = catalog.SpriteForAffix(result.General.Tier);
+            burst.sprite = result.NewPotentials.Count > 0 ? catalog.JackpotBurstFor(result.NewPotentials.Count) : null;
+            burst.enabled = burst.sprite != null;
             for (var i = 0; i < potentialCells.Length; i++)
             {
                 var open = i < result.NewPotentials.Count;
-                potentialCells[i].sprite = open && catalog != null ? catalog.SpriteForPotential(result.NewPotentials[i]) : null;
-                potentialCells[i].enabled = potentialCells[i].sprite != null;
+                potentialCells[i].sprite = open ? catalog.SpriteForPotential(result.NewPotentials[i]) : catalog.EmptyLineFrame;
+                potentialCells[i].enabled = true;
                 potentialLabels[i].gameObject.SetActive(open);
                 if (open) potentialLabels[i].text = PotentialName(result.NewPotentials[i]);
             }
@@ -116,8 +124,9 @@ namespace JoseonHunter.Presentation.UI
             root = RuntimeUiFactory.Image("Weapon Affix Reveal", transform, new Color(.015f, .02f, .035f, .82f)).gameObject;
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             group = root.AddComponent<CanvasGroup>();
-            var panel = RuntimeUiFactory.Image("Affix Reel", root.transform, JoseonUiPalette.Ink);
+            var panel = RuntimeUiFactory.Image("Affix Reel", root.transform, Color.clear);
             var panelRect = panel.rectTransform; panelRect.anchorMin = panelRect.anchorMax = new Vector2(.5f,.5f); panelRect.sizeDelta = new Vector2(760f, 360f);
+            reelFrame = RuntimeUiFactory.Image("PixelLab Reel Frame", panel.transform, Color.white); RuntimeUiFactory.Stretch(reelFrame.rectTransform, 0f, 0f, 0f, 0f); reelFrame.preserveAspect = true;
             frame = RuntimeUiFactory.Image("Rarity Frame", panel.transform, Color.white); RuntimeUiFactory.Stretch(frame.rectTransform, 12f, 12f, 12f, 12f); frame.preserveAspect = true;
             burst = RuntimeUiFactory.Image("Jackpot Burst", panel.transform, Color.white); burst.rectTransform.anchorMin = burst.rectTransform.anchorMax = new Vector2(.5f,.5f); burst.rectTransform.sizeDelta = new Vector2(180f,180f); burst.preserveAspect = true;
             title = Label("Affix Title", panel.transform, new Vector2(0f,104f), new Vector2(650f,48f), 34f, TextAlignmentOptions.Center);

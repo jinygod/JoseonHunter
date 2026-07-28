@@ -34,7 +34,7 @@ namespace JoseonHunter.Editor.AssetProduction
         [MenuItem("JoseonHunter/Assets/Import Affix Jackpot Pixel Atlases")]
         public static void EnsureImported()
         {
-            ConfigureAtlas(SlotKitPath);
+            ConfigureSlotKit();
             ConfigureAtlas(StatusSymbolsPath);
             ConfigureAtlas(PotentialPartsAPath);
             ConfigureAtlas(PotentialPartsBPath);
@@ -114,9 +114,42 @@ namespace JoseonHunter.Editor.AssetProduction
                 new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.High, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("high"))),
                 new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.Perfect, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("perfect")))
             }, entries.ToArray());
+            var slotSprites = AssetDatabase.LoadAllAssetsAtPath(SlotKitPath).OfType<Sprite>()
+                .ToDictionary(sprite => sprite.name, StringComparer.Ordinal);
+            catalog.SetSlotKitForImport(
+                slotSprites["reel_frame"], slotSprites["reel_frame"],
+                slotSprites["jackpot_burst_1"], slotSprites["jackpot_burst_2"], slotSprites["jackpot_burst_3"]);
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }
+
+        private static void ConfigureSlotKit()
+        {
+            var importer = AssetImporter.GetAtPath(SlotKitPath) as TextureImporter;
+            if (importer == null) throw new InvalidOperationException($"Missing checked-in atlas at '{SlotKitPath}'.");
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Multiple;
+            importer.spritePixelsPerUnit = PixelsPerUnit;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.isReadable = true;
+            importer.alphaIsTransparency = true;
+            importer.spritesheet = new[]
+            {
+                Slice("reel_frame", 0, 64), Slice("standard_frame", 64, 64), Slice("high_frame", 128, 64), Slice("perfect_frame", 192, 64),
+                Slice("jackpot_burst_1", 0, 0), Slice("jackpot_burst_2", 64, 0), Slice("jackpot_burst_3", 128, 0), Slice("rarity_flash", 192, 0)
+            };
+            importer.SaveAndReimport();
+        }
+
+        private static SpriteMetaData Slice(string name, float x, float y) => new SpriteMetaData
+        {
+            name = name,
+            rect = new Rect(x, y, 64f, 64f),
+            alignment = (int)SpriteAlignment.Center,
+            pivot = new Vector2(.5f, .5f)
+        };
 
         private static string MaskPathFor(WeaponPotentialId id) =>
             "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/Masks/" + id.Value + "-hit-mask.png";

@@ -122,13 +122,18 @@ namespace JoseonHunter.Presentation.UI
             slot.Level.text = $"LEVEL {weapon.Level}";
             slot.Totals.text = weapon.GeneralAffixSummary;
             var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            if (catalog == null || !catalog.HasRequiredUiSprites)
+            {
+                Debug.LogError("Weapon rack requires the imported PixelLab slot-kit catalog.", this);
+                return;
+            }
             for (var index = 0; index < slot.PotentialCells.Length; index++)
             {
                 var cell = slot.PotentialCells[index];
                 cell.sprite = index < weapon.PotentialIds.Count && catalog != null
                     ? catalog.SpriteForPotential(weapon.PotentialIds[index])
-                    : catalog != null ? catalog.SpriteForAffix(WeaponAffixTier.Standard) : null;
-                cell.enabled = cell.sprite != null;
+                    : catalog.EmptyLineFrame;
+                cell.enabled = true;
             }
         }
 
@@ -139,7 +144,7 @@ namespace JoseonHunter.Presentation.UI
             {
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
-                slot.Root.transform.localScale = Vector3.one * pulse;
+                slot.Accent.transform.localScale = Vector3.one * pulse;
                 var potentialIndex = newPotentialCount - 1;
                 if (potentialIndex >= 0 && potentialIndex < slot.PotentialCells.Length)
                     slot.PotentialCells[potentialIndex].transform.localScale = Vector3.one * pulse;
@@ -148,6 +153,7 @@ namespace JoseonHunter.Presentation.UI
 
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.Accent != null) slot.Accent.transform.localScale = Vector3.one;
             if (slot.PotentialCells != null)
                 foreach (var cell in slot.PotentialCells) if (cell != null) cell.transform.localScale = Vector3.one;
         }
@@ -157,6 +163,7 @@ namespace JoseonHunter.Presentation.UI
             if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.Accent != null) slot.Accent.transform.localScale = Vector3.one;
             if (slot.PotentialCells != null)
                 foreach (var cell in slot.PotentialCells) if (cell != null) cell.transform.localScale = Vector3.one;
         }

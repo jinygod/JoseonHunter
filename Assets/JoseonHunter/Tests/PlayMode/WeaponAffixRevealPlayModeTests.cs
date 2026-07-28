@@ -9,6 +9,8 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class WeaponAffixRevealPlayModeTests
     {
+        [TearDown]
+        public void RestoreTimeScale() => Time.timeScale = 1f;
         [TestCase(WeaponAffixTier.Standard, 0, .95f)]
         [TestCase(WeaponAffixTier.High, 0, 1.15f)]
         [TestCase(WeaponAffixTier.Perfect, 0, 1.35f)]
@@ -50,6 +52,18 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(completions, Is.Zero);
             Assert.That(presenter.IsRevealing, Is.False);
             Object.Destroy(presenter.gameObject);
+        }
+
+        [TestCase(WeaponAffixTier.Standard, 0, false)]
+        [TestCase(WeaponAffixTier.High, 0, true)]
+        [TestCase(WeaponAffixTier.Perfect, 0, true)]
+        [TestCase(WeaponAffixTier.Standard, 1, true)]
+        public void Tension_is_reserved_for_high_perfect_or_potential(WeaponAffixTier tier, int potentialCount, bool expected)
+        {
+            var presenter = new GameObject("Tension Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.Play(Result(tier, potentialCount));
+            Assert.That(presenter.IsTensionActive, Is.EqualTo(expected));
+            Object.DestroyImmediate(presenter.gameObject);
         }
 
         private static WeaponAffixRollResult Result(WeaponAffixTier tier, int potentialCount)
