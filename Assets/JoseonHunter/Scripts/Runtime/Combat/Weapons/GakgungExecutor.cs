@@ -17,6 +17,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Dictionary<int, ArrowInfo> primaryArrows = new Dictionary<int, ArrowInfo>();
         private readonly HashSet<int> firstImpacts = new HashSet<int>();
         private readonly List<SplitArrow> splitArrows = new List<SplitArrow>();
+        private readonly List<TransientEffect> transientEffects = new List<TransientEffect>();
+        private Transform presentationRoot;
+        private Sprite impactSprite;
+        private int effectSortingOrder;
 #if UNITY_INCLUDE_TESTS
         private readonly List<int> splitChildAttackIdsForTests = new List<int>();
         private readonly List<int> levelFiveSideArrowAttackIdsForTests = new List<int>();
@@ -54,6 +58,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
+            presentationRoot = context.PresentationRoot;
+            impactSprite = context.PresentationSpriteFor(WeaponId.GakgungShot, 2);
+            effectSortingOrder = context.SortingOrder + 2;
             cooldown -= deltaTime;
             if (cooldown <= 0f && TrySelectTarget(out var target))
             {
@@ -62,6 +69,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             projectiles.Tick(deltaTime, context);
             LastProjectileScale = projectiles.LastVisualScale;
+            for (var index = transientEffects.Count - 1; index >= 0; index--)
+            {
+                var effect = transientEffects[index];
+                effect.Remaining -= Mathf.Max(0f, deltaTime);
+                if (effect.Remaining > 0f) continue;
+                if (effect.Visual != null) UnityEngine.Object.Destroy(effect.Visual);
+                transientEffects.RemoveAt(index);
+            }
             for (var index = splitArrows.Count - 1; index >= 0; index--)
             {
                 var child = splitArrows[index]; child.Delay -= Mathf.Max(0f, deltaTime);
@@ -87,6 +102,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             cooldown = 0f; shotSequence = 0; LastLaunchCount = 0; LastSelectedTargetRuntimeId = 0;
             LastProjectileMaximumImpacts = 0; LastProjectileScale = 1f; projectiles.Reset(); primaryArrows.Clear(); firstImpacts.Clear();
             foreach (var child in splitArrows) runtime.DamageService.RetireAttack(child.Attack.InstanceId); splitArrows.Clear();
+            foreach (var effect in transientEffects)
+                if (effect.Visual != null) UnityEngine.Object.Destroy(effect.Visual);
+            transientEffects.Clear();
 #if UNITY_INCLUDE_TESTS
             LastArmorBreakPrimaryAttackIdForTests = 0; splitChildAttackIdsForTests.Clear();
             levelFiveSideArrowAttackIdsForTests.Clear(); armorBreakApplicationAttackIdsForTests.Clear();
@@ -117,6 +135,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
+            SpawnEffect(
+                "Gakgung Aim Glint",
+                context.PresentationSpriteFor(WeaponId.GakgungShot, 1),
+                target.WorldPosition,
+                context.PresentationRoot,
+                context.SortingOrder + 1,
+                0.10f);
             var direction = Direction(context.OwnerPosition, target.WorldPosition);
             var targetDelta = new Float2(target.WorldPosition.X - context.OwnerPosition.X, target.WorldPosition.Y - context.OwnerPosition.Y);
             var targetDistance = Mathf.Sqrt(targetDelta.X * targetDelta.X + targetDelta.Y * targetDelta.Y);
@@ -124,7 +149,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var sunPiercer = IsEvolved && shotSequence % 4 == 0;
             var impacts = sunPiercer ? 8 : (Level == 5 ? 3 : 1);
             var damage = Mathf.CeilToInt(BaseDamage * (sunPiercer ? 3f : 1f));
-            var scale = sunPiercer ? 1.75f : 1f;
+            var scale = sunPiercer ? 1.25f : 1f;
             var speed = sunPiercer ? Speed * 0.7f : Speed;
             LastSelectedTargetRuntimeId = target.RuntimeId;
             LastLaunchCount = Level == 5 ? 3 : 1;
@@ -148,12 +173,22 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range);
             projectiles.Launch(context, new LinearProjectileSpec(
                 attack, WeaponId.GakgungShot,
-                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale, allowExtendedImpacts, fullDraw, fullDraw ? drawMask : null));
+                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale,
+                allowExtendedImpacts, fullDraw, fullDraw ? drawMask : null,
+                degrees == 0f ? 0.18f : Mathf.Sign(degrees) * 0.11f,
+                0.28f));
         }
 
         private void OnDamageConfirmed(ConfirmedDamageEvent damage)
         {
             if (!damage.WeaponId.Equals(WeaponId.GakgungShot) || !primaryArrows.TryGetValue(damage.AttackInstanceId, out var arrow)) return;
+            SpawnEffect(
+                "Gakgung Impact Splinter",
+                impactSprite,
+                damage.ContactPoint,
+                presentationRoot,
+                effectSortingOrder,
+                0.14f);
             if (Potentials.HasPotential(WeaponPotentialId.GakgungArmorBreakArrowhead) && firstImpacts.Add(damage.AttackInstanceId) &&
                 WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungArmorBreakArrowhead, out _, out var armorMask) && runtime.Targets.TryGet(damage.TargetRuntimeId, out var armorTarget) && armorTarget != null && armorTarget.HurtMask != null &&
                 PixelMaskContactService.TryFindContact(armorMask, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), armorTarget.HurtMask, armorTarget.HurtMaskTransform, out _))
@@ -186,6 +221,24 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var x = target.X - origin.X; var y = target.Y - origin.Y; var length = Mathf.Sqrt(x * x + y * y);
             return length > 0.001f ? new Float2(x / length, y / length) : new Float2(1f, 0f);
         }
+        private void SpawnEffect(
+            string objectName,
+            Sprite sprite,
+            Float2 position,
+            Transform root,
+            int sortingOrder,
+            float lifetime)
+        {
+            if (sprite == null || root == null) return;
+            var visual = new GameObject(objectName);
+            visual.transform.SetParent(root, false);
+            visual.transform.position = new Vector3(position.X, position.Y, 0f);
+            visual.transform.rotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0, 4) * 90f);
+            var renderer = visual.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.sortingOrder = sortingOrder;
+            transientEffects.Add(new TransientEffect(visual, lifetime));
+        }
         private static Float2 Rotate(Float2 value, float degrees)
         {
             var radians = degrees * Mathf.Deg2Rad; var cosine = Mathf.Cos(radians); var sine = Mathf.Sin(radians);
@@ -193,5 +246,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
         private readonly struct ArrowInfo { public ArrowInfo(Float2 start, float range) { Start = start; Range = range; } public Float2 Start { get; } public float Range { get; } }
         private struct SplitArrow { public SplitArrow(AttackInstance attack, Float2 position, Float2 direction, PixelHitMask mask, float range) { Attack = attack; Position = position; Direction = direction; Mask = mask; RemainingRange = range; Delay = .05f; } public AttackInstance Attack; public Float2 Position; public Float2 Direction; public PixelHitMask Mask; public float RemainingRange; public float Delay; }
+        private sealed class TransientEffect
+        {
+            public TransientEffect(GameObject visual, float remaining) { Visual = visual; Remaining = remaining; }
+            public GameObject Visual { get; }
+            public float Remaining { get; set; }
+        }
     }
 }

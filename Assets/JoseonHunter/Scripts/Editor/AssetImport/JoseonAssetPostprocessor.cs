@@ -16,6 +16,18 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
         private const string StaticSpriteRuntimeRoot =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/";
+        private const string WeaponPolishRuntimeRoot =
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/";
+        private const string WorldRuntimeRoot =
+            "Assets/JoseonHunter/Art/World/Runtime/";
+        private const string EnemyRuntimeRoot =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/";
+        private const string EliteRuntimeRoot =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Elites/";
+        private const string BossRuntimeRoot =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Bosses/";
+        private const string HanYeonhwaRuntimePath =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
 
         private void OnPreprocessTexture()
         {
@@ -28,12 +40,19 @@ namespace JoseonHunter.Editor.AssetImport
             texture.textureType = TextureImporterType.Sprite;
             texture.filterMode = IsBilinearArt(assetPath) ? FilterMode.Bilinear : FilterMode.Point;
             texture.mipmapEnabled = false;
-            texture.spritePixelsPerUnit = 32f;
+            texture.spritePixelsPerUnit = IsMobilePixelRuntime(assetPath) ? 64f : 32f;
             texture.alphaIsTransparency = true;
-            if (assetPath.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal))
+            if (IsSingleRuntimeSprite(assetPath))
             {
                 texture.spriteImportMode = SpriteImportMode.Single;
-                SetSingleSpritePivot(texture, new Vector2(0.5f, 0.125f));
+                texture.isReadable = assetPath.StartsWith(
+                    WeaponPolishRuntimeRoot,
+                    System.StringComparison.Ordinal);
+                SetSingleSpritePivot(
+                    texture,
+                    assetPath.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal)
+                        ? new Vector2(0.5f, 0.125f)
+                        : new Vector2(0.5f, 0.5f));
                 texture.textureCompression = TextureImporterCompression.Uncompressed;
                 texture.ClearPlatformTextureSettings("Android");
                 return;
@@ -59,6 +78,23 @@ namespace JoseonHunter.Editor.AssetImport
                 overridden = true,
                 format = TextureImporterFormat.ASTC_6x6,
             });
+        }
+
+        private static bool IsMobilePixelRuntime(string path)
+        {
+            return path.Equals(HanYeonhwaRuntimePath, System.StringComparison.Ordinal)
+                || path.StartsWith(EnemyRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(EliteRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(BossRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal);
+        }
+
+        private static bool IsSingleRuntimeSprite(string path)
+        {
+            return path.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal);
         }
 
         private static SpriteMetaData[] CharacterSprites(string characterId, int frameCount, int columns)
