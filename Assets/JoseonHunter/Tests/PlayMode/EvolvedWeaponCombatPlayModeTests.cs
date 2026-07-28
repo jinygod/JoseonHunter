@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Runtime.Combat;
+using JoseonHunter.Runtime.Combat.Weapons;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
@@ -440,6 +441,48 @@ namespace JoseonHunter.Tests.PlayMode
                 var inbound = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Inbound).ToArray();
                 CollectionAssert.AreEqual(new[] { middle.RuntimeId, near.RuntimeId }, inbound.Select(value => value.TargetRuntimeId));
                 Assert.That(inbound.Any(value => value.TargetRuntimeId == far.RuntimeId), Is.False);
+            }
+        }
+
+        [Test]
+        public void Returning_heaven_thunder_preserves_exact_outbound_cadence_for_split_and_large_ticks()
+        {
+            using (var split = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            using (var large = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            {
+                split.AddTargets(3); large.AddTargets(3);
+                for (var index = 0; index < 4; index++) { split.Tick(0.01f); large.Tick(0.01f); }
+                split.Tick(0.12f);
+                split.Tick(0.08f); split.Tick(0.08f); split.Tick(0.08f);
+                large.Tick(0.36f);
+
+                var splitFan = (WindThunderFanExecutor)split.Executor;
+                var largeFan = (WindThunderFanExecutor)large.Executor;
+                Assert.That(splitFan.LastOutboundStrikeTimes[0], Is.EqualTo(0.08f).Within(0.0001f));
+                Assert.That(splitFan.LastOutboundStrikeTimes[1], Is.EqualTo(0.16f).Within(0.0001f));
+                Assert.That(splitFan.LastOutboundStrikeTimes[2], Is.EqualTo(0.24f).Within(0.0001f));
+                CollectionAssert.AreEqual(splitFan.LastOutboundStrikeTimes, largeFan.LastOutboundStrikeTimes);
+                Assert.That(split.Count(ContactPhase.Lightning), Is.EqualTo(large.Count(ContactPhase.Lightning)));
+            }
+        }
+
+        [Test]
+        public void Returning_heaven_thunder_never_returns_to_a_target_that_failed_outbound_then_recontacts()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            {
+                var near = rig.AddTarget(new Vector2(1f, 0f));
+                var middle = rig.AddTarget(new Vector2(2f, 0f));
+                var far = rig.AddTarget(new Vector2(3f, 0f));
+                for (var index = 0; index < 4; index++) rig.Tick(0.01f);
+                rig.Tick(0.12f);
+                Assert.That(rig.Registry.Unregister(far), Is.True);
+                rig.Tick(0.24f);
+                Assert.That(rig.Registry.Register(far), Is.True);
+                rig.Tick(0.01f);
+
+                CollectionAssert.AreEqual(new[] { near.RuntimeId, middle.RuntimeId }, ((WindThunderFanExecutor)rig.Executor).LastSuccessfulOutboundTargetIds);
+                CollectionAssert.AreEqual(new[] { middle.RuntimeId, near.RuntimeId }, rig.DamageEvents.Where(value => value.Phase == ContactPhase.Inbound).Select(value => value.TargetRuntimeId));
             }
         }
 

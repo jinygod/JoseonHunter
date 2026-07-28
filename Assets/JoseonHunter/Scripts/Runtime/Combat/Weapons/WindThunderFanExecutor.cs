@@ -11,15 +11,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     /// <summary>Contact-gated gusts mark targets first; the later echo resolves all marks in one simulation tick.</summary>
     public sealed class WindThunderFanExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
+        private const float LightningStrikeInterval = 0.08f;
         private readonly WeaponRuntimeController runtime;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private readonly List<ICombatTarget> marked = new List<ICombatTarget>();
+        private readonly List<int> successfulOutboundTargetIds = new List<int>();
+        private readonly HashSet<int> successfulOutboundTargetIdSet = new HashSet<int>();
+        private readonly List<float> outboundStrikeTimes = new List<float>();
         private float cooldown;
         private AttackInstance attack;
         private int gustIndex;
         private float echoRemaining;
         private int lightningIndex;
-        private float strikeRemaining;
+        private float strikeDueIn;
+        private float outboundElapsed;
         private Float2 lightningDirection;
 
         public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false)
@@ -43,10 +48,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastLightningContactCount { get; private set; }
         public int LastInboundContactCount { get; private set; }
         public int LastLightningSimulationTick { get; private set; } = -1;
+        public IReadOnlyList<int> LastSuccessfulOutboundTargetIds => successfulOutboundTargetIds;
+        public IReadOnlyList<float> LastOutboundStrikeTimes => outboundStrikeTimes;
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
-            cooldown -= Mathf.Max(0f, deltaTime);
+            var step = Mathf.Max(0f, deltaTime);
+            cooldown -= step;
             if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()) StartCast();
             switch (State)
             {
@@ -54,11 +62,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     ResolveGust(context);
                     break;
                 case WindThunderFanState.EchoDelay:
-                    echoRemaining -= Mathf.Max(0f, deltaTime);
-                    if (echoRemaining <= 0f) State = WindThunderFanState.LightningResolve;
+                    AdvanceEchoDelay(step, context);
                     break;
                 case WindThunderFanState.LightningResolve:
-                    if (IsEvolved) ResolveEvolvedLightning(deltaTime, context);
+                    if (IsEvolved) ResolveEvolvedLightning(step, context);
                     else ResolveLightning(context);
                     break;
                 case WindThunderFanState.InboundResolve:
@@ -70,7 +77,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             if (attack != null) runtime.DamageService.RetireAttack(attack.InstanceId);
-            attack = null; marked.Clear(); cooldown = 0f; State = WindThunderFanState.Complete;
+            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
         }
 
@@ -78,7 +85,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void StartCast()
         {
-            cooldown = CooldownSeconds; marked.Clear(); gustIndex = 0; lightningIndex = 0; strikeRemaining = 0f;
+            cooldown = CooldownSeconds; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear();
+            gustIndex = 0; lightningIndex = 0; strikeDueIn = LightningStrikeInterval; outboundElapsed = 0f;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0;
             attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f);
             State = WindThunderFanState.WindActive;
@@ -123,27 +131,53 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             attack = null; marked.Clear(); State = WindThunderFanState.Complete;
         }
 
-        private void ResolveEvolvedLightning(float deltaTime, in WeaponExecutionContext context)
+        private void AdvanceEchoDelay(float step, in WeaponExecutionContext context)
         {
-            strikeRemaining -= Mathf.Max(0f, deltaTime);
-            while (lightningIndex < marked.Count && strikeRemaining <= 0f)
+            if (!IsEvolved)
             {
+                echoRemaining -= step;
+                if (echoRemaining <= 0f) State = WindThunderFanState.LightningResolve;
+                return;
+            }
+            if (echoRemaining > step)
+            {
+                echoRemaining -= step;
+                return;
+            }
+
+            var residual = step - echoRemaining;
+            echoRemaining = 0f;
+            State = WindThunderFanState.LightningResolve;
+            if (IsEvolved) ResolveEvolvedLightning(residual, context);
+            else ResolveLightning(context);
+        }
+
+        private void ResolveEvolvedLightning(float availableTime, in WeaponExecutionContext context)
+        {
+            while (lightningIndex < marked.Count && availableTime + 0.00001f >= strikeDueIn)
+            {
+                availableTime -= strikeDueIn;
+                outboundElapsed += strikeDueIn;
                 var target = marked[lightningIndex++];
                 if (target != null && target.IsAlive && TryGustContact(target, out var contact) &&
                     runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f)), false, contact, ContactPhase.Lightning, context.SimulationTick), out _))
+                {
                     LastLightningContactCount++;
-                strikeRemaining += 0.08f;
+                    if (successfulOutboundTargetIdSet.Add(target.RuntimeId)) successfulOutboundTargetIds.Add(target.RuntimeId);
+                }
+                outboundStrikeTimes.Add(outboundElapsed);
+                strikeDueIn = LightningStrikeInterval;
             }
+            strikeDueIn -= availableTime;
             LastLightningSimulationTick = context.SimulationTick;
             if (lightningIndex >= marked.Count) State = WindThunderFanState.InboundResolve;
         }
 
         private void ResolveInbound(in WeaponExecutionContext context)
         {
-            for (var index = marked.Count - 1; index >= 0; index--)
+            for (var index = successfulOutboundTargetIds.Count - 1; index >= 0; index--)
             {
-                var target = marked[index];
-                if (target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
+                if (!runtime.Targets.TryGet(successfulOutboundTargetIds[index], out var target) || target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * 0.6f), false, contact, ContactPhase.Inbound, context.SimulationTick), out _)) LastInboundContactCount++;
             }
             runtime.DamageService.RetireAttack(attack.InstanceId);

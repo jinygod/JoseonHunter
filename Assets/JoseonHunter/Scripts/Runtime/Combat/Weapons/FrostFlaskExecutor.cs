@@ -104,11 +104,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!PixelMaskContactService.TryFindContact(diskMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 inside.Add(target.RuntimeId);
                 field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += step; field.Residence[target.RuntimeId] = residence;
-                if (target is IFrostStatusTarget status) status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f);
-                if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId))
+                if (target is IFrostStatusTarget status)
                 {
-                    if (target is IFrostStatusTarget freezeStatus) freezeStatus.ApplyFreeze(field.Attack.InstanceId, 0.2f);
-                    if (IsEvolved) field.StoredFrozen.Add(target.RuntimeId);
+                    status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f);
+                    if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId))
+                    {
+                        status.ApplyFreeze(field.Attack.InstanceId, 0.2f);
+                        if (IsEvolved) field.StoredFrozen.Add(target.RuntimeId);
+                    }
                 }
                 if (field.ActiveAge + 0.0001f >= field.NextDamageAge)
                     runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Tick, context.SimulationTick), out _);
