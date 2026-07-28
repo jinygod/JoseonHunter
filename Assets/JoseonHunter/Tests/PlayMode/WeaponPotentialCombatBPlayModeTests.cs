@@ -281,12 +281,53 @@ namespace JoseonHunter.Tests.PlayMode
         private static void AssertFrameSplit(WeaponPotentialId potential, float boundary)
         {
             var one = Drive(potential, true, MaskFor(potential));
+            PrepareDelayedWork(potential, one);
+            var oneStart = one.Events.Count;
             one.TickExact(boundary + .02f);
             var split = Drive(potential, true, MaskFor(potential));
+            PrepareDelayedWork(potential, split);
+            var splitStart = split.Events.Count;
             split.TickExact(boundary); split.TickExact(.02f);
-            Assert.That(one.Events, Is.Not.Empty, potential.Value + " must exercise a real executor path before comparing frame splits");
-            Assert.That(EventSignature(one.Events), Is.EqualTo(EventSignature(split.Events)), potential.Value + " at " + boundary);
+            var oneDelayed = one.Events.Skip(oneStart).ToArray();
+            var splitDelayed = split.Events.Skip(splitStart).ToArray();
+            Assert.That(oneDelayed, Is.Not.Empty, potential.Value + " must create and then advance its named delayed work");
+            Assert.That(EventSignature(oneDelayed), Is.EqualTo(EventSignature(splitDelayed)), potential.Value + " at " + boundary);
             one.Dispose(); split.Dispose();
+        }
+
+        private static void PrepareDelayedWork(WeaponPotentialId potential, DrivenExecutor rig)
+        {
+            if (potential.Equals(WeaponPotentialId.SingijeonPowderTrail))
+            {
+                rig.Target.Position = new Float2(3f, 0f); rig.TickExact(.1f);
+                rig.Target.Position = new Float2(.7f, 0f); rig.TickExact(.05f);
+                Assert.That(((SingijeonExecutor)rig.Executor).ActiveTrailCountForTests, Is.GreaterThan(0));
+                return;
+            }
+            if (potential.Equals(WeaponPotentialId.FanVacuumEdge))
+            {
+                rig.TickExact(.01f);
+                Assert.That(((WindThunderFanExecutor)rig.Executor).ActiveBleedCountForTests, Is.EqualTo(1));
+                return;
+            }
+            if (potential.Equals(WeaponPotentialId.FrostCrackMark))
+            {
+                rig.TickExact(.05f);
+                Assert.That(((FrostFlaskExecutor)rig.Executor).ActiveFieldCount, Is.EqualTo(1));
+                return;
+            }
+            if (potential.Equals(WeaponPotentialId.JangseungFourDirectionBarrier))
+            {
+                rig.Target.Position = new Float2(-3f, 0f); rig.TickExact(.01f);
+                rig.Target.Position = new Float2(0f, 0f); rig.TickExact(.4f);
+                Assert.That(((JangseungWardExecutor)rig.Executor).ActiveBarrierCountForTests, Is.EqualTo(1));
+                return;
+            }
+            // Evolved fan only: make the inbound strike the kill and leave its .08 chain
+            // pending before the split comparison begins.
+            rig.AddTarget(2, new Float2(1.25f, 0f), MaskFor(WeaponPotentialId.FanReturningChain));
+            rig.TickExact(.01f); rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.TickExact(.08f);
+            Assert.That(((WindThunderFanExecutor)rig.Executor).PendingChainForTests, Is.True);
         }
 
         private static string EventSignature(IEnumerable<ConfirmedDamageEvent> events)
