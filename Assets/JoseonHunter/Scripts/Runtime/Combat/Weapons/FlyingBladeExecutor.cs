@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Progression;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -12,6 +13,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly WeaponRuntimeController runtime;
         private readonly List<Blade> active = new List<Blade>();
         private readonly List<MoonCast> moonCasts = new List<MoonCast>();
+        private readonly List<Afterimage> afterimages = new List<Afterimage>();
         private readonly List<ICombatTarget> targetBuffer = new List<ICombatTarget>();
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
@@ -87,6 +89,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
                 if (cast.AllReturned) moonCasts.RemoveAt(index);
             }
+
+            for (var index = afterimages.Count - 1; index >= 0; index--)
+            {
+                var shadow = afterimages[index]; shadow.Delay -= Mathf.Max(0f, deltaTime);
+                if (shadow.Delay > 0f) continue;
+                if (runtime.Targets.TryGet(shadow.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
+                    PixelMaskContactService.TryFindContact(shadow.Mask, PixelMaskTransform.Translation(shadow.Contact.X, shadow.Contact.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(shadow.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage * .55f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                runtime.DamageService.RetireAttack(shadow.Attack.InstanceId); afterimages.RemoveAt(index);
+            }
         }
 
         public void Reset()
@@ -97,6 +109,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 runtime.DamageService.RetireAttack(blade.Attack.InstanceId);
             }
             active.Clear();
+            foreach (var afterimage in afterimages) runtime.DamageService.RetireAttack(afterimage.Attack.InstanceId);
+            afterimages.Clear();
             moonCasts.Clear();
             cooldown = 0f;
             MaximumDistanceFromLaunch = 0f;
@@ -138,6 +152,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var direction = targetDistance > 0.001f ? new Float2(toTarget.X / targetDistance, toTarget.Y / targetDistance) : new Float2(1f, 0f);
             var count = IsEvolved ? 4 : BladeCount;
             var cast = IsEvolved ? new MoonCast() : null;
+            var castHits = new HashSet<int>();
             LastVolleyLaunchCount = count;
             for (var index = 0; index < count; index++)
             {
@@ -149,7 +164,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 visual.transform.position = new Vector3(launch.X, launch.Y, 0f);
                 var blade = new Blade(
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
-                    launch, endpoint, stagger, visual, context.MaskFor(WeaponId.HwandoFlyingBlade) ?? ResolveMask(visual.GetComponent<SpriteRenderer>()), Range, IsEvolved);
+                    launch, endpoint, stagger, visual, context.MaskFor(WeaponId.HwandoFlyingBlade) ?? ResolveMask(visual.GetComponent<SpriteRenderer>()), Range, IsEvolved, castHits);
                 active.Add(blade);
                 cast?.Blades.Add(blade);
             }
@@ -242,9 +257,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(blade.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                runtime.DamageService.TryApply(
-                    WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage), false, contact, phase, context.SimulationTick),
-                    out _);
+                var ramp = Potentials.HasPotential(WeaponPotentialId.HwandoFlyingBladeDance) ? 1f + Mathf.Min(.60f, blade.CastHits.Count * .15f) : 1f;
+                if (!runtime.DamageService.TryApply(
+                        WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage * ramp), false, contact, phase, context.SimulationTick),
+                        out _)) continue;
+                blade.CastHits.Add(target.RuntimeId);
+                if (Potentials.HasPotential(WeaponPotentialId.HwandoVenomFang))
+                {
+                    var poison = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f);
+                    runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId, contact,
+                        Mathf.CeilToInt(BaseDamage * .20f), 3, poison, true, ContactPhase.Poison));
+                }
+                if (blade.Inbound && Potentials.HasPotential(WeaponPotentialId.HwandoReturningAfterimage) &&
+                    WeaponPotentialVisuals.TryGet(WeaponPotentialId.HwandoReturningAfterimage, out _, out var shadowMask))
+                    afterimages.Add(new Afterimage(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), target.RuntimeId, contact, shadowMask));
             }
         }
 
@@ -332,11 +358,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private sealed class Blade
         {
-            public Blade(AttackInstance attack, Float2 start, Float2 end, float delay, GameObject visual, PixelHitMask mask, float range, bool isMoonBlade)
+            public Blade(AttackInstance attack, Float2 start, Float2 end, float delay, GameObject visual, PixelHitMask mask, float range, bool isMoonBlade, HashSet<int> castHits)
             {
                 Attack = attack; Start = start; End = end; Delay = delay; Visual = visual; Mask = mask; Range = range;
                 Position = start;
                 IsMoonBlade = isMoonBlade;
+                CastHits = castHits;
                 Distance = Mathf.Sqrt((end.X - start.X) * (end.X - start.X) + (end.Y - start.Y) * (end.Y - start.Y));
             }
             public AttackInstance Attack { get; }
@@ -354,6 +381,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool IsMoonBlade { get; }
             public Float2 ReturnSegmentStart { get; set; }
             public bool HasReturnSegment { get; set; }
+            public HashSet<int> CastHits { get; }
+        }
+
+        private sealed class Afterimage
+        {
+            public Afterimage(AttackInstance attack, int targetRuntimeId, Float2 contact, PixelHitMask mask) { Attack = attack; TargetRuntimeId = targetRuntimeId; Contact = contact; Mask = mask; Delay = .12f; }
+            public AttackInstance Attack { get; } public int TargetRuntimeId { get; } public Float2 Contact { get; } public PixelHitMask Mask { get; } public float Delay { get; set; }
         }
 
         private sealed class MoonCast

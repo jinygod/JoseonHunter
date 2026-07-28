@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Progression;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -18,6 +19,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<ICombatTarget> bindingTargets = new List<ICombatTarget>();
         private float cooldown;
         private AttackInstance bindingAttack;
+        private int elementCastOrdinal;
+        private readonly List<GhostFlame> ghostFlames = new List<GhostFlame>();
 
         public TalismanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int hopCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -65,6 +68,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
                 active.RemoveAt(index);
             }
+            for (var index = ghostFlames.Count - 1; index >= 0; index--)
+            {
+                var flame = ghostFlames[index]; flame.Remaining -= Mathf.Max(0f, deltaTime);
+                if (flame.Remaining > 0f) { ghostFlames[index] = flame; continue; }
+                if (TryFindNearestLegal(flame.Position, null, out var target) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanVengefulGhostBurst, out _, out var ghostMask) &&
+                    PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(flame.Attack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage * .75f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick), out _);
+                runtime.DamageService.RetireAttack(flame.Attack.InstanceId); ghostFlames.RemoveAt(index);
+            }
             if (!IsEvolved && Level == 5 && active.Count == 0)
             {
                 if (bindingTargets.Count > 0) ResolveBindingBurst(context);
@@ -84,6 +96,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
             }
             active.Clear(); bindingTargets.Clear();
+            foreach (var flame in ghostFlames) runtime.DamageService.RetireAttack(flame.Attack.InstanceId);
+            ghostFlames.Clear(); elementCastOrdinal = 0;
             if (bindingAttack != null) runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
             bindingAttack = null; cooldown = 0f; LastState = TalismanState.Complete; LastFinalBurstCount = 0;
             LastLaunchCount = 0; TotalLaunchedTalismanCount = 0; lastContactPhases.Clear();
@@ -107,7 +121,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var cast = new TalismanCast(
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
                     IsEvolved ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null,
-                    context.OwnerPosition, target, HopCount);
+                    context.OwnerPosition, target, HopCount, Potentials.HasPotential(WeaponPotentialId.TalismanFiveElementCycle) ? elementCastOrdinal++ % 3 : -1);
                 cast.ReservedTargets.Add(target.RuntimeId);
                 cast.AttemptedTargets.Add(target.RuntimeId);
                 launchReservations.Add(target.RuntimeId);
@@ -119,6 +133,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void Advance(TalismanCast cast, float deltaTime, in WeaponExecutionContext context)
         {
+            if (cast.IceSlowRemaining > 0f)
+            {
+                cast.IceSlowRemaining -= deltaTime;
+                if (cast.IceSlowRemaining <= 0f && cast.IceTarget is IFrostStatusTarget frost) frost.RemoveFrostSlow(cast.Attack.InstanceId, 0f);
+            }
             switch (cast.State)
             {
                 case TalismanState.Flying:
@@ -140,7 +159,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void AdvanceFlight(TalismanCast cast, float deltaTime, in WeaponExecutionContext context)
         {
-            if (!IsCurrentTargetValid(cast.Target)) { ResolveNoTarget(cast, context); return; }
+            if (!IsCurrentTargetValid(cast.Target))
+            {
+                if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanSealTransfer) &&
+                    TryFindNearestLegal(cast.Position, cast.AttemptedTargets, out var transfer) && DistanceSquared(transfer.WorldPosition, cast.Position) <= 16f)
+                {
+                    cast.Target = transfer; cast.AttemptedTargets.Add(transfer.RuntimeId); cast.ReservedTargets.Add(transfer.RuntimeId);
+                    cast.SealedConfirmed = false; cast.State = TalismanState.Transferring; return;
+                }
+                if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanVengefulGhostBurst))
+                    ghostFlames.Add(new GhostFlame(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), cast.Position));
+                ResolveNoTarget(cast, context); return;
+            }
             var delta = Subtract(cast.Target.WorldPosition, cast.Position);
             var distance = Length(delta);
             var step = Mathf.Min(distance, Speed * deltaTime);
@@ -175,7 +205,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveSeal(TalismanCast cast, in WeaponExecutionContext context)
         {
-            if (!IsCurrentTargetValid(cast.Target)) { ResolveNoTarget(cast, context); return; }
+            if (!IsCurrentTargetValid(cast.Target))
+            {
+                if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanVengefulGhostBurst))
+                    ghostFlames.Add(new GhostFlame(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), cast.Position));
+                ResolveNoTarget(cast, context); return;
+            }
             // A five-color binding may include only seals that were both pixel-confirmed and accepted by the damage service.
             if (!TryContact(cast.Target, out var contact) || !Apply(cast, cast.Target, contact, ContactPhase.Seal, context.SimulationTick))
             {
@@ -183,6 +218,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
             cast.CompletedHops++;
+            cast.SealedConfirmed = true;
+            ApplyElement(cast, contact, context);
             if (IsEvolved) cast.RecordLinkedTarget(cast.Target);
             if (cast.CompletedHops >= HopCount || !TryFindNearestLegal(cast.Target.WorldPosition, cast.ReservedTargets, out var next))
             {
@@ -285,6 +322,34 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return applied;
         }
 
+        private void ApplyElement(TalismanCast cast, Float2 contact, in WeaponExecutionContext context)
+        {
+            if (cast.Element < 0 || !IsCurrentTargetValid(cast.Target)) return;
+            if (cast.Element == 0)
+            {
+                var burn = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f);
+                runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(WeaponId.TalismanThrow, cast.Target.RuntimeId, contact,
+                    Mathf.CeilToInt(BaseDamage * .15f), 3, burn, true, ContactPhase.Burn));
+                return;
+            }
+            if (cast.Element == 1)
+            {
+                if (cast.Target is IFrostStatusTarget frost) frost.ApplyFrostSlow(cast.Attack.InstanceId, .5f);
+                cast.IceTarget = cast.Target;
+                cast.IceSlowRemaining = 1.2f;
+                return;
+            }
+            if (!TryFindNearestLegal(cast.Target.WorldPosition, new HashSet<int> { cast.Target.RuntimeId }, out var other) ||
+                DistanceSquared(other.WorldPosition, cast.Target.WorldPosition) > 2.5f * 2.5f ||
+                !WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanFiveElementCycle, out _, out var chainMask) ||
+                !PixelMaskContactService.TryFindContact(chainMask, PixelMaskTransform.Translation(other.WorldPosition.X, other.WorldPosition.Y), other.HurtMask, other.HurtMaskTransform, out var chainContact)) return;
+            var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+            runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.TalismanThrow, other, Mathf.CeilToInt(BaseDamage * .60f), false, chainContact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+            runtime.DamageService.RetireAttack(attack.InstanceId);
+        }
+
+        private static float DistanceSquared(Float2 a, Float2 b) { var x = a.X - b.X; var y = a.Y - b.Y; return x * x + y * y; }
+
         private static bool IsCurrentTargetValid(ICombatTarget target) => target != null && target.IsAlive;
         private static bool IsTargetAvailable(ICombatTarget target, HashSet<int> reservations) => IsCurrentTargetValid(target) && (reservations == null || !reservations.Contains(target.RuntimeId));
         private static Float2 Subtract(Float2 left, Float2 right) => new Float2(left.X - right.X, left.Y - right.Y);
@@ -292,8 +357,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private sealed class TalismanCast
         {
-            public TalismanCast(AttackInstance attack, AttackInstance blastAttack, Float2 position, ICombatTarget target, int hopLimit)
-            { Attack = attack; BlastAttack = blastAttack; Position = position; Target = target; HopLimit = hopLimit; }
+            public TalismanCast(AttackInstance attack, AttackInstance blastAttack, Float2 position, ICombatTarget target, int hopLimit, int element)
+            { Attack = attack; BlastAttack = blastAttack; Position = position; Target = target; HopLimit = hopLimit; Element = element; }
             public AttackInstance Attack { get; }
             public AttackInstance BlastAttack { get; }
             public Float2 Position { get; set; }
@@ -306,11 +371,21 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public List<ICombatTarget> LinkedTargets { get; } = new List<ICombatTarget>();
             public HashSet<int> LinkedTargetIds { get; } = new HashSet<int>();
             public TalismanState State { get; set; } = TalismanState.Flying;
+            public int Element { get; }
+            public bool SealedConfirmed { get; set; }
+            public float IceSlowRemaining { get; set; }
+            public ICombatTarget IceTarget { get; set; }
 
             public void RecordLinkedTarget(ICombatTarget target)
             {
                 if (target != null && LinkedTargetIds.Add(target.RuntimeId)) LinkedTargets.Add(target);
             }
+        }
+
+        private struct GhostFlame
+        {
+            public GhostFlame(AttackInstance attack, Float2 position) { Attack = attack; Position = position; Remaining = .6f; }
+            public AttackInstance Attack; public Float2 Position; public float Remaining;
         }
     }
 }

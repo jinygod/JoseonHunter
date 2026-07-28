@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Progression;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -13,6 +14,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
         private int shotSequence;
+        private readonly Dictionary<int, ArrowInfo> primaryArrows = new Dictionary<int, ArrowInfo>();
+        private readonly HashSet<int> firstImpacts = new HashSet<int>();
+        private readonly List<SplitArrow> splitArrows = new List<SplitArrow>();
 
         public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -21,6 +25,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
             Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
+            runtime.DamageService.DamageConfirmed += OnDamageConfirmed;
         }
 
         public float BaseDamage { get; }
@@ -45,15 +50,25 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Launch(context, target);
             }
             projectiles.Tick(deltaTime, context);
+            for (var index = splitArrows.Count - 1; index >= 0; index--)
+            {
+                var child = splitArrows[index]; child.Delay -= Mathf.Max(0f, deltaTime);
+                if (child.Delay > 0f) { splitArrows[index] = child; continue; }
+                if (runtime.Targets.TryGet(child.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
+                    PixelMaskContactService.TryFindContact(child.Mask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack, WeaponId.GakgungShot, target, Mathf.CeilToInt(BaseDamage * .45f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                runtime.DamageService.RetireAttack(child.Attack.InstanceId); splitArrows.RemoveAt(index);
+            }
         }
 
         public void Reset()
         {
             cooldown = 0f; shotSequence = 0; LastLaunchCount = 0; LastSelectedTargetRuntimeId = 0;
-            LastProjectileMaximumImpacts = 0; LastProjectileScale = 1f; projectiles.Reset();
+            LastProjectileMaximumImpacts = 0; LastProjectileScale = 1f; projectiles.Reset(); primaryArrows.Clear(); firstImpacts.Clear();
+            foreach (var child in splitArrows) runtime.DamageService.RetireAttack(child.Attack.InstanceId); splitArrows.Clear();
         }
 
-        public void Dispose() => projectiles.Dispose();
+        public void Dispose() { runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; Reset(); projectiles.Dispose(); }
 
         private bool TrySelectTarget(out ICombatTarget selected)
         {
@@ -88,18 +103,46 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastLaunchCount = Level == 5 ? 3 : 1;
             LastProjectileMaximumImpacts = impacts;
             LastProjectileScale = scale;
-            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer);
+            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer, true);
             if (Level != 5) return;
-            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false);
-            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false);
+            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false);
+            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false);
         }
 
-        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts)
+        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary)
         {
             var shotDirection = Rotate(direction, degrees);
+            var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+            if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range);
             projectiles.Launch(context, new LinearProjectileSpec(
-                new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot,
+                attack, WeaponId.GakgungShot,
                 context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale, allowExtendedImpacts));
+        }
+
+        private void OnDamageConfirmed(ConfirmedDamageEvent damage)
+        {
+            if (!damage.WeaponId.Equals(WeaponId.GakgungShot) || !primaryArrows.TryGetValue(damage.AttackInstanceId, out var arrow)) return;
+            if (Potentials.HasPotential(WeaponPotentialId.GakgungArmorBreakArrowhead) && firstImpacts.Add(damage.AttackInstanceId))
+                runtime.AffixStatuses.ApplyVulnerability(damage.TargetRuntimeId, damage.ContactPoint, 2f, true);
+            if (Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out var drawMask) &&
+                runtime.Targets.TryGet(damage.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
+                PixelMaskContactService.TryFindContact(drawMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+            {
+                var dx = damage.ContactPoint.X - arrow.Start.X; var dy = damage.ContactPoint.Y - arrow.Start.Y;
+                var progress = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy) / Mathf.Max(.01f, arrow.Range) / .8f);
+                var bonus = .6f * progress;
+                if (bonus > 0f)
+                {
+                    var bonusAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(bonusAttack, WeaponId.GakgungShot, target, Mathf.CeilToInt(BaseDamage * bonus), false, contact, ContactPhase.PotentialChain, damage.SimulationTick), out _);
+                    runtime.DamageService.RetireAttack(bonusAttack.InstanceId);
+                }
+            }
+            if (Potentials.HasPotential(WeaponPotentialId.GakgungSplitFletching) && firstImpacts.Add(-damage.AttackInstanceId) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungSplitFletching, out _, out var splitMask))
+            {
+                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.TargetRuntimeId, splitMask));
+                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.TargetRuntimeId, splitMask));
+            }
         }
 
         private static Float2 Direction(Float2 origin, Float2 target)
@@ -112,5 +155,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var radians = degrees * Mathf.Deg2Rad; var cosine = Mathf.Cos(radians); var sine = Mathf.Sin(radians);
             return new Float2(value.X * cosine - value.Y * sine, value.X * sine + value.Y * cosine);
         }
+        private readonly struct ArrowInfo { public ArrowInfo(Float2 start, float range) { Start = start; Range = range; } public Float2 Start { get; } public float Range { get; } }
+        private struct SplitArrow { public SplitArrow(AttackInstance attack, int targetRuntimeId, PixelHitMask mask) { Attack = attack; TargetRuntimeId = targetRuntimeId; Mask = mask; Delay = .05f; } public AttackInstance Attack; public int TargetRuntimeId; public PixelHitMask Mask; public float Delay; }
     }
 }

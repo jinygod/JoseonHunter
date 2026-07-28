@@ -56,6 +56,24 @@ namespace JoseonHunter.Runtime.Combat
             return true;
         }
 
+        /// <summary>Refreshes the same source/phase on one target instead of creating parallel poison, burn, or bleed stacks.</summary>
+        public bool ApplyOrRefreshPeriodic(in PeriodicEffectRequest request)
+        {
+            if (!request.ConfirmedContact || request.DamagePerTick <= 0 || request.RemainingTicks <= 0 || request.AttackInstance == null ||
+                request.AttackInstance.RepeatHitPolicy != RepeatHitPolicy.TimedTicks || Math.Abs(request.AttackInstance.RepeatInterval - PeriodicInterval) > .0001f ||
+                !IsFinite(request.ConfirmedContactPoint) || !TryGetLiveTarget(request.TargetRuntimeId, out _)) return false;
+            for (var index = 0; index < periodicEffects.Count; index++)
+            {
+                var effect = periodicEffects[index];
+                if (!effect.SourceWeapon.Equals(request.SourceWeapon) || effect.TargetRuntimeId != request.TargetRuntimeId || effect.Phase != request.Phase) continue;
+                Retire(effect);
+                periodicEffects[index] = new PeriodicEffect(request);
+                return true;
+            }
+            periodicEffects.Add(new PeriodicEffect(request));
+            return true;
+        }
+
         public bool ApplyVulnerability(int targetRuntimeId, Float2 confirmedContact, float durationSeconds, bool confirmedContactHit)
         {
             if (!confirmedContactHit || !IsFinite(durationSeconds) || durationSeconds <= 0f || !IsFinite(confirmedContact) || !TryGetLiveTarget(targetRuntimeId, out _)) return false;

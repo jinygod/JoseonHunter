@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Progression;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -18,6 +19,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly PixelHitMask ringMask = CreateRingMask();
         private readonly PixelHitMask compressedMask = CreateCompressedMask();
         private readonly List<string> stateOrder = new List<string>();
+        private readonly List<DelayedPotentialStrike> delayedStrikes = new List<DelayedPotentialStrike>();
         private float cooldown;
 
         public ThunderBombExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float fuseDuration, float blastRadius, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
@@ -64,12 +66,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 runtime.DamageService.RetireAttack(bomb.Attack.InstanceId);
                 bombs.RemoveAt(index);
             }
+            for (var index = delayedStrikes.Count - 1; index >= 0; index--)
+            {
+                var strike = delayedStrikes[index]; strike.Remaining -= step;
+                if (strike.Remaining > 0f) { delayedStrikes[index] = strike; continue; }
+                if (strike.TargetRuntimeId != 0)
+                {
+                    if (runtime.Targets.TryGet(strike.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
+                        PixelMaskContactService.TryFindContact(strike.Mask, PixelMaskTransform.Translation(strike.Position.X, strike.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                        runtime.DamageService.TryApply(WeaponDamageRequest.Create(strike.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * strike.Multiplier), false, contact, strike.Phase, context.SimulationTick), out _);
+                }
+                else
+                {
+                    runtime.Targets.CopyTo(targets);
+                    foreach (var target in targets)
+                        if (target != null && target.IsAlive && target.HurtMask != null && PixelMaskContactService.TryFindContact(strike.Mask, PixelMaskTransform.Translation(strike.Position.X, strike.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                            runtime.DamageService.TryApply(WeaponDamageRequest.Create(strike.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * strike.Multiplier), false, contact, strike.Phase, context.SimulationTick), out _);
+                }
+                runtime.DamageService.RetireAttack(strike.Attack.InstanceId); delayedStrikes.RemoveAt(index);
+            }
         }
 
         public void Reset()
         {
             foreach (var bomb in bombs) runtime.DamageService.RetireAttack(bomb.Attack.InstanceId);
             bombs.Clear(); stateOrder.Clear(); cooldown = 0f; LastState = ThunderBombState.Complete; LastLandingPosition = default;
+            foreach (var strike in delayedStrikes) runtime.DamageService.RetireAttack(strike.Attack.InstanceId);
+            delayedStrikes.Clear();
         }
 
         public void Dispose() => Reset();
@@ -175,7 +198,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var direction = new Float2(bomb.Landing.X - target.WorldPosition.X, bomb.Landing.Y - target.WorldPosition.Y);
                 var distance = Mathf.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
                 if (distance <= 0.0001f) continue;
-                target.ApplyKnockback(new Float2(direction.X / distance, direction.Y / distance), Mathf.Min(distance, PullSpeed * step));
+                var force = Mathf.Min(distance, PullSpeed * step);
+                if (force <= 0f) continue;
+                target.ApplyKnockback(new Float2(direction.X / distance, direction.Y / distance), force);
+                bomb.PulledTargetIds.Add(target.RuntimeId);
             }
         }
 
@@ -187,7 +213,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(compressedMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage) * 2, false, contact, ContactPhase.Blast, context.SimulationTick), out _);
+                var multiplier = 2f;
+                if (Potentials.HasPotential(WeaponPotentialId.ThunderOverchargedCore)) multiplier *= 1f + Mathf.Min(.80f, bomb.PulledTargetIds.Count * .08f);
+                runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
             }
         }
 
@@ -205,9 +233,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var scale = Mathf.Max(0.01f, radius * 2f);
                 var transform = new PixelMaskTransform(bomb.Landing, 0, false, new Vector2(scale, scale));
                 if (!PixelMaskContactService.TryFindContact(ringMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
+                if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) continue;
+                if (Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
+                    bomb.LightningRodTarget = target;
             }
             bomb.SweptRadius = end;
+            if (bomb.SweptRadius + .0001f >= BlastRadius)
+            {
+                if (Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var crackMask))
+                    delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), 0, bomb.Landing, crackMask, .35f, .65f, ContactPhase.PotentialBlast));
+                if (bomb.LightningRodTarget != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderLightningRod, out _, out var rodMask))
+                    delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), bomb.LightningRodTarget.RuntimeId, bomb.LightningRodTarget.WorldPosition, rodMask, .45f, .90f, ContactPhase.PotentialChain));
+            }
             return bomb.SweptRadius + 0.0001f >= desiredRadius;
         }
 
@@ -276,6 +313,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float Elapsed { get; set; }
             public float SweptRadius { get; set; }
             public ThunderBombState State { get; set; } = ThunderBombState.Lob;
+            public HashSet<int> PulledTargetIds { get; } = new HashSet<int>();
+            public ICombatTarget LightningRodTarget { get; set; }
+        }
+
+        private struct DelayedPotentialStrike
+        {
+            public DelayedPotentialStrike(AttackInstance attack, int targetRuntimeId, Float2 position, PixelHitMask mask, float remaining, float multiplier, ContactPhase phase)
+            { Attack = attack; TargetRuntimeId = targetRuntimeId; Position = position; Mask = mask; Remaining = remaining; Multiplier = multiplier; Phase = phase; }
+            public AttackInstance Attack; public int TargetRuntimeId; public Float2 Position; public PixelHitMask Mask; public float Remaining; public float Multiplier; public ContactPhase Phase;
         }
     }
 }
