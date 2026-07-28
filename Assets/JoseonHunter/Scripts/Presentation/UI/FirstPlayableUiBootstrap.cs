@@ -194,14 +194,32 @@ namespace JoseonHunter.Presentation.UI
                 for (var index = 0; index < state.Weapons.Count; index++)
                 {
                     var weapon = state.Weapons[index];
-                    signature = signature * 31 + (weapon.Id == null ? 0 : weapon.Id.GetHashCode());
+                    signature = signature * 31 + StableContentHash(weapon.Id);
                     signature = signature * 31 + weapon.Level;
-                    signature = signature * 31 + (weapon.Icon == null ? 0 : weapon.Icon.GetEntityId().GetHashCode());
+                    signature = signature * 31 + StableContentHash(weapon.GeneralAffixSummary);
+                    signature = signature * 31 + weapon.PotentialIds.Count;
+                    for (var potentialIndex = 0; potentialIndex < weapon.PotentialIds.Count; potentialIndex++)
+                        signature = signature * 31 + StableContentHash(weapon.PotentialIds[potentialIndex].Value);
                 }
 
                 return signature;
             }
         }
+
+        private static int StableContentHash(string value)
+        {
+            unchecked
+            {
+                var hash = 17;
+                if (value == null) return hash;
+                for (var index = 0; index < value.Length; index++) hash = hash * 31 + value[index];
+                return hash;
+            }
+        }
+
+#if UNITY_INCLUDE_TESTS
+        public static int WeaponSignatureForTests(FirstPlayableUiState state) => WeaponSignature(state);
+#endif
 
         private void BuildCanvas()
         {

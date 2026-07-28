@@ -1,5 +1,7 @@
 using System.Collections;
+using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -35,6 +37,37 @@ namespace JoseonHunter.Tests.PlayMode
             controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 5);
             controller.AcquireEvolutionForTests("gakgung_sun_piercer");
             Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator Weapon_reward_exposes_the_exact_roll_result_stored_by_the_controller()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            controller.SetAffixRandomFactoryForTests((_, _, _, _) => new FixedAffixRandom());
+            ProgressionRewardEvent reward = default;
+            controller.UpgradeChosen += candidate => reward = candidate;
+            controller.OpenUpgradeForTests();
+            var index = -1;
+            for (var offerIndex = 0; offerIndex < controller.CurrentOffers.Count; offerIndex++)
+                if (controller.CurrentOffers[offerIndex].Kind == UpgradeKind.Weapon) { index = offerIndex; break; }
+            Assert.That(index, Is.GreaterThanOrEqualTo(0));
+            Assert.That(controller.TryChooseUpgrade(index), Is.True);
+            Assert.That(reward.AffixResult, Is.Not.Null);
+            Assert.That(reward.AffixResult.General,
+                Is.EqualTo(controller.AffixProfileForTests(new WeaponId(reward.WeaponId)).GeneralRolls[^1]));
+        }
+
+        [Test]
+        public void Weapon_signature_changes_for_affix_totals_and_potentials()
+        {
+            var baseState = new FirstPlayableUiState(1, 0, 1, 0, 0, 0f, 1f, 1f, 1f, false, false, 0f, 0f,
+                new[] { new WeaponSlotView("gakgung_shot", "Gakgung", 1, null) });
+            var affixedState = new FirstPlayableUiState(1, 0, 1, 0, 0, 0f, 1f, 1f, 1f, false, false, 0f, 0f,
+                new[] { new WeaponSlotView("gakgung_shot", "Gakgung", 1, null, "Damage +17%", new[] { WeaponPotentialId.GakgungFullDraw }) });
+            Assert.That(FirstPlayableUiBootstrap.WeaponSignatureForTests(baseState),
+                Is.Not.EqualTo(FirstPlayableUiBootstrap.WeaponSignatureForTests(affixedState)));
         }
 
         [UnityTest]

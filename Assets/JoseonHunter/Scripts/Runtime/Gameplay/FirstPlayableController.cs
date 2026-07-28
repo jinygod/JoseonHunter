@@ -1056,9 +1056,19 @@ namespace JoseonHunter.Runtime.Gameplay
                 weaponLevels[offer.Id] = offer.NextLevel;
                 var affixResult = RollWeaponAffix(new WeaponId(offer.Id));
                 RebuildWeaponExecutorsForLevel();
+#if false
                 return new ProgressionRewardEvent(offer.Id, offer.Id, offer.NextLevel,
                     offer.NextLevel == 1 ? ProgressionRewardKind.NewWeapon : ProgressionRewardKind.WeaponLevel,
                     WeaponDisplayName(offer.Id), offer.NextLevel == 1 ? "새 무기 획득" : $"레벨 {offer.NextLevel} 효과 적용", ResolveWeaponSprite(new WeaponId(offer.Id)));
+            }
+ #endif
+            if (offer.Kind == UpgradeKind.Weapon)
+            {
+                return new ProgressionRewardEvent(offer.Id, offer.Id, offer.NextLevel,
+                    offer.NextLevel == 1 ? ProgressionRewardKind.NewWeapon : ProgressionRewardKind.WeaponLevel,
+                    WeaponDisplayName(offer.Id), FormatUpgradeOffer(offer), ResolveWeaponSprite(new WeaponId(offer.Id)),
+                    affixResult);
+            }
             }
             if (offer.Kind == UpgradeKind.Support)
             {
