@@ -19,3 +19,12 @@
 
 - EditMode result XML was not produced due to the pre-existing editor compile error; modifier/status and existing `CombatDamageServiceTests` require rerun after that error is fixed.
 - Periodic effects deliberately require a caller-owned `AttackInstance`, a registered live target, a finite stored contact point, and a confirmed contact flag. Periodic contact phases bypass vulnerability multiplication so status ticks cannot recursively amplify status processing.
+
+## Fix round 1
+
+- Fixed periodic timing to submit monotonically increasing `.5s`, `1.0s`, ... hit times before consuming elapsed duration, preserving residual time across large deltas and retaining a pending tick when damage application rejects it.
+- Periodic attacks are retired on completion, target removal/death, reset, and controller disposal. `CombatTargetRegistry.TargetUnregistered` synchronously clears controller-owned affix state before runtime-ID reuse.
+- Added finite vulnerability-duration validation and explicit periodic `TimedTicks`/`.5s` attack-policy validation.
+- Added tests: `Periodic_damage_crosses_multiple_boundaries_and_preserves_residual_time`, `Periodic_rejects_unconfirmed_nonfinite_dead_and_unregistered_inputs`, `Periodic_event_preserves_weapon_contact_boss_and_attack_identity_without_vulnerability_recursion`, `Target_unregistration_clears_statuses_before_runtime_id_reuse_and_retires_attack`, `Reset_and_dispose_retire_active_periodic_attacks`, and `Nonfinite_contact_cannot_create_or_track_an_attack`.
+- Commands: `netcorerun.exe csc.dll @Library/Bee/artifacts/1900b0aE.dag/JoseonHunter.Runtime.rsp` exited `0`; `git diff --check` exited `0`. The corresponding EditMode response compile was deferred because the existing failed Unity graph has no `JoseonHunter.Editor.ref.dll` (`CS0006`).
+- Fix commit: `027e4ca fix: harden weapon affix status lifetime`.
