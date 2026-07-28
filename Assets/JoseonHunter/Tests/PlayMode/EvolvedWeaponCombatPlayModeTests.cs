@@ -469,9 +469,11 @@ namespace JoseonHunter.Tests.PlayMode
                 var near = rig.AddTarget(new Vector2(1f, 0f));
                 var middle = rig.AddTarget(new Vector2(2f, 0f));
                 var far = rig.AddTarget(new Vector2(3f, 0f));
-                rig.Tick(0.04f);
+                for (var index = 0; index < 4; index++) rig.Tick(0.01f);
                 rig.Tick(0.12f);
                 rig.Tick(0.24f);
+                Assert.That(rig.Count(ContactPhase.Lightning), Is.EqualTo(3));
+                Assert.That(rig.Count(ContactPhase.Inbound), Is.EqualTo(0));
                 far.ApplyResolvedDamage(1000);
                 rig.Tick(0.08f);
                 yield return null;
@@ -511,7 +513,9 @@ namespace JoseonHunter.Tests.PlayMode
             using (var large = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
             {
                 split.AddTargets(3); large.AddTargets(3);
-                split.Tick(.04f); split.Tick(.12f); split.Tick(.24f);
+                for (var index = 0; index < 4; index++) split.Tick(.01f);
+                split.Tick(.12f);
+                split.Tick(.24f);
                 Assert.That(split.Count(ContactPhase.Lightning), Is.EqualTo(3));
                 Assert.That(split.Count(ContactPhase.Inbound), Is.EqualTo(0));
                 split.Tick(.079f);
@@ -519,7 +523,8 @@ namespace JoseonHunter.Tests.PlayMode
                 split.Tick(.001f);
                 Assert.That(split.Count(ContactPhase.Inbound), Is.EqualTo(3));
 
-                large.Tick(.04f); large.Tick(.44f);
+                for (var index = 0; index < 4; index++) large.Tick(.01f);
+                large.Tick(.12f); large.Tick(.32f);
                 Assert.That(large.Count(ContactPhase.Lightning), Is.EqualTo(3));
                 Assert.That(large.Count(ContactPhase.Inbound), Is.EqualTo(3));
             }
@@ -538,7 +543,7 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(rig.Registry.Unregister(far), Is.True);
                 rig.Tick(0.24f);
                 Assert.That(rig.Registry.Register(far), Is.True);
-                rig.Tick(0.01f);
+                rig.Tick(0.08f);
 
                 CollectionAssert.AreEqual(new[] { near.RuntimeId, middle.RuntimeId }, ((WindThunderFanExecutor)rig.Executor).LastSuccessfulOutboundTargetIds);
                 CollectionAssert.AreEqual(new[] { middle.RuntimeId, near.RuntimeId }, rig.DamageEvents.Where(value => value.Phase == ContactPhase.Inbound).Select(value => value.TargetRuntimeId));
