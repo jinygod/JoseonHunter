@@ -252,9 +252,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                     if (!PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                    trail.PreviousPositions.TryGetValue(target.RuntimeId, out var previous); var hadPrevious = trail.PreviousPositions.ContainsKey(target.RuntimeId); trail.PreviousPositions[target.RuntimeId] = target.WorldPosition;
+                    trail.PreviousTransforms.TryGetValue(target.RuntimeId, out var previousTransform); var hadPrevious = trail.PreviousTransforms.ContainsKey(target.RuntimeId); trail.PreviousTransforms[target.RuntimeId] = target.HurtMaskTransform;
                     var previousContact = false;
-                    if (hadPrevious) previousContact = PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, PixelMaskTransform.Translation(previous.X, previous.Y), out _);
+                    if (hadPrevious) previousContact = PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, previousTransform, out _);
                     if (!trail.Crossed.Contains(target.RuntimeId) && hadPrevious && !previousContact) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
                 }
                 var ids = new List<int>(trail.TicksByTarget.Keys);
@@ -273,7 +273,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var dx = travel.Current.X - travel.Previous.X; var dy = travel.Current.Y - travel.Previous.Y; var distance = Mathf.Sqrt(dx * dx + dy * dy); var count = Mathf.Max(1, Mathf.CeilToInt(distance / .35f));
             for (var index = 1; index <= count; index++) { var t = index / (float)count; trails.Add(new Trail { Position = new Float2(travel.Previous.X + dx * t, travel.Previous.Y + dy * t), Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) }); }
         }
-        private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); public Dictionary<int, Float2> PreviousPositions { get; } = new Dictionary<int, Float2>(); }
+        private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); public Dictionary<int, PixelMaskTransform> PreviousTransforms { get; } = new Dictionary<int, PixelMaskTransform>(); }
         private struct TrailTicks { public TrailTicks(Float2 contact) { Contact = contact; Elapsed = 0f; Count = 0; } public Float2 Contact; public float Elapsed; public int Count; }
     }
 }
