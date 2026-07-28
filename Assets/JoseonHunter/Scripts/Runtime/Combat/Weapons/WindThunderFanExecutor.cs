@@ -77,7 +77,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             if (attack != null) runtime.DamageService.RetireAttack(attack.InstanceId);
-            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); cooldown = 0f; State = WindThunderFanState.Complete;
+            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); outboundElapsed = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
         }
 
@@ -168,7 +168,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 outboundStrikeTimes.Add(outboundElapsed);
                 strikeDueIn = LightningStrikeInterval;
             }
-            strikeDueIn -= availableTime;
+            // The phase clock advances even when a frame reaches only part of the
+            // next due interval. This keeps telemetry independent of frame slicing.
+            if (lightningIndex < marked.Count)
+            {
+                outboundElapsed += availableTime;
+                strikeDueIn -= availableTime;
+            }
             LastLightningSimulationTick = context.SimulationTick;
             if (lightningIndex >= marked.Count) State = WindThunderFanState.InboundResolve;
         }

@@ -453,7 +453,7 @@ namespace JoseonHunter.Tests.PlayMode
                 split.AddTargets(3); large.AddTargets(3);
                 for (var index = 0; index < 4; index++) { split.Tick(0.01f); large.Tick(0.01f); }
                 split.Tick(0.12f);
-                split.Tick(0.08f); split.Tick(0.08f); split.Tick(0.08f);
+                split.Tick(0.03f); split.Tick(0.05f); split.Tick(0.08f); split.Tick(0.08f);
                 large.Tick(0.36f);
 
                 var splitFan = (WindThunderFanExecutor)split.Executor;
