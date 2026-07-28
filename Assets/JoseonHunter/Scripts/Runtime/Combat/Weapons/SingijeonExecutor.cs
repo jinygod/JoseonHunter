@@ -61,7 +61,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveTrailCountForTests => trails.Count;
         public bool FocusRetargetedForTests => focusRetargeted;
         public int UnlaunchedFocusCountForTests => Mathf.Max(0, FocusProjectileCount - focusLaunchIndex);
+        public int FocusRetargetCountForTests { get; private set; }
+        public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIds;
 #endif
+        private readonly List<int> splitChildAttackIds = new List<int>();
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -133,7 +136,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             foreach (var trail in trails) runtime.DamageService.RetireAttack(trail.Attack.InstanceId);
-            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); trails.Clear(); priorTargetTransforms.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false; projectiles.Reset();
+            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); splitChildAttackIds.Clear(); trails.Clear(); priorTargetTransforms.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false;
+#if UNITY_INCLUDE_TESTS
+            FocusRetargetCountForTests = 0;
+#endif
+            projectiles.Reset();
         }
 
         public void Dispose() { Reset(); runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.ProjectileTravelled -= OnProjectileTravelled; projectiles.Dispose(); }
@@ -209,7 +216,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void LaunchRocket(in WeaponExecutionContext context, Float2 position, Float2 direction, string name, bool focus, bool child)
         {
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
-            if (focus) { focusAttackIds.Add(attack.InstanceId); focusDirections[attack.InstanceId] = direction; } if (child) childAttackIds.Add(attack.InstanceId);
+            if (focus) { focusAttackIds.Add(attack.InstanceId); focusDirections[attack.InstanceId] = direction; } if (child) { childAttackIds.Add(attack.InstanceId); splitChildAttackIds.Add(attack.InstanceId); }
             var lifetime = (child ? Range * .55f : Range) / Speed;
             projectiles.Launch(context, new LinearProjectileSpec(attack, WeaponId.SingijeonVolley, position, direction, Speed, lifetime, Mathf.CeilToInt(child ? BaseDamage * .35f : BaseDamage), 1, name));
         }
@@ -248,7 +255,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 focusDirections.TryGetValue(damage.AttackInstanceId, out var baseDirection); for (var index = -1; index <= 1; index++) { var rad = index * 30f * Mathf.Deg2Rad; var direction = Normalize(new Float2(baseDirection.X * Mathf.Cos(rad) - baseDirection.Y * Mathf.Sin(rad), baseDirection.X * Mathf.Sin(rad) + baseDirection.Y * Mathf.Cos(rad))); LaunchRocket(latestContext, damage.ContactPoint, direction, "Singijeon Submunition", false, true); }
             }
             if (Potentials.HasPotential(WeaponPotentialId.SingijeonChainIgnition) && !target.IsAlive && WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonChainIgnition, out _, out var chain) && PixelMaskContactService.TryFindContact(chain, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), target.HurtMask, target.HurtMaskTransform, out _))
-            { if (!focusRetargeted && focusSequenceActive && TryFindDensestDirection(latestContext.OwnerPosition, out _, out var centroid)) { focusPosition = centroid; focusRetargeted = true; } }
+            { if (!focusRetargeted && focusSequenceActive && TryFindDensestDirection(latestContext.OwnerPosition, out _, out var centroid)) { focusPosition = centroid; focusRetargeted = true;
+#if UNITY_INCLUDE_TESTS
+                FocusRetargetCountForTests++;
+#endif
+            } }
         }
 
         private void AdvanceTrails(float step, in WeaponExecutionContext context)

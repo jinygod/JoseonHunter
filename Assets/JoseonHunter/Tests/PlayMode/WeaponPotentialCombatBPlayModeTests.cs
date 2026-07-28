@@ -55,12 +55,14 @@ namespace JoseonHunter.Tests.PlayMode
             rig.Target.Position = new Float2(-3f, 0f); rig.TickExact(.01f);
             rig.Target.Position = new Float2(0f, 0f); rig.Advance(1.25f);
             Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.BoundaryCrossing), Is.True, potential.Value);
-            if (potential.Equals(WeaponPotentialId.JangseungGhostFace)) Assert.That(rig.Target.Position.X, Is.GreaterThan(1f), "Ghost Face adds its center-outward 1.25 knockback after the ordinary crossing response.");
+            if (potential.Equals(WeaponPotentialId.JangseungGhostFace)) Assert.That(((JangseungWardExecutor)rig.Executor).GhostFaceApplicationsForTests, Is.EqualTo(1));
             if (potential.Equals(WeaponPotentialId.JangseungFourDirectionBarrier)) Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.PotentialBlast && value.FinalDamage == 7), Is.True);
             if (potential.Equals(WeaponPotentialId.JangseungGuardianDescent))
             {
                 Assert.That(rig.Events.Count(value => value.Phase == ContactPhase.PotentialChain), Is.EqualTo(1));
-                Assert.That(((JangseungWardExecutor)rig.Executor).ActiveGuardianCountForTests, Is.GreaterThanOrEqualTo(0));
+                var ward = (JangseungWardExecutor)rig.Executor;
+                Assert.That(ward.GuardianSpawnsForTests, Is.EqualTo(1));
+                Assert.That(ward.ActiveGuardianCountForTests, Is.Zero, "one visible guardian retires after its 1.2s lifetime");
             }
             rig.Dispose();
         }
@@ -90,10 +92,24 @@ namespace JoseonHunter.Tests.PlayMode
             }
             else
             {
+                if (potential.Equals(WeaponPotentialId.SingijeonChainIgnition))
+                {
+                    rig.Dispose();
+                    rig = Drive(potential, true, MaskFor(potential), beforeExecutorDamage: (target, value) =>
+                    {
+                        if (value.WeaponId.Equals(WeaponId.SingijeonVolley) && value.Phase == ContactPhase.Direct) target.ApplyResolvedDamage(1000);
+                    });
+                    executor = (SingijeonExecutor)rig.Executor;
+                }
                 rig.Advance(1.2f);
                 Assert.That(executor.FocusProjectileCount, Is.EqualTo(8));
                 if (potential.Equals(WeaponPotentialId.SingijeonSubmunitionSplit))
-                    Assert.That(rig.Events.Select(value => value.AttackInstanceId).Distinct().Count(), Is.GreaterThan(1), "focus children must be terminal fresh attacks");
+                {
+                    Assert.That(executor.SplitChildAttackIdsForTests.Count, Is.EqualTo(3));
+                    Assert.That(executor.SplitChildAttackIdsForTests.Distinct().Count(), Is.EqualTo(3));
+                    Assert.That(rig.Events.Where(value => executor.SplitChildAttackIdsForTests.Contains(value.AttackInstanceId)).All(value => value.FinalDamage == 4), Is.True);
+                }
+                if (potential.Equals(WeaponPotentialId.SingijeonChainIgnition)) Assert.That(((SingijeonExecutor)rig.Executor).FocusRetargetCountForTests, Is.EqualTo(1));
             }
             rig.Dispose();
         }
@@ -133,7 +149,7 @@ namespace JoseonHunter.Tests.PlayMode
             }
             else if (potential.Equals(WeaponPotentialId.FanDistantThunder))
             {
-                rig.Advance(evolved ? .25f : .15f);
+                rig.Advance(evolved ? .25f : .15f); if (!evolved) rig.TickExact(.01f);
                 Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Lightning && value.FinalDamage >= 11), Is.True);
             }
             else if (!evolved)
@@ -145,7 +161,7 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 // Gust and the first outbound strike leave the primary alive.  Lower it only
                 // after that outbound event so the inbound hit itself is the killing event.
-                rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.Advance(.08f);
+                rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.Advance(.08f); rig.Advance(.08f);
                 Assert.That(fan.PendingChainForTests, Is.True);
                 rig.Advance(.08f);
                 var chains = rig.Events.Where(value => value.Phase == ContactPhase.PotentialChain).ToArray();
@@ -343,7 +359,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(materialized.Select(value => value.AttackInstanceId).Distinct().Count(), Is.EqualTo(materialized.Length), "each child potential attack must use a fresh terminal identity");
         }
 
-        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, PixelHitMask targetMask, WeaponPotentialId secondary = default, WeaponPotentialId tertiary = default)
+        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, PixelHitMask targetMask, WeaponPotentialId secondary = default, WeaponPotentialId tertiary = default, Action<TestTarget, ConfirmedDamageEvent> beforeExecutorDamage = null)
         {
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
@@ -355,6 +371,7 @@ namespace JoseonHunter.Tests.PlayMode
             var modifiers = WeaponRuntimeModifiers.From(new WeaponRunAffixProfile(Array.Empty<WeaponAffixRoll>(), ids));
             var target = new TestTarget(1, new Float2(1f, 0f), targetMask);
             registry.Register(target);
+            if (beforeExecutorDamage != null) damage.DamageConfirmed += value => beforeExecutorDamage(target, value);
             var executor = CreateExecutor(primary, runtime, evolved, modifiers);
             var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
             return new DrivenExecutor(runtime, root, executor, target, events);

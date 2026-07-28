@@ -59,6 +59,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #if UNITY_INCLUDE_TESTS
         public int ActiveBarrierCountForTests { get { var count = 0; foreach (var set in sets) if (set.RotationMask != null) count++; return count; } }
         public int ActiveGuardianCountForTests { get { var count = 0; foreach (var set in sets) if (set.GuardianMask != null) count++; return count; } }
+        public int GhostFaceApplicationsForTests { get; private set; }
+        public int GuardianSpawnsForTests { get; private set; }
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -84,6 +86,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             foreach (var set in sets) Retire(set);
             sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
+#if UNITY_INCLUDE_TESTS
+            GhostFaceApplicationsForTests = 0; GuardianSpawnsForTests = 0;
+#endif
         }
 
         public void Dispose() => Reset();
@@ -133,6 +138,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     set.GuardianMask = guardian; set.GuardianRemaining = 1.2f; set.GuardianAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
                     WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGuardianDescent, out var guardianSprite, out _);
                     set.GuardianVisual = new GameObject("Jangseung Guardian"); set.GuardianVisual.transform.SetParent(context.PresentationRoot, false); set.GuardianVisual.transform.position = new Vector3(set.DesiredCenter.X, set.DesiredCenter.Y, 0f); var renderer = set.GuardianVisual.AddComponent<SpriteRenderer>(); renderer.sprite = guardianSprite; renderer.sortingOrder = context.SortingOrder + 1;
+#if UNITY_INCLUDE_TESTS
+                    GuardianSpawnsForTests++;
+#endif
                 }
             }
             foreach (var set in sets)
@@ -255,7 +263,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     target.ApplyKnockback(OutwardDirection(segment, previous, current), Mathf.Max(0.1f, Level * 0.2f));
                     if (Potentials.HasPotential(WeaponPotentialId.JangseungGhostFace) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGhostFace, out _, out var ghostMask) &&
                         PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
+                    {
                         target.ApplyKnockback(CenterOutward(set.DesiredCenter, atCrossing), 1.25f);
+#if UNITY_INCLUDE_TESTS
+                        GhostFaceApplicationsForTests++;
+#endif
+                    }
                     if (!set.IsEvolved && target is IJangseungWardStatusTarget status)
                     {
                         set.StatusTargetIds.Add(target.RuntimeId);
