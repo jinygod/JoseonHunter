@@ -47,6 +47,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool IsEvolved { get; }
         public int ActiveFieldCount => fields.Count;
         public int ExpiredFieldCount { get; private set; }
+        public int LastStoredFrozenTargetCount { get; private set; }
+        public int LastResolvedStoredTargetCount { get; private set; }
+        public bool AllStoredTargetsResolvedOnce { get; private set; }
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -56,7 +59,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 cooldown = CooldownSeconds;
                 if (fields.Count >= FieldCapacity)
                 {
-                    Expire(fields[0]);
+                    Expire(fields[0], context);
                     fields.RemoveAt(0);
                 }
                 fields.Add(new Field(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, TickInterval), context.OwnerPosition, landing));
@@ -73,6 +76,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             // Reset is a terminal cleanup path too: every live field must release only its own status source.
             foreach (var field in fields) { CleanupFieldStatus(field); Retire(field); }
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
+            LastStoredFrozenTargetCount = 0; LastResolvedStoredTargetCount = 0; AllStoredTargetsResolvedOnce = false;
         }
 
         public void Dispose() => Reset();
@@ -89,7 +93,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
             field.ActiveAge += step;
-            if (field.ActiveAge >= Duration) { Expire(field); return; }
+            if (field.ActiveAge >= Duration) { Expire(field, context); return; }
             runtime.Targets.CopyTo(targets);
             var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f, Radius * 2f));
             var inside = field.InsideScratch;
@@ -100,7 +104,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!PixelMaskContactService.TryFindContact(diskMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 inside.Add(target.RuntimeId);
                 field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += step; field.Residence[target.RuntimeId] = residence;
-                if (target is IFrostStatusTarget status) { status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f); if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId)) status.ApplyFreeze(field.Attack.InstanceId, 0.2f); }
+                if (target is IFrostStatusTarget status) status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f);
+                if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId))
+                {
+                    if (target is IFrostStatusTarget freezeStatus) freezeStatus.ApplyFreeze(field.Attack.InstanceId, 0.2f);
+                    if (IsEvolved) field.StoredFrozen.Add(target.RuntimeId);
+                }
                 if (field.ActiveAge + 0.0001f >= field.NextDamageAge)
                     runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Tick, context.SimulationTick), out _);
             }
@@ -108,7 +117,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!inside.Contains(previous) && runtime.Targets.TryGet(previous, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
             field.Inside.Clear(); foreach (var id in inside) field.Inside.Add(id);
             if (field.ActiveAge + 0.0001f >= field.NextDamageAge) field.NextDamageAge += TickInterval;
-            if (Level == 5)
+            if (!IsEvolved && Level == 5)
             {
                 field.SpikeTimer += step;
                 if (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context); }
@@ -143,11 +152,32 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return count > 0;
         }
 
-        private void Expire(Field field)
+        private void Expire(Field field, in WeaponExecutionContext context)
         {
             if (field.Expired) return;
+            if (IsEvolved) ResolveStoredFrozenTargets(field, context);
             CleanupFieldStatus(field);
             Retire(field); field.Expired = true; ExpiredFieldCount++;
+        }
+
+        private void ResolveStoredFrozenTargets(Field field, in WeaponExecutionContext context)
+        {
+            LastStoredFrozenTargetCount = field.StoredFrozen.Count;
+            LastResolvedStoredTargetCount = 0;
+            foreach (var targetId in field.StoredFrozen)
+            {
+                if (!runtime.Targets.TryGet(targetId, out var target) || target == null || !target.IsAlive || target.HurtMask == null) continue;
+
+                // Each stored identity gets a separate, short-lived spike. Contact is checked at
+                // that spike's location; storage alone never authorizes damage.
+                var spike = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+                var transform = PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y);
+                if (PixelMaskContactService.TryFindContact(spikeMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact) &&
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _))
+                    LastResolvedStoredTargetCount++;
+                runtime.DamageService.RetireAttack(spike.InstanceId);
+            }
+            AllStoredTargetsResolvedOnce = LastResolvedStoredTargetCount == LastStoredFrozenTargetCount;
         }
 
         private void CleanupFieldStatus(Field field)
@@ -194,6 +224,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool AttackRetired { get; set; }
             public Dictionary<int, float> Residence { get; } = new Dictionary<int, float>();
             public HashSet<int> Frozen { get; } = new HashSet<int>();
+            public HashSet<int> StoredFrozen { get; } = new HashSet<int>();
             public HashSet<int> Inside { get; } = new HashSet<int>();
             public HashSet<int> InsideScratch { get; } = new HashSet<int>();
         }

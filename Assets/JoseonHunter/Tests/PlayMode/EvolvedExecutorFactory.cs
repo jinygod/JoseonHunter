@@ -45,16 +45,16 @@ namespace JoseonHunter.Tests.PlayMode
                 case SingijeonExecutor value:
                     return Snapshot(WeaponId.SingijeonVolley, "Singijeon", value.IsEvolved, value.LastDirectionBucket >= 0 ? "Volley" : "Idle", value.LastLaunchCount, value.ActiveProjectileCount, value.ScoutProjectileCount, value.FocusProjectileCount, value.Range, volleyKinds: value.VolleyKinds);
                 case FrostFlaskExecutor value:
-                    return Snapshot(WeaponId.FrostFlask, "FrostFlask", value.IsEvolved, value.ActiveFieldCount > 0 ? "Field" : "Idle", value.ActiveFieldCount, value.ExpiredFieldCount, value.ActiveFieldCount, value.ExpiredFieldCount, value.Duration);
+                    return Snapshot(WeaponId.FrostFlask, "FrostFlask", value.IsEvolved, value.ActiveFieldCount > 0 ? "Field" : "Idle", value.ActiveFieldCount, value.LastResolvedStoredTargetCount, value.ActiveFieldCount, value.ExpiredFieldCount, value.Duration, allStoredTargetsResolvedOnce: value.AllStoredTargetsResolvedOnce);
                 case WindThunderFanExecutor value:
-                    return Snapshot(WeaponId.WindThunderFan, "WindThunderFan", value.IsEvolved, value.State.ToString(), value.LastWindContactCount, value.LastLightningContactCount, value.LastWindContactCount, value.LastLightningContactCount, value.Range);
+                    return Snapshot(WeaponId.WindThunderFan, "WindThunderFan", value.IsEvolved, value.State.ToString(), value.LastWindContactCount, value.LastLightningContactCount + value.LastInboundContactCount, value.LastWindContactCount, value.LastLightningContactCount, value.Range);
                 default:
                     return Snapshot(default, executor.GetType().Name, executor is IWeaponEvolutionProfile profile && profile.IsEvolved, "Unknown", 0, 0, 0, 0, 0f);
             }
         }
 
-        private static EvolutionTelemetry Snapshot(WeaponId weaponId, string executorKind, bool isEvolved, string state, int primaryCount, int secondaryCount, int scoutProjectileCount, int focusProjectileCount, float fieldDuration, IReadOnlyList<ContactPhase> contactPhases = null, int lastProjectileMaximumImpacts = 0, float lastProjectileScale = 0f, IReadOnlyList<string> stateOrder = null, IReadOnlyList<string> volleyKinds = null) =>
-            new EvolutionTelemetry(lastProjectileMaximumImpacts, lastProjectileScale, stateOrder ?? new[] { state }, volleyKinds ?? ContactPhaseNames(contactPhases), scoutProjectileCount, focusProjectileCount, fieldDuration, false, isEvolved, weaponId, executorKind, state, primaryCount, secondaryCount);
+        private static EvolutionTelemetry Snapshot(WeaponId weaponId, string executorKind, bool isEvolved, string state, int primaryCount, int secondaryCount, int scoutProjectileCount, int focusProjectileCount, float fieldDuration, IReadOnlyList<ContactPhase> contactPhases = null, int lastProjectileMaximumImpacts = 0, float lastProjectileScale = 0f, IReadOnlyList<string> stateOrder = null, IReadOnlyList<string> volleyKinds = null, bool allStoredTargetsResolvedOnce = false) =>
+            new EvolutionTelemetry(lastProjectileMaximumImpacts, lastProjectileScale, stateOrder ?? new[] { state }, volleyKinds ?? ContactPhaseNames(contactPhases), scoutProjectileCount, focusProjectileCount, fieldDuration, allStoredTargetsResolvedOnce, isEvolved, weaponId, executorKind, state, primaryCount, secondaryCount);
 
         private static IReadOnlyList<string> ContactPhaseNames(IReadOnlyList<ContactPhase> phases)
         {

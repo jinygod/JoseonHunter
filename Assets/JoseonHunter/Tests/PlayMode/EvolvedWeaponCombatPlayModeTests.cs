@@ -388,6 +388,61 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Frost_bloom_stores_only_confirmed_frozen_residents_then_shatters_each_once_on_expiry()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.FrostFlask))
+            {
+                rig.AddTargets(3, insideField: true);
+                var missingMask = rig.AddTargetWithoutMask(new Vector2(0.7f, 0f));
+                yield return rig.AdvanceSeconds(1.55f);
+
+                var blasts = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Blast).ToArray();
+                Assert.That(blasts, Has.Length.EqualTo(3));
+                Assert.That(blasts.Select(value => value.TargetRuntimeId), Is.Unique);
+                Assert.That(blasts.Any(value => value.TargetRuntimeId == missingMask.RuntimeId), Is.False);
+                Assert.That(rig.Telemetry.AllStoredTargetsResolvedOnce, Is.True);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Returning_heaven_thunder_strikes_marked_targets_by_projection_then_returns_in_reverse_with_lower_damage()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            {
+                var near = rig.AddTarget(new Vector2(1f, 0f));
+                var middle = rig.AddTarget(new Vector2(2f, 0f));
+                var far = rig.AddTarget(new Vector2(3f, 0f));
+                yield return rig.AdvanceSeconds(0.65f);
+
+                var lightning = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Lightning).ToArray();
+                var inbound = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Inbound).ToArray();
+                CollectionAssert.AreEqual(new[] { near.RuntimeId, middle.RuntimeId, far.RuntimeId }, lightning.Select(value => value.TargetRuntimeId));
+                CollectionAssert.AreEqual(new[] { far.RuntimeId, middle.RuntimeId, near.RuntimeId }, inbound.Select(value => value.TargetRuntimeId));
+                Assert.That(lightning.Select(value => value.FinalDamage).Distinct().Single(), Is.GreaterThan(inbound.Select(value => value.FinalDamage).Distinct().Single()));
+                Assert.That(lightning.Select(value => value.SimulationTick).Distinct().Count(), Is.GreaterThanOrEqualTo(2));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Returning_heaven_thunder_skips_target_lost_before_inbound_without_retargeting()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            {
+                var near = rig.AddTarget(new Vector2(1f, 0f));
+                var middle = rig.AddTarget(new Vector2(2f, 0f));
+                var far = rig.AddTarget(new Vector2(3f, 0f));
+                yield return rig.AdvanceSeconds(0.55f);
+                far.ApplyResolvedDamage(1000);
+                rig.Tick(0.05f);
+                yield return null;
+
+                var inbound = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Inbound).ToArray();
+                CollectionAssert.AreEqual(new[] { middle.RuntimeId, near.RuntimeId }, inbound.Select(value => value.TargetRuntimeId));
+                Assert.That(inbound.Any(value => value.TargetRuntimeId == far.RuntimeId), Is.False);
+            }
+        }
+
         [Test]
         public void Normal_ward_and_singijeon_keep_their_existing_launch_and_crossing_behavior()
         {

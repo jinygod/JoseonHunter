@@ -1,9 +1,7 @@
 # Task 6 report
 
-- Added confirmed-hit damage-number aggregation keyed by attack instance, target, and weapon with a 0.25-second display window.
-- Added a bounded world-space TextMeshPro pool (prewarm 48, maximum 96), event binding to `CombatDamageService`, contact-point placement, weapon accents, critical punch styling, boss predicate styling/lifetime, and complete presenter reset on release.
-- Added focused accumulator and pool lifecycle tests. They were not run per implementation-first instruction.
-- A focused C# compile of the Task 6 presentation surface plus its current combat dependencies completed without errors (the stale referenced assemblies produced expected duplicate-type warnings during this isolated check).
-- Static review found an existing EditMode compilation failure in `WeaponContentTests` for missing `JoseonHunter.Content.Weapons` types.
-- Unity 6's installed `com.unity.ugui` package embeds TextMeshPro; the presentation asmdef now explicitly references `Unity.TextMeshPro`.
-- Review fix: aggregation windows are now enforced when events arrive, retaining an expired aggregate for the next flush; Thunder Crash Bomb uses the lightning-violet accent.
+- Frost Bloom now records only targets that completed confirmed freeze-field residence. When an evolved field expires, each stored live identity receives one separately allocated spike blast only after spike-mask contact; absent/dead/maskless targets are skipped. Normal level-5 periodic spikes remain unchanged.
+- Returning Heaven Thunder keeps confirmed wind marking, orders its outward lightning by wind-direction projection with 0.08-second strike spacing, then applies reduced-damage inbound hits in reverse identity order. Missing or dead return targets are skipped without retargeting. Normal fan echo behavior remains unchanged.
+- Added PlayMode coverage for Frost storage/shatter identity and missing-mask exclusion, outward/inbound order and reduced damage, and targets lost before return. Added the catalog mechanic-dimension invariant to `CombatRuleTests`.
+- One focused Unity PlayMode attempt was made. Unity exited 0 but did not generate a test-results XML because the editor could not validate its license (LicenseClient handshake/access-token errors in `Temp/evolution-playmode.log`), so no test-pass claim is made.
+- Preserved the eight untracked weapon `.meta` files and unrelated `task-5-review.md`; they are not part of this task.

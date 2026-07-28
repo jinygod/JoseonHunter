@@ -182,6 +182,13 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That((baseDamage, flatBonus, isCritical, multiplier), Is.EqualTo((8, 2, true, 1.5f)));
         }
 
+        [Test]
+        public void Every_evolution_changes_two_or_more_independent_mechanic_dimensions()
+        {
+            foreach (var evolution in WeaponEvolutionCatalog.All)
+                Assert.That(evolution.ChangedDimensions.Distinct().Count(), Is.GreaterThanOrEqualTo(2), evolution.DisplayName);
+        }
+
         private static UpgradeState State(
             IReadOnlyDictionary<string, int> weapons = null,
             IReadOnlyDictionary<string, int> supports = null,
