@@ -1314,6 +1314,35 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnGUI()
         {
+            if (!runEnded)
+            {
+                return;
+            }
+
+            var scale = Mathf.Min(Screen.width / 1080f, Screen.height / 1920f);
+            var offsetX = (Screen.width - 1080f * scale) * 0.5f;
+            GUI.matrix = Matrix4x4.TRS(new Vector3(offsetX, 0f, 0f), Quaternion.identity, new Vector3(scale, scale, 1f));
+            var centered = new GUIStyle(GUI.skin.box)
+            {
+                fontSize = 30,
+                alignment = TextAnchor.MiddleCenter,
+                normal = { textColor = new Color(0.12f, 0.12f, 0.10f) }
+            };
+            var button = new GUIStyle(GUI.skin.button) { fontSize = 30, wordWrap = true };
+            GUI.Box(new Rect(100f, 470f, 880f, 700f),
+                victory
+                    ? $"Run complete!\\n\\nSurvived {elapsed:0.0}s  Kills {kills}  Level {level}\\nCoins {coins}"
+                    : $"Run failed!\\n\\nSurvived {elapsed:0.0}s  Kills {kills}  Level {level}\\nTry again.",
+                centered);
+            if (GUI.Button(new Rect(260f, 1000f, 560f, 120f), "Restart (R)", button))
+            {
+                ResetRun();
+            }
+        }
+
+#if false
+        private void LegacyOnGUI()
+        {
             var scale = Mathf.Min(Screen.width / 1080f, Screen.height / 1920f);
             var offsetX = (Screen.width - 1080f * scale) * 0.5f;
             GUI.matrix = Matrix4x4.TRS(new Vector3(offsetX, 0f, 0f), Quaternion.identity, new Vector3(scale, scale, 1f));
@@ -1400,5 +1429,6 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
             }
         }
+#endif
     }
 }
