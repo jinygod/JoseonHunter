@@ -251,11 +251,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 foreach (var target in targets)
                 {
                     if (target == null || !target.IsAlive || target.HurtMask == null) continue;
-                    if (!PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                     trail.PreviousTransforms.TryGetValue(target.RuntimeId, out var previousTransform); var hadPrevious = trail.PreviousTransforms.ContainsKey(target.RuntimeId); trail.PreviousTransforms[target.RuntimeId] = target.HurtMaskTransform;
+                    var currentContact = PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact);
                     var previousContact = false;
                     if (hadPrevious) previousContact = PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, previousTransform, out _);
-                    if (!trail.Crossed.Contains(target.RuntimeId) && hadPrevious && !previousContact) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
+                    if (!trail.Crossed.Contains(target.RuntimeId) && hadPrevious && !previousContact && currentContact) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
                 }
                 var ids = new List<int>(trail.TicksByTarget.Keys);
                 foreach (var id in ids)

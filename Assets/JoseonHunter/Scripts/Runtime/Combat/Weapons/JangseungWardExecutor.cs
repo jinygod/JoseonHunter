@@ -117,6 +117,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!set.IsCompleted || set.PotentialCompletionStarted) continue;
                 set.PotentialCompletionStarted = true;
                 set.PotentialStartedThisTick = true;
+                set.PotentialCreatedThisTick = true;
                 set.PotentialTickStep = set.IsEvolved ? set.CompletionResidual : 0f;
                 if (Potentials.HasPotential(WeaponPotentialId.JangseungFourDirectionBarrier) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungFourDirectionBarrier, out _, out var barrier))
                 {
@@ -155,13 +156,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var set in sets)
             {
                 if (set.GuardianRemaining <= 0f || set.GuardianMask == null) continue;
-                var potentialStep = set.PotentialTickStep > 0f ? set.PotentialTickStep : step;
+                var potentialStep = set.PotentialCreatedThisTick ? set.PotentialTickStep : step;
                 set.GuardianRemaining -= potentialStep; if (!set.GuardianResolved) ResolveGuardian(set, set.GuardianMask, context);
                 if (set.GuardianRemaining > 0f) continue;
                 runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null;
                 if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual); set.GuardianVisual = null;
             }
-            foreach (var set in sets) if (!set.PotentialStartedThisTick) set.PotentialTickStep = 0f;
+            foreach (var set in sets) { if (!set.PotentialStartedThisTick) set.PotentialTickStep = 0f; set.PotentialCreatedThisTick = false; }
         }
 
         private void ResolveGuardian(WardSet set, PixelHitMask guardianMask, in WeaponExecutionContext context)
@@ -430,6 +431,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public GameObject GuardianVisual { get; set; }
             public float CompletionResidual { get; set; }
             public float PotentialTickStep { get; set; }
+            public bool PotentialCreatedThisTick { get; set; }
             public void ActivateNextPost()
             {
                 if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));

@@ -247,7 +247,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             for (var index = spreadResidences.Count - 1; index >= 0; index--)
             {
-                var spread = spreadResidences[index]; spread.Remaining -= step;
+                var spread = spreadResidences[index]; if (spread.CreatedThisTick) { spread.CreatedThisTick = false; spreadResidences[index] = spread; continue; } spread.Remaining -= step;
                 if (spread.Remaining > 0f) { spreadResidences[index] = spread; continue; }
                 if (runtime.Targets.TryGet(spread.TargetId, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(spread.SourceId, SlowDecaySeconds);
                 spreadResidences.RemoveAt(index);
@@ -292,6 +292,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool SpreadResolved { get; set; }
             public GameObject Visual { get; set; }
         }
-        private struct SpreadResidence { public SpreadResidence(int targetId, int sourceId, float remaining) { TargetId = targetId; SourceId = sourceId; Remaining = remaining; } public int TargetId; public int SourceId; public float Remaining; }
+        private struct SpreadResidence { public SpreadResidence(int targetId, int sourceId, float remaining) { TargetId = targetId; SourceId = sourceId; Remaining = remaining; CreatedThisTick = true; } public int TargetId; public int SourceId; public float Remaining; public bool CreatedThisTick; }
     }
 }
