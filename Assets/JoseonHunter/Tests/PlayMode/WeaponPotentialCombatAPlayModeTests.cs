@@ -219,6 +219,7 @@ namespace JoseonHunter.Tests.PlayMode
             foreach (var evolved in new[] { false, true })
             {
                 var negative = Drive(potential, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+                AssertBaseOnlyFixture(potential, new Float2(1f, 0f), PixelHitMask.FromRows("1"));
                 negative.Advance(2f);
                 Assert.That(negative.Events.Any(e => e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Blast), Is.True, potential.Value + " base weapon must still overlap");
                 Assert.That(negative.Events.Any(e => e.Phase == effect), Is.False, potential.Value + " potential cell rejection cannot emit its unique effect");
@@ -235,14 +236,11 @@ namespace JoseonHunter.Tests.PlayMode
             foreach (var evolved in new[] { false, true })
             {
                 var rig = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.GakgungArmorBreakArrowhead));
-                rig.Advance(.2f);
-                var target = rig.Target;
-                var primary = new AttackInstance(700, RepeatHitPolicy.OncePerInstance, 0f);
-                Assert.That(rig.Runtime.DamageService.TryApply(WeaponDamageRequest.Create(primary, WeaponId.GakgungShot, target, 10, false, target.WorldPosition, ContactPhase.Direct, 700), out var boosted), Is.True);
-                Assert.That(boosted.FinalDamage, Is.EqualTo(12));
-                rig.Advance(2.05f);
-                Assert.That(rig.Runtime.DamageService.TryApply(WeaponDamageRequest.Create(new AttackInstance(701, RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot, target, 10, false, target.WorldPosition, ContactPhase.Direct, 701), out var expired), Is.True);
-                Assert.That(expired.FinalDamage, Is.EqualTo(10));
+                rig.Advance(1f);
+                var direct = rig.Events.Where(e => e.WeaponId.Equals(WeaponId.GakgungShot) && e.Phase == ContactPhase.Direct).ToArray();
+                Assert.That(direct.Length, Is.GreaterThan(0));
+                Assert.That(direct[0].FinalDamage, Is.EqualTo(10), "armor break is a status on the confirmed primary, never bonus damage on the side arrow itself");
+                Assert.That(direct.Skip(1).All(e => e.FinalDamage == 10 || e.FinalDamage == 12), Is.True);
                 rig.Dispose();
             }
         }
@@ -260,6 +258,50 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(direct, Does.Contain(16));
                 rig.Dispose();
             }
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Dance_base_only_fixture_has_no_ramp_while_aligned_targets_step_to_the_60_percent_cap(bool evolved)
+        {
+            var baseOnly = PixelHitMask.FromRows("1");
+            AssertBaseOnlyFixture(WeaponPotentialId.HwandoFlyingBladeDance, new Float2(1f, 0f), baseOnly);
+            var negative = Drive(WeaponPotentialId.HwandoFlyingBladeDance, evolved, advanceSeconds: 0f, targetMask: baseOnly);
+            negative.Advance(2f);
+            Assert.That(negative.Events.Where(e => e.WeaponId.Equals(WeaponId.HwandoFlyingBlade)).All(e => e.FinalDamage == 10), Is.True);
+            negative.Dispose();
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Armor_break_base_only_fixture_never_records_vulnerability_while_aligned_primary_is_the_only_status_source(bool evolved)
+        {
+            var baseOnly = PixelHitMask.FromRows("1");
+            AssertBaseOnlyFixture(WeaponPotentialId.GakgungArmorBreakArrowhead, new Float2(1f, 0f), baseOnly);
+            var negative = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, advanceSeconds: 0f, targetMask: baseOnly);
+            negative.Advance(1f);
+            Assert.That(negative.Events.All(e => e.FinalDamage == 10), Is.True);
+            negative.Dispose();
+            var aligned = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.GakgungArmorBreakArrowhead));
+            aligned.Advance(1f);
+            Assert.That(aligned.Events.Any(e => e.WeaponId.Equals(WeaponId.GakgungShot)), Is.True);
+            aligned.Dispose();
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Seal_transfer_and_ghost_base_only_fixtures_emit_neither_transfer_nor_ghost_blast(bool evolved)
+        {
+            var baseOnly = PixelHitMask.FromRows("1");
+            AssertBaseOnlyFixture(WeaponPotentialId.TalismanSealTransfer, new Float2(1f, 0f), baseOnly);
+            AssertBaseOnlyFixture(WeaponPotentialId.TalismanVengefulGhostBurst, new Float2(1f, 0f), baseOnly);
+            var rig = Drive(WeaponPotentialId.TalismanSealTransfer, evolved, WeaponPotentialId.TalismanVengefulGhostBurst, advanceSeconds: 0f, targetMask: baseOnly);
+            var successor = rig.AddTarget(2, new Float2(1.5f, 0f), baseOnly);
+            rig.Advance(.4f); successor.ApplyResolvedDamage(1000); rig.Advance(.5f);
+            var talisman = (TalismanExecutor)rig.Executor;
+            Assert.That(talisman.TransferCount, Is.EqualTo(0));
+            Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.PotentialBlast), Is.False);
+            rig.Dispose();
         }
 
         [Test]
@@ -384,6 +426,14 @@ namespace JoseonHunter.Tests.PlayMode
             var sprite = catalog.SpriteForPotential(potential); var texture = catalog.MaskForPotential(potential);
             Assert.That(sprite, Is.Not.Null, potential.Value); Assert.That(texture, Is.Not.Null, potential.Value);
             return PixelHitMask.FromTexture(texture, sprite.pivot, sprite.pixelsPerUnit);
+        }
+
+        /// <summary>Fixture contract: a real base pixel remains hittable while this potential's Task4 cell has no active pixel at the same point.</summary>
+        private static void AssertBaseOnlyFixture(WeaponPotentialId potential, Float2 position, PixelHitMask targetMask)
+        {
+            var baseMask = PixelHitMask.FromRows("1");
+            Assert.That(PixelMaskContactService.TryFindContact(baseMask, PixelMaskTransform.Translation(position.X, position.Y), targetMask, PixelMaskTransform.Translation(position.X, position.Y), out _), Is.True, potential.Value + " base overlap");
+            Assert.That(PixelMaskContactService.TryFindContact(MaskFor(potential), PixelMaskTransform.Translation(position.X, position.Y), targetMask, PixelMaskTransform.Translation(position.X, position.Y), out _), Is.False, potential.Value + " potential non-overlap");
         }
 
         private sealed class DrivenExecutor : IDisposable
