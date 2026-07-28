@@ -78,9 +78,12 @@ namespace JoseonHunter.Tests.PlayMode
             far.Advance(.20f); // post-80% impact clamps at 1.6x damage / 1.35x visual scale
             Assert.That(near.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(10));
             Assert.That(far.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(16));
+            var postCap = Drive(WeaponPotentialId.GakgungFullDraw, evolved, targetPosition: new Float2(9f, 0f), advanceSeconds: 0f);
+            postCap.Advance(.50f);
+            Assert.That(postCap.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.FinalDamage).First(), Is.EqualTo(16));
             var split = Drive(WeaponPotentialId.GakgungSplitFletching, evolved);
             Assert.That(split.Events.Count(e => e.Phase == ContactPhase.PotentialChain), Is.LessThanOrEqualTo(2), "split arrows are terminal child attacks and cannot recurse");
-            near.Dispose(); far.Dispose(); split.Dispose();
+            near.Dispose(); far.Dispose(); postCap.Dispose(); split.Dispose();
         }
 
         [TestCase(false)]
@@ -186,7 +189,7 @@ namespace JoseonHunter.Tests.PlayMode
             positive.Advance(1f);
             var negativeDamage = negative.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
             var positiveDamage = positive.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
-            Assert.That(negativeDamage, Is.EqualTo(20));
+            Assert.That(negativeDamage, Is.EqualTo(evolved ? 20 : 10));
             Assert.That(positiveDamage, Is.EqualTo(evolved ? 22 : 20));
             negative.Dispose(); positive.Dispose();
         }
