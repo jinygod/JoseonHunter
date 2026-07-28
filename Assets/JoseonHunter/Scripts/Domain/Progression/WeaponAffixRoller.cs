@@ -37,7 +37,14 @@ namespace JoseonHunter.Domain.Progression
             if (profile.PotentialIds.Count < 3 && random.NextUnit() < JackpotChance(profile.PotentialIds.Count))
             {
                 AddPotential(profile, weaponId, random, newPotentials);
-                if (newPotentials.Count > 0 && random.NextUnit() < .08) AddPotential(profile, weaponId, random, newPotentials);
+                if (profile.PotentialIds.Count >= 3) return new WeaponAffixRollResult(general, newPotentials.AsReadOnly());
+
+                if (newPotentials.Count > 0 && random.NextUnit() < .08)
+                {
+                    AddPotential(profile, weaponId, random, newPotentials);
+                    if (profile.PotentialIds.Count >= 3) return new WeaponAffixRollResult(general, newPotentials.AsReadOnly());
+                }
+
                 if (newPotentials.Count > 1 && random.NextUnit() < .01) AddPotential(profile, weaponId, random, newPotentials);
             }
 
@@ -68,10 +75,10 @@ namespace JoseonHunter.Domain.Progression
             var clampedUnit = Math.Max(0d, Math.Min(1d, valueUnit));
             return stat switch
             {
-                WeaponAffixStat.Damage => Interpolate(10d, 20d, clampedUnit),
+                WeaponAffixStat.Damage => Interpolate(10d, 30d, clampedUnit),
                 WeaponAffixStat.Cooldown => -Interpolate(5d, 12d, clampedUnit),
                 WeaponAffixStat.Area => Interpolate(8d, 20d, clampedUnit),
-                WeaponAffixStat.ProjectileSpeed => Interpolate(10d, 20d, clampedUnit),
+                WeaponAffixStat.ProjectileSpeed => Interpolate(10d, 30d, clampedUnit),
                 WeaponAffixStat.Duration => Interpolate(10d, 25d, clampedUnit),
                 _ => throw new ArgumentOutOfRangeException(nameof(stat))
             };
