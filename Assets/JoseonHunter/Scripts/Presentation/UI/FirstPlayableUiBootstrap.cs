@@ -13,6 +13,7 @@ namespace JoseonHunter.Presentation.UI
         private FirstPlayableController boundController;
         private CombatHudPresenter combatHud;
         private WeaponRackPresenter weaponRack;
+        private RewardRevealPresenter rewardReveal;
         private UpgradeChoicePresenter upgradeChoice;
         private RectTransform safeAreaContainer;
         private Rect lastSafeArea;
@@ -52,6 +53,9 @@ namespace JoseonHunter.Presentation.UI
             var rackRoot = RuntimeUiFactory.Rect("Weapon Rack", safeAreaContainer);
             RuntimeUiFactory.Stretch(rackRoot, 0f, 0f, 0f, 0f);
             weaponRack = rackRoot.gameObject.AddComponent<WeaponRackPresenter>();
+            var rewardRoot = RuntimeUiFactory.Rect("Reward Reveal", safeAreaContainer);
+            RuntimeUiFactory.Stretch(rewardRoot, 0f, 0f, 0f, 0f);
+            rewardReveal = rewardRoot.gameObject.AddComponent<RewardRevealPresenter>();
             var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", safeAreaContainer);
             RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
@@ -96,14 +100,18 @@ namespace JoseonHunter.Presentation.UI
             boundController = controller;
             if (boundController == null) return;
             boundController.UpgradeOpened += OpenUpgradeChoice;
+            boundController.UpgradeChosen += OnUpgradeChosen;
             boundController.RunReset += CloseUpgradeChoice;
+            boundController.RunReset += CloseRewardReveal;
         }
 
         private void UnbindController()
         {
             if (boundController == null) return;
             boundController.UpgradeOpened -= OpenUpgradeChoice;
+            boundController.UpgradeChosen -= OnUpgradeChosen;
             boundController.RunReset -= CloseUpgradeChoice;
+            boundController.RunReset -= CloseRewardReveal;
             boundController = null;
         }
 
@@ -115,6 +123,24 @@ namespace JoseonHunter.Presentation.UI
         private void CloseUpgradeChoice()
         {
             upgradeChoice?.CloseImmediately();
+        }
+
+        private void OnUpgradeChosen(ProgressionRewardEvent reward)
+        {
+            if (reward.Kind != ProgressionRewardKind.Support)
+            {
+                var state = boundController.UiState;
+                weaponSignature = WeaponSignature(state);
+                weaponRack.Render(state.Weapons);
+                weaponRack.Pulse(reward.WeaponId, reward.NewLevel);
+            }
+
+            rewardReveal?.Play(reward);
+        }
+
+        private void CloseRewardReveal()
+        {
+            rewardReveal?.HideImmediately();
         }
 
         private void NotifyUpgradePresentationClosed()

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
@@ -16,15 +17,18 @@ namespace JoseonHunter.Presentation.UI
             public Image Icon;
             public TextMeshProUGUI Name;
             public TextMeshProUGUI Level;
+            public string WeaponId;
         }
 
         private readonly List<Slot> slots = new();
+        private readonly Dictionary<string, Slot> slotsByWeaponId = new();
 
         public void Render(IReadOnlyList<WeaponSlotView> weapons)
         {
             while (slots.Count > weapons.Count)
             {
                 var slot = slots[slots.Count - 1];
+                if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId.Remove(slot.WeaponId);
                 Destroy(slot.Root);
                 slots.RemoveAt(slots.Count - 1);
             }
@@ -34,6 +38,13 @@ namespace JoseonHunter.Presentation.UI
                 if (index == slots.Count) slots.Add(CreateSlot(index));
                 PopulateSlot(slots[index], weapons[index]);
             }
+        }
+
+        public void Pulse(string weaponId, int newLevel)
+        {
+            if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
+            slot.Level.text = $"LEVEL {newLevel}";
+            StartCoroutine(PulseRoutine(slot));
         }
 
         private Slot CreateSlot(int index)
@@ -70,13 +81,30 @@ namespace JoseonHunter.Presentation.UI
             return slot;
         }
 
-        private static void PopulateSlot(Slot slot, WeaponSlotView weapon)
+        private void PopulateSlot(Slot slot, WeaponSlotView weapon)
         {
+            if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId.Remove(slot.WeaponId);
+            slot.WeaponId = weapon.Id;
+            if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId[slot.WeaponId] = slot;
             slot.Accent.color = JoseonUiPalette.WeaponAccent(new WeaponId(weapon.Id));
             slot.Icon.sprite = weapon.Icon;
             slot.Icon.enabled = weapon.Icon != null;
             slot.Name.text = weapon.DisplayName;
             slot.Level.text = $"LEVEL {weapon.Level}";
+        }
+
+        private static IEnumerator PulseRoutine(Slot slot)
+        {
+            var elapsed = 0f;
+            while (elapsed < .24f)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
+                slot.Root.transform.localScale = Vector3.one * pulse;
+                yield return null;
+            }
+
+            if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
         }
     }
 }
