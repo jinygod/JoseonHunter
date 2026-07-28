@@ -22,6 +22,20 @@ This manifest is the spend lock for the run-only weapon-affix presentation set. 
 | jackpot_burst_3 | `(128,0,64,64)` | three-line reveal burst | decorative-only |
 | rarity_flash | `(192,0,64,64)` | final rarity flash | decorative-only |
 
+### Cost-0 runtime SlotParts derivations
+
+The following are mechanical, lossless crops of the approved PixelLab `slot-kit.png` job. Coordinates use the Unity atlas convention: bottom-left origin. No new PixelLab generation, retry, redraw, or cost was incurred. The source copies are in `ArtSource/Pixel/UI/AffixJackpot/SlotParts/`; byte-identical runtime copies are in `Assets/JoseonHunter/Art/UI/AffixJackpot/SlotParts/`.
+
+| SlotPart | Source rect `(x,y,w,h)` | ArtSource/runtime destination |
+| --- | --- | --- |
+| `reel_frame.png` | `(0,64,64,64)` | `SlotParts/reel_frame.png` |
+| `empty_line_frame.png` | `(64,64,64,64)` | `SlotParts/empty_line_frame.png` |
+| `jackpot_burst_1.png` | `(0,0,64,64)` | `SlotParts/jackpot_burst_1.png` |
+| `jackpot_burst_2.png` | `(64,0,64,64)` | `SlotParts/jackpot_burst_2.png` |
+| `jackpot_burst_3.png` | `(128,0,64,64)` | `SlotParts/jackpot_burst_3.png` |
+
+`empty_line_frame.png` intentionally derives from the approved standard-frame cell and is distinct from the reel-frame cell; it is used only for locked potential UI cells.
+
 ## `status-symbols.png` — UI-only, 4 x 2 cells of 64 x 64
 
 | Cell | Bounds | Use | Contact |
