@@ -198,6 +198,61 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [TestCase("hwando_venom_fang", ContactPhase.Poison)]
+        [TestCase("hwando_returning_afterimage", ContactPhase.PotentialChain)]
+        [TestCase("gakgung_split_fletching", ContactPhase.PotentialChain)]
+        [TestCase("talisman_five_element_cycle", ContactPhase.Burn)]
+        [TestCase("thunder_earth_current", ContactPhase.PotentialBlast)]
+        [TestCase("thunder_lightning_rod", ContactPhase.PotentialChain)]
+        public void Potential_specific_cell_mask_gate_has_base_overlap_negative_and_exact_effect_positive_in_normal_and_evolved(string potentialValue, ContactPhase effect)
+        {
+            var potential = new WeaponPotentialId(potentialValue);
+            foreach (var evolved in new[] { false, true })
+            {
+                var negative = Drive(potential, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+                negative.Advance(2f);
+                Assert.That(negative.Events.Any(e => e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Blast), Is.True, potential.Value + " base weapon must still overlap");
+                Assert.That(negative.Events.Any(e => e.Phase == effect), Is.False, potential.Value + " potential cell rejection cannot emit its unique effect");
+                var positive = Drive(potential, evolved, advanceSeconds: 0f, targetMask: MaskFor(potential));
+                positive.Advance(2f);
+                Assert.That(positive.Events.Any(e => e.Phase == effect), Is.True, potential.Value + " aligned Task4 cell must emit its unique effect");
+                negative.Dispose(); positive.Dispose();
+            }
+        }
+
+        [Test]
+        public void Armor_break_is_primary_only_and_applies_exact_20_percent_for_two_seconds()
+        {
+            foreach (var evolved in new[] { false, true })
+            {
+                var rig = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.GakgungArmorBreakArrowhead));
+                rig.Advance(.2f);
+                var target = rig.Target;
+                var primary = new AttackInstance(700, RepeatHitPolicy.OncePerInstance, 0f);
+                Assert.That(rig.Runtime.DamageService.TryApply(WeaponDamageRequest.Create(primary, WeaponId.GakgungShot, target, 10, false, target.WorldPosition, ContactPhase.Direct, 700), out var boosted), Is.True);
+                Assert.That(boosted.FinalDamage, Is.EqualTo(12));
+                rig.Advance(2.05f);
+                Assert.That(rig.Runtime.DamageService.TryApply(WeaponDamageRequest.Create(new AttackInstance(701, RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot, target, 10, false, target.WorldPosition, ContactPhase.Direct, 701), out var expired), Is.True);
+                Assert.That(expired.FinalDamage, Is.EqualTo(10));
+                rig.Dispose();
+            }
+        }
+
+        [Test]
+        public void Dance_uses_only_distinct_cell_confirmed_targets_and_caps_at_60_percent()
+        {
+            foreach (var evolved in new[] { false, true })
+            {
+                var rig = Drive(WeaponPotentialId.HwandoFlyingBladeDance, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.HwandoFlyingBladeDance));
+                for (var index = 2; index <= 6; index++) rig.AddTarget(index, new Float2(1f + index * .05f, 0f), MaskFor(WeaponPotentialId.HwandoFlyingBladeDance));
+                rig.Advance(2f);
+                var direct = rig.Events.Where(e => e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Inbound || e.Phase == ContactPhase.Outbound).Select(e => e.FinalDamage).ToArray();
+                Assert.That(direct.Max(), Is.LessThanOrEqualTo(16));
+                Assert.That(direct, Does.Contain(16));
+                rig.Dispose();
+            }
+        }
+
         [Test]
         public void Lightning_rod_tracks_live_position_and_skips_unregistered_target_in_normal_and_evolved_paths()
         {
