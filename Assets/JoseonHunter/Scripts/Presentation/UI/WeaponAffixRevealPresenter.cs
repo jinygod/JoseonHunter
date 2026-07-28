@@ -35,6 +35,7 @@ namespace JoseonHunter.Presentation.UI
         public bool IsRevealing => routine != null;
         public WeaponAffixRollResult LastCompletedResult { get; private set; }
         public bool IsTensionActive => activeResult != null && (activeResult.General.Tier != WeaponAffixTier.Standard || activeResult.NewPotentials.Count > 0);
+        public float TensionScale { get; private set; } = 1f;
         public event Action RevealCompleted;
 
         public void Play(WeaponAffixRollResult result)
@@ -44,6 +45,7 @@ namespace JoseonHunter.Presentation.UI
             HideImmediately();
             activeResult = result;
             completed = false;
+            TensionScale = 1f;
             elapsed = 0f;
             finishAt = DurationFor(result);
             title.text = TierName(result.General.Tier) + " AFFINITY";
@@ -106,7 +108,8 @@ namespace JoseonHunter.Presentation.UI
                 elapsed += Time.unscaledDeltaTime;
                 var progress = Mathf.Clamp01(elapsed / finishAt);
                 group.alpha = Mathf.Clamp01(progress * 7f) * Mathf.Clamp01((1f - progress) * 7f);
-                if (frame.enabled) frame.transform.localScale = Vector3.one * (1f + Mathf.Sin(progress * Mathf.PI) * .05f);
+                TensionScale = IsTensionActive ? 1f + Mathf.Sin(progress * Mathf.PI * 5f) * .08f : 1f;
+                if (frame.enabled) frame.transform.localScale = Vector3.one * TensionScale;
                 yield return null;
             }
             Complete();
@@ -116,6 +119,7 @@ namespace JoseonHunter.Presentation.UI
         {
             if (completed) return;
             completed = true;
+            TensionScale = 1f;
             LastCompletedResult = activeResult;
             routine = null;
             if (root != null) root.SetActive(false);

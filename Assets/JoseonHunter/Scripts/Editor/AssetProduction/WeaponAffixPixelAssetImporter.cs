@@ -114,11 +114,9 @@ namespace JoseonHunter.Editor.AssetProduction
                 new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.High, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("high"))),
                 new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.Perfect, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("perfect")))
             }, entries.ToArray());
-            var slotSprites = AssetDatabase.LoadAllAssetsAtPath(SlotKitPath).OfType<Sprite>()
-                .ToDictionary(sprite => sprite.name, StringComparer.Ordinal);
             catalog.SetSlotKitForImport(
-                slotSprites["reel_frame"], slotSprites["reel_frame"],
-                slotSprites["jackpot_burst_1"], slotSprites["jackpot_burst_2"], slotSprites["jackpot_burst_3"]);
+                AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("reel_frame")), AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("empty_line_frame")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("jackpot_burst_1")), AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("jackpot_burst_2")), AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("jackpot_burst_3")));
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }
@@ -137,7 +135,7 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.alphaIsTransparency = true;
             importer.spritesheet = new[]
             {
-                Slice("reel_frame", 0, 64), Slice("standard_frame", 64, 64), Slice("high_frame", 128, 64), Slice("perfect_frame", 192, 64),
+                Slice("reel_frame", 0, 64), Slice("empty_line_frame", 64, 64), Slice("high_frame", 128, 64), Slice("perfect_frame", 192, 64),
                 Slice("jackpot_burst_1", 0, 0), Slice("jackpot_burst_2", 64, 0), Slice("jackpot_burst_3", 128, 0), Slice("rarity_flash", 192, 0)
             };
             importer.SaveAndReimport();
@@ -159,5 +157,7 @@ namespace JoseonHunter.Editor.AssetProduction
 
         private static string RarityFramePath(string tier) =>
             "Assets/JoseonHunter/Art/UI/AffixJackpot/RarityFrames/" + tier + ".png";
+        private static string SlotPartPath(string name) =>
+            "Assets/JoseonHunter/Art/UI/AffixJackpot/SlotParts/" + name + ".png";
     }
 }

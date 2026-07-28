@@ -74,6 +74,10 @@ namespace JoseonHunter.Tests.PlayMode
             controller.OpenUpgradeForTests();
             controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
             yield return new WaitForSecondsRealtime(.35f);
+            var completions = 0;
+            var queuedOpens = 0;
+            affix.RevealCompleted += () => completions++;
+            controller.UpgradeOpened += _ => queuedOpens++;
             var card = choice.GetComponentInChildren<Button>(true);
             ExecuteEvents.Execute<IPointerClickHandler>(card.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
             controller.AddExperienceForTests(100);
@@ -84,8 +88,11 @@ namespace JoseonHunter.Tests.PlayMode
             yield return new WaitForSecondsRealtime(.2f);
             Assert.That(affix.IsRevealing, Is.True);
             affix.Skip();
+            affix.Skip();
             yield return new WaitForSecondsRealtime(.35f);
             Assert.That(controller.IsUpgradeOpen, Is.True);
+            Assert.That(completions, Is.EqualTo(1));
+            Assert.That(queuedOpens, Is.EqualTo(1));
             yield return null;
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
@@ -151,6 +158,20 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Play(Result(tier, potentialCount));
             Assert.That(presenter.IsTensionActive, Is.EqualTo(expected));
             Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Tension_changes_the_reel_transform_but_standard_does_not()
+        {
+            var presenter = new GameObject("Tension Motion Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.Play(Result(WeaponAffixTier.Standard, 0));
+            yield return new WaitForSecondsRealtime(.08f);
+            Assert.That(presenter.TensionScale, Is.EqualTo(1f));
+            presenter.Play(Result(WeaponAffixTier.High, 0));
+            yield return new WaitForSecondsRealtime(.08f);
+            Assert.That(presenter.TensionScale, Is.Not.EqualTo(1f));
+            Object.Destroy(presenter.gameObject);
         }
 
         private static WeaponAffixRollResult Result(WeaponAffixTier tier, int potentialCount)
