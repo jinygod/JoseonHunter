@@ -90,6 +90,25 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void EvolvedGakgungKeepsLevelFourPrimaryToOneImpactBeforeSunPiercerCadence()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bow = new GakgungExecutor(runtime, 10f, 10f, 2f, 10f, 4, evolved: true);
+            registry.Register(new TestTarget(1, new Float2(0.2f, 0f), mask));
+            registry.Register(new TestTarget(2, new Float2(0.4f, 0f), mask));
+            registry.Register(new TestTarget(3, new Float2(0.6f, 0f), mask));
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+
+            bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
+
+            Assert.That(events, Has.Count.EqualTo(1));
+        }
+
+        [Test]
         public void SingijeonUsesDensestDirectionAndConfiguredNonHomingLanes()
         {
             var mask = PixelHitMask.FromRows("1");

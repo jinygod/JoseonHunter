@@ -11,7 +11,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     {
         public const int MaxActiveProjectiles = 32;
         public const int MaxPooledProjectiles = 32;
-        public const int MaxImpactsPerProjectile = 8;
+        public const int MaxImpactsPerProjectile = 3;
+        public const int MaxExtendedImpactsPerProjectile = 8;
         private const int MaxSweepSamples = 64;
         private readonly WeaponRuntimeController runtime;
         private readonly List<Projectile> active = new List<Projectile>();
@@ -186,11 +187,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
     public readonly struct LinearProjectileSpec
     {
-        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f)
+        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f, bool allowExtendedImpacts = false)
         {
             Attack = attack ?? throw new ArgumentNullException(nameof(attack));
             WeaponId = weaponId; Position = position; Direction = direction; Speed = Mathf.Max(0.01f, speed);
-            Lifetime = Mathf.Max(0.01f, lifetime); Damage = Mathf.Max(1, damage); MaxImpacts = Mathf.Clamp(maxImpacts, 1, LinearProjectileExecutor.MaxImpactsPerProjectile);
+            Lifetime = Mathf.Max(0.01f, lifetime); Damage = Mathf.Max(1, damage);
+            MaxImpacts = Mathf.Clamp(maxImpacts, 1, allowExtendedImpacts ? LinearProjectileExecutor.MaxExtendedImpactsPerProjectile : LinearProjectileExecutor.MaxImpactsPerProjectile);
             VisualName = string.IsNullOrEmpty(visualName) ? "Linear Projectile" : visualName;
             Scale = Mathf.Max(0.01f, scale);
         }

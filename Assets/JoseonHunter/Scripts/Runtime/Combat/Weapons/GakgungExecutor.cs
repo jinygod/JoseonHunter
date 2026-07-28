@@ -79,7 +79,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var direction = Direction(context.OwnerPosition, target.WorldPosition);
             shotSequence++;
             var sunPiercer = IsEvolved && shotSequence % 4 == 0;
-            var impacts = sunPiercer ? 8 : 1 + Level;
+            var impacts = sunPiercer ? 8 : (Level == 5 ? 3 : 1);
             var damage = Mathf.CeilToInt(BaseDamage * (sunPiercer ? 3f : 1f));
             var scale = sunPiercer ? 1.75f : 1f;
             var speed = sunPiercer ? Speed * 0.7f : Speed;
@@ -87,18 +87,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastLaunchCount = Level == 5 ? 3 : 1;
             LastProjectileMaximumImpacts = impacts;
             LastProjectileScale = scale;
-            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale);
+            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer);
             if (Level != 5) return;
-            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f);
-            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f);
+            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false);
+            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false);
         }
 
-        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale)
+        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts)
         {
             var shotDirection = Rotate(direction, degrees);
             projectiles.Launch(context, new LinearProjectileSpec(
                 new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot,
-                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale));
+                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale, allowExtendedImpacts));
         }
 
         private static Float2 Direction(Float2 origin, Float2 target)

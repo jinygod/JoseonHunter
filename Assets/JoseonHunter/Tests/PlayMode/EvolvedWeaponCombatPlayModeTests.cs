@@ -124,6 +124,19 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Sun_piercer_keeps_normal_level_five_primary_pierce_before_fourth_cast()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.GakgungShot))
+            {
+                rig.AddTarget(new Vector2(3f, 0f));
+                yield return rig.AdvanceCasts(3);
+
+                Assert.That(rig.Telemetry.LastProjectileMaximumImpacts, Is.EqualTo(3));
+                Assert.That(rig.Telemetry.LastProjectileScale, Is.EqualTo(1f));
+            }
+        }
+
         private sealed class CountingExecutor : IWeaponExecutor
         {
             public int TickCount { get; private set; }
