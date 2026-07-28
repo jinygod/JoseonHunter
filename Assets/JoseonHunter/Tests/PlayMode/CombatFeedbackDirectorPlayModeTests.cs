@@ -80,6 +80,35 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [Test]
+        public void Fatal_boss_event_uses_event_time_classification_after_target_death()
+        {
+            var root = new GameObject("Feedback Director");
+            var director = root.AddComponent<CombatFeedbackDirector>();
+            var registry = new CombatTargetRegistry();
+            var target = new KillableTarget(1, isBoss: true);
+            registry.Register(target);
+            var service = new CombatDamageService(registry);
+            director.SetTargetAlivePredicate(id => id == target.RuntimeId && target.IsAlive);
+            director.Bind(service);
+
+            try
+            {
+                Assert.That(service.TryApply(WeaponDamageRequest.Create(1, WeaponId.HwandoFlyingBlade, target, 10, false,
+                    new Float2(0f, 0f), ContactPhase.Direct, 1), out var confirmed), Is.True);
+                Assert.That(confirmed.IsBossTarget, Is.True);
+                Assert.That(target.IsAlive, Is.False);
+                var flash = root.transform.Find("Contact Flash");
+                Assert.That(flash, Is.Not.Null);
+                Assert.That(flash.localScale.x, Is.EqualTo(.56f).Within(.001f));
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
         private static void TriggerCriticalImpulse(CombatFeedbackDirector director)
         {
             var registry = new CombatTargetRegistry();
@@ -102,11 +131,12 @@ namespace JoseonHunter.Tests.PlayMode
         private sealed class KillableTarget : ICombatTarget
         {
             private int health = 10;
-            public KillableTarget(int runtimeId) { RuntimeId = runtimeId; }
+            private readonly bool isBoss;
+            public KillableTarget(int runtimeId, bool isBoss = false) { RuntimeId = runtimeId; this.isBoss = isBoss; }
             public int RuntimeId { get; }
             public bool IsAlive => health > 0;
             public int Health => health;
-            public bool IsBoss => false;
+            public bool IsBoss => isBoss;
             public bool IsElite => false;
             public float ThreatScore => 0f;
             public Float2 WorldPosition => new Float2(0f, 0f);

@@ -26,6 +26,20 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ConfirmedFatalBossHitPreservesEventTimeBossClassification()
+        {
+            var target = new FakeCombatTarget(7, 9, isBoss: true);
+            var registry = new CombatTargetRegistry();
+            registry.Register(target);
+            var service = new CombatDamageService(registry);
+
+            Assert.That(service.TryApply(WeaponDamageRequest.Create(12, WeaponId.HwandoFlyingBlade, target, 9, false,
+                new Float2(3f, 4f), ContactPhase.Outbound, 44), out var confirmed), Is.True);
+            Assert.That(target.IsAlive, Is.False);
+            Assert.That(confirmed.IsBossTarget, Is.True);
+        }
+
+        [Test]
         public void RegisteredTargetRejectsDuplicateContactBeforeASecondMutation()
         {
             var registry = new CombatTargetRegistry();
@@ -69,11 +83,12 @@ namespace JoseonHunter.Tests.EditMode
 
         private sealed class FakeCombatTarget : ICombatTarget
         {
-            public FakeCombatTarget(int runtimeId, int health) { RuntimeId = runtimeId; Health = health; }
+            private readonly bool isBoss;
+            public FakeCombatTarget(int runtimeId, int health, bool isBoss = false) { RuntimeId = runtimeId; Health = health; this.isBoss = isBoss; }
             public int RuntimeId { get; }
             public bool IsAlive => Health > 0;
             public int Health { get; private set; }
-            public bool IsBoss => false;
+            public bool IsBoss => isBoss;
             public bool IsElite => false;
             public float ThreatScore => 0f;
             public Float2 WorldPosition => new Float2(0f, 0f);

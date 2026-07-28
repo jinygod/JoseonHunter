@@ -41,9 +41,7 @@ namespace JoseonHunter.Presentation.Combat
             boundService = service;
             if (boundService == null) return;
 
-            pool.SetBossTargetPredicate(controller.IsBossCombatTarget);
             pool.Bind(boundService);
-            feedbackDirector.SetBossTargetPredicate(controller.IsBossCombatTarget);
             feedbackDirector.SetTargetAlivePredicate(controller.IsCombatTargetAlive);
             feedbackDirector.Bind(boundService);
         }

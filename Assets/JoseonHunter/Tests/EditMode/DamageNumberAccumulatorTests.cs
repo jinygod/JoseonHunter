@@ -45,10 +45,19 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(accumulator.FlushReady(1.52f).Single().DisplayedDamage, Is.EqualTo(6));
         }
 
-        private static ConfirmedDamageEvent Event(int source, int target, int damage, float time, WeaponId weapon = default, bool critical = false)
+        [Test]
+        public void BossClassificationFlowsToTheDelayedDisplay()
+        {
+            var accumulator = new DamageNumberAccumulator(0.25f);
+            accumulator.Add(Event(1, 2, 4, 0f, boss: true), 0f);
+
+            Assert.That(accumulator.FlushReady(0.25f).Single().IsBossTarget, Is.True);
+        }
+
+        private static ConfirmedDamageEvent Event(int source, int target, int damage, float time, WeaponId weapon = default, bool critical = false, bool boss = false)
         {
             if (weapon.Equals(default(WeaponId))) weapon = WeaponId.HwandoFlyingBlade;
-            return new ConfirmedDamageEvent(source, weapon, target, new DamageResult(damage, critical), new Float2(damage, target), ContactPhase.Tick, (int)(time * 100f));
+            return new ConfirmedDamageEvent(source, weapon, target, new DamageResult(damage, critical), new Float2(damage, target), ContactPhase.Tick, (int)(time * 100f), boss);
         }
     }
 }

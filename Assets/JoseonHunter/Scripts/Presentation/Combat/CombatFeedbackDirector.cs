@@ -44,7 +44,7 @@ namespace JoseonHunter.Presentation.Combat
     {
         public static FeedbackProfile Resolve(FeedbackRequest request)
         {
-            var intensity = request.Killed || request.Critical ? 80 : 70;
+            var intensity = request.Boss && request.Killed ? 100 : request.Killed || request.Critical ? 80 : 70;
             if (request.ReducedEffects) return new FeedbackProfile(intensity, 0f, 0f, true);
             return intensity == 80
                 ? new FeedbackProfile(80, 0.035f, 0.08f, true)
@@ -67,7 +67,6 @@ namespace JoseonHunter.Presentation.Combat
 
         private readonly List<ContactFlash> flashes = new List<ContactFlash>();
         private CombatDamageService damageService;
-        private Func<int, bool> isBossTarget;
         private Func<int, bool> isTargetAlive;
         private Texture2D flashTexture;
         private Sprite flashSprite;
@@ -151,7 +150,6 @@ namespace JoseonHunter.Presentation.Combat
             RestoreHitStop();
         }
 
-        public void SetBossTargetPredicate(Func<int, bool> predicate) => isBossTarget = predicate;
         public void SetTargetAlivePredicate(Func<int, bool> predicate) => isTargetAlive = predicate;
 
         private void Subscribe()
@@ -167,7 +165,7 @@ namespace JoseonHunter.Presentation.Combat
         private void OnDamageConfirmed(ConfirmedDamageEvent confirmed)
         {
             var request = new FeedbackRequest(confirmed.IsCritical, isTargetAlive != null && !isTargetAlive(confirmed.TargetRuntimeId),
-                isBossTarget != null && isBossTarget(confirmed.TargetRuntimeId), ReducedEffects);
+                confirmed.IsBossTarget, ReducedEffects);
             var profile = CombatFeedbackBudget.Resolve(request);
             if (profile.ShowContactFlash) ShowFlash(confirmed.ContactPoint, profile.Intensity);
             if (profile.HitStopSeconds > 0f) BeginHitStop(profile.HitStopSeconds);
@@ -235,8 +233,8 @@ namespace JoseonHunter.Presentation.Combat
         {
             var flash = flashes.Find(candidate => !candidate.Renderer.gameObject.activeSelf) ?? flashes[0];
             flash.Renderer.transform.position = new Vector3(contactPoint.X, contactPoint.Y, 0f);
-            flash.Renderer.transform.localScale = Vector3.one * (intensity == 80 ? .42f : .30f);
-            flash.Renderer.color = intensity == 80 ? new Color(1f, .79f, .24f, .9f) : new Color(1f, 1f, 1f, .7f);
+            flash.Renderer.transform.localScale = Vector3.one * (intensity >= 100 ? .56f : intensity == 80 ? .42f : .30f);
+            flash.Renderer.color = intensity >= 100 ? new Color(1f, .42f, .12f, .95f) : intensity == 80 ? new Color(1f, .79f, .24f, .9f) : new Color(1f, 1f, 1f, .7f);
             flash.Remaining = flash.Lifetime = FlashLifetime;
             flash.Renderer.gameObject.SetActive(true);
         }

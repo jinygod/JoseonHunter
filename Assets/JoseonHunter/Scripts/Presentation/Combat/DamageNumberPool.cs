@@ -21,7 +21,6 @@ namespace JoseonHunter.Presentation.Combat
         private readonly Stack<DamageNumberPresenter> available = new Stack<DamageNumberPresenter>();
         private readonly HashSet<DamageNumberPresenter> active = new HashSet<DamageNumberPresenter>();
         private CombatDamageService damageService;
-        private Func<int, bool> isBossTarget;
         private int totalInstances;
 
         public int ActiveCount => active.Count;
@@ -63,11 +62,6 @@ namespace JoseonHunter.Presentation.Combat
             Clear();
         }
 
-        public void SetBossTargetPredicate(Func<int, bool> predicate)
-        {
-            isBossTarget = predicate;
-        }
-
         public void Clear()
         {
             accumulator.Clear();
@@ -101,7 +95,7 @@ namespace JoseonHunter.Presentation.Combat
             if (presenter == null) return;
 
             active.Add(presenter);
-            presenter.Play(display, isBossTarget != null && isBossTarget(display.TargetRuntimeId), AccentFor(display.WeaponId), Release);
+            presenter.Play(display, display.IsBossTarget, AccentFor(display.WeaponId), Release);
         }
 
         private DamageNumberPresenter Rent()

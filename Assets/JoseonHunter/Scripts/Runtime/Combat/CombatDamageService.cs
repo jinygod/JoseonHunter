@@ -70,7 +70,7 @@ namespace JoseonHunter.Runtime.Combat
             if (!attack.TryRecordHit(request.Target.RuntimeId, request.Phase, request.HitTime)) return false;
 
             request.Target.ApplyResolvedDamage(result.FinalDamage);
-            confirmed = new ConfirmedDamageEvent(attack.InstanceId, request.WeaponId, request.Target.RuntimeId, result, request.ContactPoint, request.Phase, request.SimulationTick);
+            confirmed = new ConfirmedDamageEvent(attack.InstanceId, request.WeaponId, request.Target.RuntimeId, result, request.ContactPoint, request.Phase, request.SimulationTick, request.Target.IsBoss);
             DamageConfirmed?.Invoke(confirmed);
             return true;
         }

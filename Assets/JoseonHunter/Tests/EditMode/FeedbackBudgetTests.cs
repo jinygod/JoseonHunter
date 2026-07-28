@@ -26,5 +26,14 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(profile.CameraImpulse, Is.EqualTo(0f));
             Assert.That(profile.HitStopSeconds, Is.EqualTo(0f));
         }
+
+        [Test]
+        public void Fatal_boss_contact_uses_maximum_feedback_intensity()
+        {
+            var profile = CombatFeedbackBudget.Resolve(new FeedbackRequest(
+                critical: false, killed: true, boss: true, reducedEffects: false));
+
+            Assert.That(profile.Intensity, Is.EqualTo(100));
+        }
     }
 }

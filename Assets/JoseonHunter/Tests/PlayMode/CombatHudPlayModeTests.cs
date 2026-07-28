@@ -58,6 +58,26 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Run_reset_closes_the_bootstrap_owned_upgrade_presentation()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(choice, Is.Not.Null);
+
+            controller.OpenUpgradeForTests();
+            yield return new WaitForSecondsRealtime(.35f);
+            Assert.That(choice.IsOpen, Is.True);
+
+            controller.ResetRunForTests();
+            Assert.That(choice.IsOpen, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator Bootstrap_creates_one_portrait_hud_with_a_safe_area_container()
         {
             yield return DestroyBootstraps();

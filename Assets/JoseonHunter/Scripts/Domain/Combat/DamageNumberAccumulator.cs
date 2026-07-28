@@ -6,13 +6,14 @@ namespace JoseonHunter.Domain.Combat
 {
     public readonly struct DamageNumberDisplay
     {
-        public DamageNumberDisplay(int displayedDamage, Float2 contactPoint, bool isCritical, WeaponId weaponId, int targetRuntimeId)
+        public DamageNumberDisplay(int displayedDamage, Float2 contactPoint, bool isCritical, WeaponId weaponId, int targetRuntimeId, bool isBossTarget)
         {
             DisplayedDamage = displayedDamage;
             ContactPoint = contactPoint;
             IsCritical = isCritical;
             WeaponId = weaponId;
             TargetRuntimeId = targetRuntimeId;
+            IsBossTarget = isBossTarget;
         }
 
         public int DisplayedDamage { get; }
@@ -20,6 +21,7 @@ namespace JoseonHunter.Domain.Combat
         public bool IsCritical { get; }
         public WeaponId WeaponId { get; }
         public int TargetRuntimeId { get; }
+        public bool IsBossTarget { get; }
     }
 
     /// <summary>Coalesces nearby confirmed hits without changing their combat results.</summary>
@@ -114,6 +116,7 @@ namespace JoseonHunter.Domain.Combat
                 IsCritical = confirmed.IsCritical;
                 WeaponId = confirmed.WeaponId;
                 TargetRuntimeId = confirmed.TargetRuntimeId;
+                IsBossTarget = confirmed.IsBossTarget;
                 StartTime = startTime;
             }
 
@@ -122,6 +125,7 @@ namespace JoseonHunter.Domain.Combat
             public bool IsCritical;
             public WeaponId WeaponId;
             public int TargetRuntimeId;
+            public bool IsBossTarget;
             public float StartTime;
 
             public void Add(ConfirmedDamageEvent confirmed)
@@ -129,9 +133,10 @@ namespace JoseonHunter.Domain.Combat
                 Damage = SaturatingAdd(Damage, confirmed.FinalDamage);
                 ContactPoint = confirmed.ContactPoint;
                 IsCritical |= confirmed.IsCritical;
+                IsBossTarget |= confirmed.IsBossTarget;
             }
 
-            public DamageNumberDisplay ToDisplay() => new DamageNumberDisplay(Damage, ContactPoint, IsCritical, WeaponId, TargetRuntimeId);
+            public DamageNumberDisplay ToDisplay() => new DamageNumberDisplay(Damage, ContactPoint, IsCritical, WeaponId, TargetRuntimeId, IsBossTarget);
 
             private static int SaturatingAdd(int left, int right) => right > 0 && left > int.MaxValue - right ? int.MaxValue : left + right;
         }
