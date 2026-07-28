@@ -217,8 +217,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!PixelMaskContactService.TryFindContact(compressedMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 var multiplier = 2f;
                 if (Potentials.HasPotential(WeaponPotentialId.ThunderOverchargedCore)) multiplier *= 1f + Mathf.Min(.80f, bomb.PulledTargetIds.Count * .08f);
-                runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _) &&
+                    Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
+                    bomb.LightningRodTarget = target;
             }
+            if (Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var earthMask))
+                delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), 0, bomb.Landing, earthMask, .35f, .65f, ContactPhase.PotentialBlast));
+            if (bomb.LightningRodTarget != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderLightningRod, out _, out var rodMask))
+                delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), bomb.LightningRodTarget.RuntimeId, bomb.Landing, rodMask, .45f, .90f, ContactPhase.PotentialChain, true));
         }
 
         private bool SweepRing(Bomb bomb, float desiredRadius, in WeaponExecutionContext context)

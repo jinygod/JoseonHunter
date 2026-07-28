@@ -54,9 +54,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 var child = splitArrows[index]; child.Delay -= Mathf.Max(0f, deltaTime);
                 if (child.Delay > 0f) { splitArrows[index] = child; continue; }
-                if (runtime.Targets.TryGet(child.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
-                    PixelMaskContactService.TryFindContact(child.Mask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack, WeaponId.GakgungShot, target, Mathf.CeilToInt(BaseDamage * .45f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                var travel = Mathf.Min(child.RemainingRange, Speed * Mathf.Max(0f, deltaTime));
+                child.Position = new Float2(child.Position.X + child.Direction.X * travel, child.Position.Y + child.Direction.Y * travel);
+                child.RemainingRange -= travel;
+                runtime.Targets.CopyTo(targets);
+                var hit = false;
+                foreach (var target in targets)
+                {
+                    if (target == null || !target.IsAlive || target.HurtMask == null || !PixelMaskContactService.TryFindContact(child.Mask, PixelMaskTransform.Translation(child.Position.X, child.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                    hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack, WeaponId.GakgungShot, target, Mathf.CeilToInt(BaseDamage * .45f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                    if (hit) break;
+                }
+                if (!hit && child.RemainingRange > 0f) { splitArrows[index] = child; continue; }
                 runtime.DamageService.RetireAttack(child.Attack.InstanceId); splitArrows.RemoveAt(index);
             }
         }
@@ -103,15 +112,22 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastLaunchCount = Level == 5 ? 3 : 1;
             LastProjectileMaximumImpacts = impacts;
             LastProjectileScale = scale;
-            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer, true);
+            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer, true, targetDistance);
             if (Level != 5) return;
-            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false);
-            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false);
+            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance);
+            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance);
         }
 
-        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary)
+        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary, float targetDistance)
         {
             var shotDirection = Rotate(direction, degrees);
+            if (primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw))
+            {
+                var progress = Mathf.Clamp01(targetDistance / Mathf.Max(.01f, Range * .8f));
+                damage = Mathf.CeilToInt(damage * (1f + .6f * progress));
+                scale *= 1f + .35f * progress;
+                LastProjectileScale = scale;
+            }
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range);
             projectiles.Launch(context, new LinearProjectileSpec(
@@ -126,24 +142,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungArmorBreakArrowhead, out _, out var armorMask) && runtime.Targets.TryGet(damage.TargetRuntimeId, out var armorTarget) && armorTarget != null && armorTarget.HurtMask != null &&
                 PixelMaskContactService.TryFindContact(armorMask, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), armorTarget.HurtMask, armorTarget.HurtMaskTransform, out _))
                 runtime.AffixStatuses.ApplyVulnerability(damage.TargetRuntimeId, damage.ContactPoint, 2f, true);
-            if (Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out var drawMask) &&
-                runtime.Targets.TryGet(damage.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
-                PixelMaskContactService.TryFindContact(drawMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
-            {
-                var dx = damage.ContactPoint.X - arrow.Start.X; var dy = damage.ContactPoint.Y - arrow.Start.Y;
-                var progress = Mathf.Clamp01(Mathf.Sqrt(dx * dx + dy * dy) / Mathf.Max(.01f, arrow.Range) / .8f);
-                var bonus = .6f * progress;
-                if (bonus > 0f)
-                {
-                    var bonusAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(bonusAttack, WeaponId.GakgungShot, target, Mathf.CeilToInt(BaseDamage * bonus), false, contact, ContactPhase.PotentialChain, damage.SimulationTick), out _);
-                    runtime.DamageService.RetireAttack(bonusAttack.InstanceId);
-                }
-            }
             if (Potentials.HasPotential(WeaponPotentialId.GakgungSplitFletching) && firstImpacts.Add(-damage.AttackInstanceId) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungSplitFletching, out _, out var splitMask))
             {
-                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.TargetRuntimeId, splitMask));
-                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.TargetRuntimeId, splitMask));
+                var vector = new Float2(damage.ContactPoint.X - arrow.Start.X, damage.ContactPoint.Y - arrow.Start.Y);
+                var length = Mathf.Max(.001f, Mathf.Sqrt(vector.X * vector.X + vector.Y * vector.Y));
+                var direction = new Float2(vector.X / length, vector.Y / length);
+                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.ContactPoint, Rotate(direction, -25f), splitMask, arrow.Range * .65f));
+                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.ContactPoint, Rotate(direction, 25f), splitMask, arrow.Range * .65f));
             }
         }
 
@@ -158,6 +163,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return new Float2(value.X * cosine - value.Y * sine, value.X * sine + value.Y * cosine);
         }
         private readonly struct ArrowInfo { public ArrowInfo(Float2 start, float range) { Start = start; Range = range; } public Float2 Start { get; } public float Range { get; } }
-        private struct SplitArrow { public SplitArrow(AttackInstance attack, int targetRuntimeId, PixelHitMask mask) { Attack = attack; TargetRuntimeId = targetRuntimeId; Mask = mask; Delay = .05f; } public AttackInstance Attack; public int TargetRuntimeId; public PixelHitMask Mask; public float Delay; }
+        private struct SplitArrow { public SplitArrow(AttackInstance attack, Float2 position, Float2 direction, PixelHitMask mask, float range) { Attack = attack; Position = position; Direction = direction; Mask = mask; RemainingRange = range; Delay = .05f; } public AttackInstance Attack; public Float2 Position; public Float2 Direction; public PixelHitMask Mask; public float RemainingRange; public float Delay; }
     }
 }
