@@ -20,11 +20,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<string> stateOrder = new List<string>();
         private float cooldown;
 
-        public ThunderBombExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float fuseDuration, float blastRadius, int level, bool evolved = false)
+        public ThunderBombExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float fuseDuration, float blastRadius, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds); Range = Mathf.Max(0.01f, range);
-            LobDuration = Mathf.Max(0.01f, lobDuration); FuseDuration = Mathf.Max(0f, fuseDuration); BlastRadius = Mathf.Max(0.01f, blastRadius); Level = Mathf.Clamp(level, 1, 5);
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range));
+            LobDuration = Mathf.Max(0.01f, modifiers.ScaleDuration(lobDuration)); FuseDuration = Mathf.Max(0f, fuseDuration); BlastRadius = Mathf.Max(0.01f, modifiers.ScaleArea(blastRadius)); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
         }
 
@@ -36,6 +36,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float BlastRadius { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public int ActiveBombCount => bombs.Count;
         public ThunderBombState LastState { get; private set; } = ThunderBombState.Complete;
         public Float2 LastLandingPosition { get; private set; }

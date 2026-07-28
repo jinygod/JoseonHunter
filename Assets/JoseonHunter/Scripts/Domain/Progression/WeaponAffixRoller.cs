@@ -21,6 +21,16 @@ namespace JoseonHunter.Domain.Progression
 
     public static class WeaponAffixRoller
     {
+        public static int StableSeed(WeaponId weaponId, int level, int kills, int ordinal)
+        {
+            unchecked
+            {
+                var hash = 17;
+                foreach (var character in weaponId.Value) hash = hash * 31 + character;
+                return (((hash * 31) + level) * 31 + kills) * 31 + ordinal;
+            }
+        }
+
         public static WeaponAffixRollResult RollAndApply(WeaponRunAffixState state, WeaponId weaponId, IAffixRandom random)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));

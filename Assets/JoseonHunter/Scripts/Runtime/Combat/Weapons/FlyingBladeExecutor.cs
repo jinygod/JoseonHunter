@@ -17,10 +17,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
         private float cooldown;
 
-        public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, bool evolved = false)
+        public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            Reconfigure(baseDamage, cooldownSeconds, range, speed, bladeCount);
+            Reconfigure(modifiers.ScaleDamage(baseDamage), modifiers.ScaleCooldown(cooldownSeconds), modifiers.ScaleArea(range), modifiers.ScaleSpeed(speed), bladeCount);
+            Potentials = modifiers;
             IsEvolved = evolved;
         }
 
@@ -39,6 +40,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Speed { get; private set; }
         public int BladeCount { get; private set; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public int ActiveBladeCount => active.Count;
         public int PooledBladeCount => pool.Count;
         public int LastVolleyLaunchCount { get; private set; }

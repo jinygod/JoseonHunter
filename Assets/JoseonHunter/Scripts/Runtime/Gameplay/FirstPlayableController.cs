@@ -33,6 +33,11 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly HashSet<string> unlockedUpgradeIds = new HashSet<string>();
         private readonly HashSet<string> acquiredEvolutionIds = new HashSet<string>();
         private readonly WeaponEvolutionState evolutionState = new WeaponEvolutionState();
+        private readonly WeaponRunAffixState weaponAffixes = new WeaponRunAffixState();
+        private int affixRollOrdinal;
+#if UNITY_INCLUDE_TESTS
+        private Func<WeaponId, int, int, int, IAffixRandom> affixRandomFactoryForTests;
+#endif
         private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
         private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
@@ -105,6 +110,16 @@ namespace JoseonHunter.Runtime.Gameplay
             RebuildWeaponExecutorsForLevel();
         }
         public int WeaponLevelForTests(WeaponId weaponId) => weaponLevels[weaponId.Value];
+        public void SetAffixRandomFactoryForTests(Func<WeaponId, int, int, int, IAffixRandom> factory) => affixRandomFactoryForTests = factory;
+        public WeaponRunAffixProfile AffixProfileForTests(WeaponId weaponId) => weaponAffixes.TryProfileFor(weaponId, out var profile) ? new WeaponRunAffixProfile(profile.GeneralRolls, profile.PotentialIds) : null;
+        public WeaponAffixRollResult RollWeaponAffixForTests(WeaponId weaponId) => RollWeaponAffix(weaponId);
+        public void AcquireEvolutionForTests(string evolutionId)
+        {
+            if (!WeaponEvolutionCatalog.TryGet(evolutionId, out var evolution)) return;
+            acquiredEvolutionIds.Add(evolutionId);
+            evolutionState.SetEvolved(evolution.RequiredWeaponId);
+            RebuildWeaponExecutorsForLevel();
+        }
         public void UnlockEvolutionForTests(string evolutionId) => unlockedUpgradeIds.Add(evolutionId);
         public ICombatTarget SpawnEnemyForTests(Vector2 position)
         {
@@ -435,6 +450,8 @@ namespace JoseonHunter.Runtime.Gameplay
             supportLevels.Clear();
             unlockedUpgradeIds.Clear();
             acquiredEvolutionIds.Clear();
+            weaponAffixes.Clear();
+            affixRollOrdinal = 0;
             evolutionState.Clear();
             foreach (var evolution in WeaponEvolutionCatalog.All) unlockedUpgradeIds.Add(evolution.Id);
             combatTargets = new CombatTargetRegistry();
@@ -766,14 +783,15 @@ namespace JoseonHunter.Runtime.Gameplay
                 var data = definition.Levels[Mathf.Clamp(ownedLevel - 1, 0, 4)];
                 IWeaponExecutor executor;
                 var evolved = evolutionState.IsEvolved(id);
-                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, evolved);
-                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved);
-                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved);
-                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved);
-                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved);
-                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved);
-                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved);
-                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved);
+                var modifiers = WeaponRuntimeModifiers.From(weaponAffixes.TryProfileFor(id, out var profile) ? profile : null);
+                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, evolved, modifiers);
+                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved, modifiers);
                 else throw new InvalidOperationException($"No executor is available for '{id}'.");
                 weaponRuntime.Register(id, executor);
                 registeredWeaponIds.Add(id);
@@ -1036,6 +1054,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (offer.Kind == UpgradeKind.Weapon)
             {
                 weaponLevels[offer.Id] = offer.NextLevel;
+                var affixResult = RollWeaponAffix(new WeaponId(offer.Id));
                 RebuildWeaponExecutorsForLevel();
                 return new ProgressionRewardEvent(offer.Id, offer.Id, offer.NextLevel,
                     offer.NextLevel == 1 ? ProgressionRewardKind.NewWeapon : ProgressionRewardKind.WeaponLevel,
@@ -1094,6 +1113,30 @@ namespace JoseonHunter.Runtime.Gameplay
             return id;
         }
 
+        private WeaponAffixRollResult RollWeaponAffix(WeaponId weaponId)
+        {
+            var ordinal = affixRollOrdinal++;
+#if UNITY_INCLUDE_TESTS
+            var testRandom = affixRandomFactoryForTests?.Invoke(weaponId, level, kills, ordinal);
+            if (testRandom != null) return WeaponAffixRoller.RollAndApply(weaponAffixes, weaponId, testRandom);
+#endif
+            return WeaponAffixRoller.RollAndApply(weaponAffixes, weaponId,
+                new SeededAffixRandom(WeaponAffixRoller.StableSeed(weaponId, level, kills, ordinal)));
+        }
+
+        private string GeneralAffixSummary(WeaponId weaponId)
+        {
+            if (!weaponAffixes.TryProfileFor(weaponId, out var profile) || profile.GeneralRolls.Count == 0) return string.Empty;
+            var modifiers = WeaponRuntimeModifiers.From(profile);
+            var values = new List<string>();
+            if (modifiers.DamageBonus != 0f) values.Add($"Damage +{Mathf.RoundToInt(modifiers.DamageBonus * 100f)}%");
+            if (modifiers.CooldownReduction != 0f) values.Add($"Cooldown -{Mathf.RoundToInt(modifiers.CooldownReduction * 100f)}%");
+            if (modifiers.AreaBonus != 0f) values.Add($"Area +{Mathf.RoundToInt(modifiers.AreaBonus * 100f)}%");
+            if (modifiers.SpeedBonus != 0f) values.Add($"Speed +{Mathf.RoundToInt(modifiers.SpeedBonus * 100f)}%");
+            if (modifiers.DurationBonus != 0f) values.Add($"Duration +{Mathf.RoundToInt(modifiers.DurationBonus * 100f)}%");
+            return string.Join(" · ", values);
+        }
+
         private FirstPlayableUiState BuildUiState()
         {
             var weapons = new List<WeaponSlotView>(weaponLevels.Count);
@@ -1103,7 +1146,9 @@ namespace JoseonHunter.Runtime.Gameplay
                     weapon.Key,
                     WeaponDisplayName(weapon.Key),
                     weapon.Value,
-                    ResolveWeaponSprite(new WeaponId(weapon.Key))));
+                    ResolveWeaponSprite(new WeaponId(weapon.Key)),
+                    GeneralAffixSummary(new WeaponId(weapon.Key)),
+                    weaponAffixes.TryProfileFor(new WeaponId(weapon.Key), out var profile) ? profile.PotentialIds : null));
             }
 
             var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null);

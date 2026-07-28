@@ -19,11 +19,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float cooldown;
         private AttackInstance bindingAttack;
 
-        public TalismanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int hopCount, int level, bool evolved = false)
+        public TalismanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int hopCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds);
-            Range = Mathf.Max(0.01f, range); Speed = Mathf.Max(0.01f, speed);
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
+            Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); Potentials = modifiers;
             HopCount = Mathf.Max(1, hopCount); Level = Mathf.Clamp(level, 1, 5);
             IsEvolved = evolved;
         }
@@ -35,6 +35,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int HopCount { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public int ActiveCastCount => active.Count;
         public int LastLaunchCount { get; private set; }
         public int TotalLaunchedTalismanCount { get; private set; }

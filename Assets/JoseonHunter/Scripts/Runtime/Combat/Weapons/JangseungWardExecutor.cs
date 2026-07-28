@@ -30,18 +30,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float cooldown;
         private float elapsedSeconds;
 
-        public JangseungWardExecutor(WeaponRuntimeController runtime, PixelHitMask wardSegmentMask, float baseDamage, float cooldownSeconds, float radius, int postCount, int setCapacity, float reentryInterval, int level, bool evolved = false)
+        public JangseungWardExecutor(WeaponRuntimeController runtime, PixelHitMask wardSegmentMask, float baseDamage, float cooldownSeconds, float radius, int postCount, int setCapacity, float reentryInterval, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             segmentMask = wardSegmentMask ?? throw new ArgumentNullException(nameof(wardSegmentMask));
-            BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds); Radius = Mathf.Max(0.05f, radius);
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Radius = Mathf.Max(0.05f, modifiers.ScaleArea(radius)); Potentials = modifiers;
             PostCount = Mathf.Clamp(postCount, 2, 4); SetCapacity = Mathf.Clamp(setCapacity, 1, MaximumWardSets);
             ReentryInterval = Mathf.Max(0f, reentryInterval); Level = Mathf.Clamp(level, 1, 5);
             IsEvolved = evolved;
         }
 
-        public JangseungWardExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float radius, int postCount, int setCapacity, float reentryInterval, int level, bool evolved = false)
-            : this(runtime, PixelHitMask.FromRows("111", "111", "111"), baseDamage, cooldownSeconds, radius, postCount, setCapacity, reentryInterval, level, evolved) { }
+        public JangseungWardExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float radius, int postCount, int setCapacity, float reentryInterval, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
+            : this(runtime, PixelHitMask.FromRows("111", "111", "111"), baseDamage, cooldownSeconds, radius, postCount, setCapacity, reentryInterval, level, evolved, modifiers) { }
 
         public float BaseDamage { get; }
         public float CooldownSeconds { get; }
@@ -51,6 +51,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float ReentryInterval { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public int ActiveWardSetCount => sets.Count;
         public int ActivePostCount { get { var count = 0; foreach (var set in sets) count += set.Posts.Count; return count; } }
         public int EvictedWardSetCount { get; private set; }

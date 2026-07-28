@@ -55,15 +55,20 @@ namespace JoseonHunter.Runtime.Gameplay
 
     public readonly struct WeaponSlotView
     {
-        public WeaponSlotView(string id, string displayName, int level, Sprite icon)
+        public WeaponSlotView(string id, string displayName, int level, Sprite icon,
+            string generalAffixSummary = null, IEnumerable<WeaponPotentialId> potentialIds = null)
         {
             Id = id; DisplayName = displayName; Level = level; Icon = icon;
+            GeneralAffixSummary = generalAffixSummary ?? string.Empty;
+            PotentialIds = Array.AsReadOnly((potentialIds ?? Array.Empty<WeaponPotentialId>()).ToArray());
         }
 
         public string Id { get; }
         public string DisplayName { get; }
         public int Level { get; }
         public Sprite Icon { get; }
+        public string GeneralAffixSummary { get; }
+        public IReadOnlyList<WeaponPotentialId> PotentialIds { get; }
     }
 
     public sealed class UpgradeChoiceState
@@ -83,10 +88,10 @@ namespace JoseonHunter.Runtime.Gameplay
     public readonly struct ProgressionRewardEvent
     {
         public ProgressionRewardEvent(string id, string weaponId, int newLevel, ProgressionRewardKind kind,
-            string displayName, string changeSummary, Sprite icon)
+            string displayName, string changeSummary, Sprite icon, WeaponAffixRollResult affixResult = null)
         {
             Id = id; WeaponId = weaponId; NewLevel = newLevel; Kind = kind; DisplayName = displayName;
-            ChangeSummary = changeSummary; Icon = icon;
+            ChangeSummary = changeSummary; Icon = icon; AffixResult = affixResult;
         }
 
         public string Id { get; }
@@ -96,5 +101,6 @@ namespace JoseonHunter.Runtime.Gameplay
         public string DisplayName { get; }
         public string ChangeSummary { get; }
         public Sprite Icon { get; }
+        public WeaponAffixRollResult AffixResult { get; }
     }
 }

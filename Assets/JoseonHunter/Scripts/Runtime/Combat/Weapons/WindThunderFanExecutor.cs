@@ -28,10 +28,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float inboundPauseRemaining;
         private Float2 lightningDirection;
 
-        public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false)
+        public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds); Range = Mathf.Max(0.01f, range);
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Potentials = modifiers;
             Knockback = Mathf.Max(0f, knockback); MarkedTargetCap = Mathf.Max(1, markedTargetCap); Level = Mathf.Clamp(level, 1, 5);
             IsEvolved = evolved;
             State = WindThunderFanState.Complete;
@@ -44,6 +44,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int MarkedTargetCap { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public WindThunderFanState State { get; private set; }
         public int LastWindContactCount { get; private set; }
         public int LastLightningContactCount { get; private set; }

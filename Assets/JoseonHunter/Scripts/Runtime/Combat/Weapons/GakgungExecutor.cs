@@ -14,12 +14,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float cooldown;
         private int shotSequence;
 
-        public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false)
+        public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             projectiles = new LinearProjectileExecutor(runtime);
-            BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds);
-            Range = Mathf.Max(0.01f, range); Speed = Mathf.Max(0.01f, speed); Level = Mathf.Clamp(level, 1, 5);
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
+            Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
         }
 
@@ -29,6 +29,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Speed { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public int LastSelectedTargetRuntimeId { get; private set; }
         public int LastLaunchCount { get; private set; }
         public int ActiveProjectileCount => projectiles.ActiveCount;

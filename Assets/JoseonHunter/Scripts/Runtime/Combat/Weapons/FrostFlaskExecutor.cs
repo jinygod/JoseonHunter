@@ -28,11 +28,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly PixelHitMask spikeMask = CreateSpikeMask();
         private float cooldown;
 
-        public FrostFlaskExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float duration, float radius, int fieldCapacity, int level, bool evolved = false)
+        public FrostFlaskExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float duration, float radius, int fieldCapacity, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds); Range = Mathf.Max(0.01f, range);
-            LobDuration = Mathf.Max(0.01f, lobDuration); Duration = Mathf.Max(0.01f, duration); Radius = Mathf.Max(0.01f, radius); FieldCapacity = Mathf.Clamp(fieldCapacity, 1, MaximumFields); Level = Mathf.Clamp(level, 1, 5);
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range));
+            LobDuration = Mathf.Max(0.01f, modifiers.ScaleDuration(lobDuration)); Duration = Mathf.Max(0.01f, modifiers.ScaleDuration(duration)); Radius = Mathf.Max(0.01f, modifiers.ScaleArea(radius)); FieldCapacity = Mathf.Clamp(fieldCapacity, 1, MaximumFields); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
         }
 
@@ -45,6 +45,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int FieldCapacity { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
+        public WeaponRuntimeModifiers Potentials { get; }
         public int ActiveFieldCount => fields.Count;
         public int ExpiredFieldCount { get; private set; }
         public int LastStoredFrozenTargetCount { get; private set; }
