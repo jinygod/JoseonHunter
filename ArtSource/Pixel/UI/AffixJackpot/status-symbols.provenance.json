@@ -1,1 +1,1 @@
-{"provider":"PixelLab","promptRevision":"affix-status-symbols-v1","status":"spend_locked_not_generated","manifest":"Docs/Assets/pixellab-affix-asset-manifest.md","approvedDestination":"ArtSource/Pixel/UI/AffixJackpot/status-symbols.png"}
+{"provider":"PixelLab","job":"42e2f5bc-72a1-46f8-bde4-cde5133cfe4d","model":"pixen","promptRevision":"affix-status-symbols-v1","cost":1,"status":"approved","dimensions":"256x128","alphaValues":[0,255],"manifest":"Docs/Assets/pixellab-affix-asset-manifest.md","approvedDestination":"ArtSource/Pixel/UI/AffixJackpot/status-symbols.png"}

@@ -1,2 +1,7 @@
 timestamp,job_id,tool,prompt_revision,cost,status,remaining_generations,asset_path,inspection
 2026-07-28T00:00:00+09:00,,get_balance,affix-batch-v1,0,baseline_reported_by_controller,1970,,active Pixel Apprentice; total 2000; used 30; credits $0; no repeat query
+2026-07-28T00:00:00+09:00,6841af63-38dc-41a2-86e8-17795bc93f21,create_image_pixen,affix-slot-kit-v1,1,approved,1969,ArtSource/Pixel/UI/AffixJackpot/slot-kit.png,256x128 original inspected; transparent; alpha 0/255; no readable text or humans
+2026-07-28T00:00:00+09:00,42e2f5bc-72a1-46f8-bde4-cde5133cfe4d,create_image_pixen,affix-status-symbols-v1,1,approved,1968,ArtSource/Pixel/UI/AffixJackpot/status-symbols.png,256x128 original inspected; transparent; alpha 0/255; no readable text or humans
+2026-07-28T00:00:00+09:00,c4bc5820-1763-4cf3-a356-7e3d60be7e8d,create_image_pixflux,affix-potential-a-v1,1,approved,1967,ArtSource/Pixel/Weapons/Potentials/potential-parts-a.png,256x128 original inspected; transparent; alpha 0/255; no readable text humans or panel shapes
+2026-07-28T00:00:00+09:00,2860c08c-b476-4124-ae89-c100b234e757,create_image_pixflux,affix-potential-b-v1,1,rejected_processing_timeout,1966,,stalled at 95 percent without output; no source accepted
+2026-07-28T00:00:00+09:00,05023dff-be8b-4285-bdb6-9c6aff7b2c16,create_image_pixflux,affix-potential-b-v1-retry1,1,approved,1965,ArtSource/Pixel/Weapons/Potentials/potential-parts-b.png,256x128 original inspected; transparent; alpha 0/255; no readable text humans or panel shapes
