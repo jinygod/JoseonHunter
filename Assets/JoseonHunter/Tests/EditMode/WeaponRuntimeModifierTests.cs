@@ -51,6 +51,115 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void Periodic_damage_crosses_multiple_boundaries_and_preserves_residual_time()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(19, 100);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var statuses = new WeaponAffixStatusService(registry, damage);
+            Assert.That(statuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId,
+                new Float2(4f, 5f), 10, 3, new AttackInstance(92, RepeatHitPolicy.TimedTicks, .5f), true)), Is.True);
+
+            statuses.Tick(1.2f, 7);
+            Assert.That(target.Health, Is.EqualTo(80));
+            statuses.Tick(.3f, 8);
+            Assert.That(target.Health, Is.EqualTo(70));
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Periodic_rejects_unconfirmed_nonfinite_dead_and_unregistered_inputs()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(20, 10);
+            var dead = new Target(21, 0);
+            registry.Register(target);
+            registry.Register(dead);
+            var statuses = new WeaponAffixStatusService(registry, new CombatDamageService(registry));
+            var attack = new AttackInstance(93, RepeatHitPolicy.TimedTicks, .5f);
+
+            Assert.That(statuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId,
+                new Float2(0f, 0f), 1, 1, attack, false)), Is.False);
+            Assert.That(statuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId,
+                new Float2(float.NaN, 0f), 1, 1, attack, true)), Is.False);
+            Assert.That(statuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId,
+                new Float2(0f, 0f), 1, 1, new AttackInstance(98, RepeatHitPolicy.OncePerPhase, 0f), true)), Is.False);
+            Assert.That(statuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, dead.RuntimeId,
+                new Float2(0f, 0f), 1, 1, attack, true)), Is.False);
+            Assert.That(registry.Unregister(target), Is.True);
+            Assert.That(statuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId,
+                new Float2(0f, 0f), 1, 1, attack, true)), Is.False);
+            Assert.That(statuses.ApplyVulnerability(dead.RuntimeId, new Float2(0f, 0f), float.NaN, true), Is.False);
+            Assert.That(statuses.ApplyVulnerability(dead.RuntimeId, new Float2(0f, 0f), float.PositiveInfinity, true), Is.False);
+        }
+
+        [Test]
+        public void Periodic_event_preserves_weapon_contact_boss_and_attack_identity_without_vulnerability_recursion()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(22, 50, true);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var controller = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            var attack = new AttackInstance(94, RepeatHitPolicy.TimedTicks, .5f);
+            ConfirmedDamageEvent confirmed = default;
+            damage.DamageConfirmed += value => confirmed = value;
+            Assert.That(controller.AffixStatuses.ApplyVulnerability(target.RuntimeId, new Float2(8f, 9f), 2f, true), Is.True);
+            Assert.That(controller.AffixStatuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId,
+                new Float2(8f, 9f), 10, 1, attack, true)), Is.True);
+
+            controller.AffixStatuses.Tick(.5f, 3);
+            Assert.That(confirmed.WeaponId, Is.EqualTo(WeaponId.HwandoFlyingBlade));
+            Assert.That(confirmed.AttackInstanceId, Is.EqualTo(94));
+            Assert.That(confirmed.ContactPoint, Is.EqualTo(new Float2(8f, 9f)));
+            Assert.That(confirmed.IsBossTarget, Is.True);
+            Assert.That(confirmed.FinalDamage, Is.EqualTo(10));
+            controller.Dispose();
+        }
+
+        [Test]
+        public void Target_unregistration_clears_statuses_before_runtime_id_reuse_and_retires_attack()
+        {
+            var registry = new CombatTargetRegistry();
+            var oldTarget = new Target(23, 100);
+            registry.Register(oldTarget);
+            var damage = new CombatDamageService(registry);
+            var controller = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            Assert.That(controller.AffixStatuses.ApplyVulnerability(23, new Float2(1f, 1f), 2f, true), Is.True);
+            Assert.That(controller.AffixStatuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, 23,
+                new Float2(1f, 1f), 5, 2, new AttackInstance(95, RepeatHitPolicy.TimedTicks, .5f), true)), Is.True);
+            controller.AffixStatuses.Tick(.5f, 1);
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(1));
+            Assert.That(registry.Unregister(oldTarget), Is.True);
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
+            var replacement = new Target(23, 100);
+            registry.Register(replacement);
+            Assert.That(damage.TryApply(WeaponDamageRequest.Create(96, WeaponId.GakgungShot, replacement, 10, false,
+                new Float2(1f, 1f), ContactPhase.Direct, 2), out var normal), Is.True);
+            Assert.That(normal.FinalDamage, Is.EqualTo(10));
+            controller.Dispose();
+        }
+
+        [Test]
+        public void Reset_and_dispose_retire_active_periodic_attacks()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(24, 100);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var controller = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            Assert.That(controller.AffixStatuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, 24,
+                new Float2(0f, 0f), 5, 2, new AttackInstance(97, RepeatHitPolicy.TimedTicks, .5f), true)), Is.True);
+            controller.AffixStatuses.Tick(.5f, 1);
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(1));
+            controller.Reset();
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
+            controller.Dispose();
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Vulnerability_multiplies_unrelated_later_damage_for_two_seconds_then_expires()
         {
             var registry = new CombatTargetRegistry();
@@ -71,11 +180,12 @@ namespace JoseonHunter.Tests.EditMode
 
         private sealed class Target : ICombatTarget
         {
-            public Target(int runtimeId, int health) { RuntimeId = runtimeId; Health = health; }
+            private readonly bool isBoss;
+            public Target(int runtimeId, int health, bool isBoss = false) { RuntimeId = runtimeId; Health = health; this.isBoss = isBoss; }
             public int RuntimeId { get; }
             public bool IsAlive => Health > 0;
             public int Health { get; private set; }
-            public bool IsBoss => false;
+            public bool IsBoss => isBoss;
             public bool IsElite => false;
             public float ThreatScore => 0f;
             public Float2 WorldPosition => new Float2(0f, 0f);

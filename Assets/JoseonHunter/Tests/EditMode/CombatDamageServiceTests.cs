@@ -72,6 +72,20 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void Nonfinite_contact_cannot_create_or_track_an_attack()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new FakeCombatTarget(9, 40);
+            registry.Register(target);
+            var service = new CombatDamageService(registry);
+
+            Assert.That(service.TryApply(WeaponDamageRequest.Create(19, WeaponId.HwandoFlyingBlade, target, 9, false,
+                new Float2(float.PositiveInfinity, 4f), ContactPhase.Outbound, 44), out _), Is.False);
+            Assert.That(target.Health, Is.EqualTo(40));
+            Assert.That(service.TrackedAttackCount, Is.EqualTo(0));
+        }
+
+        [Test]
         public void ServiceRequiresARegistryAndDamageResolutionRejectsInvalidNumbers()
         {
             Assert.That(() => new CombatDamageService(null), Throws.ArgumentNullException);

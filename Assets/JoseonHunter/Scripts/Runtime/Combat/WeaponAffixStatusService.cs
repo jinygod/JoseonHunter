@@ -33,14 +33,13 @@ namespace JoseonHunter.Runtime.Combat
     /// <summary>Run-owned periodic damage and vulnerability state, kept separate from weapon executors.</summary>
     public sealed class WeaponAffixStatusService
     {
-        private const float PeriodicInterval = .5f;
+        private const float PeriodicInterval = PeriodicEffectRequest.IntervalSeconds;
         private readonly CombatTargetRegistry targets;
         private readonly CombatDamageService damage;
         private readonly List<PeriodicEffect> periodicEffects = new List<PeriodicEffect>();
         private readonly Dictionary<int, float> vulnerabilityRemaining = new Dictionary<int, float>();
         private readonly List<int> expiredVulnerabilityTargets = new List<int>();
         private readonly List<int> vulnerabilityTargets = new List<int>();
-        private int nextStatusAttackId = -1;
 
         public WeaponAffixStatusService(CombatTargetRegistry targets, CombatDamageService damage)
         {
@@ -51,6 +50,7 @@ namespace JoseonHunter.Runtime.Combat
         public bool ApplyPeriodic(in PeriodicEffectRequest request)
         {
             if (!request.ConfirmedContact || request.DamagePerTick <= 0 || request.RemainingTicks <= 0 || request.AttackInstance == null ||
+                request.AttackInstance.RepeatHitPolicy != RepeatHitPolicy.TimedTicks || Math.Abs(request.AttackInstance.RepeatInterval - PeriodicInterval) > .0001f ||
                 !IsFinite(request.ConfirmedContactPoint) || !TryGetLiveTarget(request.TargetRuntimeId, out _)) return false;
             periodicEffects.Add(new PeriodicEffect(request));
             return true;
@@ -58,7 +58,7 @@ namespace JoseonHunter.Runtime.Combat
 
         public bool ApplyVulnerability(int targetRuntimeId, Float2 confirmedContact, float durationSeconds, bool confirmedContactHit)
         {
-            if (!confirmedContactHit || durationSeconds <= 0f || !IsFinite(confirmedContact) || !TryGetLiveTarget(targetRuntimeId, out _)) return false;
+            if (!confirmedContactHit || !IsFinite(durationSeconds) || durationSeconds <= 0f || !IsFinite(confirmedContact) || !TryGetLiveTarget(targetRuntimeId, out _)) return false;
             vulnerabilityRemaining[targetRuntimeId] = Math.Max(durationSeconds, vulnerabilityRemaining.TryGetValue(targetRuntimeId, out var current) ? current : 0f);
             return true;
         }
@@ -70,18 +70,17 @@ namespace JoseonHunter.Runtime.Combat
             for (var index = periodicEffects.Count - 1; index >= 0; index--)
             {
                 var effect = periodicEffects[index];
-                if (!TryGetLiveTarget(effect.TargetRuntimeId, out var target)) { periodicEffects.RemoveAt(index); continue; }
+                if (!TryGetLiveTarget(effect.TargetRuntimeId, out var target)) { Retire(effect); periodicEffects.RemoveAt(index); continue; }
                 effect.Elapsed += deltaTime;
                 while (effect.Elapsed >= PeriodicInterval && effect.RemainingTicks > 0)
                 {
+                    if (!damage.TryApply(WeaponDamageRequest.Create(effect.AttackInstance, effect.SourceWeapon, target, effect.DamagePerTick, false,
+                        effect.ContactPoint, effect.Phase, simulationTick, effect.NextTickTime, true), out _)) break;
                     effect.Elapsed -= PeriodicInterval;
-                    var attack = effect.AttackInstance ?? new AttackInstance(AllocateStatusAttackId(), RepeatHitPolicy.TimedTicks, PeriodicInterval);
-                    effect.AttackInstance = attack;
-                    damage.TryApply(WeaponDamageRequest.Create(attack, effect.SourceWeapon, target, effect.DamagePerTick, false,
-                        effect.ContactPoint, effect.Phase, simulationTick, effect.Elapsed + simulationTick, true), out _);
+                    effect.NextTickTime += PeriodicInterval;
                     effect.RemainingTicks--;
                 }
-                if (effect.RemainingTicks <= 0) periodicEffects.RemoveAt(index); else periodicEffects[index] = effect;
+                if (effect.RemainingTicks <= 0) { Retire(effect); periodicEffects.RemoveAt(index); } else periodicEffects[index] = effect;
             }
         }
 
@@ -89,14 +88,14 @@ namespace JoseonHunter.Runtime.Combat
         {
             vulnerabilityRemaining.Remove(runtimeId);
             for (var index = periodicEffects.Count - 1; index >= 0; index--)
-                if (periodicEffects[index].TargetRuntimeId == runtimeId) periodicEffects.RemoveAt(index);
+                if (periodicEffects[index].TargetRuntimeId == runtimeId) { Retire(periodicEffects[index]); periodicEffects.RemoveAt(index); }
         }
 
         public void Reset()
         {
+            foreach (var effect in periodicEffects) Retire(effect);
             periodicEffects.Clear();
             vulnerabilityRemaining.Clear();
-            nextStatusAttackId = -1;
         }
 
         internal float IncomingDamageMultiplier(int targetRuntimeId, ContactPhase phase) =>
@@ -118,13 +117,10 @@ namespace JoseonHunter.Runtime.Combat
         private bool TryGetLiveTarget(int runtimeId, out ICombatTarget target) =>
             targets.TryGet(runtimeId, out target) && target != null && target.IsAlive && target.Health > 0 && targets.Contains(target);
 
-        private int AllocateStatusAttackId()
-        {
-            if (nextStatusAttackId == int.MinValue) throw new InvalidOperationException("Status attack ID space exhausted.");
-            return nextStatusAttackId--;
-        }
+        private void Retire(PeriodicEffect effect) => damage.RetireAttack(effect.AttackInstance.InstanceId);
 
         private static bool IsPeriodicPhase(ContactPhase phase) => phase == ContactPhase.Poison || phase == ContactPhase.Burn || phase == ContactPhase.Bleed;
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
         private static bool IsFinite(Float2 point) => !float.IsNaN(point.X) && !float.IsInfinity(point.X) && !float.IsNaN(point.Y) && !float.IsInfinity(point.Y);
 
         private struct PeriodicEffect
@@ -133,10 +129,10 @@ namespace JoseonHunter.Runtime.Combat
             {
                 SourceWeapon = request.SourceWeapon; TargetRuntimeId = request.TargetRuntimeId; ContactPoint = request.ConfirmedContactPoint;
                 DamagePerTick = request.DamagePerTick; RemainingTicks = request.RemainingTicks; AttackInstance = request.AttackInstance;
-                Phase = request.Phase; Elapsed = 0f;
+                Phase = request.Phase; Elapsed = 0f; NextTickTime = PeriodicInterval;
             }
             public WeaponId SourceWeapon; public int TargetRuntimeId; public Float2 ContactPoint; public int DamagePerTick;
-            public int RemainingTicks; public AttackInstance AttackInstance; public ContactPhase Phase; public float Elapsed;
+            public int RemainingTicks; public AttackInstance AttackInstance; public ContactPhase Phase; public float Elapsed; public float NextTickTime;
         }
     }
 }

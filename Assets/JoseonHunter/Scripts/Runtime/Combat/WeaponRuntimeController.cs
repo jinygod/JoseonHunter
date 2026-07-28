@@ -61,6 +61,7 @@ namespace JoseonHunter.Runtime.Combat
             BladeMask = bladeMask ?? throw new ArgumentNullException(nameof(bladeMask));
             AffixStatuses = new WeaponAffixStatusService(Targets, DamageService);
             DamageService.SetAffixStatuses(AffixStatuses);
+            Targets.TargetUnregistered += OnTargetUnregistered;
         }
 
         public CombatTargetRegistry Targets { get; }
@@ -130,10 +131,16 @@ namespace JoseonHunter.Runtime.Combat
             executors.Clear();
             executorsByWeapon.Clear();
             AffixStatuses.Reset();
+            Targets.TargetUnregistered -= OnTargetUnregistered;
             DamageService.SetAffixStatuses(null);
             DamageService.ClearAttacks();
             spriteResolver = null;
             maskResolver = null;
+        }
+
+        private void OnTargetUnregistered(ICombatTarget target)
+        {
+            if (target != null) AffixStatuses.ClearTarget(target.RuntimeId);
         }
     }
 }

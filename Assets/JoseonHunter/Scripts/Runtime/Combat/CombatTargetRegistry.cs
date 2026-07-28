@@ -7,6 +7,8 @@ namespace JoseonHunter.Runtime.Combat
     {
         private readonly Dictionary<int, ICombatTarget> targets = new Dictionary<int, ICombatTarget>();
 
+        public event Action<ICombatTarget> TargetUnregistered;
+
         public bool Register(ICombatTarget target)
         {
             if (target == null) throw new ArgumentNullException(nameof(target));
@@ -18,7 +20,9 @@ namespace JoseonHunter.Runtime.Combat
         public bool Unregister(ICombatTarget target)
         {
             if (target == null) return false;
-            return targets.TryGetValue(target.RuntimeId, out var registered) && ReferenceEquals(registered, target) && targets.Remove(target.RuntimeId);
+            if (!targets.TryGetValue(target.RuntimeId, out var registered) || !ReferenceEquals(registered, target) || !targets.Remove(target.RuntimeId)) return false;
+            TargetUnregistered?.Invoke(target);
+            return true;
         }
 
         public bool Contains(ICombatTarget target) => target != null && targets.TryGetValue(target.RuntimeId, out var registered) && ReferenceEquals(registered, target);

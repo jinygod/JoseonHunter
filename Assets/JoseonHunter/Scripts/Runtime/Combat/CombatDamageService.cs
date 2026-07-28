@@ -59,7 +59,7 @@ namespace JoseonHunter.Runtime.Combat
         internal void SetAffixStatuses(WeaponAffixStatusService statuses) => affixStatuses = statuses;
 
         /// <summary>Forgets a completed attack after its executor has permanently stopped producing contacts.</summary>
-        public bool RetireAttack(int attackInstanceId) => attackInstanceId > 0 && attacks.Remove(attackInstanceId);
+        public bool RetireAttack(int attackInstanceId) => attacks.Remove(attackInstanceId);
 
         public void ClearAttacks() => attacks.Clear();
 
