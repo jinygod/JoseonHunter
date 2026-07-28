@@ -144,7 +144,7 @@ namespace JoseonHunter.Presentation.UI
                     var weapon = state.Weapons[index];
                     signature = signature * 31 + (weapon.Id == null ? 0 : weapon.Id.GetHashCode());
                     signature = signature * 31 + weapon.Level;
-                    signature = signature * 31 + (weapon.Icon == null ? 0 : weapon.Icon.GetInstanceID());
+                    signature = signature * 31 + (weapon.Icon == null ? 0 : weapon.Icon.GetEntityId().GetHashCode());
                 }
 
                 return signature;
