@@ -32,6 +32,7 @@ namespace JoseonHunter.Tests.PlayMode
         public WeaponRuntimeController Runtime { get; }
         public IWeaponExecutor Executor { get; }
         public IReadOnlyList<ContactPhase> ContactPhases => events.Select(value => value.Phase).ToArray();
+        public IReadOnlyList<ConfirmedDamageEvent> DamageEvents => events;
         public IReadOnlyList<ContactPhase> DistinctPhaseOrder => events.Select(value => value.Phase).Distinct().ToArray();
         public int UniqueDamagedTargets => events.Select(value => value.TargetRuntimeId).Distinct().Count();
         public EvolutionTelemetry Telemetry => EvolvedExecutorFactory.ReadTelemetry(Executor);
@@ -39,9 +40,17 @@ namespace JoseonHunter.Tests.PlayMode
         public static EvolvedWeaponTestRig For(WeaponId weaponId) => new EvolvedWeaponTestRig(weaponId);
         public int Count(ContactPhase phase) => events.Count(value => value.Phase == phase);
 
-        public TestTarget AddTarget(Vector2 position)
+        public TestTarget AddTarget(Vector2 position, PixelHitMask mask = null)
         {
-            var target = new TestTarget(targets.Count + 1, new Float2(position.x, position.y), PixelHitMask.FromRows("1"));
+            var target = new TestTarget(targets.Count + 1, new Float2(position.x, position.y), mask ?? PixelHitMask.FromRows("1"));
+            targets.Add(target);
+            Registry.Register(target);
+            return target;
+        }
+
+        public TestTarget AddTargetWithoutMask(Vector2 position)
+        {
+            var target = new TestTarget(targets.Count + 1, new Float2(position.x, position.y), null);
             targets.Add(target);
             Registry.Register(target);
             return target;
@@ -64,7 +73,7 @@ namespace JoseonHunter.Tests.PlayMode
             while (elapsed < seconds)
             {
                 const float delta = 0.05f;
-                Executor.Tick(delta, new WeaponExecutionContext(default, root.transform, null, 0, ++tick));
+                Tick(delta);
                 elapsed += delta;
                 yield return null;
             }
@@ -75,10 +84,12 @@ namespace JoseonHunter.Tests.PlayMode
             for (var index = 0; index < count; index++)
             {
                 var delta = index == 0 ? 0.01f : 0.1f;
-                Executor.Tick(delta, new WeaponExecutionContext(default, root.transform, null, 0, ++tick));
+                Tick(delta);
                 yield return null;
             }
         }
+
+        public void Tick(float delta) => Executor.Tick(delta, new WeaponExecutionContext(default, root.transform, null, 0, ++tick));
 
         public void Dispose()
         {

@@ -75,6 +75,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void Advance(Bomb bomb, float step, in WeaponExecutionContext context)
         {
+            if (IsEvolved)
+            {
+                AdvanceEvolved(bomb, step, context);
+                return;
+            }
             switch (bomb.State)
             {
                 case ThunderBombState.Lob:
@@ -83,7 +88,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     // The arc height is presentation-ready deterministic state; landing always remains the predicted center.
                     bomb.Position = Lerp(bomb.Start, bomb.Landing, progress);
                     bomb.Height = 4f * progress * (1f - progress) * Mathf.Min(0.75f, Range * 0.25f);
-                    if (progress >= 1f) Transition(bomb, IsEvolved ? ThunderBombState.Pull : ThunderBombState.Fuse);
+                    if (progress >= 1f) Transition(bomb, ThunderBombState.Fuse);
                     break;
                 case ThunderBombState.Fuse:
                     bomb.Elapsed += step;
@@ -104,19 +109,51 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var secondaryComplete = SweepRing(bomb, BlastRadius * (1f + Mathf.Clamp01(bomb.Elapsed / SecondaryDuration)), context);
                     if (bomb.Elapsed >= SecondaryDuration && secondaryComplete) bomb.State = ThunderBombState.Complete;
                     break;
-                case ThunderBombState.Pull:
-                    bomb.Elapsed += step;
-                    PullTargets(bomb, step);
-                    if (bomb.Elapsed >= PullDuration) Transition(bomb, ThunderBombState.CompressionDelay);
-                    break;
-                case ThunderBombState.CompressionDelay:
-                    bomb.Elapsed += step;
-                    if (bomb.Elapsed >= CompressionDelay) Transition(bomb, ThunderBombState.CompressedBlast);
-                    break;
-                case ThunderBombState.CompressedBlast:
-                    ResolveCompressedBlast(bomb, context);
-                    bomb.State = ThunderBombState.Complete;
-                    break;
+            }
+        }
+
+        private void AdvanceEvolved(Bomb bomb, float step, in WeaponExecutionContext context)
+        {
+            var remaining = step;
+            while (remaining > 0f && bomb.State != ThunderBombState.Complete)
+            {
+                switch (bomb.State)
+                {
+                    case ThunderBombState.Lob:
+                        var lobSlice = Mathf.Min(remaining, LobDuration - bomb.Elapsed);
+                        bomb.Elapsed += lobSlice;
+                        remaining -= lobSlice;
+                        var progress = Mathf.Clamp01(bomb.Elapsed / LobDuration);
+                        bomb.Position = Lerp(bomb.Start, bomb.Landing, progress);
+                        bomb.Height = 4f * progress * (1f - progress) * Mathf.Min(0.75f, Range * 0.25f);
+                        if (bomb.Elapsed >= LobDuration) Transition(bomb, ThunderBombState.Pull);
+                        break;
+                    case ThunderBombState.Pull:
+                        var pullSlice = Mathf.Min(remaining, PullDuration - bomb.Elapsed);
+                        PullTargets(bomb, pullSlice);
+                        bomb.Elapsed += pullSlice;
+                        remaining -= pullSlice;
+                        if (bomb.Elapsed >= PullDuration) Transition(bomb, ThunderBombState.CompressionDelay);
+                        break;
+                    case ThunderBombState.CompressionDelay:
+                        var delaySlice = Mathf.Min(remaining, CompressionDelay - bomb.Elapsed);
+                        bomb.Elapsed += delaySlice;
+                        remaining -= delaySlice;
+                        if (bomb.Elapsed >= CompressionDelay)
+                        {
+                            Transition(bomb, ThunderBombState.CompressedBlast);
+                            ResolveCompressedBlast(bomb, context);
+                            bomb.State = ThunderBombState.Complete;
+                        }
+                        break;
+                    case ThunderBombState.CompressedBlast:
+                        ResolveCompressedBlast(bomb, context);
+                        bomb.State = ThunderBombState.Complete;
+                        break;
+                    default:
+                        bomb.State = ThunderBombState.Complete;
+                        break;
+                }
             }
         }
 

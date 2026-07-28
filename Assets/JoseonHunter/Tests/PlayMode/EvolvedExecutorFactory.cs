@@ -39,7 +39,7 @@ namespace JoseonHunter.Tests.PlayMode
                 case TalismanExecutor value:
                     return Snapshot(WeaponId.TalismanThrow, "Talisman", value.IsEvolved, value.LastState.ToString(), value.TotalLaunchedTalismanCount, value.ActiveCastCount, value.LastLaunchCount, value.LastFinalBurstCount, 0f, value.LastContactPhases);
                 case ThunderBombExecutor value:
-                    return Snapshot(WeaponId.ThunderCrashBomb, "ThunderBomb", value.IsEvolved, value.LastState.ToString(), value.ActiveBombCount, value.Level, value.ActiveBombCount, 0, value.BlastRadius, value.StateOrder);
+                    return Snapshot(WeaponId.ThunderCrashBomb, "ThunderBomb", value.IsEvolved, value.LastState.ToString(), value.ActiveBombCount, value.Level, value.ActiveBombCount, 0, value.BlastRadius, stateOrder: value.StateOrder);
                 case JangseungWardExecutor value:
                     return Snapshot(WeaponId.JangseungWard, "JangseungWard", value.IsEvolved, value.ActiveWardSetCount > 0 ? "Active" : "Idle", value.ActiveWardSetCount, value.ActivePostCount, value.ActivePostCount, value.EvictedWardSetCount, value.Radius);
                 case SingijeonExecutor value:
@@ -53,8 +53,8 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
-        private static EvolutionTelemetry Snapshot(WeaponId weaponId, string executorKind, bool isEvolved, string state, int primaryCount, int secondaryCount, int scoutProjectileCount, int focusProjectileCount, float fieldDuration, IReadOnlyList<ContactPhase> contactPhases = null, int lastProjectileMaximumImpacts = 0, float lastProjectileScale = 0f) =>
-            new EvolutionTelemetry(lastProjectileMaximumImpacts, lastProjectileScale, new[] { state }, ContactPhaseNames(contactPhases), scoutProjectileCount, focusProjectileCount, fieldDuration, false, isEvolved, weaponId, executorKind, state, primaryCount, secondaryCount);
+        private static EvolutionTelemetry Snapshot(WeaponId weaponId, string executorKind, bool isEvolved, string state, int primaryCount, int secondaryCount, int scoutProjectileCount, int focusProjectileCount, float fieldDuration, IReadOnlyList<ContactPhase> contactPhases = null, int lastProjectileMaximumImpacts = 0, float lastProjectileScale = 0f, IReadOnlyList<string> stateOrder = null) =>
+            new EvolutionTelemetry(lastProjectileMaximumImpacts, lastProjectileScale, stateOrder ?? new[] { state }, ContactPhaseNames(contactPhases), scoutProjectileCount, focusProjectileCount, fieldDuration, false, isEvolved, weaponId, executorKind, state, primaryCount, secondaryCount);
 
         private static IReadOnlyList<string> ContactPhaseNames(IReadOnlyList<ContactPhase> phases)
         {

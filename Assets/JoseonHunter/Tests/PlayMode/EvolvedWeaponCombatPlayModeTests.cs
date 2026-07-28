@@ -147,7 +147,50 @@ namespace JoseonHunter.Tests.PlayMode
 
                 Assert.That(rig.Count(ContactPhase.Blast), Is.EqualTo(4));
                 Assert.That(rig.UniqueDamagedTargets, Is.EqualTo(4));
+                var blasts = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Blast).ToArray();
+                Assert.That(blasts.Select(value => value.AttackInstanceId).Distinct().Count(), Is.EqualTo(1));
+                Assert.That(blasts.Select(value => value.SimulationTick).Distinct().Count(), Is.EqualTo(1));
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Heaven_chain_requires_three_confirmed_links_and_excludes_missing_masks()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.TalismanThrow))
+            {
+                rig.AddTargets(2);
+                yield return rig.AdvanceSeconds(3f);
+                Assert.That(rig.Count(ContactPhase.Blast), Is.EqualTo(0));
+            }
+
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.TalismanThrow))
+            {
+                rig.AddTarget(new Vector2(1f, 0f));
+                var missingMask = rig.AddTargetWithoutMask(new Vector2(1.2f, 0f));
+                rig.AddTarget(new Vector2(1.4f, 0f));
+                rig.AddTarget(new Vector2(1.6f, 0f));
+                yield return rig.AdvanceSeconds(3f);
+
+                Assert.That(rig.Count(ContactPhase.Blast), Is.EqualTo(3));
+                Assert.That(rig.DamageEvents.Any(value => value.TargetRuntimeId == missingMask.RuntimeId), Is.False);
+            }
+        }
+
+        [Test]
+        public void Normal_level_five_talisman_still_launches_three_seals()
+        {
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            for (var index = 0; index < 3; index++) registry.Register(new TestTarget(index + 1, new Float2(1f + index * 0.2f, 0f), PixelHitMask.FromRows("1")));
+            var executor = new TalismanExecutor(runtime, 10f, 1f, 4f, 8f, 5, 5);
+            var root = new GameObject("Normal talisman preservation test root");
+
+            executor.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.That(executor.LastLaunchCount, Is.EqualTo(3));
+            executor.Dispose();
+            Object.DestroyImmediate(root);
         }
 
         [UnityTest]
@@ -156,11 +199,50 @@ namespace JoseonHunter.Tests.PlayMode
             using (var rig = EvolvedWeaponTestRig.For(WeaponId.ThunderCrashBomb))
             {
                 var target = rig.AddTarget(new Vector2(2f, 0f));
-                yield return rig.AdvanceSeconds(1f);
+                rig.Tick(0.5f);
+                Assert.That(rig.DamageEvents, Is.Empty, "Lob and pull entry cannot deal damage.");
+                rig.Tick(0.24f);
+                Assert.That(rig.DamageEvents, Is.Empty, "Pull cannot deal damage.");
+                rig.Tick(0.01f);
+                Assert.That(rig.DamageEvents, Is.Empty, "Pull boundary cannot deal damage.");
+                rig.Tick(0.11f);
+                Assert.That(rig.DamageEvents, Is.Empty, "Compression silence cannot deal damage.");
+                rig.Tick(0.01f);
+                yield return null;
 
                 Assert.That(target.Position.X, Is.LessThan(2f));
                 Assert.That(rig.Telemetry.StateOrder, Is.EqualTo(new[] { "Pull", "CompressionDelay", "CompressedBlast" }));
                 CollectionAssert.Contains(rig.ContactPhases, ContactPhase.Blast);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Thunder_prison_consumes_large_tick_across_pull_and_silence_exactly()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.ThunderCrashBomb))
+            {
+                var target = rig.AddTarget(new Vector2(2f, 0f));
+                rig.Tick(0.5f);
+                rig.Tick(0.5f);
+                yield return null;
+
+                Assert.That(target.Position.X, Is.EqualTo(1f).Within(0.001f));
+                Assert.That(rig.Telemetry.StateOrder, Is.EqualTo(new[] { "Pull", "CompressionDelay", "CompressedBlast" }));
+                Assert.That(rig.Count(ContactPhase.Blast), Is.EqualTo(1));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Thunder_prison_requires_pixel_mask_overlap_for_terminal_blast()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.ThunderCrashBomb))
+            {
+                rig.AddTarget(new Vector2(2f, 0f), PixelHitMask.FromRows("0"));
+                rig.Tick(0.5f);
+                rig.Tick(0.5f);
+                yield return null;
+
+                Assert.That(rig.Count(ContactPhase.Blast), Is.EqualTo(0));
             }
         }
 

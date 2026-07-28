@@ -96,7 +96,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var simultaneous = !IsEvolved && Level == 5 ? 3 : 1;
             LastFinalBurstCount = 0; lastContactPhases.Clear();
             bindingTargets.Clear();
-            bindingAttack = Level == 5 ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null;
+            bindingAttack = !IsEvolved && Level == 5 ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null;
             var launchReservations = new HashSet<int>();
             LastLaunchCount = 0;
             for (var index = 0; index < simultaneous; index++)
