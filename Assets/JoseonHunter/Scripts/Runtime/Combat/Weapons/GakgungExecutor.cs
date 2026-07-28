@@ -123,20 +123,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary, float targetDistance, ICombatTarget target)
         {
             var shotDirection = Rotate(direction, degrees);
-            if (primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && target != null && target.HurtMask != null &&
-                WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out var drawMask) &&
-                PixelMaskContactService.TryFindContact(drawMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out _))
-            {
-                var progress = Mathf.Clamp01(targetDistance / Mathf.Max(.01f, Range * .8f));
-                damage = Mathf.CeilToInt(damage * (1f + .6f * progress));
-                scale *= 1f + .35f * progress;
-                LastProjectileScale = scale;
-            }
+            PixelHitMask drawMask = null;
+            var fullDraw = primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out drawMask);
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range);
             projectiles.Launch(context, new LinearProjectileSpec(
                 attack, WeaponId.GakgungShot,
-                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale, allowExtendedImpacts));
+                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale, allowExtendedImpacts, fullDraw, fullDraw ? drawMask : null));
         }
 
         private void OnDamageConfirmed(ConfirmedDamageEvent damage)

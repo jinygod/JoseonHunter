@@ -56,6 +56,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     previousPosition.X + projectile.Direction.X * travel,
                     previousPosition.Y + projectile.Direction.Y * travel);
                 projectile.Visual.transform.position = new Vector3(projectile.Position.X, projectile.Position.Y, 0f);
+                if (projectile.FullDraw)
+                    projectile.Visual.transform.localScale = Vector3.one * projectile.BaseScale * (1f + .35f * FullDrawProgress(projectile));
                 if (processedTime > 0f)
                 {
                     projectile.PendingSimulationTime -= processedTime;
@@ -113,14 +115,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                     if (!PixelMaskContactService.TryFindContact(projectile.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                    var damage = projectile.Damage;
+                    if (projectile.FullDraw && PotentialMaskOverlaps(projectile, target, contact)) damage = Mathf.CeilToInt(damage * (1f + .6f * FullDrawProgress(projectile)));
                     if (!runtime.DamageService.TryApply(
-                            WeaponDamageRequest.Create(projectile.Attack, projectile.WeaponId, target, projectile.Damage, false, contact, ContactPhase.Direct, context.SimulationTick),
+                            WeaponDamageRequest.Create(projectile.Attack, projectile.WeaponId, target, damage, false, contact, ContactPhase.Direct, context.SimulationTick),
                             out _)) continue;
                     projectile.ImpactCount++;
                     if (projectile.ImpactCount >= projectile.MaxImpacts) return;
                 }
             }
         }
+        private static float FullDrawProgress(Projectile projectile) => Mathf.Clamp01((projectile.InitialLifetime - projectile.RemainingLifetime) * projectile.Speed / Mathf.Max(.01f, projectile.AllowedRange * .8f));
+        private static bool PotentialMaskOverlaps(Projectile projectile, ICombatTarget target, Float2 contact) => projectile.PotentialMask != null &&
+            PixelMaskContactService.TryFindContact(projectile.PotentialMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _);
 
         private GameObject Acquire(in WeaponExecutionContext context, WeaponId weaponId, string visualName, float scale)
         {
@@ -168,7 +175,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 Attack = spec.Attack; WeaponId = spec.WeaponId; Position = spec.Position; Direction = spec.Direction;
                 Speed = spec.Speed; RemainingLifetime = spec.Lifetime; Damage = spec.Damage; MaxImpacts = spec.MaxImpacts;
-                Visual = visual; Mask = mask;
+                Visual = visual; Mask = mask; InitialLifetime = spec.Lifetime; AllowedRange = spec.AllowedRange; BaseScale = spec.Scale; FullDraw = spec.FullDraw; PotentialMask = spec.PotentialMask;
             }
             public AttackInstance Attack { get; }
             public WeaponId WeaponId { get; }
@@ -182,12 +189,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public int ImpactCount { get; set; }
             public GameObject Visual { get; }
             public PixelHitMask Mask { get; }
+            public float InitialLifetime { get; } public float AllowedRange { get; } public float BaseScale { get; } public bool FullDraw { get; } public PixelHitMask PotentialMask { get; }
         }
     }
 
     public readonly struct LinearProjectileSpec
     {
-        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f, bool allowExtendedImpacts = false)
+        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f, bool allowExtendedImpacts = false, bool fullDraw = false, PixelHitMask potentialMask = null)
         {
             Attack = attack ?? throw new ArgumentNullException(nameof(attack));
             WeaponId = weaponId; Position = position; Direction = direction; Speed = Mathf.Max(0.01f, speed);
@@ -195,6 +203,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             MaxImpacts = Mathf.Clamp(maxImpacts, 1, allowExtendedImpacts ? LinearProjectileExecutor.MaxExtendedImpactsPerProjectile : LinearProjectileExecutor.MaxImpactsPerProjectile);
             VisualName = string.IsNullOrEmpty(visualName) ? "Linear Projectile" : visualName;
             Scale = Mathf.Max(0.01f, scale);
+            FullDraw = fullDraw; PotentialMask = potentialMask; AllowedRange = Speed * Lifetime;
         }
         public AttackInstance Attack { get; }
         public WeaponId WeaponId { get; }
@@ -206,5 +215,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int MaxImpacts { get; }
         public string VisualName { get; }
         public float Scale { get; }
+        public bool FullDraw { get; } public PixelHitMask PotentialMask { get; } public float AllowedRange { get; }
     }
 }

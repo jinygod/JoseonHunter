@@ -213,10 +213,11 @@ namespace JoseonHunter.Tests.PlayMode
         private static WeaponId WeaponFor(WeaponPotentialId potential)
         {
             var id = potential.Value;
-            if (id.StartsWith("Hwando", StringComparison.Ordinal)) return WeaponId.HwandoFlyingBlade;
-            if (id.StartsWith("Gakgung", StringComparison.Ordinal)) return WeaponId.GakgungShot;
-            if (id.StartsWith("Talisman", StringComparison.Ordinal)) return WeaponId.TalismanThrow;
-            return WeaponId.ThunderCrashBomb;
+            if (id.StartsWith("hwando_", StringComparison.Ordinal)) return WeaponId.HwandoFlyingBlade;
+            if (id.StartsWith("gakgung_", StringComparison.Ordinal)) return WeaponId.GakgungShot;
+            if (id.StartsWith("talisman_", StringComparison.Ordinal)) return WeaponId.TalismanThrow;
+            if (id.StartsWith("thunder_", StringComparison.Ordinal)) return WeaponId.ThunderCrashBomb;
+            throw new ArgumentOutOfRangeException(nameof(potential), potential.Value, "Task 6 potential has no owning weapon.");
         }
 
         private static PixelHitMask MaskFor(WeaponPotentialId potential)
