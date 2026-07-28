@@ -246,6 +246,62 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Twelve_guardians_marks_only_targets_inside_completed_ward()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.JangseungWard))
+            {
+                var inside = rig.AddTarget(Vector2.zero);
+                var outside = rig.AddTarget(new Vector2(9f, 0f));
+                yield return rig.AdvanceSeconds(1f);
+
+                Assert.That(inside.Statuses, Contains.Item("guardian_mark"));
+                Assert.That(outside.Statuses, Does.Not.Contain("guardian_mark"));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Twelve_guardians_pulses_only_a_marked_target_on_confirmed_boundary_crossing()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.JangseungWard))
+            {
+                var marked = rig.AddTarget(Vector2.zero);
+                yield return rig.AdvanceSeconds(0.35f);
+                marked.Position = new Float2(5f, 0f);
+                rig.Tick(0.05f);
+                yield return null;
+
+                Assert.That(marked.Statuses, Contains.Item("guardian_mark"));
+                Assert.That(rig.Count(ContactPhase.BoundaryCrossing), Is.EqualTo(1));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Fire_dragon_barrage_scouts_then_focuses_marked_position()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
+            {
+                rig.AddTarget(new Vector2(2f, 0f));
+                yield return rig.AdvanceSeconds(0.45f);
+
+                Assert.That(rig.Telemetry.VolleyKinds, Is.EqualTo(new[] { "scout", "focus" }));
+                Assert.That(rig.Telemetry.ScoutProjectileCount, Is.EqualTo(3));
+                Assert.That(rig.Telemetry.FocusProjectileCount, Is.GreaterThanOrEqualTo(8));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Fire_dragon_rockets_confirm_each_target_contact_once_per_instance()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
+            {
+                rig.AddTarget(new Vector2(2f, 0f));
+                yield return rig.AdvanceSeconds(0.45f);
+
+                Assert.That(rig.DamageEvents.GroupBy(value => new { value.AttackInstanceId, value.TargetRuntimeId }).All(group => group.Count() == 1), Is.True);
+            }
+        }
+
         private sealed class CountingExecutor : IWeaponExecutor
         {
             public int TickCount { get; private set; }

@@ -126,7 +126,7 @@ namespace JoseonHunter.Tests.PlayMode
         public void ApplyFrostSlow(int sourceId, float strength) => Statuses.Add($"frost:{sourceId}");
         public void RemoveFrostSlow(int sourceId, float decaySeconds) => Statuses.Remove($"frost:{sourceId}");
         public void ApplyFreeze(int sourceId, float durationSeconds) => Statuses.Add($"freeze:{sourceId}");
-        public void ApplyJangseungWard(int sourceId, float strength) => Statuses.Add($"ward:{sourceId}");
-        public void RemoveJangseungWard(int sourceId) => Statuses.Remove($"ward:{sourceId}");
+        public void ApplyJangseungWard(int sourceId, float strength) { Statuses.Add($"ward:{sourceId}"); Statuses.Add("guardian_mark"); }
+        public void RemoveJangseungWard(int sourceId) { Statuses.Remove($"ward:{sourceId}"); Statuses.Remove("guardian_mark"); }
     }
 }

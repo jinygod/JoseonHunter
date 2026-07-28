@@ -20,6 +20,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public const float MobileRepositionInterval = 0.35f;
         public const float MaximumMobileStep = 0.75f;
         private const float BoundaryThickness = 0.12f;
+        private const float EvolvedPostActivationInterval = 0.1f;
         private readonly WeaponRuntimeController runtime;
         private readonly PixelHitMask segmentMask;
         private readonly Dictionary<int, PixelHitMask> stretchedSegmentMasks = new Dictionary<int, PixelHitMask>();
@@ -53,6 +54,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveWardSetCount => sets.Count;
         public int ActivePostCount { get { var count = 0; foreach (var set in sets) count += set.Posts.Count; return count; } }
         public int EvictedWardSetCount { get; private set; }
+        public int CompletedWardSetCount { get { var count = 0; foreach (var set in sets) if (set.IsCompleted) count++; return count; } }
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -67,6 +69,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (Level == 5 && sets.Count > 0) RequestMobileReposition(context.OwnerPosition);
                 else PlaceSet(context.OwnerPosition);
             }
+            if (IsEvolved) AdvanceEvolvedPostActivation(step);
             ResolveCrossings(context, frameStartElapsed, step);
             RememberCurrentTargetPositions();
         }
@@ -86,8 +89,39 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Retire(sets[0]); sets.RemoveAt(0); EvictedWardSetCount++;
             }
             var count = Level == 5 ? 4 : PostCount;
-            var set = new WardSet(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.BoundaryReentry, ReentryInterval), center, Radius, count);
+            var set = new WardSet(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.BoundaryReentry, ReentryInterval), center, Radius, count, IsEvolved);
             sets.Add(set);
+        }
+
+        private void AdvanceEvolvedPostActivation(float step)
+        {
+            foreach (var set in sets)
+            {
+                if (!set.IsEvolved || set.IsCompleted) continue;
+                set.ActivationElapsed += step;
+                while (set.ActivationElapsed + 0.0001f >= EvolvedPostActivationInterval && !set.IsCompleted)
+                {
+                    set.ActivationElapsed -= EvolvedPostActivationInterval;
+                    set.ActivateNextPost();
+                }
+                if (set.IsCompleted && !set.MarkResolved) MarkEnclosedTargets(set);
+            }
+        }
+
+        private void MarkEnclosedTargets(WardSet set)
+        {
+            runtime.Targets.CopyTo(targets);
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive || !IsInsideCompletedWard(target.WorldPosition, set)) continue;
+                set.MarkedTargetIds.Add(target.RuntimeId);
+                if (target is IJangseungWardStatusTarget status)
+                {
+                    set.StatusTargetIds.Add(target.RuntimeId);
+                    status.ApplyJangseungWard(set.Attack.InstanceId, Level * 0.1f);
+                }
+            }
+            set.MarkResolved = true;
         }
 
         private void RequestMobileReposition(Float2 center)
@@ -128,6 +162,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveTargetAgainstSet(ICombatTarget target, Float2 previous, Float2 current, WardSet set, in WeaponExecutionContext context, float frameStartElapsed, float step)
         {
+            if (set.IsEvolved && !set.IsCompleted) return;
+            if (set.IsEvolved && !set.MarkedTargetIds.Contains(target.RuntimeId)) return;
             foreach (var segment in Segments(set))
             {
                 if (!TrySegmentIntersection(previous, current, segment.Start, segment.End, out var movementT)) continue;
@@ -141,7 +177,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, crossingTime), out _))
                 {
                     target.ApplyKnockback(OutwardDirection(segment, previous, current), Mathf.Max(0.1f, Level * 0.2f));
-                    if (target is IJangseungWardStatusTarget status)
+                    if (!set.IsEvolved && target is IJangseungWardStatusTarget status)
                     {
                         set.StatusTargetIds.Add(target.RuntimeId);
                         status.ApplyJangseungWard(set.Attack.InstanceId, Level * 0.1f);
@@ -265,22 +301,46 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return dx * dx + dy * dy;
         }
 
+        private static bool IsInsideCompletedWard(Float2 point, WardSet set)
+        {
+            var inside = false;
+            for (int current = 0, previous = set.Posts.Count - 1; current < set.Posts.Count; previous = current++)
+            {
+                var a = set.Posts[current]; var b = set.Posts[previous];
+                if ((a.Y > point.Y) == (b.Y > point.Y)) continue;
+                if (point.X < (b.X - a.X) * (point.Y - a.Y) / (b.Y - a.Y) + a.X) inside = !inside;
+            }
+            return inside;
+        }
+
         private readonly struct Segment { public Segment(Float2 start, Float2 end) { Start = start; End = end; } public Float2 Start { get; } public Float2 End { get; } }
         private sealed class WardSet
         {
-            public WardSet(AttackInstance attack, Float2 center, float radius, int count)
+            public WardSet(AttackInstance attack, Float2 center, float radius, int count, bool evolved)
             {
-                Attack = attack; DesiredCenter = center;
-                for (var index = 0; index < count; index++) Posts.Add(CardinalPost(center, radius, CardinalIndex(count, index)));
+                Attack = attack; DesiredCenter = center; Radius = radius; PostCount = count; IsEvolved = evolved;
+                if (evolved) ActivateNextPost();
+                else for (var index = 0; index < count; index++) Posts.Add(CardinalPost(center, radius, CardinalIndex(count, index)));
             }
             public AttackInstance Attack { get; }
             public List<Float2> Posts { get; } = new List<Float2>();
             public HashSet<int> TouchingTargetIds { get; } = new HashSet<int>();
             public HashSet<int> StatusTargetIds { get; } = new HashSet<int>();
+            public HashSet<int> MarkedTargetIds { get; } = new HashSet<int>();
             public Float2 DesiredCenter { get; set; }
+            public float Radius { get; }
+            public int PostCount { get; }
+            public bool IsEvolved { get; }
+            public bool IsCompleted => Posts.Count == PostCount;
+            public float ActivationElapsed { get; set; }
+            public bool MarkResolved { get; set; }
             public float MobileElapsed { get; set; }
             public bool HasRequestedMove { get; set; }
             public bool Retired { get; set; }
+            public void ActivateNextPost()
+            {
+                if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));
+            }
             private static int CardinalIndex(int count, int index) => count == 2 ? index * 2 : index;
         }
     }

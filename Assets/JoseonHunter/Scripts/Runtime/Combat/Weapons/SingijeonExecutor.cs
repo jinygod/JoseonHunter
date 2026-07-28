@@ -15,6 +15,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly LinearProjectileExecutor projectiles;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
+        private float focusDelay;
+        private bool awaitingFocus;
+        private Float2 focusPosition;
+        private readonly List<string> volleyKinds = new List<string>();
 
         public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level, bool evolved = false)
         {
@@ -36,29 +40,50 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveProjectileCount => projectiles.ActiveCount;
         public Float2 LastDirection { get; private set; }
         public int LastDirectionBucket { get; private set; } = -1;
+        public IReadOnlyList<string> VolleyKinds => volleyKinds;
+        public int ScoutProjectileCount { get; private set; }
+        public int FocusProjectileCount { get; private set; }
+        public Float2 RecordedFocusPosition => focusPosition;
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
-            cooldown -= deltaTime;
-            if (cooldown <= 0f && TryFindDensestDirection(context.OwnerPosition, out var direction))
+            if (IsEvolved && awaitingFocus)
             {
-                cooldown = CooldownSeconds;
-                Launch(context, direction);
+                focusDelay -= Mathf.Max(0f, deltaTime);
+                if (focusDelay <= 0f)
+                {
+                    LaunchFocus(context);
+                    awaitingFocus = false;
+                    cooldown = CooldownSeconds;
+                }
+            }
+            else
+            {
+                cooldown -= deltaTime;
+                if (cooldown <= 0f && TryFindDensestDirection(context.OwnerPosition, out var direction, out var densePosition))
+                {
+                    if (IsEvolved) LaunchScout(context, direction, densePosition);
+                    else
+                    {
+                        cooldown = CooldownSeconds;
+                        Launch(context, direction);
+                    }
+                }
             }
             projectiles.Tick(deltaTime, context);
         }
 
         public void Reset()
         {
-            cooldown = 0f; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; projectiles.Reset();
+            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); projectiles.Reset();
         }
 
         public void Dispose() => projectiles.Dispose();
 
-        private bool TryFindDensestDirection(Float2 origin, out Float2 direction)
+        private bool TryFindDensestDirection(Float2 origin, out Float2 direction, out Float2 densePosition)
         {
             targets.Clear(); runtime.Targets.CopyTo(targets);
-            var counts = new Dictionary<int, int>();
+            var counts = new Dictionary<int, int>(); var positions = new Dictionary<int, Float2>();
             foreach (var target in targets)
             {
                 if (target == null || !target.IsAlive) continue;
@@ -67,6 +92,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var rawBucket = Mathf.FloorToInt((Mathf.Atan2(y, x) * Mathf.Rad2Deg + BucketDegrees * 0.5f) / BucketDegrees);
                 var bucket = ((rawBucket % BucketCount) + BucketCount) % BucketCount;
                 counts.TryGetValue(bucket, out var count); counts[bucket] = count + 1;
+                if (!positions.ContainsKey(bucket)) positions.Add(bucket, target.WorldPosition);
             }
             var selectedBucket = 0; var highestCount = 0;
             foreach (var pair in counts)
@@ -76,11 +102,47 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     selectedBucket = pair.Key; highestCount = pair.Value;
                 }
             }
-            if (highestCount == 0) { direction = default; return false; }
+            if (highestCount == 0) { direction = default; densePosition = default; return false; }
             LastDirectionBucket = selectedBucket;
             var radians = selectedBucket * BucketDegrees * Mathf.Deg2Rad;
             direction = new Float2(Mathf.Cos(radians), Mathf.Sin(radians));
+            densePosition = positions[selectedBucket];
             return true;
+        }
+
+        private void LaunchScout(in WeaponExecutionContext context, Float2 direction, Float2 densePosition)
+        {
+            LastDirection = direction; focusPosition = densePosition; awaitingFocus = true; focusDelay = 0.35f;
+            volleyKinds.Clear(); volleyKinds.Add("scout"); ScoutProjectileCount = 0; FocusProjectileCount = 0; LastLaunchCount = 3;
+            for (var index = -1; index <= 1; index++)
+            {
+                var radians = index * 10f * Mathf.Deg2Rad;
+                var spread = new Float2(direction.X * Mathf.Cos(radians) - direction.Y * Mathf.Sin(radians), direction.X * Mathf.Sin(radians) + direction.Y * Mathf.Cos(radians));
+                LaunchRocket(context, context.OwnerPosition, spread, "Singijeon Scout Rocket");
+                ScoutProjectileCount++;
+            }
+        }
+
+        private void LaunchFocus(in WeaponExecutionContext context)
+        {
+            volleyKinds.Add("focus"); FocusProjectileCount = 8; LastLaunchCount = FocusProjectileCount;
+            for (var index = 0; index < FocusProjectileCount; index++)
+            {
+                var radians = index * Mathf.PI * 2f / FocusProjectileCount;
+                var offset = new Float2(Mathf.Cos(radians) * 0.3f, Mathf.Sin(radians) * 0.3f);
+                var target = new Float2(focusPosition.X + offset.X, focusPosition.Y + offset.Y);
+                var direction = Normalize(new Float2(target.X - context.OwnerPosition.X, target.Y - context.OwnerPosition.Y));
+                LaunchRocket(context, context.OwnerPosition, direction, "Singijeon Focus Rocket");
+            }
+        }
+
+        private void LaunchRocket(in WeaponExecutionContext context, Float2 position, Float2 direction, string name) =>
+            projectiles.Launch(context, new LinearProjectileSpec(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.SingijeonVolley, position, direction, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), 1, name));
+
+        private static Float2 Normalize(Float2 value)
+        {
+            var length = Mathf.Sqrt(value.X * value.X + value.Y * value.Y);
+            return length < 0.0001f ? new Float2(1f, 0f) : new Float2(value.X / length, value.Y / length);
         }
 
         private void Launch(in WeaponExecutionContext context, Float2 direction)
