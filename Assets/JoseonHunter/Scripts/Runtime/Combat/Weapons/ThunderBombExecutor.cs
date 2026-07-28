@@ -221,7 +221,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(compressedMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 var multiplier = 2f;
-                if (Potentials.HasPotential(WeaponPotentialId.ThunderOverchargedCore)) multiplier *= 1f + Mathf.Min(.80f, bomb.PulledTargetIds.Count * .08f);
+                var coreContact = Potentials.HasPotential(WeaponPotentialId.ThunderOverchargedCore) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderOverchargedCore, out _, out var coreMask) &&
+                    PixelMaskContactService.TryFindContact(coreMask, PixelMaskTransform.Translation(bomb.Landing.X, bomb.Landing.Y), target.HurtMask, target.HurtMaskTransform, out _);
+                if (coreContact) multiplier *= 1f + Mathf.Min(.80f, bomb.PulledTargetIds.Count * .08f);
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _) &&
                     Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
                     bomb.LightningRodTarget = target;

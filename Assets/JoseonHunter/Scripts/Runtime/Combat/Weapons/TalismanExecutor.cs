@@ -21,6 +21,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private AttackInstance bindingAttack;
         private int elementCastOrdinal;
         private readonly List<GhostFlame> ghostFlames = new List<GhostFlame>();
+        private readonly List<IceSlow> iceSlows = new List<IceSlow>();
 
         public TalismanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int hopCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -66,10 +67,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Advance(cast, Mathf.Max(0f, deltaTime), context);
                 LastState = cast.State;
                 if (cast.State != TalismanState.Complete) continue;
-                ClearIce(cast);
                 runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
                 if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
                 active.RemoveAt(index);
+            }
+            for (var index = iceSlows.Count - 1; index >= 0; index--)
+            {
+                var slow = iceSlows[index]; slow.Remaining -= Mathf.Max(0f, deltaTime);
+                if (slow.Remaining > 0f) { iceSlows[index] = slow; continue; }
+                if (slow.Target is IFrostStatusTarget frost) frost.RemoveFrostSlow(slow.SourceAttackId, 0f);
+                iceSlows.RemoveAt(index);
             }
             for (var index = ghostFlames.Count - 1; index >= 0; index--)
             {
@@ -98,11 +105,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             foreach (var cast in active)
             {
-                ClearIce(cast);
                 runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
                 if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
             }
             active.Clear(); bindingTargets.Clear();
+            foreach (var slow in iceSlows) if (slow.Target is IFrostStatusTarget frost) frost.RemoveFrostSlow(slow.SourceAttackId, 0f);
+            iceSlows.Clear();
             foreach (var flame in ghostFlames) runtime.DamageService.RetireAttack(flame.Attack.InstanceId);
             ghostFlames.Clear(); elementCastOrdinal = 0;
             if (bindingAttack != null) runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
@@ -140,11 +148,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void Advance(TalismanCast cast, float deltaTime, in WeaponExecutionContext context)
         {
-            if (cast.IceSlowRemaining > 0f)
-            {
-                cast.IceSlowRemaining -= deltaTime;
-                if (cast.IceSlowRemaining <= 0f && cast.IceTarget is IFrostStatusTarget frost) frost.RemoveFrostSlow(cast.Attack.InstanceId, 0f);
-            }
             switch (cast.State)
             {
                 case TalismanState.Flying:
@@ -172,7 +175,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     TryFindNearestLegal(cast.Position, cast.AttemptedTargets, out var transfer) && DistanceSquared(transfer.WorldPosition, cast.Position) <= 16f)
                 {
                     cast.Target = transfer; cast.AttemptedTargets.Add(transfer.RuntimeId); cast.ReservedTargets.Add(transfer.RuntimeId);
-                    cast.SealedConfirmed = false; cast.HasTransferred = true; TransferCount++; cast.State = TalismanState.Transferring; return;
+                    cast.SealedConfirmed = false; cast.HasTransferred = true; cast.SuppressTransferContact = true; TransferCount++; cast.State = TalismanState.Transferring; return;
                 }
                 if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanVengefulGhostBurst))
                     ghostFlames.Add(new GhostFlame(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), cast.Position));
@@ -189,12 +192,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
 
-            if (cast.State != TalismanState.Transferring)
+            if (!cast.SuppressTransferContact)
             {
                 Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
                 Apply(cast, cast.Target, contact, ContactPhase.Attach, context.SimulationTick);
             }
             cast.State = TalismanState.Attached;
+            cast.SuppressTransferContact = false;
         }
 
         private void ResolveFailedContact(TalismanCast cast)
@@ -346,8 +350,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (cast.Element == 1)
             {
                 if (cast.Target is IFrostStatusTarget frost) frost.ApplyFrostSlow(cast.Attack.InstanceId, .5f);
-                cast.IceTarget = cast.Target;
-                cast.IceSlowRemaining = 1.2f;
+                iceSlows.Add(new IceSlow(cast.Target, cast.Attack.InstanceId, 1.2f));
                 return;
             }
             if (!TryFindNearestLegal(cast.Target.WorldPosition, new HashSet<int> { cast.Target.RuntimeId }, out var other) ||
@@ -360,11 +363,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
 
         private static float DistanceSquared(Float2 a, Float2 b) { var x = a.X - b.X; var y = a.Y - b.Y; return x * x + y * y; }
-        private static void ClearIce(TalismanCast cast)
-        {
-            if (cast.IceTarget is IFrostStatusTarget frost) frost.RemoveFrostSlow(cast.Attack.InstanceId, 0f);
-            cast.IceSlowRemaining = 0f; cast.IceTarget = null;
-        }
 
         private static bool IsCurrentTargetValid(ICombatTarget target) => target != null && target.IsAlive;
         private static bool IsTargetAvailable(ICombatTarget target, HashSet<int> reservations) => IsCurrentTargetValid(target) && (reservations == null || !reservations.Contains(target.RuntimeId));
@@ -389,15 +387,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public TalismanState State { get; set; } = TalismanState.Flying;
             public int Element { get; }
             public bool SealedConfirmed { get; set; }
-            public float IceSlowRemaining { get; set; }
-            public ICombatTarget IceTarget { get; set; }
             public bool HasTransferred { get; set; }
+            public bool SuppressTransferContact { get; set; }
 
             public void RecordLinkedTarget(ICombatTarget target)
             {
                 if (target != null && LinkedTargetIds.Add(target.RuntimeId)) LinkedTargets.Add(target);
             }
         }
+
+        private struct IceSlow { public IceSlow(ICombatTarget target, int sourceAttackId, float remaining) { Target = target; SourceAttackId = sourceAttackId; Remaining = remaining; } public ICombatTarget Target; public int SourceAttackId; public float Remaining; }
 
         private struct GhostFlame
         {

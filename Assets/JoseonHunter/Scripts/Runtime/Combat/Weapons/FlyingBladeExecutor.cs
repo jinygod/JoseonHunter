@@ -263,7 +263,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!runtime.DamageService.TryApply(
                         WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage * ramp), false, contact, phase, context.SimulationTick),
                         out _)) continue;
-                blade.CastHits.Add(target.RuntimeId);
+                if (danceContact) blade.CastHits.Add(target.RuntimeId);
                 if (Potentials.HasPotential(WeaponPotentialId.HwandoVenomFang) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.HwandoVenomFang, out _, out var venomMask) &&
                     PixelMaskContactService.TryFindContact(venomMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
                 {
