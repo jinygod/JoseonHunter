@@ -56,6 +56,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActivePostCount { get { var count = 0; foreach (var set in sets) count += set.Posts.Count; return count; } }
         public int EvictedWardSetCount { get; private set; }
         public int CompletedWardSetCount { get { var count = 0; foreach (var set in sets) if (set.IsCompleted) count++; return count; } }
+#if UNITY_INCLUDE_TESTS
+        public int ActiveBarrierCountForTests { get { var count = 0; foreach (var set in sets) if (set.RotationMask != null) count++; return count; } }
+        public int ActiveGuardianCountForTests { get { var count = 0; foreach (var set in sets) if (set.GuardianMask != null) count++; return count; } }
+#endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {

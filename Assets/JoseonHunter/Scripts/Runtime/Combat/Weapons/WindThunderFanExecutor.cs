@@ -55,6 +55,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastLightningSimulationTick { get; private set; } = -1;
         public IReadOnlyList<int> LastSuccessfulOutboundTargetIds => successfulOutboundTargetIds;
         public IReadOnlyList<float> LastOutboundStrikeTimes => outboundStrikeTimes;
+#if UNITY_INCLUDE_TESTS
+        public int ActiveBleedCountForTests => bleeds.Count;
+        public bool PendingChainForTests => pendingChain.Scheduled;
+#endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {

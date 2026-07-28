@@ -53,6 +53,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastResolvedStoredTargetCount { get; private set; }
         public bool AllStoredTargetsResolvedOnce { get; private set; }
         public float LastFieldVisualScale { get; private set; } = 1f;
+#if UNITY_INCLUDE_TESTS
+        public int ActiveSpreadResidenceCountForTests => spreadResidences.Count;
+#endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {

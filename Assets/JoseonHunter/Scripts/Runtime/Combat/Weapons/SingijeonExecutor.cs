@@ -57,6 +57,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ScoutProjectileCount { get; private set; }
         public int FocusProjectileCount { get; private set; }
         public Float2 RecordedFocusPosition => focusPosition;
+#if UNITY_INCLUDE_TESTS
+        public int ActiveTrailCountForTests => trails.Count;
+        public bool FocusRetargetedForTests => focusRetargeted;
+        public int UnlaunchedFocusCountForTests => Mathf.Max(0, FocusProjectileCount - focusLaunchIndex);
+#endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {

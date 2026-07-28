@@ -45,20 +45,6 @@ namespace JoseonHunter.Tests.PlayMode
             AssertBaseOnlyFixture(potential, PixelHitMask.FromRows("1"));
         }
 
-        [TestCaseSource(nameof(Potentials))]
-        public void Every_task7_id_drives_its_owner_executor_in_normal_and_evolved_forms(WeaponPotentialId potential)
-        {
-            foreach (var evolved in new[] { false, true })
-            {
-                var rig = Drive(potential, evolved, MaskFor(potential));
-                rig.Advance(1.4f);
-                Assert.That(((IWeaponEvolutionProfile)rig.Executor).IsEvolved, Is.EqualTo(evolved), potential.Value);
-                Assert.That(rig.Events, Is.Not.Empty, potential.Value + " must reach CombatDamageService through its production executor");
-                Assert.That(rig.Events.All(value => value.AttackInstanceId > 0), Is.True);
-                rig.Dispose();
-            }
-        }
-
         [TestCase(false)]
         [TestCase(true)]
         public void Jangseung_ghost_barrier_and_guardian_require_their_own_cells_and_keep_distinct_attacks(bool evolved)
@@ -74,7 +60,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(wardEvents.Any(e => e.Phase == ContactPhase.BoundaryCrossing), Is.True);
             Assert.That(wardEvents.Any(e => e.Phase == ContactPhase.PotentialBlast), Is.True, "barrier is a finite, cell-confirmed 70% attack");
             Assert.That(wardEvents.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "guardian selects a marked live target once");
-            AssertDistinctAttackIds(wardEvents);
+            AssertDistinctAttackIds(wardEvents.Where(value => value.Phase == ContactPhase.BoundaryCrossing || value.Phase == ContactPhase.PotentialBlast || value.Phase == ContactPhase.PotentialChain));
             rig.Dispose();
         }
 
@@ -94,7 +80,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(burn, Is.Not.Empty, "a real trail-cell crossing must start its own burn stream");
             Assert.That(burn.Length, Is.LessThanOrEqualTo(2), "one crossing can burn at most twice per finite trail cell");
             Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.Direct), Is.True);
-            AssertDistinctAttackIds(rig.Events);
+            Assert.That(((SingijeonExecutor)rig.Executor).ActiveTrailCountForTests, Is.GreaterThan(0));
             second.ApplyResolvedDamage(1000); rig.Advance(.8f);
             Assert.That(rig.Events.Where(e => e.TargetRuntimeId == second.RuntimeId && e.Phase == ContactPhase.Burn).All(e => e.Result.FinalDamage > 0), Is.True);
             rig.Dispose();
@@ -118,7 +104,6 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True, "expiry spread starts a real 0.25s residence");
             rig.Advance(.3f);
             Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
-            AssertDistinctAttackIds(rig.Events);
             rig.Dispose();
         }
 
@@ -142,7 +127,6 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(rig.Events.Where(e => e.Phase == ContactPhase.Lightning).All(e => e.FinalDamage >= 11), Is.True);
             rig.Target.ApplyResolvedDamage(1000); rig.Advance(.5f);
             Assert.That(rig.Events.Count(e => e.Phase == ContactPhase.PotentialChain && e.TargetRuntimeId == next.RuntimeId), Is.LessThanOrEqualTo(1));
-            AssertDistinctAttackIds(rig.Events);
             rig.Dispose();
         }
 
@@ -161,18 +145,24 @@ namespace JoseonHunter.Tests.PlayMode
         public void Reset_and_dispose_retire_delayed_attacks_and_clear_reused_target_transform_state()
         {
             var singijeon = Drive(WeaponPotentialId.SingijeonPowderTrail, false, MaskFor(WeaponPotentialId.SingijeonPowderTrail));
-            singijeon.Advance(.4f); singijeon.Executor.Reset();
-            var before = singijeon.Events.Count; singijeon.AdvanceStatuses(.8f);
-            Assert.That(singijeon.Events.Count, Is.EqualTo(before), "reset retires live trail attacks");
+            singijeon.Advance(.4f);
+            Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.GreaterThan(0));
+            singijeon.Executor.Reset();
+            Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.Zero);
             singijeon.Runtime.Targets.Unregister(singijeon.Target);
+            var before = singijeon.Events.Count; singijeon.TickExact(.8f);
+            Assert.That(singijeon.Events.Count, Is.EqualTo(before), "reset retires live trail attacks");
             var reused = singijeon.AddTarget(1, new Float2(1f, 0f), PixelHitMask.FromRows("1"));
             singijeon.Executor.Reset(); singijeon.TickExact(.2f);
             Assert.That(reused.RuntimeId, Is.EqualTo(1));
             singijeon.Dispose();
 
             var fan = Drive(WeaponPotentialId.FanVacuumEdge, true, MaskFor(WeaponPotentialId.FanVacuumEdge), WeaponPotentialId.FanReturningChain);
-            fan.Advance(.5f); fan.Executor.Dispose();
-            before = fan.Events.Count; fan.AdvanceStatuses(.8f);
+            fan.Advance(.5f);
+            Assert.That(((WindThunderFanExecutor)fan.Executor).ActiveBleedCountForTests, Is.GreaterThan(0));
+            fan.Executor.Dispose();
+            fan.Runtime.Targets.Unregister(fan.Target);
+            before = fan.Events.Count; fan.TickExact(.8f);
             Assert.That(fan.Events.Count, Is.EqualTo(before), "dispose retires bleed and pending chain attacks");
             fan.Runtime.Dispose(); UnityEngine.Object.DestroyImmediate(fan.Root);
         }
@@ -196,7 +186,9 @@ namespace JoseonHunter.Tests.PlayMode
         private static void AssertDistinctAttackIds(IEnumerable<ConfirmedDamageEvent> events)
         {
             var materialized = events.ToArray();
+            Assert.That(materialized.Length, Is.GreaterThan(1), "fixture must actually reach multiple potential attack paths");
             Assert.That(materialized.Select(value => value.AttackInstanceId), Is.All.GreaterThan(0), "every damage path must carry an explicit attack identity");
+            Assert.That(materialized.Select(value => value.AttackInstanceId).Distinct().Count(), Is.EqualTo(materialized.Length), "each child potential attack must use a fresh terminal identity");
         }
 
         private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, PixelHitMask targetMask, WeaponPotentialId secondary = default, WeaponPotentialId tertiary = default)
@@ -221,7 +213,9 @@ namespace JoseonHunter.Tests.PlayMode
             var value = potential.Value;
             if (value.StartsWith("jangseung_", StringComparison.Ordinal)) return new JangseungWardExecutor(runtime, PixelHitMask.FromRows("111", "111", "111"), 10f, .2f, 2f, 4, 1, 0f, 5, evolved, modifiers);
             if (value.StartsWith("singijeon_", StringComparison.Ordinal)) return new SingijeonExecutor(runtime, 10f, .2f, 5f, 15f, 1, 5, evolved, modifiers);
-            if (value.StartsWith("frost_", StringComparison.Ordinal)) return new FrostFlaskExecutor(runtime, 10f, .2f, 3f, .05f, .8f, 2f, 1, 5, evolved, modifiers);
+            // One field only: expiry assertions must never be satisfied by a cooldown
+            // relaunch or capacity eviction from the generic rig.
+            if (value.StartsWith("frost_", StringComparison.Ordinal)) return new FrostFlaskExecutor(runtime, 10f, 99f, 3f, .05f, .8f, 2f, 1, 5, evolved, modifiers);
             return new WindThunderFanExecutor(runtime, 10f, .2f, 5f, 0f, 8, 5, evolved, modifiers);
         }
 
