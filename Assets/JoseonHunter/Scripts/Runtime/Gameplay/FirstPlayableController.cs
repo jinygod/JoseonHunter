@@ -32,6 +32,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly Dictionary<string, int> supportLevels = new Dictionary<string, int>();
         private readonly HashSet<string> unlockedUpgradeIds = new HashSet<string>();
         private readonly HashSet<string> acquiredEvolutionIds = new HashSet<string>();
+        private readonly WeaponEvolutionState evolutionState = new WeaponEvolutionState();
         private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
         private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
@@ -87,6 +88,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public IReadOnlyList<WeaponId> RegisteredWeaponIds => registeredWeaponIds;
         public FirstPlayableUiState UiState => BuildUiState();
         public bool IsUpgradeOpen => upgradeOpen;
+        public IReadOnlyCollection<string> AcquiredEvolutionIds => acquiredEvolutionIds;
         public event Action<UpgradeChoiceState> UpgradeOpened;
         public event Action<ProgressionRewardEvent> UpgradeChosen;
         public event Action RunReset;
@@ -97,6 +99,13 @@ namespace JoseonHunter.Runtime.Gameplay
         public void OpenUpgradeForTests() => OpenUpgrade();
         public void AddExperienceForTests(int amount) => AddExperience(amount);
         public void ResetRunForTests() => ResetRun();
+        public void SetWeaponLevelForTests(WeaponId weaponId, int weaponLevel)
+        {
+            weaponLevels[weaponId.Value] = weaponLevel;
+            RebuildWeaponExecutorsForLevel();
+        }
+        public int WeaponLevelForTests(WeaponId weaponId) => weaponLevels[weaponId.Value];
+        public void UnlockEvolutionForTests(string evolutionId) => unlockedUpgradeIds.Add(evolutionId);
 #endif
 
         public bool IsCombatTargetAlive(int runtimeId) =>
@@ -383,6 +392,8 @@ namespace JoseonHunter.Runtime.Gameplay
             supportLevels.Clear();
             unlockedUpgradeIds.Clear();
             acquiredEvolutionIds.Clear();
+            evolutionState.Clear();
+            foreach (var evolution in WeaponEvolutionCatalog.All) unlockedUpgradeIds.Add(evolution.Id);
             combatTargets = new CombatTargetRegistry();
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
@@ -711,16 +722,17 @@ namespace JoseonHunter.Runtime.Gameplay
                     throw new InvalidOperationException($"Gameplay catalog is missing '{id}'.");
                 var data = definition.Levels[Mathf.Clamp(ownedLevel - 1, 0, 4)];
                 IWeaponExecutor executor;
-                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount);
-                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level);
-                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level);
-                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level);
-                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level);
-                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level);
-                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level);
-                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level);
+                var evolved = evolutionState.IsEvolved(id);
+                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, evolved);
+                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved);
+                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved);
+                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved);
+                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved);
+                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved);
+                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved);
                 else throw new InvalidOperationException($"No executor is available for '{id}'.");
-                weaponRuntime.Register(executor);
+                weaponRuntime.Register(id, executor);
                 registeredWeaponIds.Add(id);
             }
         }
@@ -993,6 +1005,16 @@ namespace JoseonHunter.Runtime.Gameplay
                 return new ProgressionRewardEvent(offer.Id, null, offer.NextLevel, ProgressionRewardKind.Support,
                     SupportDisplayName(offer.Id), SupportDelta(offer.Id), null);
             }
+            if (offer.Kind == UpgradeKind.Evolution && WeaponEvolutionCatalog.TryGet(offer.Id, out var evolution))
+            {
+                acquiredEvolutionIds.Add(offer.Id);
+                evolutionState.SetEvolved(evolution.RequiredWeaponId);
+                RebuildWeaponExecutorsForLevel();
+                return new ProgressionRewardEvent(offer.Id, evolution.RequiredWeaponId.Value, 5,
+                    ProgressionRewardKind.Evolution, evolution.DisplayName, evolution.Summary,
+                    ResolveWeaponSprite(evolution.RequiredWeaponId));
+            }
+
             acquiredEvolutionIds.Add(offer.Id);
             return new ProgressionRewardEvent(offer.Id, WeaponId.HwandoFlyingBlade.Value, 1,
                 ProgressionRewardKind.Evolution, "환도 비검 진화", "진화 완료", ResolveWeaponSprite(WeaponId.HwandoFlyingBlade));

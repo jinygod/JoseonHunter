@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
 {
-    public sealed class FlyingBladeExecutor : IWeaponExecutor
+    public sealed class FlyingBladeExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
         private const float ArrivalDistance = 0.08f;
         private readonly WeaponRuntimeController runtime;
@@ -16,10 +16,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
         private float cooldown;
 
-        public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount)
+        public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, bool evolved = false)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             Reconfigure(baseDamage, cooldownSeconds, range, speed, bladeCount);
+            IsEvolved = evolved;
         }
 
         public void Reconfigure(float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount)
@@ -36,6 +37,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Range { get; private set; }
         public float Speed { get; private set; }
         public int BladeCount { get; private set; }
+        public bool IsEvolved { get; }
         public int ActiveBladeCount => active.Count;
         public int PooledBladeCount => pool.Count;
         public int LastVolleyLaunchCount { get; private set; }

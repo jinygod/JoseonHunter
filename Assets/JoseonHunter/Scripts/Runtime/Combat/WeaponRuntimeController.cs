@@ -47,6 +47,7 @@ namespace JoseonHunter.Runtime.Combat
     public sealed class WeaponRuntimeController
     {
         private readonly List<IWeaponExecutor> executors = new List<IWeaponExecutor>();
+        private readonly Dictionary<WeaponId, IWeaponExecutor> executorsByWeapon = new Dictionary<WeaponId, IWeaponExecutor>();
         private int simulationTick;
         private int nextAttackInstanceId = 1;
         private Func<WeaponId, Sprite> spriteResolver;
@@ -78,6 +79,18 @@ namespace JoseonHunter.Runtime.Combat
             executors.Add(executor);
         }
 
+        public void Register(WeaponId weaponId, IWeaponExecutor executor)
+        {
+            Register(executor);
+            executorsByWeapon[weaponId] = executor;
+        }
+
+#if UNITY_INCLUDE_TESTS
+        public bool IsEvolvedForTests(WeaponId weaponId) =>
+            executorsByWeapon.TryGetValue(weaponId, out var executor) &&
+            executor is IWeaponEvolutionProfile profile && profile.IsEvolved;
+#endif
+
         public void SetSpriteResolver(Func<WeaponId, Sprite> resolver) => spriteResolver = resolver;
         public void SetMaskResolver(Func<WeaponId, PixelHitMask> resolver) => maskResolver = resolver;
 
@@ -105,6 +118,7 @@ namespace JoseonHunter.Runtime.Combat
             disposed = true;
             foreach (var executor in executors) executor.Dispose();
             executors.Clear();
+            executorsByWeapon.Clear();
             DamageService.ClearAttacks();
             spriteResolver = null;
             maskResolver = null;

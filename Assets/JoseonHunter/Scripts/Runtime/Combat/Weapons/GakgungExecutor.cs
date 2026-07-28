@@ -6,19 +6,20 @@ using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
 {
-    public sealed class GakgungExecutor : IWeaponExecutor
+    public sealed class GakgungExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
         private readonly WeaponRuntimeController runtime;
         private readonly LinearProjectileExecutor projectiles;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
 
-        public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level)
+        public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             projectiles = new LinearProjectileExecutor(runtime);
             BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds);
             Range = Mathf.Max(0.01f, range); Speed = Mathf.Max(0.01f, speed); Level = Mathf.Clamp(level, 1, 5);
+            IsEvolved = evolved;
         }
 
         public float BaseDamage { get; }
@@ -26,6 +27,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Range { get; }
         public float Speed { get; }
         public int Level { get; }
+        public bool IsEvolved { get; }
         public int LastSelectedTargetRuntimeId { get; private set; }
         public int LastLaunchCount { get; private set; }
         public int ActiveProjectileCount => projectiles.ActiveCount;

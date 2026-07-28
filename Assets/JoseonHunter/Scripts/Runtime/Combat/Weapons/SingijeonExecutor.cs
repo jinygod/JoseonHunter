@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
 {
-    public sealed class SingijeonExecutor : IWeaponExecutor
+    public sealed class SingijeonExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
         private const float BucketDegrees = 30f;
         private const int BucketCount = 12;
@@ -16,12 +16,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
 
-        public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level)
+        public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level, bool evolved = false)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             projectiles = new LinearProjectileExecutor(runtime);
             BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds);
             Range = Mathf.Max(0.01f, range); Speed = Mathf.Max(0.01f, speed); LaneCount = Mathf.Clamp(laneCount, 1, MaxLaneCount); Level = Mathf.Clamp(level, 1, 5);
+            IsEvolved = evolved;
         }
 
         public float BaseDamage { get; }
@@ -30,6 +31,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Speed { get; }
         public int LaneCount { get; }
         public int Level { get; }
+        public bool IsEvolved { get; }
         public int LastLaunchCount { get; private set; }
         public int ActiveProjectileCount => projectiles.ActiveCount;
         public Float2 LastDirection { get; private set; }

@@ -9,7 +9,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     public enum ThunderBombState { Lob, Fuse, Blast, SecondaryShockwave, Complete }
 
     /// <summary>A deterministic lob followed by a one-shot, pixel-confirmed expanding blast ring.</summary>
-    public sealed class ThunderBombExecutor : IWeaponExecutor
+    public sealed class ThunderBombExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
         private const int MaximumBombs = 4;
         private readonly WeaponRuntimeController runtime;
@@ -18,11 +18,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly PixelHitMask ringMask = CreateRingMask();
         private float cooldown;
 
-        public ThunderBombExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float fuseDuration, float blastRadius, int level)
+        public ThunderBombExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float fuseDuration, float blastRadius, int level, bool evolved = false)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds); Range = Mathf.Max(0.01f, range);
             LobDuration = Mathf.Max(0.01f, lobDuration); FuseDuration = Mathf.Max(0f, fuseDuration); BlastRadius = Mathf.Max(0.01f, blastRadius); Level = Mathf.Clamp(level, 1, 5);
+            IsEvolved = evolved;
         }
 
         public float BaseDamage { get; }
@@ -32,6 +33,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float FuseDuration { get; }
         public float BlastRadius { get; }
         public int Level { get; }
+        public bool IsEvolved { get; }
         public int ActiveBombCount => bombs.Count;
         public ThunderBombState LastState { get; private set; } = ThunderBombState.Complete;
         public Float2 LastLandingPosition { get; private set; }

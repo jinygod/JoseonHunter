@@ -9,7 +9,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     public enum WindThunderFanState { WindActive, EchoDelay, LightningResolve, Complete }
 
     /// <summary>Contact-gated gusts mark targets first; the later echo resolves all marks in one simulation tick.</summary>
-    public sealed class WindThunderFanExecutor : IWeaponExecutor
+    public sealed class WindThunderFanExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
         private readonly WeaponRuntimeController runtime;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
@@ -19,11 +19,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private int gustIndex;
         private float echoRemaining;
 
-        public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level)
+        public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             BaseDamage = Mathf.Max(1f, baseDamage); CooldownSeconds = Mathf.Max(0.01f, cooldownSeconds); Range = Mathf.Max(0.01f, range);
             Knockback = Mathf.Max(0f, knockback); MarkedTargetCap = Mathf.Max(1, markedTargetCap); Level = Mathf.Clamp(level, 1, 5);
+            IsEvolved = evolved;
             State = WindThunderFanState.Complete;
         }
 
@@ -33,6 +34,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Knockback { get; }
         public int MarkedTargetCap { get; }
         public int Level { get; }
+        public bool IsEvolved { get; }
         public WindThunderFanState State { get; private set; }
         public int LastWindContactCount { get; private set; }
         public int LastLightningContactCount { get; private set; }
