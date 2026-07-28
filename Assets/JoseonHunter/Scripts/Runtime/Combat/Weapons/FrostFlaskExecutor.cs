@@ -98,8 +98,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (progress >= 1f) { field.Active = true; field.Age = 0f; }
                 return;
             }
-            field.ActiveAge += step;
-            if (field.ActiveAge >= Duration) { Expire(field, context); return; }
+            var activeStep = Mathf.Min(step, Mathf.Max(0f, Duration - field.ActiveAge));
+            field.ActiveAge += activeStep;
             runtime.Targets.CopyTo(targets);
             var mistMask = diskMask;
             var radiusScale = 1f;
@@ -116,11 +116,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(mistMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 inside.Add(target.RuntimeId);
-                field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += step; field.Residence[target.RuntimeId] = residence;
+                field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += activeStep; field.Residence[target.RuntimeId] = residence;
                 if (Potentials.HasPotential(WeaponPotentialId.FrostCrackMark) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostCrackMark, out _, out var crackMask) &&
                     PixelMaskContactService.TryFindContact(crackMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
                 {
-                    field.CrackElapsed.TryGetValue(target.RuntimeId, out var crackElapsed); crackElapsed += step;
+                    field.CrackElapsed.TryGetValue(target.RuntimeId, out var crackElapsed); crackElapsed += activeStep;
                     while (crackElapsed + .00001f >= .5f) { crackElapsed -= .5f; field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); field.CrackStacks[target.RuntimeId] = Mathf.Min(3, stacks + 1); }
                     field.CrackElapsed[target.RuntimeId] = crackElapsed;
                 }
