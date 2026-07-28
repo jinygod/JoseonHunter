@@ -22,21 +22,33 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Weapon_upgrade_rolls_once_and_evolution_preserves_the_profile()
+        public IEnumerator Weapon_offers_roll_once_rebuild_once_and_evolution_preserves_the_profile()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            controller.SetAffixRandomFactoryForTests((_, _, _, _) => new FixedAffixRandom());
-            controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 1);
+            controller.SetAffixRandomFactoryForTests((_, _, _, _) => new JackpotAffixRandom());
+            for (var weaponLevel = 1; weaponLevel <= 5; weaponLevel++)
+            {
+                var oldRuntime = controller.WeaponRuntime;
+                var rebuilds = controller.WeaponRebuildCountForTests;
+                controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, weaponLevel));
+                Assert.That(controller.TryChooseUpgrade(0), Is.True);
+                Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(weaponLevel));
+                Assert.That(controller.WeaponRebuildCountForTests, Is.EqualTo(rebuilds + 1));
+                Assert.That(oldRuntime.IsDisposedForTests, Is.True);
+                Assert.That(controller.WeaponRuntime.RegistrationCountForTests(WeaponId.GakgungShot), Is.EqualTo(1));
+                Assert.That(controller.CombatDamageService.AttachedAffixStatusesForTests, Is.SameAs(controller.WeaponRuntime.AffixStatuses));
+            }
 
-            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(0));
-            controller.RollWeaponAffixForTests(WeaponId.GakgungShot);
-            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(1));
-
-            controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 5);
-            controller.AcquireEvolutionForTests("gakgung_sun_piercer");
-            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(1));
+            var beforeEvolution = controller.WeaponRuntime;
+            var profile = controller.AffixProfileForTests(WeaponId.GakgungShot);
+            controller.SetUpgradeOffersForTests(new UpgradeOffer("gakgung_sun_piercer", UpgradeKind.Evolution, 5));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+            Assert.That(beforeEvolution.IsDisposedForTests, Is.True);
+            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(5));
+            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).PotentialIds, Is.EqualTo(profile.PotentialIds));
+            Assert.That(controller.WeaponRuntime.RegistrationCountForTests(WeaponId.GakgungShot), Is.EqualTo(1));
         }
 
         [UnityTest]
@@ -48,15 +60,14 @@ namespace JoseonHunter.Tests.PlayMode
             controller.SetAffixRandomFactoryForTests((_, _, _, _) => new FixedAffixRandom());
             ProgressionRewardEvent reward = default;
             controller.UpgradeChosen += candidate => reward = candidate;
-            controller.OpenUpgradeForTests();
-            var index = -1;
-            for (var offerIndex = 0; offerIndex < controller.CurrentOffers.Count; offerIndex++)
-                if (controller.CurrentOffers[offerIndex].Kind == UpgradeKind.Weapon) { index = offerIndex; break; }
-            Assert.That(index, Is.GreaterThanOrEqualTo(0));
-            Assert.That(controller.TryChooseUpgrade(index), Is.True);
+            controller.SetAffixRandomFactoryForTests((_, _, _, _) => new JackpotAffixRandom());
+            controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
             Assert.That(reward.AffixResult, Is.Not.Null);
             Assert.That(reward.AffixResult.General,
                 Is.EqualTo(controller.AffixProfileForTests(new WeaponId(reward.WeaponId)).GeneralRolls[^1]));
+            Assert.That(reward.AffixResult.NewPotentials,
+                Is.EqualTo(controller.AffixProfileForTests(new WeaponId(reward.WeaponId)).PotentialIds));
         }
 
         [Test]
@@ -70,6 +81,17 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.Not.EqualTo(FirstPlayableUiBootstrap.WeaponSignatureForTests(affixedState)));
         }
 
+        [Test]
+        public void Weapon_signature_changes_when_only_the_affix_tier_changes()
+        {
+            var standard = new FirstPlayableUiState(1, 0, 1, 0, 0, 0f, 1f, 1f, 1f, false, false, 0f, 0f,
+                new[] { new WeaponSlotView("gakgung_shot", "Gakgung", 1, null, "Damage +17%", null, new[] { WeaponAffixTier.Standard }) });
+            var perfect = new FirstPlayableUiState(1, 0, 1, 0, 0, 0f, 1f, 1f, 1f, false, false, 0f, 0f,
+                new[] { new WeaponSlotView("gakgung_shot", "Gakgung", 1, null, "Damage +17%", null, new[] { WeaponAffixTier.Perfect }) });
+            Assert.That(FirstPlayableUiBootstrap.WeaponSignatureForTests(standard),
+                Is.Not.EqualTo(FirstPlayableUiBootstrap.WeaponSignatureForTests(perfect)));
+        }
+
         [UnityTest]
         public IEnumerator Run_reset_clears_weapon_affix_profiles()
         {
@@ -77,8 +99,15 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             controller.SetAffixRandomFactoryForTests((_, _, _, _) => new JackpotAffixRandom());
-            controller.RollWeaponAffixForTests(WeaponId.GakgungShot);
-            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).PotentialIds.Count, Is.EqualTo(3));
+            controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+            var rolls = controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count;
+            controller.SetUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(rolls));
+
+            controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 1);
+            Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(rolls));
 
             controller.ResetRunForTests();
             Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot), Is.Null);

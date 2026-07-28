@@ -200,6 +200,9 @@ namespace JoseonHunter.Presentation.UI
                     signature = signature * 31 + weapon.PotentialIds.Count;
                     for (var potentialIndex = 0; potentialIndex < weapon.PotentialIds.Count; potentialIndex++)
                         signature = signature * 31 + StableContentHash(weapon.PotentialIds[potentialIndex].Value);
+                    signature = signature * 31 + weapon.GeneralAffixTiers.Count;
+                    for (var tierIndex = 0; tierIndex < weapon.GeneralAffixTiers.Count; tierIndex++)
+                        signature = signature * 31 + (int)weapon.GeneralAffixTiers[tierIndex];
                 }
 
                 return signature;

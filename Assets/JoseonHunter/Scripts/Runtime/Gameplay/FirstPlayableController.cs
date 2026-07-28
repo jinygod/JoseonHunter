@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
@@ -101,7 +102,14 @@ namespace JoseonHunter.Runtime.Gameplay
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
         public int AppliedUpgradeCount { get; private set; }
+        public int WeaponRebuildCountForTests { get; private set; }
         public void OpenUpgradeForTests() => OpenUpgrade();
+        public void SetUpgradeOffersForTests(params UpgradeOffer[] offers)
+        {
+            upgradeOpen = true;
+            upgradeOfferData.Clear();
+            upgradeOfferData.AddRange(offers);
+        }
         public void AddExperienceForTests(int amount) => AddExperience(amount);
         public void ResetRunForTests() => ResetRun();
         public void SetWeaponLevelForTests(WeaponId weaponId, int weaponLevel)
@@ -983,6 +991,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private void RebuildWeaponExecutorsForLevel()
         {
             if (weaponRuntime == null) return;
+#if UNITY_INCLUDE_TESTS
+            WeaponRebuildCountForTests++;
+#endif
             weaponRuntime.Dispose();
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
@@ -1158,7 +1169,8 @@ namespace JoseonHunter.Runtime.Gameplay
                     weapon.Value,
                     ResolveWeaponSprite(new WeaponId(weapon.Key)),
                     GeneralAffixSummary(new WeaponId(weapon.Key)),
-                    weaponAffixes.TryProfileFor(new WeaponId(weapon.Key), out var profile) ? profile.PotentialIds : null));
+                    weaponAffixes.TryProfileFor(new WeaponId(weapon.Key), out var profile) ? profile.PotentialIds : null,
+                    profile == null ? null : profile.GeneralRolls.Select(roll => roll.Tier)));
             }
 
             var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null);

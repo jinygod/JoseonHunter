@@ -56,11 +56,13 @@ namespace JoseonHunter.Runtime.Gameplay
     public readonly struct WeaponSlotView
     {
         public WeaponSlotView(string id, string displayName, int level, Sprite icon,
-            string generalAffixSummary = null, IEnumerable<WeaponPotentialId> potentialIds = null)
+            string generalAffixSummary = null, IEnumerable<WeaponPotentialId> potentialIds = null,
+            IEnumerable<WeaponAffixTier> generalAffixTiers = null)
         {
             Id = id; DisplayName = displayName; Level = level; Icon = icon;
             GeneralAffixSummary = generalAffixSummary ?? string.Empty;
             PotentialIds = Array.AsReadOnly((potentialIds ?? Array.Empty<WeaponPotentialId>()).ToArray());
+            GeneralAffixTiers = Array.AsReadOnly((generalAffixTiers ?? Array.Empty<WeaponAffixTier>()).ToArray());
         }
 
         public string Id { get; }
@@ -69,6 +71,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public Sprite Icon { get; }
         public string GeneralAffixSummary { get; }
         public IReadOnlyList<WeaponPotentialId> PotentialIds { get; }
+        public IReadOnlyList<WeaponAffixTier> GeneralAffixTiers { get; }
     }
 
     public sealed class UpgradeChoiceState

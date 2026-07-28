@@ -55,6 +55,9 @@ namespace JoseonHunter.Runtime.Combat
 
         public event Action<ConfirmedDamageEvent> DamageConfirmed;
         public int TrackedAttackCount => attacks.Count;
+#if UNITY_INCLUDE_TESTS
+        public WeaponAffixStatusService AttachedAffixStatusesForTests => affixStatuses;
+#endif
 
         /// <summary>Attaches the sole live affix-status owner for this shared damage service.</summary>
         public void AttachAffixStatuses(WeaponAffixStatusService provider)
