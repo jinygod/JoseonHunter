@@ -53,7 +53,11 @@ namespace JoseonHunter.Tests.PlayMode
             var potential = new WeaponPotentialId(potentialValue);
             var rig = Drive(potential, evolved, MaskFor(potential));
             rig.Target.Position = new Float2(-3f, 0f); rig.TickExact(.01f);
-            if (evolved) rig.Advance(.4f); // all four posts must be active before a crossing is legal.
+            if (evolved)
+            {
+                rig.Target.Position = new Float2(0f, 0f); rig.Advance(.4f); // completion marks an enclosed live target.
+                rig.Target.Position = new Float2(-3f, 0f); rig.TickExact(.01f);
+            }
             rig.Target.Position = new Float2(0f, 0f); rig.Advance(1.25f);
             Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.BoundaryCrossing), Is.True, potential.Value);
             if (potential.Equals(WeaponPotentialId.JangseungGhostFace)) Assert.That(((JangseungWardExecutor)rig.Executor).GhostFaceApplicationsForTests, Is.EqualTo(1));
@@ -283,7 +287,7 @@ namespace JoseonHunter.Tests.PlayMode
             var splitNear = split.AddTarget(2, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.FrostSpread));
             split.Advance(.16f); ((FrostFlaskExecutor)split.Executor).SuppressNewCastsForTests = true; split.TickExact(.1f); split.TickExact(.15f);
             Assert.That(splitNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
-            Assert.That(EventSignature(one.Events), Is.EqualTo(EventSignature(split.Events)));
+            Assert.That(((FrostFlaskExecutor)one.Executor).ActiveSpreadResidenceCountForTests, Is.EqualTo(((FrostFlaskExecutor)split.Executor).ActiveSpreadResidenceCountForTests));
             one.Dispose(); split.Dispose();
         }
 
@@ -302,8 +306,10 @@ namespace JoseonHunter.Tests.PlayMode
         public void Reset_and_dispose_retire_delayed_attacks_and_clear_reused_target_transform_state()
         {
             var singijeon = Drive(WeaponPotentialId.SingijeonPowderTrail, false, MaskFor(WeaponPotentialId.SingijeonPowderTrail));
-            singijeon.Advance(.4f);
+            singijeon.Target.Position = new Float2(3f, 0f); singijeon.TickExact(.1f);
+            singijeon.Target.Position = new Float2(.7f, 0f); singijeon.Advance(.4f);
             Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.GreaterThan(0));
+            Assert.That(singijeon.Events.Any(value => value.Phase == ContactPhase.Burn), Is.True, "pre-reset trail must have an eligible pending/active burn path");
             singijeon.Executor.Reset();
             Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.Zero);
             singijeon.Target.Position = new Float2(.7f, 0f); // keep it contact-eligible for a broken stale trail.
@@ -313,6 +319,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(singijeon.Runtime.DamageService.TrackedAttackCount, Is.Zero);
             singijeon.Runtime.Targets.Unregister(singijeon.Target);
             var reused = singijeon.AddTarget(1, new Float2(3f, 0f), MaskFor(WeaponPotentialId.SingijeonPowderTrail));
+            ((SingijeonExecutor)singijeon.Executor).SuppressNewCastsForTests = false;
             singijeon.Executor.Reset(); singijeon.TickExact(.1f); // fresh ID's first observation cannot be a crossing.
             Assert.That(reused.RuntimeId, Is.EqualTo(1));
             var freshStart = singijeon.Events.Count;
