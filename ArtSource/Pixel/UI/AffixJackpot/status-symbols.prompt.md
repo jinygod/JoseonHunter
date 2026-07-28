@@ -1,0 +1,3 @@
+# status-symbols — affix-status-symbols-v1
+
+Generate one **256 x 128 transparent PNG pixel-art atlas**, no text and no letters. Use the Joseon Hunter master palette and hard 1-pixel edges. Arrange exactly eight isolated 64 x 64 status symbols in a 4 columns x 2 rows grid with transparent gutters: poison droplet-and-fang glyph, burn ember flame glyph, frost crystal glyph, bleed slash glyph, broken armor plate glyph, seal-transfer talisman-arrow glyph, lightning-mark bolt glyph, experience spirit-flame glyph. These are compact symbolic UI emblems only, never panels, never readable text, never human figures. Fully transparent background, no anti-aliasing, no gradients, no translucent pixels.

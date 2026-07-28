@@ -1,0 +1,2 @@
+timestamp,job_id,tool,prompt_revision,cost,status,remaining_generations,asset_path,inspection
+2026-07-28T00:00:00+09:00,,get_balance,affix-batch-v1,0,baseline_reported_by_controller,1970,,active Pixel Apprentice; total 2000; used 30; credits $0; no repeat query
