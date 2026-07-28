@@ -127,6 +127,7 @@ namespace JoseonHunter.Tests.PlayMode
         [TestCase(true)]
         public void Talisman_transfer_is_once_has_no_transfer_contact_damage_and_ghost_seeks_nearest_live_mask_contact(bool evolved)
         {
+            Assert.That(PixelMaskContactService.TryFindContact(MaskFor(WeaponPotentialId.TalismanSealTransfer), PixelMaskTransform.Translation(1f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer), PixelMaskTransform.Translation(1f, 0f), out _), Is.True);
             var rig = Drive(WeaponPotentialId.TalismanSealTransfer, evolved, WeaponPotentialId.TalismanVengefulGhostBurst, advanceSeconds: 0f);
             var second = rig.AddTarget(2, new Float2(1.5f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer));
             var third = rig.AddTarget(3, new Float2(2f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer));
@@ -190,7 +191,7 @@ namespace JoseonHunter.Tests.PlayMode
             var negativeDamage = negative.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
             var positiveDamage = positive.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
             Assert.That(negativeDamage, Is.EqualTo(evolved ? 20 : 10));
-            Assert.That(positiveDamage, Is.EqualTo(evolved ? 22 : 20));
+            Assert.That(positiveDamage, Is.EqualTo(evolved ? 22 : 10), "normal ring has no Pull; only evolved compression gains the moved-target +8% bonus");
             negative.Dispose(); positive.Dispose();
         }
 
@@ -235,12 +236,13 @@ namespace JoseonHunter.Tests.PlayMode
         {
             foreach (var evolved in new[] { false, true })
             {
-                var rig = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.GakgungArmorBreakArrowhead));
+                var rig = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, WeaponPotentialId.GakgungSplitFletching, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.GakgungArmorBreakArrowhead));
                 rig.Advance(1f);
                 var direct = rig.Events.Where(e => e.WeaponId.Equals(WeaponId.GakgungShot) && e.Phase == ContactPhase.Direct).ToArray();
                 Assert.That(direct.Length, Is.GreaterThan(0));
                 Assert.That(direct[0].FinalDamage, Is.EqualTo(10), "armor break is a status on the confirmed primary, never bonus damage on the side arrow itself");
                 Assert.That(direct.Skip(1).All(e => e.FinalDamage == 10 || e.FinalDamage == 12), Is.True);
+                Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "level-five split child must execute through its terminal PotentialChain path");
                 rig.Dispose();
             }
         }
@@ -395,7 +397,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var weapon = WeaponFor(potential);
             if (weapon.Equals(WeaponId.HwandoFlyingBlade)) return new FlyingBladeExecutor(runtime, 10f, 10f, 4f, 20f, 1, evolved, modifiers);
-            if (weapon.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, 10f, 10f, 10f, 20f, 1, evolved, modifiers);
+            if (weapon.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, 10f, 10f, 10f, 20f, modifiers.HasPotential(WeaponPotentialId.GakgungSplitFletching) ? 5 : 1, evolved, modifiers);
             if (weapon.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, 10f, .05f, 4f, 20f, 3, 1, evolved, modifiers);
             return new ThunderBombExecutor(runtime, 10f, 10f, 4f, .1f, 0f, 2f, 1, evolved, modifiers);
         }
