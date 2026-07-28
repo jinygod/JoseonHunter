@@ -161,6 +161,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null;
                 if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual); set.GuardianVisual = null;
             }
+            foreach (var set in sets) if (!set.PotentialStartedThisTick) set.PotentialTickStep = 0f;
         }
 
         private void ResolveGuardian(WardSet set, PixelHitMask guardianMask, in WeaponExecutionContext context)

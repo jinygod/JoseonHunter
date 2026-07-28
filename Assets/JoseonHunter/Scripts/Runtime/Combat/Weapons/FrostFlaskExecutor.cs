@@ -142,9 +142,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (field.ActiveAge + 0.0001f >= field.NextDamageAge) field.NextDamageAge += TickInterval;
             if (!IsEvolved && Level == 5)
             {
-                field.SpikeTimer += step;
+                field.SpikeTimer += activeStep;
                 while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context, false); }
             }
+            if (field.ActiveAge + .00001f >= Duration) Expire(field, context);
         }
 
         private void RaiseSpike(Field field, in WeaponExecutionContext context, bool expirySpike)
@@ -171,8 +172,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         if (other == null || !other.IsAlive || other.HurtMask == null || other.RuntimeId == target.RuntimeId) continue;
                         var dx = other.WorldPosition.X - target.WorldPosition.X; var dy = other.WorldPosition.Y - target.WorldPosition.Y;
                         if (dx * dx + dy * dy > 2.25f || !PixelMaskContactService.TryFindContact(spreadMask, PixelMaskTransform.Translation(other.WorldPosition.X, other.WorldPosition.Y), other.HurtMask, other.HurtMaskTransform, out _)) continue;
-                        spreadResidences.Add(new SpreadResidence(other.RuntimeId, field.Attack.InstanceId, .25f));
-                        if (other is IFrostStatusTarget status) status.ApplyFrostSlow(field.Attack.InstanceId, .5f);
+                        var spreadSource = runtime.AllocateAttackInstanceId();
+                        spreadResidences.Add(new SpreadResidence(other.RuntimeId, spreadSource, .25f));
+                        if (other is IFrostStatusTarget status) status.ApplyFrostSlow(spreadSource, .5f);
                     }
                 }
             }
