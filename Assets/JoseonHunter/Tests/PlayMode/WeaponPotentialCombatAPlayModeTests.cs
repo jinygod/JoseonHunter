@@ -73,13 +73,25 @@ namespace JoseonHunter.Tests.PlayMode
             far.Advance(.25f); // arrow has traveled 50% of its allowed range but has not reached the target
             var nearBow = (GakgungExecutor)near.Executor; var farBow = (GakgungExecutor)far.Executor;
             Assert.That(nearBow.LastProjectileScale, Is.EqualTo(1f).Within(.01f));
-            Assert.That(farBow.LastProjectileScale, Is.GreaterThan(1f).And.LessThan(1.35f));
+            Assert.That(farBow.LastProjectileScale, Is.EqualTo(1f).Within(.01f), "before a potential-mask contact Full Draw must retain the base visual");
             far.Advance(.20f); // post-80% impact clamps at 1.6x damage / 1.35x visual scale
             Assert.That(near.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(10));
             Assert.That(far.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(16));
             var split = Drive(WeaponPotentialId.GakgungSplitFletching, false);
             Assert.That(split.Events.Count(e => e.Phase == ContactPhase.PotentialChain), Is.LessThanOrEqualTo(2), "split arrows are terminal child attacks and cannot recurse");
             near.Dispose(); far.Dispose(); split.Dispose();
+        }
+
+        [Test]
+        public void Full_draw_mask_negative_keeps_base_damage_and_visual_even_while_the_base_arrow_overlaps()
+        {
+            var rig = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(5f, 0f), advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+            rig.Advance(.30f);
+            var bow = (GakgungExecutor)rig.Executor;
+            Assert.That(bow.LastProjectileScale, Is.EqualTo(1f).Within(.01f));
+            rig.Advance(.10f);
+            Assert.That(rig.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.FinalDamage).First(), Is.EqualTo(10));
+            rig.Dispose();
         }
 
         [Test]
@@ -267,7 +279,14 @@ namespace JoseonHunter.Tests.PlayMode
             public DrivenExecutor(WeaponRuntimeController runtime, GameObject root, IWeaponExecutor executor, TestTarget target, List<ConfirmedDamageEvent> events, WeaponPotentialId potential)
             { Runtime = runtime; Root = root; Executor = executor; Target = target; Events = events; Potential = potential; }
             public WeaponRuntimeController Runtime { get; } public GameObject Root { get; } public IWeaponExecutor Executor { get; } public TestTarget Target { get; } public List<ConfirmedDamageEvent> Events { get; } public WeaponPotentialId Potential { get; }
-            public void Advance(float seconds) { for (var elapsed = 0f; elapsed < seconds; elapsed += .05f) Executor.Tick(.05f, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick)); }
+            public void Advance(float seconds)
+            {
+                for (var elapsed = 0f; elapsed < seconds; elapsed += .05f)
+                {
+                    Executor.Tick(.05f, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick));
+                    Runtime.AffixStatuses.Tick(.05f, tick);
+                }
+            }
             public TestTarget AddTarget(int runtimeId, Float2 position, PixelHitMask mask)
             {
                 var target = new TestTarget(runtimeId, position, mask); Runtime.Targets.Register(target); return target;
