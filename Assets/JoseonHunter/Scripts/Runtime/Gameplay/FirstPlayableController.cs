@@ -73,6 +73,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool bossSpawned;
         private bool bossAlive;
         private bool upgradeOpen;
+        private bool awaitingUpgradePresentationClose;
         private bool runEnded;
         private bool victory;
 
@@ -94,6 +95,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
         public int AppliedUpgradeCount { get; private set; }
         public void OpenUpgradeForTests() => OpenUpgrade();
+        public void AddExperienceForTests(int amount) => AddExperience(amount);
+        public void ResetRunForTests() => ResetRun();
 #endif
 
         public bool IsCombatTargetAlive(int runtimeId) =>
@@ -402,6 +405,7 @@ namespace JoseonHunter.Runtime.Gameplay
             bossSpawned = false;
             bossAlive = false;
             upgradeOpen = false;
+            awaitingUpgradePresentationClose = false;
             runEnded = false;
             victory = false;
 
@@ -889,7 +893,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 pendingUpgradeCount++;
             }
 
-            if (!upgradeOpen && pendingUpgradeCount > 0)
+            if (!upgradeOpen && !awaitingUpgradePresentationClose && pendingUpgradeCount > 0)
             {
                 pendingUpgradeCount--;
                 OpenUpgrade();
@@ -939,14 +943,31 @@ namespace JoseonHunter.Runtime.Gameplay
 #if UNITY_INCLUDE_TESTS
             AppliedUpgradeCount++;
 #endif
+            awaitingUpgradePresentationClose = true;
             UpgradeChosen?.Invoke(reward);
+            return true;
+        }
+
+        /// <summary>Signals that presentation has finished showing the selected reward.</summary>
+        public bool NotifyUpgradePresentationClosed()
+        {
+            if (!awaitingUpgradePresentationClose)
+            {
+                return false;
+            }
+
+            awaitingUpgradePresentationClose = false;
             if (pendingUpgradeCount > 0)
             {
                 pendingUpgradeCount--;
                 OpenUpgrade();
             }
+
             return true;
         }
+
+        // Retained for the existing gameplay smoke test while presentation migrates to TryChooseUpgrade.
+        private void ChooseUpgrade(int index) => TryChooseUpgrade(index);
 
         private ProgressionRewardEvent ApplyUpgrade(UpgradeOffer offer)
         {
