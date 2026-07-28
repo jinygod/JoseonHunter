@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Collections;
+using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
 using UnityEngine;
@@ -17,6 +19,8 @@ namespace JoseonHunter.Presentation.UI
             public Image Icon;
             public TextMeshProUGUI Name;
             public TextMeshProUGUI Level;
+            public TextMeshProUGUI Totals;
+            public Image[] PotentialCells;
             public string WeaponId;
             public Coroutine PulseRoutine;
         }
@@ -41,12 +45,12 @@ namespace JoseonHunter.Presentation.UI
             }
         }
 
-        public void Pulse(string weaponId, int newLevel)
+        public void Pulse(string weaponId, int newLevel, int newPotentialCount = 0)
         {
             if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
             slot.Level.text = $"LEVEL {newLevel}";
             StopPulse(slot);
-            slot.PulseRoutine = StartCoroutine(PulseRoutine(slot));
+            slot.PulseRoutine = StartCoroutine(PulseRoutine(slot, newPotentialCount));
         }
 
         public void ResetPulses()
@@ -63,8 +67,8 @@ namespace JoseonHunter.Presentation.UI
             var rect = slot.Root.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = Vector2.zero;
             rect.pivot = Vector2.zero;
-            rect.anchoredPosition = new Vector2(42f, 42f + index * 118f);
-            rect.sizeDelta = new Vector2(390f, 102f);
+            rect.anchoredPosition = new Vector2(42f, 42f + index * 126f);
+            rect.sizeDelta = new Vector2(430f, 112f);
             slot.Accent = RuntimeUiFactory.Image("Accent", slot.Root.transform, JoseonUiPalette.Gold);
             var accentRect = slot.Accent.rectTransform;
             accentRect.anchorMin = new Vector2(0f, 0f);
@@ -87,6 +91,22 @@ namespace JoseonHunter.Presentation.UI
             slot.Level.rectTransform.pivot = new Vector2(0f, .5f);
             slot.Level.rectTransform.anchoredPosition = new Vector2(110f, -22f);
             slot.Level.rectTransform.sizeDelta = new Vector2(210f, 28f);
+            slot.Totals = RuntimeUiFactory.Text("Affix Totals", slot.Root.transform, string.Empty, 14f, TextAlignmentOptions.Left);
+            slot.Totals.rectTransform.anchorMin = slot.Totals.rectTransform.anchorMax = new Vector2(0f, .5f);
+            slot.Totals.rectTransform.pivot = new Vector2(0f, .5f);
+            slot.Totals.rectTransform.anchoredPosition = new Vector2(110f, -45f);
+            slot.Totals.rectTransform.sizeDelta = new Vector2(210f, 22f);
+            slot.PotentialCells = new Image[3];
+            for (var potentialIndex = 0; potentialIndex < slot.PotentialCells.Length; potentialIndex++)
+            {
+                var cell = RuntimeUiFactory.Image("Potential Cell " + potentialIndex, slot.Root.transform, Color.white);
+                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = new Vector2(1f, .5f);
+                cell.rectTransform.pivot = new Vector2(1f, .5f);
+                cell.rectTransform.anchoredPosition = new Vector2(-16f - potentialIndex * 42f, 0f);
+                cell.rectTransform.sizeDelta = new Vector2(18f, 18f);
+                cell.preserveAspect = true;
+                slot.PotentialCells[potentialIndex] = cell;
+            }
             return slot;
         }
 
@@ -100,9 +120,19 @@ namespace JoseonHunter.Presentation.UI
             slot.Icon.enabled = weapon.Icon != null;
             slot.Name.text = weapon.DisplayName;
             slot.Level.text = $"LEVEL {weapon.Level}";
+            slot.Totals.text = weapon.GeneralAffixSummary;
+            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            for (var index = 0; index < slot.PotentialCells.Length; index++)
+            {
+                var cell = slot.PotentialCells[index];
+                cell.sprite = index < weapon.PotentialIds.Count && catalog != null
+                    ? catalog.SpriteForPotential(weapon.PotentialIds[index])
+                    : catalog != null ? catalog.SpriteForAffix(WeaponAffixTier.Standard) : null;
+                cell.enabled = cell.sprite != null;
+            }
         }
 
-        private IEnumerator PulseRoutine(Slot slot)
+        private IEnumerator PulseRoutine(Slot slot, int newPotentialCount)
         {
             var elapsed = 0f;
             while (elapsed < .24f)
@@ -110,11 +140,16 @@ namespace JoseonHunter.Presentation.UI
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
                 slot.Root.transform.localScale = Vector3.one * pulse;
+                var potentialIndex = newPotentialCount - 1;
+                if (potentialIndex >= 0 && potentialIndex < slot.PotentialCells.Length)
+                    slot.PotentialCells[potentialIndex].transform.localScale = Vector3.one * pulse;
                 yield return null;
             }
 
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.PotentialCells != null)
+                foreach (var cell in slot.PotentialCells) if (cell != null) cell.transform.localScale = Vector3.one;
         }
 
         private void StopPulse(Slot slot)
@@ -122,6 +157,8 @@ namespace JoseonHunter.Presentation.UI
             if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.PotentialCells != null)
+                foreach (var cell in slot.PotentialCells) if (cell != null) cell.transform.localScale = Vector3.one;
         }
     }
 }

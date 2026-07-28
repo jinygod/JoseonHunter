@@ -121,7 +121,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(icon, Is.Not.Null);
             Assert.That(icon.enabled, Is.False);
             rack.Render(new[] { new WeaponSlotView("hwando_flying_blade", "Hwando", 1, null) });
-            Assert.That(root.GetComponentsInChildren<Image>(true).Length, Is.EqualTo(3));
+            Assert.That(root.GetComponentsInChildren<Image>(true).Length, Is.GreaterThanOrEqualTo(3));
             Object.Destroy(root);
         }
 

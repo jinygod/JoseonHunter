@@ -16,6 +16,7 @@ namespace JoseonHunter.Presentation.UI
         private CombatHudPresenter combatHud;
         private WeaponRackPresenter weaponRack;
         private RewardRevealPresenter rewardReveal;
+        private WeaponAffixRevealPresenter affixReveal;
         private UpgradeChoicePresenter upgradeChoice;
         private RectTransform safeAreaContainer;
         private Rect lastSafeArea;
@@ -62,6 +63,8 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(rewardRoot, 0f, 0f, 0f, 0f);
             rewardReveal = rewardRoot.gameObject.AddComponent<RewardRevealPresenter>();
             rewardReveal.RevealCompleted += OnRewardRevealCompleted;
+            affixReveal = rewardRoot.gameObject.AddComponent<WeaponAffixRevealPresenter>();
+            affixReveal.RevealCompleted += OnRewardRevealCompleted;
             var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", safeAreaContainer);
             RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
@@ -74,6 +77,7 @@ namespace JoseonHunter.Presentation.UI
             UnbindController();
             if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
+            if (affixReveal != null) affixReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (instance == this) instance = null;
         }
 
@@ -142,10 +146,15 @@ namespace JoseonHunter.Presentation.UI
                 var state = boundController.UiState;
                 weaponSignature = WeaponSignature(state);
                 weaponRack.Render(state.Weapons);
-                weaponRack.Pulse(reward.WeaponId, reward.NewLevel);
+                weaponRack.Pulse(reward.WeaponId, reward.NewLevel, reward.AffixResult?.NewPotentials.Count ?? 0);
             }
 
-            rewardReveal?.Play(reward);
+            // Weapon selections already have a complete affix result; the generic card would
+            // duplicate that reveal and hold the next queued choice unnecessarily.
+            if (reward.Kind != ProgressionRewardKind.Support && reward.Kind != ProgressionRewardKind.Evolution && reward.AffixResult != null)
+                affixReveal?.Play(reward.AffixResult);
+            else
+                rewardReveal?.Play(reward);
         }
 
         private void CloseRewardReveal()
@@ -153,6 +162,7 @@ namespace JoseonHunter.Presentation.UI
             waitingForRewardReveal = false;
             waitingForChoiceClose = false;
             rewardReveal?.HideImmediately();
+            affixReveal?.HideImmediately();
             weaponRack?.ResetPulses();
         }
 
