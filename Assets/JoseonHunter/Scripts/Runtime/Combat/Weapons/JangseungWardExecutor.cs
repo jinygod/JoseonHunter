@@ -106,7 +106,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     set.ActivationElapsed -= EvolvedPostActivationInterval;
                     set.ActivateNextPost();
                 }
-                if (set.IsCompleted && !set.MarkResolved) MarkEnclosedTargets(set);
+                if (set.IsCompleted && !set.MarkResolved) { set.CompletionResidual = set.ActivationElapsed; MarkEnclosedTargets(set); }
             }
         }
 
@@ -117,6 +117,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!set.IsCompleted || set.PotentialCompletionStarted) continue;
                 set.PotentialCompletionStarted = true;
                 set.PotentialStartedThisTick = true;
+                set.PotentialTickStep = set.IsEvolved ? set.CompletionResidual : 0f;
                 if (Potentials.HasPotential(WeaponPotentialId.JangseungFourDirectionBarrier) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungFourDirectionBarrier, out _, out var barrier))
                 {
                     set.RotatingAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
@@ -131,9 +132,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             foreach (var set in sets)
             {
-                if (set.PotentialStartedThisTick) { set.PotentialStartedThisTick = false; continue; }
+                var potentialStep = set.PotentialStartedThisTick ? set.PotentialTickStep : step;
+                set.PotentialStartedThisTick = false;
                 if (set.RotationRemaining <= 0f || set.RotationMask == null) continue;
-                var residual = Mathf.Min(step, set.RotationRemaining);
+                var residual = Mathf.Min(potentialStep, set.RotationRemaining);
                 while (residual > .00001f)
                 {
                     var slice = Mathf.Min(.02f, residual); residual -= slice; set.RotationElapsed += slice; set.RotationRemaining -= slice;
@@ -153,7 +155,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var set in sets)
             {
                 if (set.GuardianRemaining <= 0f || set.GuardianMask == null) continue;
-                set.GuardianRemaining -= step; if (!set.GuardianResolved) ResolveGuardian(set, set.GuardianMask, context);
+                var potentialStep = set.PotentialTickStep > 0f ? set.PotentialTickStep : step;
+                set.GuardianRemaining -= potentialStep; if (!set.GuardianResolved) ResolveGuardian(set, set.GuardianMask, context);
                 if (set.GuardianRemaining > 0f) continue;
                 runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null;
                 if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual); set.GuardianVisual = null;
@@ -424,6 +427,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool GuardianResolved { get; set; }
             public bool PotentialStartedThisTick { get; set; }
             public GameObject GuardianVisual { get; set; }
+            public float CompletionResidual { get; set; }
+            public float PotentialTickStep { get; set; }
             public void ActivateNextPost()
             {
                 if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));

@@ -67,9 +67,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
 
             var remaining = Mathf.Max(0f, deltaTime);
-            AdvanceFocusSequence(ref remaining, context);
             while (remaining > 0.0001f)
             {
+                if (focusSequenceActive)
+                {
+                    if (nextFocusLaunch <= .00001f) { var zero = 0f; AdvanceFocusSequence(ref zero, context); continue; }
+                    var launchSlice = Mathf.Min(remaining, nextFocusLaunch);
+                    projectiles.Tick(launchSlice, context); remaining -= launchSlice; nextFocusLaunch -= launchSlice;
+                    if (nextFocusLaunch <= .00001f) { var zero = 0f; AdvanceFocusSequence(ref zero, context); }
+                    continue;
+                }
                 if (awaitingFocus)
                 {
                     var untilFocus = Mathf.Min(remaining, focusDelay);
