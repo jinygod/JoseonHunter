@@ -29,6 +29,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private Float2 lightningDirection;
         private readonly List<Bleed> bleeds = new List<Bleed>();
         private PendingChain pendingChain;
+        private Float2 castOrigin;
 
         public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -61,7 +62,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             AdvanceBleeds(step, context);
             AdvancePotentialChain(step, context);
             cooldown -= step;
-            if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()) StartCast();
+            if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()) StartCast(context.OwnerPosition);
             switch (State)
             {
                 case WindThunderFanState.WindActive:
@@ -83,14 +84,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             if (attack != null) runtime.DamageService.RetireAttack(attack.InstanceId);
+            foreach (var bleed in bleeds) runtime.DamageService.RetireAttack(bleed.Attack.InstanceId);
+            if (pendingChain.Attack != null) runtime.DamageService.RetireAttack(pendingChain.Attack.InstanceId);
             attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); bleeds.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
         }
 
         public void Dispose() => Reset();
 
-        private void StartCast()
+        private void StartCast(Float2 origin)
         {
+            castOrigin = origin;
             cooldown = CooldownSeconds; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear();
             gustIndex = 0; lightningIndex = 0; strikeDueIn = LightningStrikeInterval; outboundElapsed = 0f; inboundPauseRemaining = 0f;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0;
@@ -200,8 +204,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
 
+            var residual = Mathf.Max(0f, availableTime - inboundPauseRemaining);
             inboundPauseRemaining = 0f;
             ResolveInbound(context);
+            AdvancePotentialChain(residual, context);
         }
 
         private void ResolveInbound(in WeaponExecutionContext context)
@@ -268,7 +274,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float LightningMultiplier(ICombatTarget target, Float2 contact, bool inbound)
         {
             if (!Potentials.HasPotential(WeaponPotentialId.FanDistantThunder) || !TryPotentialContact(WeaponPotentialId.FanDistantThunder, target, contact)) return 1f;
-            var projection = (target.WorldPosition.X * lightningDirection.X + target.WorldPosition.Y * lightningDirection.Y);
+            var projection = ((target.WorldPosition.X - castOrigin.X) * lightningDirection.X + (target.WorldPosition.Y - castOrigin.Y) * lightningDirection.Y);
             var distance = Mathf.Clamp01(projection / Mathf.Max(.01f, Range)); return 1f + distance * .75f;
         }
         private void RefreshBleed(ICombatTarget target, Float2 contact)

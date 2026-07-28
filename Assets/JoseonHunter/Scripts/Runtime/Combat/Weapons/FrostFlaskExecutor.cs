@@ -51,6 +51,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastStoredFrozenTargetCount { get; private set; }
         public int LastResolvedStoredTargetCount { get; private set; }
         public bool AllStoredTargetsResolvedOnce { get; private set; }
+        public float LastFieldVisualScale { get; private set; } = 1f;
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -96,14 +97,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             field.ActiveAge += step;
             if (field.ActiveAge >= Duration) { Expire(field, context); return; }
             runtime.Targets.CopyTo(targets);
-            var radiusScale = Potentials.HasPotential(WeaponPotentialId.FrostMist) ? Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(field.ActiveAge / Duration)) : 1f;
+            var mistMask = diskMask;
+            var radiusScale = 1f;
+            if (Potentials.HasPotential(WeaponPotentialId.FrostMist) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostMist, out _, out var authoredMistMask)) { mistMask = authoredMistMask; radiusScale = Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(field.ActiveAge / Duration)); }
+            LastFieldVisualScale = radiusScale;
             var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f * radiusScale, Radius * 2f * radiusScale));
             var inside = field.InsideScratch;
             inside.Clear();
             foreach (var target in targets)
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
-                if (!PixelMaskContactService.TryFindContact(diskMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                if (!PixelMaskContactService.TryFindContact(mistMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 inside.Add(target.RuntimeId);
                 field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += step; field.Residence[target.RuntimeId] = residence;
                 if (Potentials.HasPotential(WeaponPotentialId.FrostCrackMark) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostCrackMark, out _, out var crackMask) &&
@@ -132,11 +136,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (!IsEvolved && Level == 5)
             {
                 field.SpikeTimer += step;
-                while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context); }
+                while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context, false); }
             }
         }
 
-        private void RaiseSpike(Field field, in WeaponExecutionContext context)
+        private void RaiseSpike(Field field, in WeaponExecutionContext context, bool expirySpike)
         {
             var spike = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             runtime.Targets.CopyTo(targets);
@@ -152,7 +156,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); damage *= 1f + stacks * .25f; field.CrackStacks.Remove(target.RuntimeId); field.CrackElapsed.Remove(target.RuntimeId);
                 }
                 var hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(damage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
-                if (hit && Potentials.HasPotential(WeaponPotentialId.FrostSpread) && !field.SpreadResolved && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostSpread, out _, out var spreadMask))
+                if (hit && expirySpike && Potentials.HasPotential(WeaponPotentialId.FrostSpread) && !field.SpreadResolved && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostSpread, out _, out var spreadMask))
                 {
                     field.SpreadResolved = true;
                     foreach (var other in targets)
@@ -184,6 +188,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Expire(Field field, in WeaponExecutionContext context)
         {
             if (field.Expired) return;
+            if (Potentials.HasPotential(WeaponPotentialId.FrostSpread)) RaiseSpike(field, context, true);
             if (IsEvolved) ResolveStoredFrozenTargets(field, context);
             CleanupFieldStatus(field);
             Retire(field); field.Expired = true; ExpiredFieldCount++;

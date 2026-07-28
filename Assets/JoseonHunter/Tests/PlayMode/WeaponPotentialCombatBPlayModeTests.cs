@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
 

@@ -71,8 +71,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 else PlaceSet(context.OwnerPosition);
             }
             if (IsEvolved) AdvanceEvolvedPostActivation(step);
-            AdvancePotentialCompletions(step, context);
             ResolveCrossings(context, frameStartElapsed, step);
+            AdvancePotentialCompletions(step, context);
             RememberCurrentTargetPositions();
         }
 
@@ -122,23 +122,34 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     set.RotationMask = barrier; set.RotationRemaining = .8f;
                 }
                 if (Potentials.HasPotential(WeaponPotentialId.JangseungGuardianDescent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGuardianDescent, out _, out var guardian))
-                    ResolveGuardian(set, guardian, context);
+                    set.GuardianMask = guardian; set.GuardianRemaining = 1.2f; set.GuardianAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             }
             foreach (var set in sets)
             {
                 if (set.RotationRemaining <= 0f || set.RotationMask == null) continue;
-                set.RotationElapsed += Mathf.Min(step, set.RotationRemaining); set.RotationRemaining -= step;
-                runtime.Targets.CopyTo(targets);
-                var degrees = Mathf.RoundToInt(set.RotationElapsed / .8f * 360f);
-                var transform = new PixelMaskTransform(set.DesiredCenter, degrees, false, Vector2.one);
-                foreach (var target in targets)
+                var residual = Mathf.Min(step, set.RotationRemaining);
+                while (residual > .00001f)
                 {
-                    if (target == null || !target.IsAlive || target.HurtMask == null || set.RotatedTargetIds.Contains(target.RuntimeId)) continue;
-                    if (!PixelMaskContactService.TryFindContact(set.RotationMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                    if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.RotatingAttack, WeaponId.JangseungWard, target, Mathf.CeilToInt(BaseDamage * .7f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick, elapsedSeconds), out _)) set.RotatedTargetIds.Add(target.RuntimeId);
+                    var slice = Mathf.Min(.02f, residual); residual -= slice; set.RotationElapsed += slice; set.RotationRemaining -= slice;
+                    runtime.Targets.CopyTo(targets);
+                    var degrees = Mathf.RoundToInt(set.RotationElapsed / .8f * 360f);
+                    var transform = new PixelMaskTransform(set.DesiredCenter, degrees, false, new Vector2(set.Radius * 2f, BoundaryThickness * 8f));
+                    foreach (var target in targets)
+                    {
+                        if (target == null || !target.IsAlive || target.HurtMask == null || set.RotatedTargetIds.Contains(target.RuntimeId)) continue;
+                        if (!PixelMaskContactService.TryFindContact(set.RotationMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                        if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.RotatingAttack, WeaponId.JangseungWard, target, Mathf.CeilToInt(BaseDamage * .7f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick, elapsedSeconds - set.RotationRemaining), out _)) set.RotatedTargetIds.Add(target.RuntimeId);
+                    }
                 }
                 if (set.RotationRemaining > 0f) continue;
                 runtime.DamageService.RetireAttack(set.RotatingAttack.InstanceId); set.RotationMask = null;
+            }
+            foreach (var set in sets)
+            {
+                if (set.GuardianRemaining <= 0f || set.GuardianMask == null || set.GuardianResolved) continue;
+                set.GuardianRemaining -= step; ResolveGuardian(set, set.GuardianMask, context);
+                if (set.GuardianResolved || set.GuardianRemaining > 0f) continue;
+                runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null;
             }
         }
 
@@ -151,10 +162,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (best == null || target.ThreatScore > best.ThreatScore || (Mathf.Approximately(target.ThreatScore, best.ThreatScore) && target.RuntimeId < best.RuntimeId)) best = target;
             }
             if (best == null) return;
-            var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             if (PixelMaskContactService.TryFindContact(guardianMask, PixelMaskTransform.Translation(best.WorldPosition.X, best.WorldPosition.Y), best.HurtMask, best.HurtMaskTransform, out var contact))
-                runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.JangseungWard, best, Mathf.CeilToInt(BaseDamage * 1.1f), false, contact, ContactPhase.PotentialChain, context.SimulationTick, elapsedSeconds), out _);
-            runtime.DamageService.RetireAttack(attack.InstanceId);
+            { if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.GuardianAttack, WeaponId.JangseungWard, best, Mathf.CeilToInt(BaseDamage * 1.1f), false, contact, ContactPhase.PotentialChain, context.SimulationTick, elapsedSeconds), out _)) set.GuardianResolved = true; }
+            if (set.GuardianResolved) { runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null; }
         }
 
         private void MarkEnclosedTargets(WardSet set)
@@ -229,7 +239,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     target.ApplyKnockback(OutwardDirection(segment, previous, current), Mathf.Max(0.1f, Level * 0.2f));
                     if (Potentials.HasPotential(WeaponPotentialId.JangseungGhostFace) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGhostFace, out _, out var ghostMask) &&
                         PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
-                        target.ApplyKnockback(OutwardDirection(segment, previous, current), 1.25f);
+                        target.ApplyKnockback(CenterOutward(set.DesiredCenter, atCrossing), 1.25f);
                     if (!set.IsEvolved && target is IJangseungWardStatusTarget status)
                     {
                         set.StatusTargetIds.Add(target.RuntimeId);
@@ -309,6 +319,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (runtime.Targets.TryGet(targetId, out var target) && target is IJangseungWardStatusTarget status) status.RemoveJangseungWard(set.Attack.InstanceId);
             runtime.DamageService.RetireAttack(set.Attack.InstanceId);
             if (set.RotatingAttack != null) runtime.DamageService.RetireAttack(set.RotatingAttack.InstanceId);
+            if (set.GuardianAttack != null) runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId);
             set.Retired = true;
         }
 
@@ -335,6 +346,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var normal = new Float2(-y, x); var movement = new Float2(current.X - previous.X, current.Y - previous.Y);
             return normal.X * movement.X + normal.Y * movement.Y >= 0f ? normal : new Float2(-normal.X, -normal.Y);
         }
+        private static Float2 CenterOutward(Float2 center, Float2 point)
+        { var x = point.X - center.X; var y = point.Y - center.Y; var length = Mathf.Sqrt(x * x + y * y); return length < .0001f ? new Float2(1f, 0f) : new Float2(x / length, y / length); }
         private static bool TrySegmentIntersection(Float2 a, Float2 b, Float2 c, Float2 d, out float movementT)
         {
             var rX = b.X - a.X; var rY = b.Y - a.Y; var sX = d.X - c.X; var sY = d.Y - c.Y;
@@ -397,6 +410,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float RotationRemaining { get; set; }
             public float RotationElapsed { get; set; }
             public HashSet<int> RotatedTargetIds { get; } = new HashSet<int>();
+            public AttackInstance GuardianAttack { get; set; }
+            public PixelHitMask GuardianMask { get; set; }
+            public float GuardianRemaining { get; set; }
+            public bool GuardianResolved { get; set; }
             public void ActivateNextPost()
             {
                 if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));

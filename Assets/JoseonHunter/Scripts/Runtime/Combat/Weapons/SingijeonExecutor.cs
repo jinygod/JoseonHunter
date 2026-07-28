@@ -23,6 +23,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly HashSet<int> childAttackIds = new HashSet<int>();
         private readonly List<Trail> trails = new List<Trail>();
         private WeaponExecutionContext latestContext;
+        private readonly Dictionary<int, Float2> focusDirections = new Dictionary<int, Float2>();
+        private int focusLaunchIndex;
+        private float nextFocusLaunch;
+        private bool focusSequenceActive;
+        private bool focusRetargeted;
 
         public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -61,6 +66,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
 
             var remaining = Mathf.Max(0f, deltaTime);
+            AdvanceFocusSequence(ref remaining, context);
             while (remaining > 0.0001f)
             {
                 if (awaitingFocus)
@@ -110,10 +116,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); childAttackIds.Clear(); trails.Clear(); projectiles.Reset();
+            foreach (var trail in trails) runtime.DamageService.RetireAttack(trail.Attack.InstanceId);
+            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); trails.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false; projectiles.Reset();
         }
 
-        public void Dispose() { runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.Dispose(); }
+        public void Dispose() { Reset(); runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.Dispose(); }
 
         private bool TryFindDensestDirection(Float2 origin, out Float2 direction, out Float2 densePosition)
         {
@@ -163,23 +170,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void LaunchFocus(in WeaponExecutionContext context)
         {
-            volleyKinds.Add("focus"); FocusProjectileCount = 8; LastLaunchCount = FocusProjectileCount;
-            for (var index = 0; index < FocusProjectileCount; index++)
+            volleyKinds.Add("focus"); FocusProjectileCount = 8; LastLaunchCount = FocusProjectileCount; focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = true; focusRetargeted = false;
+            var none = 0f; AdvanceFocusSequence(ref none, context);
+        }
+
+        private void AdvanceFocusSequence(ref float available, in WeaponExecutionContext context)
+        {
+            if (!focusSequenceActive) return;
+            while (focusLaunchIndex < FocusProjectileCount && available + .00001f >= nextFocusLaunch)
             {
-                var radians = index * Mathf.PI * 2f / FocusProjectileCount;
-                var offset = new Float2(Mathf.Cos(radians) * 0.3f, Mathf.Sin(radians) * 0.3f);
+                available -= nextFocusLaunch; nextFocusLaunch = .05f;
+                var radians = focusLaunchIndex * Mathf.PI * 2f / FocusProjectileCount;
+                var offset = new Float2(Mathf.Cos(radians) * .3f, Mathf.Sin(radians) * .3f);
                 var target = new Float2(focusPosition.X + offset.X, focusPosition.Y + offset.Y);
-                var direction = Normalize(new Float2(target.X - context.OwnerPosition.X, target.Y - context.OwnerPosition.Y));
-                LaunchRocket(context, context.OwnerPosition, direction, "Singijeon Focus Rocket", true, false);
+                LaunchRocket(context, context.OwnerPosition, Normalize(new Float2(target.X - context.OwnerPosition.X, target.Y - context.OwnerPosition.Y)), "Singijeon Focus Rocket", true, false);
+                focusLaunchIndex++;
             }
+            if (focusLaunchIndex >= FocusProjectileCount) focusSequenceActive = false;
+            else nextFocusLaunch -= available;
         }
 
         private void LaunchRocket(in WeaponExecutionContext context, Float2 position, Float2 direction, string name, bool focus, bool child)
         {
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
-            if (focus) focusAttackIds.Add(attack.InstanceId); if (child) childAttackIds.Add(attack.InstanceId);
-            projectiles.Launch(context, new LinearProjectileSpec(attack, WeaponId.SingijeonVolley, position, direction, Speed, Range / Speed, Mathf.CeilToInt(child ? BaseDamage * .35f : BaseDamage), 1, name));
-            if (Potentials.HasPotential(WeaponPotentialId.SingijeonPowderTrail) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonPowderTrail, out _, out var mask)) trails.Add(new Trail { Position = position, Direction = direction, Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) });
+            if (focus) { focusAttackIds.Add(attack.InstanceId); focusDirections[attack.InstanceId] = direction; } if (child) childAttackIds.Add(attack.InstanceId);
+            var lifetime = (child ? Range * .55f : Range) / Speed;
+            projectiles.Launch(context, new LinearProjectileSpec(attack, WeaponId.SingijeonVolley, position, direction, Speed, lifetime, Mathf.CeilToInt(child ? BaseDamage * .35f : BaseDamage), 1, name));
+            AddTrailCells(position, direction, child ? Range * .55f : Range);
         }
 
         private static Float2 Normalize(Float2 value)
@@ -204,6 +221,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 projectiles.Launch(context, new LinearProjectileSpec(
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.SingijeonVolley,
                     position, direction, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), 1, "Singijeon Rocket"));
+                AddTrailCells(position, direction, Range);
             }
         }
 
@@ -213,28 +231,39 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (!runtime.Targets.TryGet(damage.TargetRuntimeId, out var target) || target == null || target.HurtMask == null) return;
             if (Potentials.HasPotential(WeaponPotentialId.SingijeonSubmunitionSplit) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonSubmunitionSplit, out _, out var split) && PixelMaskContactService.TryFindContact(split, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), target.HurtMask, target.HurtMaskTransform, out _))
             {
-                var baseDirection = LastDirection; for (var index = -1; index <= 1; index++) { var rad = index * 30f * Mathf.Deg2Rad; var direction = Normalize(new Float2(baseDirection.X * Mathf.Cos(rad) - baseDirection.Y * Mathf.Sin(rad), baseDirection.X * Mathf.Sin(rad) + baseDirection.Y * Mathf.Cos(rad))); LaunchRocket(latestContext, damage.ContactPoint, direction, "Singijeon Submunition", false, true); }
+                focusDirections.TryGetValue(damage.AttackInstanceId, out var baseDirection); for (var index = -1; index <= 1; index++) { var rad = index * 30f * Mathf.Deg2Rad; var direction = Normalize(new Float2(baseDirection.X * Mathf.Cos(rad) - baseDirection.Y * Mathf.Sin(rad), baseDirection.X * Mathf.Sin(rad) + baseDirection.Y * Mathf.Cos(rad))); LaunchRocket(latestContext, damage.ContactPoint, direction, "Singijeon Submunition", false, true); }
             }
             if (Potentials.HasPotential(WeaponPotentialId.SingijeonChainIgnition) && !target.IsAlive && WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonChainIgnition, out _, out var chain) && PixelMaskContactService.TryFindContact(chain, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), target.HurtMask, target.HurtMaskTransform, out _))
-            { if (TryFindDensestDirection(latestContext.OwnerPosition, out _, out var centroid)) focusPosition = centroid; }
+            { if (!focusRetargeted && focusSequenceActive && TryFindDensestDirection(latestContext.OwnerPosition, out _, out var centroid)) { focusPosition = centroid; focusRetargeted = true; } }
         }
 
         private void AdvanceTrails(float step, in WeaponExecutionContext context)
         {
             for (var index = trails.Count - 1; index >= 0; index--)
             {
-                var trail = trails[index]; trail.Remaining -= step; trail.Elapsed += step; runtime.Targets.CopyTo(targets);
+                var trail = trails[index]; trail.Remaining -= step; runtime.Targets.CopyTo(targets);
                 foreach (var target in targets)
                 {
                     if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                     if (!PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                    trail.Crossed.Add(target.RuntimeId);
-                    while (trail.Elapsed + .00001f >= .3f && trail.TicksByTarget.TryGetValue(target.RuntimeId, out var ticks) && ticks < 2) { trail.Elapsed -= .3f; runtime.DamageService.TryApply(WeaponDamageRequest.Create(trail.Attack, WeaponId.SingijeonVolley, target, Mathf.CeilToInt(BaseDamage * .15f), false, contact, ContactPhase.Burn, context.SimulationTick), out _); trail.TicksByTarget[target.RuntimeId] = ticks + 1; }
-                    if (!trail.TicksByTarget.ContainsKey(target.RuntimeId)) trail.TicksByTarget[target.RuntimeId] = 0;
+                    if (!trail.Crossed.Contains(target.RuntimeId)) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
+                }
+                var ids = new List<int>(trail.TicksByTarget.Keys);
+                foreach (var id in ids)
+                {
+                    var ticks = trail.TicksByTarget[id]; ticks.Elapsed += step;
+                    while (ticks.Elapsed + .00001f >= .3f && ticks.Count < 2) { ticks.Elapsed -= .3f; if (runtime.Targets.TryGet(id, out var target) && target != null && target.IsAlive) runtime.DamageService.TryApply(WeaponDamageRequest.Create(trail.Attack, WeaponId.SingijeonVolley, target, Mathf.CeilToInt(BaseDamage * .15f), false, ticks.Contact, ContactPhase.Burn, context.SimulationTick), out _); ticks.Count++; }
+                    trail.TicksByTarget[id] = ticks;
                 }
                 if (trail.Remaining <= 0f) { runtime.DamageService.RetireAttack(trail.Attack.InstanceId); trails.RemoveAt(index); } else trails[index] = trail;
             }
         }
-        private sealed class Trail { public Float2 Position; public Float2 Direction; public PixelHitMask Mask; public float Remaining; public float Elapsed; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, int> TicksByTarget { get; } = new Dictionary<int, int>(); }
+        private void AddTrailCells(Float2 position, Float2 direction, float range)
+        {
+            if (!Potentials.HasPotential(WeaponPotentialId.SingijeonPowderTrail) || !WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonPowderTrail, out _, out var mask)) return;
+            for (var d = .35f; d <= range; d += .35f) trails.Add(new Trail { Position = new Float2(position.X + direction.X * d, position.Y + direction.Y * d), Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) });
+        }
+        private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); }
+        private struct TrailTicks { public TrailTicks(Float2 contact) { Contact = contact; Elapsed = 0f; Count = 0; } public Float2 Contact; public float Elapsed; public int Count; }
     }
 }
