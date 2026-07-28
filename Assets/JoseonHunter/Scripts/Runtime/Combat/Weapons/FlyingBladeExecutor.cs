@@ -257,12 +257,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(blade.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                var ramp = Potentials.HasPotential(WeaponPotentialId.HwandoFlyingBladeDance) ? 1f + Mathf.Min(.60f, blade.CastHits.Count * .15f) : 1f;
+                var danceContact = Potentials.HasPotential(WeaponPotentialId.HwandoFlyingBladeDance) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.HwandoFlyingBladeDance, out _, out var danceMask) &&
+                    PixelMaskContactService.TryFindContact(danceMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _);
+                var ramp = danceContact ? 1f + Mathf.Min(.60f, blade.CastHits.Count * .15f) : 1f;
                 if (!runtime.DamageService.TryApply(
                         WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage * ramp), false, contact, phase, context.SimulationTick),
                         out _)) continue;
                 blade.CastHits.Add(target.RuntimeId);
-                if (Potentials.HasPotential(WeaponPotentialId.HwandoVenomFang))
+                if (Potentials.HasPotential(WeaponPotentialId.HwandoVenomFang) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.HwandoVenomFang, out _, out var venomMask) &&
+                    PixelMaskContactService.TryFindContact(venomMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
                 {
                     var poison = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f);
                     runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId, contact,

@@ -64,6 +64,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Advance(cast, Mathf.Max(0f, deltaTime), context);
                 LastState = cast.State;
                 if (cast.State != TalismanState.Complete) continue;
+                ClearIce(cast);
                 runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
                 if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
                 active.RemoveAt(index);
@@ -92,6 +93,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             foreach (var cast in active)
             {
+                ClearIce(cast);
                 runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
                 if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
             }
@@ -161,11 +163,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (!IsCurrentTargetValid(cast.Target))
             {
-                if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanSealTransfer) &&
+                if (cast.SealedConfirmed && !cast.HasTransferred && Potentials.HasPotential(WeaponPotentialId.TalismanSealTransfer) &&
                     TryFindNearestLegal(cast.Position, cast.AttemptedTargets, out var transfer) && DistanceSquared(transfer.WorldPosition, cast.Position) <= 16f)
                 {
                     cast.Target = transfer; cast.AttemptedTargets.Add(transfer.RuntimeId); cast.ReservedTargets.Add(transfer.RuntimeId);
-                    cast.SealedConfirmed = false; cast.State = TalismanState.Transferring; return;
+                    cast.SealedConfirmed = false; cast.HasTransferred = true; cast.State = TalismanState.Transferring; return;
                 }
                 if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanVengefulGhostBurst))
                     ghostFlames.Add(new GhostFlame(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), cast.Position));
@@ -182,8 +184,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
 
-            Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
-            Apply(cast, cast.Target, contact, ContactPhase.Attach, context.SimulationTick);
+            if (cast.State != TalismanState.Transferring)
+            {
+                Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
+                Apply(cast, cast.Target, contact, ContactPhase.Attach, context.SimulationTick);
+            }
             cast.State = TalismanState.Attached;
         }
 
@@ -324,7 +329,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ApplyElement(TalismanCast cast, Float2 contact, in WeaponExecutionContext context)
         {
-            if (cast.Element < 0 || !IsCurrentTargetValid(cast.Target)) return;
+            if (cast.Element < 0 || !IsCurrentTargetValid(cast.Target) || !WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanFiveElementCycle, out _, out var elementMask) ||
+                !PixelMaskContactService.TryFindContact(elementMask, PixelMaskTransform.Translation(contact.X, contact.Y), cast.Target.HurtMask, cast.Target.HurtMaskTransform, out _)) return;
             if (cast.Element == 0)
             {
                 var burn = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f);
@@ -349,6 +355,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
 
         private static float DistanceSquared(Float2 a, Float2 b) { var x = a.X - b.X; var y = a.Y - b.Y; return x * x + y * y; }
+        private static void ClearIce(TalismanCast cast)
+        {
+            if (cast.IceTarget is IFrostStatusTarget frost) frost.RemoveFrostSlow(cast.Attack.InstanceId, 0f);
+            cast.IceSlowRemaining = 0f; cast.IceTarget = null;
+        }
 
         private static bool IsCurrentTargetValid(ICombatTarget target) => target != null && target.IsAlive;
         private static bool IsTargetAvailable(ICombatTarget target, HashSet<int> reservations) => IsCurrentTargetValid(target) && (reservations == null || !reservations.Contains(target.RuntimeId));
@@ -375,6 +386,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool SealedConfirmed { get; set; }
             public float IceSlowRemaining { get; set; }
             public ICombatTarget IceTarget { get; set; }
+            public bool HasTransferred { get; set; }
 
             public void RecordLinkedTarget(ICombatTarget target)
             {
