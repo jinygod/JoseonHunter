@@ -31,52 +31,50 @@ namespace JoseonHunter.Editor.AssetProduction
             WeaponPotentialId.FrostMist, WeaponPotentialId.FanVacuumEdge, WeaponPotentialId.FanDistantThunder, WeaponPotentialId.FanReturningChain
         };
 
-        [InitializeOnLoadMethod]
-        private static void ScheduleMissingCatalogImport()
-        {
-            EditorApplication.delayCall += ImportIfCatalogIsIncomplete;
-        }
-
         [MenuItem("JoseonHunter/Assets/Import Affix Jackpot Pixel Atlases")]
         public static void EnsureImported()
         {
-            ConfigureAtlas(SlotKitPath, SlotSpriteNames, 64, 64);
-            ConfigureAtlas(StatusSymbolsPath, StatusSpriteNames, 64, 64);
-            ConfigureAtlas(PotentialPartsAPath, PotentialIds.Take(12).Select(id => id.Value).ToArray(), 64, 32);
-            ConfigureAtlas(PotentialPartsBPath, PotentialIds.Skip(12).Select(id => id.Value).ToArray(), 64, 32);
+            ConfigureAtlas(SlotKitPath);
+            ConfigureAtlas(StatusSymbolsPath);
+            ConfigureAtlas(PotentialPartsAPath);
+            ConfigureAtlas(PotentialPartsBPath);
             ConfigureMask(PotentialPartsAMaskPath);
             ConfigureMask(PotentialPartsBMaskPath);
+            foreach (var potentialId in PotentialIds) ConfigureMask(MaskPathFor(potentialId));
+            foreach (var potentialId in PotentialIds) ConfigureSprite(SpritePathFor(potentialId));
+            ConfigureSprite(RarityFramePath("standard"));
+            ConfigureSprite(RarityFramePath("high"));
+            ConfigureSprite(RarityFramePath("perfect"));
             CreateOrUpdateCatalog();
         }
 
-        private static void ImportIfCatalogIsIncomplete()
-        {
-            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
-            var catalog = AssetDatabase.LoadAssetAtPath<WeaponAffixPresentationCatalogAsset>(CatalogPath);
-            if (catalog != null && catalog.SpriteForAffix(WeaponAffixTier.Standard) != null &&
-                catalog.SpriteForPotential(WeaponPotentialId.HwandoVenomFang) != null) return;
-            EnsureImported();
-        }
-
-        private static void ConfigureAtlas(string path, string[] names, int cellWidth, int cellHeight)
+        private static void ConfigureAtlas(string path)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null) throw new InvalidOperationException($"Missing checked-in atlas at '{path}'.");
             importer.textureType = TextureImporterType.Sprite;
-            importer.spriteImportMode = SpriteImportMode.Multiple;
+            importer.spriteImportMode = SpriteImportMode.Single;
             importer.spritePixelsPerUnit = PixelsPerUnit;
             importer.filterMode = FilterMode.Point;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
-            importer.spritesheet = names.Select((name, index) => new SpriteMetaData
-            {
-                name = name,
-                rect = new Rect((index % 4) * cellWidth, 128 - ((index / 4) + 1) * cellHeight, cellWidth, cellHeight),
-                pivot = new Vector2(.5f, .5f),
-                alignment = (int)SpriteAlignment.Center
-            }).ToArray();
+            importer.SaveAndReimport();
+        }
+
+        private static void ConfigureSprite(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) throw new InvalidOperationException($"Missing checked-in cell sprite at '{path}'.");
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = PixelsPerUnit;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.isReadable = true;
+            importer.alphaIsTransparency = true;
             importer.SaveAndReimport();
         }
 
@@ -102,28 +100,31 @@ namespace JoseonHunter.Editor.AssetProduction
                 AssetDatabase.CreateAsset(catalog, CatalogPath);
             }
 
-            var slotSprites = SpritesAt(SlotKitPath);
-            var spritesA = SpritesAt(PotentialPartsAPath);
-            var spritesB = SpritesAt(PotentialPartsBPath);
-            var maskA = AssetDatabase.LoadAssetAtPath<Texture2D>(PotentialPartsAMaskPath);
-            var maskB = AssetDatabase.LoadAssetAtPath<Texture2D>(PotentialPartsBMaskPath);
             var entries = new List<WeaponAffixPresentationCatalogAsset.PotentialPresentation>();
             for (var index = 0; index < PotentialIds.Length; index++)
             {
-                var sprite = index < 12 ? spritesA[PotentialIds[index].Value] : spritesB[PotentialIds[index].Value];
-                entries.Add(new WeaponAffixPresentationCatalogAsset.PotentialPresentation(PotentialIds[index], sprite, index < 12 ? maskA : maskB));
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpritePathFor(PotentialIds[index]));
+                var rect = new Rect((index % 4) * 64, 128 - ((index % 12 / 4) + 1) * 32, 64, 32);
+                var mask = AssetDatabase.LoadAssetAtPath<Texture2D>(MaskPathFor(PotentialIds[index]));
+                entries.Add(new WeaponAffixPresentationCatalogAsset.PotentialPresentation(PotentialIds[index], sprite, mask, rect, sprite.pivot));
             }
             catalog.SetForImport(new[]
             {
-                new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.Standard, slotSprites["standard_frame"]),
-                new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.High, slotSprites["high_frame"]),
-                new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.Perfect, slotSprites["perfect_frame"])
+                new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.Standard, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("standard"))),
+                new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.High, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("high"))),
+                new WeaponAffixPresentationCatalogAsset.RarityFrame(WeaponAffixTier.Perfect, AssetDatabase.LoadAssetAtPath<Sprite>(RarityFramePath("perfect")))
             }, entries.ToArray());
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }
 
-        private static Dictionary<string, Sprite> SpritesAt(string path) =>
-            AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToDictionary(sprite => sprite.name, StringComparer.Ordinal);
+        private static string MaskPathFor(WeaponPotentialId id) =>
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/Masks/" + id.Value + "-hit-mask.png";
+
+        private static string SpritePathFor(WeaponPotentialId id) =>
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/Sprites/" + id.Value + ".png";
+
+        private static string RarityFramePath(string tier) =>
+            "Assets/JoseonHunter/Art/UI/AffixJackpot/RarityFrames/" + tier + ".png";
     }
 }

@@ -18,7 +18,7 @@ namespace JoseonHunter.Editor.Scenes
             var scene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Single);
             foreach (var root in scene.GetRootGameObjects())
             {
-                Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(root);
             }
 
             var cameraObject = new GameObject("Main Camera");

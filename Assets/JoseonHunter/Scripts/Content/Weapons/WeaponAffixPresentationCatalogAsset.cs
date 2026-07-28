@@ -15,17 +15,23 @@ namespace JoseonHunter.Content.Weapons
             [SerializeField] private string potentialId;
             [SerializeField] private Sprite sprite;
             [SerializeField] private Texture2D hitMask;
+            [SerializeField] private Rect sourceRect;
+            [SerializeField] private Vector2 pivot;
 
-            public PotentialPresentation(WeaponPotentialId id, Sprite presentationSprite, Texture2D mask)
+            public PotentialPresentation(WeaponPotentialId id, Sprite presentationSprite, Texture2D mask, Rect documentedSourceRect, Vector2 spritePivot)
             {
                 potentialId = id.Value;
                 sprite = presentationSprite;
                 hitMask = mask;
+                sourceRect = documentedSourceRect;
+                pivot = spritePivot;
             }
 
             public bool Matches(WeaponPotentialId id) => string.Equals(potentialId, id.Value, StringComparison.Ordinal);
             public Sprite Sprite => sprite;
             public Texture2D HitMask => hitMask;
+            public Rect SourceRect => sourceRect;
+            public Vector2 Pivot => pivot;
         }
 
         [Serializable]
@@ -55,6 +61,14 @@ namespace JoseonHunter.Content.Weapons
 
         public Texture2D MaskForPotential(WeaponPotentialId potentialId) =>
             (potentials ?? Array.Empty<PotentialPresentation>()).FirstOrDefault(entry => entry.Matches(potentialId)).HitMask;
+
+        public bool TryGetPotentialPresentation(WeaponPotentialId potentialId, out PotentialPresentation presentation)
+        {
+            foreach (var entry in potentials ?? Array.Empty<PotentialPresentation>())
+                if (entry.Matches(potentialId)) { presentation = entry; return true; }
+            presentation = default;
+            return false;
+        }
 
         public IReadOnlyList<string> Validate(IEnumerable<WeaponPotentialId> requiredPotentialIds)
         {

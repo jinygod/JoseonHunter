@@ -12,5 +12,251 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e7b2d19d270f5ea4694217ffb9d30351, type: 3}
   m_Name: WeaponAffixPresentationCatalog
   m_EditorClassIdentifier:
-  rarityFrames: []
-  potentials: []
+  rarityFrames:
+  - tier: 0
+    sprite: {fileID: 21300000, guid: 5e66620616da59a49b46c60b0414ce86, type: 3}
+  - tier: 1
+    sprite: {fileID: 21300000, guid: 1f85de7473155174d9c5d80258b241fd, type: 3}
+  - tier: 2
+    sprite: {fileID: 21300000, guid: b317df97c137a1f4dad0c73b94ef18e7, type: 3}
+  potentials:
+  - potentialId: hwando_venom_fang
+    sprite: {fileID: 21300000, guid: 921fc8a5ea42147459dfe05d938512cc, type: 3}
+    hitMask: {fileID: 2800000, guid: ed1c29ee01ac7734c96854cf9e4e6aef, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 0
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: hwando_returning_afterimage
+    sprite: {fileID: 21300000, guid: a11741b9b40edf94b8f28ee273d1dd47, type: 3}
+    hitMask: {fileID: 2800000, guid: d365cd8d3df38d543b6b86dbc580917d, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 64
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: hwando_flying_blade_dance
+    sprite: {fileID: 21300000, guid: f8da20af0ea7e654cb20520d97b463eb, type: 3}
+    hitMask: {fileID: 2800000, guid: 58f27d63ca52b9840a881d7f4a5c177b, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 128
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: gakgung_armor_break_arrowhead
+    sprite: {fileID: 21300000, guid: 0b225079b245e534cb822c3cedc534ab, type: 3}
+    hitMask: {fileID: 2800000, guid: 06c29c84e5d07a94c998365c62f3d135, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 192
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: gakgung_split_fletching
+    sprite: {fileID: 21300000, guid: 299f7124a16296541a0ad931a711f9e6, type: 3}
+    hitMask: {fileID: 2800000, guid: b9883e9da90147242b19d7dbe761eb85, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 0
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: gakgung_full_draw
+    sprite: {fileID: 21300000, guid: cf7c8d3e758b71d41980f3087f13c1bf, type: 3}
+    hitMask: {fileID: 2800000, guid: 4348c77dc24fe3548adcf8a0e67404e2, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 64
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: talisman_five_element_cycle
+    sprite: {fileID: 21300000, guid: adcba051c7c243f4e971faad7302008f, type: 3}
+    hitMask: {fileID: 2800000, guid: 4f99fa66ea1793842a6f66d36b024b3f, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 128
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: talisman_seal_transfer
+    sprite: {fileID: 21300000, guid: b4d03046548a7b749805ec710ecb4cce, type: 3}
+    hitMask: {fileID: 2800000, guid: 90770edb2140ca746a209fc42030a3dd, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 192
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: talisman_vengeful_ghost_burst
+    sprite: {fileID: 21300000, guid: 9c51e13f5f3e31e41ad5b46bdd2a5ba4, type: 3}
+    hitMask: {fileID: 2800000, guid: dd86b0e9fbc05c94c923883b5e669d09, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 0
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: thunder_earth_current
+    sprite: {fileID: 21300000, guid: a4878dbbc9b3c7647a0e54d7bf8b3af9, type: 3}
+    hitMask: {fileID: 2800000, guid: 8a2ac0917c37e254e81e573e1d57fc16, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 64
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: thunder_overcharged_core
+    sprite: {fileID: 21300000, guid: 7f682f9b857d4114bad2f3dbab041ff8, type: 3}
+    hitMask: {fileID: 2800000, guid: 31851c7701e5ff143905003a240f572f, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 128
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: thunder_lightning_rod
+    sprite: {fileID: 21300000, guid: 219aef88b3943c04f89895864e92e90b, type: 3}
+    hitMask: {fileID: 2800000, guid: e545bacf6ee64dd4b80510a81bf2c173, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 192
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: jangseung_ghost_face
+    sprite: {fileID: 21300000, guid: 395c5747508640d4b910102c588371ec, type: 3}
+    hitMask: {fileID: 2800000, guid: 89f564c67669a9d47b0220f2c788664f, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 0
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: jangseung_four_direction_barrier
+    sprite: {fileID: 21300000, guid: 7f8a4e74dbf876c4c84db7cfa9449f1f, type: 3}
+    hitMask: {fileID: 2800000, guid: 2506d93f39dd6f74cb8f219ccb66d2dc, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 64
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: jangseung_guardian_descent
+    sprite: {fileID: 21300000, guid: 4ff3a007202e282418c8dc477604220a, type: 3}
+    hitMask: {fileID: 2800000, guid: ffd08efb55583644e8b7b71376d121f5, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 128
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: singijeon_powder_trail
+    sprite: {fileID: 21300000, guid: 04355e750e210d348a1648f354d1e9dd, type: 3}
+    hitMask: {fileID: 2800000, guid: 792de49c1790b5c49bf6f5d41a70bf39, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 192
+      y: 96
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: singijeon_submunition_split
+    sprite: {fileID: 21300000, guid: f5c9fa5b60b2a9644b732552b64ee42d, type: 3}
+    hitMask: {fileID: 2800000, guid: b5ec9b27aaf950d40944f0d5610deb1c, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 0
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: singijeon_chain_ignition
+    sprite: {fileID: 21300000, guid: 9260b26fe800d1b4abd5a49ae7f4dc79, type: 3}
+    hitMask: {fileID: 2800000, guid: ef2378bb2f25b824ebd0ae45c79229ac, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 64
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: frost_crack_mark
+    sprite: {fileID: 21300000, guid: 30d41eac4c0ddd546b45e4b9698e08db, type: 3}
+    hitMask: {fileID: 2800000, guid: 085f1b7724a7a114c98cb462a779cbab, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 128
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: frost_spread
+    sprite: {fileID: 21300000, guid: 635a1f60ebdee0c4f865c45bd446bec7, type: 3}
+    hitMask: {fileID: 2800000, guid: c343bcdf0c281a043aec582ef2f5ae1f, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 192
+      y: 64
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: frost_mist
+    sprite: {fileID: 21300000, guid: b5d85487f34520d4385bc02bf67ed4a0, type: 3}
+    hitMask: {fileID: 2800000, guid: f4a840a0ebeb7f34f9141b69713f7aeb, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 0
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: fan_vacuum_edge
+    sprite: {fileID: 21300000, guid: 7bec6228ccd5aac4db4bbad708aad649, type: 3}
+    hitMask: {fileID: 2800000, guid: fa3fd70e696b52a408b960bb5d35a7a7, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 64
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: fan_distant_thunder
+    sprite: {fileID: 21300000, guid: 4711ca107226e964cab229cd939e4364, type: 3}
+    hitMask: {fileID: 2800000, guid: 3e6091461c8586f43a0f61a73a100978, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 128
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}
+  - potentialId: fan_returning_chain
+    sprite: {fileID: 21300000, guid: 63fbb105b7c15be49aa533d882a2f218, type: 3}
+    hitMask: {fileID: 2800000, guid: b13bd2e4f95b7b94bb38accc0e77d8ba, type: 3}
+    sourceRect:
+      serializedVersion: 2
+      x: 192
+      y: 32
+      width: 64
+      height: 32
+    pivot: {x: 32, y: 16}

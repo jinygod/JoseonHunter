@@ -15,7 +15,6 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void ApprovedAtlasesAreBinaryAndExactDimensions()
         {
-            WeaponAffixPixelAssetImporter.EnsureImported();
             foreach (var path in new[] { WeaponAffixPixelAssetImporter.SlotKitPath, WeaponAffixPixelAssetImporter.StatusSymbolsPath, WeaponAffixPixelAssetImporter.PotentialPartsAPath, WeaponAffixPixelAssetImporter.PotentialPartsBPath })
             {
                 var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
@@ -29,7 +28,6 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void PotentialMasksAreBinarySubsetsAndEveryPotentialResolves()
         {
-            WeaponAffixPixelAssetImporter.EnsureImported();
             var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
             Assert.That(catalog, Is.Not.Null);
             var ids = WeaponAffixCatalog.CompatiblePotentials(WeaponRoster.All[0])
@@ -38,14 +36,30 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(catalog.Validate(ids), Is.Empty);
             foreach (var id in ids)
             {
-                Assert.That(catalog.SpriteForPotential(id), Is.Not.Null, id.Value);
+                var sprite = catalog.SpriteForPotential(id);
+                Assert.That(sprite, Is.Not.Null, id.Value);
                 var mask = catalog.MaskForPotential(id);
                 Assert.That(mask, Is.Not.Null, id.Value);
-                Assert.That(mask.GetPixels32().Any(pixel => pixel.a == byte.MaxValue), Is.True, id.Value);
+                Assert.That(mask.width, Is.EqualTo(64), id.Value);
+                Assert.That(mask.height, Is.EqualTo(32), id.Value);
+                ValidateCellLocalMask(sprite, mask, id.Value);
+                Assert.That(catalog.TryGetPotentialPresentation(id, out var entry), Is.True, id.Value);
+                Assert.That(entry.SourceRect, Is.EqualTo(ExpectedRect(id)));
+                Assert.That(entry.Pivot, Is.EqualTo(sprite.pivot));
+                Assert.That(entry.Sprite.rect.size, Is.EqualTo(new Vector2(64f, 32f)));
             }
             ValidateMaskSubset(WeaponAffixPixelAssetImporter.PotentialPartsAPath, WeaponAffixPixelAssetImporter.PotentialPartsAMaskPath);
             ValidateMaskSubset(WeaponAffixPixelAssetImporter.PotentialPartsBPath, WeaponAffixPixelAssetImporter.PotentialPartsBMaskPath);
         }
+
+        private static Rect ExpectedRect(WeaponPotentialId id)
+        {
+            var index = RequiredIds().ToList().FindIndex(candidate => candidate.Equals(id));
+            return new Rect((index % 4) * 64, 128 - ((index % 12 / 4) + 1) * 32, 64, 32);
+        }
+
+        private static IEnumerable<WeaponPotentialId> RequiredIds() => WeaponAffixCatalog.CompatiblePotentials(WeaponRoster.All[0])
+            .Concat(WeaponRoster.All.Skip(1).SelectMany(WeaponAffixCatalog.CompatiblePotentials)).Distinct();
 
         [Test]
         public void UiAtlasesHaveNoGameplayMaskAssets()
@@ -67,6 +81,28 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(maskPixels[index].a == 0 || maskPixels[index].a == byte.MaxValue, Is.True, maskPath);
                 Assert.That(maskPixels[index].a != byte.MaxValue || sourcePixels[index].a == byte.MaxValue, Is.True, maskPath);
             }
+        }
+
+        private static void ValidateCellLocalMask(Sprite sprite, Texture2D mask, string label)
+        {
+            Assert.That(sprite.texture.width, Is.EqualTo(64), label);
+            Assert.That(sprite.texture.height, Is.EqualTo(32), label);
+            var sourcePixels = sprite.texture.GetPixels32();
+            var maskPixels = mask.GetPixels32();
+            var opaquePixelCount = 0;
+            for (var index = 0; index < maskPixels.Length; index++)
+            {
+                Assert.That(maskPixels[index].a == 0 || maskPixels[index].a == byte.MaxValue, Is.True, label);
+                if (maskPixels[index].a != byte.MaxValue)
+                {
+                    continue;
+                }
+
+                opaquePixelCount++;
+                Assert.That(sourcePixels[index].a, Is.EqualTo(byte.MaxValue), label);
+            }
+
+            Assert.That(opaquePixelCount, Is.GreaterThan(0), label);
         }
     }
 }
