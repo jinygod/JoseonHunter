@@ -91,6 +91,27 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Support_and_evolution_keep_generic_reward_reveal()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null; yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            var generic = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            affix.SetCatalogForTests(TestCatalog());
+
+            yield return ChooseThroughVisibleCard(controller, choice, new UpgradeOffer("boots", UpgradeKind.Support, 1));
+            Assert.That(generic.IsRevealing, Is.True);
+            Assert.That(affix.IsRevealing, Is.False);
+            yield return new WaitForSecondsRealtime(.5f);
+
+            yield return ChooseThroughVisibleCard(controller, choice, new UpgradeOffer("gakgung_sun_piercer", UpgradeKind.Evolution, 5));
+            Assert.That(generic.IsRevealing, Is.True);
+            Assert.That(affix.IsRevealing, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator Hide_cancels_without_a_completion_notification()
         {
             var presenter = new GameObject("Affix Reveal Cancel Test").AddComponent<WeaponAffixRevealPresenter>();
@@ -147,6 +168,16 @@ namespace JoseonHunter.Tests.PlayMode
             var catalog = ScriptableObject.CreateInstance<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>();
             catalog.SetSlotKitForTests(sprite, sprite, sprite, sprite, sprite);
             return catalog;
+        }
+
+        private static IEnumerator ChooseThroughVisibleCard(FirstPlayableController controller, UpgradeChoicePresenter choice, UpgradeOffer offer)
+        {
+            controller.OpenUpgradeForTests();
+            controller.SetUpgradeOffersForTests(offer);
+            yield return new WaitForSecondsRealtime(.35f);
+            var card = choice.GetComponentInChildren<Button>(true);
+            ExecuteEvents.Execute<IPointerClickHandler>(card.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
+            yield return new WaitForSecondsRealtime(.2f);
         }
     }
 }
