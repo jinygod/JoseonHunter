@@ -84,11 +84,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 var flame = ghostFlames[index]; flame.Remaining -= Mathf.Max(0f, deltaTime);
                 if (flame.Remaining > 0f) { ghostFlames[index] = flame; continue; }
-                if (TryFindNearestLegal(flame.Position, null, out var target) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanVengefulGhostBurst, out _, out var ghostMask) &&
-                    PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                if (TryFindNearestLegal(flame.Position, null, out var ghostTarget) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanVengefulGhostBurst, out _, out var ghostMask) &&
+                    PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(ghostTarget.WorldPosition.X, ghostTarget.WorldPosition.Y), ghostTarget.HurtMask, ghostTarget.HurtMaskTransform, out var contact))
                 {
-                    LastGhostSeekTargetRuntimeId = target.RuntimeId;
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(flame.Attack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage * .75f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick), out _);
+                    LastGhostSeekTargetRuntimeId = ghostTarget.RuntimeId;
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(flame.Attack, WeaponId.TalismanThrow, ghostTarget, Mathf.CeilToInt(BaseDamage * .75f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick), out _);
                 }
                 runtime.DamageService.RetireAttack(flame.Attack.InstanceId); ghostFlames.RemoveAt(index);
             }

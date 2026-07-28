@@ -71,10 +71,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 child.RemainingRange -= travel;
                 runtime.Targets.CopyTo(targets);
                 var hit = false;
-                foreach (var target in targets)
+                foreach (var splitTarget in targets)
                 {
-                    if (target == null || !target.IsAlive || target.HurtMask == null || !PixelMaskContactService.TryFindContact(child.Mask, PixelMaskTransform.Translation(child.Position.X, child.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                    hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack, WeaponId.GakgungShot, target, Mathf.CeilToInt(BaseDamage * .45f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                    if (splitTarget == null || !splitTarget.IsAlive || splitTarget.HurtMask == null || !PixelMaskContactService.TryFindContact(child.Mask, PixelMaskTransform.Translation(child.Position.X, child.Position.Y), splitTarget.HurtMask, splitTarget.HurtMaskTransform, out var contact)) continue;
+                    hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack, WeaponId.GakgungShot, splitTarget, Mathf.CeilToInt(BaseDamage * .45f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
                     if (hit) break;
                 }
                 if (!hit && child.RemainingRange > 0f) { splitArrows[index] = child; continue; }

@@ -94,9 +94,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 var shadow = afterimages[index]; shadow.Delay -= Mathf.Max(0f, deltaTime);
                 if (shadow.Delay > 0f) continue;
-                if (runtime.Targets.TryGet(shadow.TargetRuntimeId, out var target) && target != null && target.IsAlive && target.HurtMask != null &&
-                    PixelMaskContactService.TryFindContact(shadow.Mask, PixelMaskTransform.Translation(shadow.Contact.X, shadow.Contact.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(shadow.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage * .55f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                if (runtime.Targets.TryGet(shadow.TargetRuntimeId, out var resolvedTarget) && resolvedTarget != null && resolvedTarget.IsAlive && resolvedTarget.HurtMask != null &&
+                    PixelMaskContactService.TryFindContact(shadow.Mask, PixelMaskTransform.Translation(shadow.Contact.X, shadow.Contact.Y), resolvedTarget.HurtMask, resolvedTarget.HurtMaskTransform, out var contact))
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(shadow.Attack, WeaponId.HwandoFlyingBlade, resolvedTarget, Mathf.CeilToInt(BaseDamage * .55f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
                 runtime.DamageService.RetireAttack(shadow.Attack.InstanceId); afterimages.RemoveAt(index);
             }
         }

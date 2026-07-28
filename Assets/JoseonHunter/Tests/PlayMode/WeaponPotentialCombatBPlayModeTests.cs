@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;

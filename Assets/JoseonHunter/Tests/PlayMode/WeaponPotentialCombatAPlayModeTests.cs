@@ -249,13 +249,13 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(rig.Runtime.AffixStatuses.HasVulnerabilityForTests(rig.Target.RuntimeId), Is.True);
                 Assert.That(rig.Runtime.AffixStatuses.VulnerabilityRemainingForTests(rig.Target.RuntimeId), Is.EqualTo(1.95f).Within(.001f));
                 Assert.That(bow.SplitChildAttackIdsForTests, Is.Not.Empty);
-                Assert.That(bow.SplitChildAttackIdsForTests, Does.Not.Contain(bow.LastArmorBreakPrimaryAttackIdForTests));
+                Assert.That(bow.SplitChildAttackIdsForTests, Has.No.Member(bow.LastArmorBreakPrimaryAttackIdForTests));
                 AdvanceUntil(rig, () => rig.Events.Any(e => e.WeaponId.Equals(WeaponId.GakgungShot) && e.Phase == ContactPhase.Direct && e.FinalDamage == 12), .5f);
                 var direct = rig.Events.Where(e => e.WeaponId.Equals(WeaponId.GakgungShot) && e.Phase == ContactPhase.Direct).ToArray();
                 Assert.That(direct.Length, Is.GreaterThan(0));
                 Assert.That(direct.Any(e => e.FinalDamage == 12), Is.True);
                 Assert.That(bow.LevelFiveSideArrowAttackIdsForTests.Any(id => rig.Events.Any(e => e.AttackInstanceId == id && e.Phase == ContactPhase.Direct)), Is.True);
-                Assert.That(bow.LevelFiveSideArrowAttackIdsForTests, Does.Not.Contain(bow.LastArmorBreakPrimaryAttackIdForTests));
+                Assert.That(bow.LevelFiveSideArrowAttackIdsForTests, Has.No.Member(bow.LastArmorBreakPrimaryAttackIdForTests));
                 Assert.That(bow.ArmorBreakApplicationAttackIdsForTests.All(id => !bow.LevelFiveSideArrowAttackIdsForTests.Contains(id)), Is.True);
                 Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "level-five split child must execute through its terminal PotentialChain path");
                 var remaining = rig.Runtime.AffixStatuses.VulnerabilityRemainingForTests(rig.Target.RuntimeId);
