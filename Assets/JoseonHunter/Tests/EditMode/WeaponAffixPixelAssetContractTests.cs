@@ -68,6 +68,28 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(AssetDatabase.LoadAssetAtPath<Texture2D>(WeaponAffixPixelAssetImporter.StatusSymbolsPath.Replace(".png", "-hit-mask.png")), Is.Null);
         }
 
+        [Test]
+        public void Every_potential_sprite_and_mask_uses_the_mobile_safe_pixel_import_profile()
+        {
+            foreach (var id in RequiredIds())
+            {
+                AssertPixelImport("Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/Sprites/" + id.Value + ".png");
+                AssertPixelImport("Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/Masks/" + id.Value + "-hit-mask.png");
+            }
+        }
+
+        private static void AssertPixelImport(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            Assert.That(importer, Is.Not.Null, path);
+            Assert.That(importer.isReadable, Is.True, path);
+            Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point), path);
+            Assert.That(importer.mipmapEnabled, Is.False, path);
+            Assert.That(importer.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed), path);
+            foreach (var platform in new[] { "Android", "Standalone", "WebGL" })
+                Assert.That(importer.GetPlatformTextureSettings(platform).overridden, Is.False, path + " " + platform);
+        }
+
         private static void ValidateMaskSubset(string sourcePath, string maskPath)
         {
             var source = AssetDatabase.LoadAssetAtPath<Texture2D>(sourcePath);

@@ -224,11 +224,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var coreContact = Potentials.HasPotential(WeaponPotentialId.ThunderOverchargedCore) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderOverchargedCore, out _, out var coreMask) &&
                     PixelMaskContactService.TryFindContact(coreMask, PixelMaskTransform.Translation(bomb.Landing.X, bomb.Landing.Y), target.HurtMask, target.HurtMaskTransform, out _);
                 if (coreContact) multiplier *= 1f + Mathf.Min(.80f, bomb.PulledTargetIds.Count * .08f);
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _) &&
-                    Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
+                if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) continue;
+                bomb.MainBlastConfirmed = true;
+                if (Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
                     bomb.LightningRodTarget = target;
             }
-            if (Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var earthMask))
+            if (bomb.MainBlastConfirmed && Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var earthMask))
                 delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), 0, bomb.Landing, earthMask, .35f, .65f, ContactPhase.PotentialBlast));
             if (bomb.LightningRodTarget != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderLightningRod, out _, out var rodMask))
             {
@@ -252,13 +253,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var transform = new PixelMaskTransform(bomb.Landing, 0, false, new Vector2(scale, scale));
                 if (!PixelMaskContactService.TryFindContact(ringMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) continue;
+                bomb.MainBlastConfirmed = true;
                 if (Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
                     bomb.LightningRodTarget = target;
             }
             bomb.SweptRadius = end;
             if (bomb.SweptRadius + .0001f >= BlastRadius)
             {
-                if (Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var crackMask))
+                if (bomb.MainBlastConfirmed && Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var crackMask))
                     delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), 0, bomb.Landing, crackMask, .35f, .65f, ContactPhase.PotentialBlast));
                 if (bomb.LightningRodTarget != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderLightningRod, out _, out var rodMask))
                 {
@@ -333,6 +335,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float Height { get; set; }
             public float Elapsed { get; set; }
             public float SweptRadius { get; set; }
+            public bool MainBlastConfirmed { get; set; }
             public ThunderBombState State { get; set; } = ThunderBombState.Lob;
             public HashSet<int> PulledTargetIds { get; } = new HashSet<int>();
             public ICombatTarget LightningRodTarget { get; set; }

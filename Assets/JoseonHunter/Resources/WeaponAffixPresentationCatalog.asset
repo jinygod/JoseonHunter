@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e7b2d19d270f5ea4694217ffb9d30351, type: 3}
   m_Name: WeaponAffixPresentationCatalog
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   rarityFrames:
   - tier: 0
     sprite: {fileID: 21300000, guid: 5e66620616da59a49b46c60b0414ce86, type: 3}

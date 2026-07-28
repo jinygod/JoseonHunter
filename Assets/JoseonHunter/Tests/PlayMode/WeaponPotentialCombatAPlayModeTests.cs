@@ -113,6 +113,19 @@ namespace JoseonHunter.Tests.PlayMode
             normal.Dispose(); evolved.Dispose();
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Earth_current_requires_a_confirmed_main_blast_before_it_can_schedule(bool evolved)
+        {
+            var rig = Drive(WeaponPotentialId.ThunderEarthCurrent, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("0"));
+            var lateTarget = rig.AddTarget(2, new Float2(20f, 0f), MaskFor(WeaponPotentialId.ThunderEarthCurrent));
+            rig.Advance(1f); // the bomb's main blast resolves while neither target has a confirmed mask contact.
+            lateTarget.Position = new Float2(0f, 0f);
+            rig.Advance(.8f); // an erroneously allocated Earth Current would now hit this target.
+            Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.PotentialBlast && value.TargetRuntimeId == lateTarget.RuntimeId), Is.False);
+            rig.Dispose();
+        }
+
         [Test]
         public void Delayed_potential_skips_dead_or_unregistered_target()
         {

@@ -62,14 +62,7 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
-            foreach (var platform in new[] { "DefaultTexturePlatform", "Standalone", "Android", "WebGL" })
-            {
-                var settings = importer.GetPlatformTextureSettings(platform);
-                settings.name = platform;
-                settings.overridden = false;
-                settings.textureCompression = TextureImporterCompression.Uncompressed;
-                importer.SetPlatformTextureSettings(settings);
-            }
+            ClearPlatformOverrides(importer);
             importer.SaveAndReimport();
         }
 
@@ -85,14 +78,7 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
-            foreach (var platform in new[] { "DefaultTexturePlatform", "Standalone", "Android", "WebGL" })
-            {
-                var settings = importer.GetPlatformTextureSettings(platform);
-                settings.name = platform;
-                settings.overridden = false;
-                settings.textureCompression = TextureImporterCompression.Uncompressed;
-                importer.SetPlatformTextureSettings(settings);
-            }
+            ClearPlatformOverrides(importer);
             importer.SaveAndReimport();
         }
 
@@ -106,7 +92,20 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
+            ClearPlatformOverrides(importer);
             importer.SaveAndReimport();
+        }
+
+        private static void ClearPlatformOverrides(TextureImporter importer)
+        {
+            foreach (var platform in new[] { "DefaultTexturePlatform", "Standalone", "Android", "WebGL" })
+            {
+                var settings = importer.GetPlatformTextureSettings(platform);
+                settings.name = platform;
+                settings.overridden = false;
+                settings.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SetPlatformTextureSettings(settings);
+            }
         }
 
         private static void CreateOrUpdateCatalog()
