@@ -10,6 +10,7 @@ namespace JoseonHunter.Presentation.Combat
     {
         private FirstPlayableController controller;
         private DamageNumberPool pool;
+        private CombatFeedbackDirector feedbackDirector;
         private CombatDamageService boundService;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -32,19 +33,25 @@ namespace JoseonHunter.Presentation.Combat
                 var poolObject = new GameObject("Damage Number Pool");
                 poolObject.transform.SetParent(transform, false);
                 pool = poolObject.AddComponent<DamageNumberPool>();
+                feedbackDirector = poolObject.AddComponent<CombatFeedbackDirector>();
             }
 
             pool.Unbind();
+            feedbackDirector.Unbind();
             boundService = service;
             if (boundService == null) return;
 
             pool.SetBossTargetPredicate(controller.IsBossCombatTarget);
             pool.Bind(boundService);
+            feedbackDirector.SetBossTargetPredicate(controller.IsBossCombatTarget);
+            feedbackDirector.SetTargetAlivePredicate(controller.IsCombatTargetAlive);
+            feedbackDirector.Bind(boundService);
         }
 
         private void OnDestroy()
         {
             if (pool != null) pool.Unbind();
+            if (feedbackDirector != null) feedbackDirector.Unbind();
             boundService = null;
         }
     }

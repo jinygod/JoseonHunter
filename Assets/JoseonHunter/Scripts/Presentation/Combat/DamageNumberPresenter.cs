@@ -11,6 +11,7 @@ namespace JoseonHunter.Presentation.Combat
         private const float NormalLifetime = 0.55f;
         private const float BossLifetimeBonus = 0.15f;
         private const float RiseDistance = 0.75f;
+        private const float NormalRiseDuration = 0.35f;
         private const float CriticalPunchDuration = 0.12f;
         private const float CriticalPunchScale = 1.2f;
 
@@ -37,7 +38,8 @@ namespace JoseonHunter.Presentation.Combat
             if (!IsActive) return;
 
             elapsed += Time.deltaTime;
-            var progress = Mathf.Clamp01(elapsed / lifetime);
+            // Numbers complete their rise before their visibility window ends; boss values then linger in place.
+            var progress = Mathf.Clamp01(elapsed / NormalRiseDuration);
             transform.position = startPosition + Vector3.up * (RiseDistance * progress);
             transform.localScale = Vector3.one * (IsCritical && elapsed < CriticalPunchDuration
                 ? Mathf.Lerp(CriticalPunchScale, 1f, elapsed / CriticalPunchDuration)
