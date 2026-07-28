@@ -73,7 +73,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             for (var index = iceSlows.Count - 1; index >= 0; index--)
             {
-                var slow = iceSlows[index]; slow.Remaining -= Mathf.Max(0f, deltaTime);
+                var slow = iceSlows[index];
+                if (slow.CreatedThisTick) { slow.CreatedThisTick = false; iceSlows[index] = slow; continue; }
+                slow.Remaining -= Mathf.Max(0f, deltaTime);
                 if (slow.Remaining > 0f) { iceSlows[index] = slow; continue; }
                 if (slow.Target is IFrostStatusTarget frost) frost.RemoveFrostSlow(slow.SourceAttackId, 0f);
                 iceSlows.RemoveAt(index);
@@ -396,7 +398,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
 
-        private struct IceSlow { public IceSlow(ICombatTarget target, int sourceAttackId, float remaining) { Target = target; SourceAttackId = sourceAttackId; Remaining = remaining; } public ICombatTarget Target; public int SourceAttackId; public float Remaining; }
+        private struct IceSlow { public IceSlow(ICombatTarget target, int sourceAttackId, float remaining) { Target = target; SourceAttackId = sourceAttackId; Remaining = remaining; CreatedThisTick = true; } public ICombatTarget Target; public int SourceAttackId; public float Remaining; public bool CreatedThisTick; }
 
         private struct GhostFlame
         {
