@@ -95,12 +95,9 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 if (potential.Equals(WeaponPotentialId.SingijeonChainIgnition))
                 {
-                    rig.Dispose();
-                    rig = Drive(potential, true, MaskFor(potential), beforeExecutorDamage: (target, value) =>
-                    {
-                        if (value.WeaponId.Equals(WeaponId.SingijeonVolley) && value.Phase == ContactPhase.Direct) target.ApplyResolvedDamage(1000);
-                    });
                     executor = (SingijeonExecutor)rig.Executor;
+                    rig.AddTarget(2, new Float2(1.5f, 0f), MaskFor(potential));
+                    executor.BeforeFocusPotentialCheckForTests = target => { target.ApplyResolvedDamage(1000); return true; };
                 }
                 rig.Advance(1.2f);
                 Assert.That(executor.FocusProjectileCount, Is.EqualTo(8));
@@ -108,7 +105,10 @@ namespace JoseonHunter.Tests.PlayMode
                 {
                     Assert.That(executor.SplitChildAttackIdsForTests.Count, Is.EqualTo(3));
                     Assert.That(executor.SplitChildAttackIdsForTests.Distinct().Count(), Is.EqualTo(3));
-                    Assert.That(rig.Events.Where(value => executor.SplitChildAttackIdsForTests.Contains(value.AttackInstanceId)).All(value => value.FinalDamage == 4), Is.True);
+                    var childHits = rig.Events.Where(value => executor.SplitChildAttackIdsForTests.Contains(value.AttackInstanceId)).ToArray();
+                    Assert.That(childHits.Length, Is.EqualTo(3));
+                    Assert.That(childHits.All(value => value.FinalDamage == 4), Is.True);
+                    Assert.That(childHits.Select(value => value.AttackInstanceId).Distinct().Count(), Is.EqualTo(3));
                 }
                 if (potential.Equals(WeaponPotentialId.SingijeonChainIgnition)) Assert.That(((SingijeonExecutor)rig.Executor).FocusRetargetCountForTests, Is.EqualTo(1));
             }
@@ -275,12 +275,13 @@ namespace JoseonHunter.Tests.PlayMode
             var oneNear = one.AddTarget(2, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.FrostSpread));
             one.Advance(.16f); // launch, then capacity-evict at the next cooldown boundary
             Assert.That(((FrostFlaskExecutor)one.Executor).ActiveSpreadResidenceCountForTests, Is.GreaterThan(0));
+            ((FrostFlaskExecutor)one.Executor).SuppressNewCastsForTests = true;
             one.TickExact(.25f);
             Assert.That(oneNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
 
             var split = Drive(WeaponPotentialId.FrostSpread, false, MaskFor(WeaponPotentialId.FrostSpread), frostCooldown: .1f);
             var splitNear = split.AddTarget(2, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.FrostSpread));
-            split.Advance(.16f); split.TickExact(.1f); split.TickExact(.15f);
+            split.Advance(.16f); ((FrostFlaskExecutor)split.Executor).SuppressNewCastsForTests = true; split.TickExact(.1f); split.TickExact(.15f);
             Assert.That(splitNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
             Assert.That(EventSignature(one.Events), Is.EqualTo(EventSignature(split.Events)));
             one.Dispose(); split.Dispose();
@@ -305,7 +306,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.GreaterThan(0));
             singijeon.Executor.Reset();
             Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.Zero);
-            singijeon.Target.Position = new Float2(99f, 99f); // live and registered, but outside every new launch.
+            singijeon.Target.Position = new Float2(.7f, 0f); // keep it contact-eligible for a broken stale trail.
+            ((SingijeonExecutor)singijeon.Executor).SuppressNewCastsForTests = true;
             var before = singijeon.Events.Count; singijeon.TickExact(.8f);
             Assert.That(singijeon.Events.Count, Is.EqualTo(before), "reset retires live trail attacks");
             Assert.That(singijeon.Runtime.DamageService.TrackedAttackCount, Is.Zero);
@@ -322,7 +324,8 @@ namespace JoseonHunter.Tests.PlayMode
             fan.Advance(.5f);
             Assert.That(((WindThunderFanExecutor)fan.Executor).ActiveBleedCountForTests, Is.GreaterThan(0));
             fan.Executor.Dispose();
-            fan.Target.Position = new Float2(99f, 99f);
+            fan.Target.Position = new Float2(1f, 0f); // retain the original bleed contact target.
+            ((WindThunderFanExecutor)fan.Executor).SuppressNewCastsForTests = true;
             before = fan.Events.Count; fan.TickExact(.8f);
             Assert.That(fan.Events.Count, Is.EqualTo(before), "dispose retires bleed and pending chain attacks");
             Assert.That(fan.Runtime.DamageService.TrackedAttackCount, Is.Zero);

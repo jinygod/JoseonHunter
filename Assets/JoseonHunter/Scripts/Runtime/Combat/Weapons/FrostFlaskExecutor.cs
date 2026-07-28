@@ -55,13 +55,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float LastFieldVisualScale { get; private set; } = 1f;
 #if UNITY_INCLUDE_TESTS
         public int ActiveSpreadResidenceCountForTests => spreadResidences.Count;
+        public bool SuppressNewCastsForTests { get; set; }
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime); cooldown -= step;
             AdvanceSpreadResidences(step);
-            if (cooldown <= 0f && TryFindCrowd(context.OwnerPosition, out var landing))
+            if (cooldown <= 0f
+#if UNITY_INCLUDE_TESTS
+                && !SuppressNewCastsForTests
+#endif
+                && TryFindCrowd(context.OwnerPosition, out var landing))
             {
                 cooldown = CooldownSeconds;
                 if (fields.Count >= FieldCapacity)

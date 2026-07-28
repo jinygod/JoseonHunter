@@ -63,12 +63,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int UnlaunchedFocusCountForTests => Mathf.Max(0, FocusProjectileCount - focusLaunchIndex);
         public int FocusRetargetCountForTests { get; private set; }
         public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIds;
+        public Func<ICombatTarget, bool> BeforeFocusPotentialCheckForTests { get; set; }
+        public bool SuppressNewCastsForTests { get; set; }
 #endif
         private readonly List<int> splitChildAttackIds = new List<int>();
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             latestContext = context; AdvanceTrails(Mathf.Max(0f, deltaTime), context);
+#if UNITY_INCLUDE_TESTS
+            if (SuppressNewCastsForTests) { RememberTargetTransforms(); return; }
+#endif
             if (!IsEvolved)
             {
                 TickNormal(deltaTime, context);
@@ -250,6 +255,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (!damage.WeaponId.Equals(WeaponId.SingijeonVolley) || damage.Phase != ContactPhase.Direct || !focusAttackIds.Contains(damage.AttackInstanceId) || childAttackIds.Contains(damage.AttackInstanceId)) return;
             if (!runtime.Targets.TryGet(damage.TargetRuntimeId, out var target) || target == null || target.HurtMask == null) return;
+#if UNITY_INCLUDE_TESTS
+            BeforeFocusPotentialCheckForTests?.Invoke(target);
+#endif
             if (Potentials.HasPotential(WeaponPotentialId.SingijeonSubmunitionSplit) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonSubmunitionSplit, out _, out var split) && PixelMaskContactService.TryFindContact(split, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), target.HurtMask, target.HurtMaskTransform, out _))
             {
                 focusDirections.TryGetValue(damage.AttackInstanceId, out var baseDirection); for (var index = -1; index <= 1; index++) { var rad = index * 30f * Mathf.Deg2Rad; var direction = Normalize(new Float2(baseDirection.X * Mathf.Cos(rad) - baseDirection.Y * Mathf.Sin(rad), baseDirection.X * Mathf.Sin(rad) + baseDirection.Y * Mathf.Cos(rad))); LaunchRocket(latestContext, damage.ContactPoint, direction, "Singijeon Submunition", false, true); }

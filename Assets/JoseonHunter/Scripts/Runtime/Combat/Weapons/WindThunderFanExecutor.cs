@@ -58,6 +58,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #if UNITY_INCLUDE_TESTS
         public int ActiveBleedCountForTests => bleeds.Count;
         public bool PendingChainForTests => pendingChain.Scheduled;
+        public bool SuppressNewCastsForTests { get; set; }
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -66,7 +67,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             AdvanceBleeds(step, context);
             AdvancePotentialChain(step, context);
             cooldown -= step;
-            if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()) StartCast(context.OwnerPosition);
+            if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()
+#if UNITY_INCLUDE_TESTS
+                && !SuppressNewCastsForTests
+#endif
+                ) StartCast(context.OwnerPosition);
             switch (State)
             {
                 case WindThunderFanState.WindActive:
