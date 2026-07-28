@@ -86,6 +86,10 @@ namespace JoseonHunter.Runtime.Combat
         }
 
 #if UNITY_INCLUDE_TESTS
+        public bool IsDisposedForTests => disposed;
+        public int RegistrationCountForTests(WeaponId weaponId) => executorsByWeapon.ContainsKey(weaponId) ? 1 : 0;
+        public IWeaponExecutor ExecutorForTests(WeaponId weaponId) =>
+            executorsByWeapon.TryGetValue(weaponId, out var executor) ? executor : null;
         public bool IsEvolvedForTests(WeaponId weaponId) =>
             executorsByWeapon.TryGetValue(weaponId, out var executor) &&
             executor is IWeaponEvolutionProfile profile && profile.IsEvolved;
