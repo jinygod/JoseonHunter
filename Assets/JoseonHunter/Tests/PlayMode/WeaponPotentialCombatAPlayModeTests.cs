@@ -275,6 +275,55 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
+        public void Five_element_rotation_has_mask_negative_and_exact_fire_ice_lightning_results_in_both_forms()
+        {
+            foreach (var evolved in new[] { false, true })
+            {
+                var negative = Drive(WeaponPotentialId.TalismanFiveElementCycle, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+                negative.Advance(3f);
+                Assert.That(negative.Events.Any(e => e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Attach), Is.True);
+                Assert.That(negative.Events.Any(e => e.Phase == ContactPhase.Burn || e.Phase == ContactPhase.PotentialChain), Is.False);
+                Assert.That(negative.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
+                negative.Dispose();
+
+                var fire = Drive(WeaponPotentialId.TalismanFiveElementCycle, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.TalismanFiveElementCycle));
+                AdvanceUntil(fire, () => fire.Events.Any(e => e.Phase == ContactPhase.Burn), 2f);
+                fire.Runtime.Targets.Unregister(fire.Target);
+                fire.Advance(1.55f);
+                Assert.That(fire.Events.Count(e => e.Phase == ContactPhase.Burn), Is.EqualTo(3));
+                Assert.That(fire.Events.Where(e => e.Phase == ContactPhase.Burn).All(e => e.FinalDamage == 2), Is.True);
+                fire.Dispose();
+
+                var ice = Drive(WeaponPotentialId.TalismanFiveElementCycle, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.TalismanFiveElementCycle));
+                AdvanceUntil(ice, () => ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), 3f);
+                Assert.That(ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+                ice.Runtime.Targets.Unregister(ice.Target);
+                ice.Advance(1.19f);
+                Assert.That(ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+                ice.Advance(.02f);
+                Assert.That(ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
+                ice.Dispose();
+
+                var lightning = Drive(WeaponPotentialId.TalismanFiveElementCycle, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.TalismanFiveElementCycle));
+                var nearest = lightning.AddTarget(2, new Float2(1.25f, 0f), MaskFor(WeaponPotentialId.TalismanFiveElementCycle));
+                var farther = lightning.AddTarget(3, new Float2(2.4f, 0f), MaskFor(WeaponPotentialId.TalismanFiveElementCycle));
+                AdvanceUntil(lightning, () => lightning.Events.Any(e => e.Phase == ContactPhase.PotentialChain), 4f);
+                var chains = lightning.Events.Where(e => e.Phase == ContactPhase.PotentialChain).ToArray();
+                Assert.That(chains.Length, Is.EqualTo(1));
+                Assert.That(chains[0].TargetRuntimeId, Is.EqualTo(nearest.RuntimeId));
+                Assert.That(chains[0].TargetRuntimeId, Is.Not.EqualTo(farther.RuntimeId));
+                Assert.That(chains[0].FinalDamage, Is.EqualTo(6));
+                lightning.Dispose();
+            }
+        }
+
+        private static void AdvanceUntil(DrivenExecutor rig, Func<bool> condition, float timeout)
+        {
+            for (var elapsed = 0f; elapsed < timeout && !condition(); elapsed += .05f) rig.Advance(.05f);
+            Assert.That(condition(), Is.True, "Expected potential effect did not resolve through its executor.");
+        }
+
+        [Test]
         public void Lightning_rod_tracks_live_position_and_skips_unregistered_target_in_normal_and_evolved_paths()
         {
             foreach (var evolved in new[] { false, true })
