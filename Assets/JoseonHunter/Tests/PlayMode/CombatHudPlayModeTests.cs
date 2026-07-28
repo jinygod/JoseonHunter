@@ -101,6 +101,10 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(bootstrap.SafeAreaContainer.anchorMin, Is.EqualTo(new Vector2(0f, .06f)));
             Assert.That(bootstrap.SafeAreaContainer.anchorMax, Is.EqualTo(new Vector2(1f, .94f)));
 
+            bootstrap.ApplySafeArea(new Rect(0f, 96f, 1080f, 1728f), new Vector2(1080f, 1920f));
+            Assert.That(bootstrap.SafeAreaContainer.anchorMin, Is.EqualTo(new Vector2(0f, .05f)));
+            Assert.That(bootstrap.SafeAreaContainer.anchorMax, Is.EqualTo(new Vector2(1f, .95f)));
+
             new GameObject("Duplicate UI Test").AddComponent<FirstPlayableUiBootstrap>();
             yield return null;
             Assert.That(Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length,

@@ -117,5 +117,11 @@ namespace JoseonHunter.Content.Weapons
             jackpotBurst2 = importedBurst2;
             jackpotBurst3 = importedBurst3;
         }
+
+#if UNITY_INCLUDE_TESTS
+        public void SetSlotKitForTests(Sprite importedReelFrame, Sprite importedEmptyLineFrame,
+            Sprite importedBurst1, Sprite importedBurst2, Sprite importedBurst3) =>
+            SetSlotKitForImport(importedReelFrame, importedEmptyLineFrame, importedBurst1, importedBurst2, importedBurst3);
+#endif
     }
 }

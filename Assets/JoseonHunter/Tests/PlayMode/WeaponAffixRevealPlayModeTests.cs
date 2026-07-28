@@ -4,6 +4,11 @@ using JoseonHunter.Presentation.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Domain.Combat;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -41,6 +46,51 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Pointer_dispatch_skip_is_idempotent()
+        {
+            var eventSystem = new GameObject("EventSystem").AddComponent<EventSystem>();
+            var presenter = new GameObject("Pointer Skip Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            var result = Result(WeaponAffixTier.Standard, 0);
+            presenter.Play(result);
+            var pointer = new PointerEventData(eventSystem);
+            ExecuteEvents.Execute<IPointerClickHandler>(presenter.gameObject, pointer, ExecuteEvents.pointerClickHandler);
+            ExecuteEvents.Execute<IPointerClickHandler>(presenter.gameObject, pointer, ExecuteEvents.pointerClickHandler);
+            yield return new WaitForSecondsRealtime(.34f);
+            Assert.That(presenter.LastCompletedResult, Is.SameAs(result));
+            Object.Destroy(presenter.gameObject); Object.Destroy(eventSystem.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Weapon_reveal_waits_for_choice_close_then_opens_one_queued_choice_after_skip()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null; yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            var generic = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            affix.SetCatalogForTests(TestCatalog());
+            controller.OpenUpgradeForTests();
+            controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
+            yield return new WaitForSecondsRealtime(.35f);
+            var card = choice.GetComponentInChildren<Button>(true);
+            ExecuteEvents.Execute<IPointerClickHandler>(card.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
+            controller.AddExperienceForTests(100);
+            yield return new WaitForSecondsRealtime(.05f);
+            Assert.That(choice.IsOpen, Is.True);
+            Assert.That(affix.IsRevealing, Is.False);
+            Assert.That(generic.IsRevealing, Is.False);
+            yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(affix.IsRevealing, Is.True);
+            affix.Skip();
+            yield return new WaitForSecondsRealtime(.35f);
+            Assert.That(controller.IsUpgradeOpen, Is.True);
+            yield return null;
+            Assert.That(controller.IsUpgradeOpen, Is.True);
+        }
+
+        [UnityTest]
         public IEnumerator Hide_cancels_without_a_completion_notification()
         {
             var presenter = new GameObject("Affix Reveal Cancel Test").AddComponent<WeaponAffixRevealPresenter>();
@@ -51,6 +101,22 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             Assert.That(completions, Is.Zero);
             Assert.That(presenter.IsRevealing, Is.False);
+            Object.Destroy(presenter.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Every_result_auto_completes_on_its_unscaled_boundary()
+        {
+            var presenter = new GameObject("Boundary Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            Time.timeScale = 0f;
+            foreach (var result in new[] { Result(WeaponAffixTier.Standard, 0), Result(WeaponAffixTier.High, 0), Result(WeaponAffixTier.Perfect, 0), Result(WeaponAffixTier.Standard, 1), Result(WeaponAffixTier.Standard, 2), Result(WeaponAffixTier.Standard, 3) })
+            {
+                presenter.Play(result);
+                yield return new WaitForSecondsRealtime(WeaponAffixRevealPresenter.DurationFor(result) + .04f);
+                Assert.That(presenter.IsRevealing, Is.False);
+                Assert.That(presenter.LastCompletedResult, Is.SameAs(result));
+            }
             Object.Destroy(presenter.gameObject);
         }
 
@@ -72,6 +138,15 @@ namespace JoseonHunter.Tests.PlayMode
             for (var index = 0; index < potentialCount; index++)
                 potentials[index] = new WeaponPotentialId("test_potential_" + index);
             return new WeaponAffixRollResult(new WeaponAffixRoll(WeaponAffixStat.Damage, tier, .2d), potentials);
+        }
+
+        private static JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset TestCatalog()
+        {
+            var texture = new Texture2D(2, 2);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f));
+            var catalog = ScriptableObject.CreateInstance<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>();
+            catalog.SetSlotKitForTests(sprite, sprite, sprite, sprite, sprite);
+            return catalog;
         }
     }
 }

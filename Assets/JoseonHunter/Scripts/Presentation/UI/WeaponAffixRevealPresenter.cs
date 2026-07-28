@@ -27,6 +27,10 @@ namespace JoseonHunter.Presentation.UI
         private float elapsed;
         private float finishAt;
         private bool completed;
+        private WeaponAffixPresentationCatalogAsset catalogForTests;
+#if UNITY_INCLUDE_TESTS
+        public void SetCatalogForTests(WeaponAffixPresentationCatalogAsset catalog) => catalogForTests = catalog;
+#endif
 
         public bool IsRevealing => routine != null;
         public WeaponAffixRollResult LastCompletedResult { get; private set; }
@@ -44,7 +48,7 @@ namespace JoseonHunter.Presentation.UI
             finishAt = DurationFor(result);
             title.text = TierName(result.General.Tier) + " AFFINITY";
             detail.text = Describe(result.General);
-            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            var catalog = catalogForTests ?? Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
             if (catalog == null || !catalog.HasRequiredUiSprites)
             {
                 Debug.LogError("Weapon affix reveal requires the imported PixelLab slot-kit catalog.", this);
