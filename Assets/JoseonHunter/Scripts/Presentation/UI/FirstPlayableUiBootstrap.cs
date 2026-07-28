@@ -1,5 +1,7 @@
 using JoseonHunter.Runtime.Gameplay;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace JoseonHunter.Presentation.UI
@@ -45,6 +47,7 @@ namespace JoseonHunter.Presentation.UI
 
             instance = this;
             BuildCanvas();
+            EnsureEventSystem();
             safeAreaContainer = RuntimeUiFactory.Rect("Safe Area", transform);
             ApplySafeArea(Screen.safeArea, new Vector2(Screen.width, Screen.height));
 
@@ -212,6 +215,27 @@ namespace JoseonHunter.Presentation.UI
             scaler.referenceResolution = new Vector2(1080f, 1920f);
             scaler.matchWidthOrHeight = 1f;
             if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
+        }
+
+        private static void EnsureEventSystem()
+        {
+            var systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            EventSystem eventSystem = systems.Length > 0 ? systems[0] : null;
+            if (eventSystem == null)
+            {
+                eventSystem = new GameObject("EventSystem").AddComponent<EventSystem>();
+            }
+
+            for (var index = 1; index < systems.Length; index++)
+            {
+                if (systems[index] != null && systems[index] != eventSystem)
+                    Destroy(systems[index].gameObject);
+            }
+
+            var inputModule = eventSystem.GetComponent<InputSystemUIInputModule>();
+            if (inputModule == null) inputModule = eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();
+            foreach (var module in eventSystem.GetComponents<BaseInputModule>())
+                if (module != inputModule) Destroy(module);
         }
     }
 }

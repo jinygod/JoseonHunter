@@ -218,6 +218,25 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Thunder_prison_moves_a_registered_first_playable_target_without_damage_during_pull()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var target = controller.SpawnEnemyForTests(new Vector2(2f, 0f));
+            var executor = new ThunderBombExecutor(controller.WeaponRuntime, 10f, 10f, 4f, 0.5f, 0.15f, 1.8f, 5, true);
+            var damageCount = 0;
+            controller.CombatDamageService.DamageConfirmed += record => { if (record.WeaponId.Equals(WeaponId.ThunderCrashBomb)) damageCount++; };
+
+            executor.Tick(0.5f, new WeaponExecutionContext(default, null, null, 0, 1));
+            executor.Tick(0.25f, new WeaponExecutionContext(default, null, null, 0, 2));
+            Assert.That(target.WorldPosition.X, Is.LessThan(2f));
+            Assert.That(damageCount, Is.EqualTo(0));
+            executor.Dispose();
+        }
+
+        [UnityTest]
         public IEnumerator Thunder_prison_consumes_large_tick_across_pull_and_silence_exactly()
         {
             using (var rig = EvolvedWeaponTestRig.For(WeaponId.ThunderCrashBomb))
@@ -259,6 +278,23 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(inside.Statuses, Contains.Item("guardian_mark"));
                 Assert.That(outside.Statuses, Does.Not.Contain("guardian_mark"));
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Twelve_guardians_marks_and_clears_a_registered_first_playable_target()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var target = controller.SpawnEnemyForTests(Vector2.zero);
+            var executor = new JangseungWardExecutor(controller.WeaponRuntime, 10f, 10f, 4f, 4, 0, .2f, 5, true);
+            executor.Tick(.4f, new WeaponExecutionContext(default, null, null, 0, 1));
+            Assert.That(target is IJangseungWardStatusTarget, Is.True);
+            Assert.That(controller.HasJangseungWardMark(target.RuntimeId), Is.True);
+            executor.Reset();
+            Assert.That(controller.HasJangseungWardMark(target.RuntimeId), Is.False);
+            yield return null;
         }
 
         [UnityTest]
@@ -433,9 +469,11 @@ namespace JoseonHunter.Tests.PlayMode
                 var near = rig.AddTarget(new Vector2(1f, 0f));
                 var middle = rig.AddTarget(new Vector2(2f, 0f));
                 var far = rig.AddTarget(new Vector2(3f, 0f));
-                yield return rig.AdvanceSeconds(0.55f);
+                rig.Tick(0.04f);
+                rig.Tick(0.12f);
+                rig.Tick(0.24f);
                 far.ApplyResolvedDamage(1000);
-                rig.Tick(0.05f);
+                rig.Tick(0.08f);
                 yield return null;
 
                 var inbound = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Inbound).ToArray();
@@ -463,6 +501,27 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(splitFan.LastOutboundStrikeTimes[2], Is.EqualTo(0.24f).Within(0.0001f));
                 CollectionAssert.AreEqual(splitFan.LastOutboundStrikeTimes, largeFan.LastOutboundStrikeTimes);
                 Assert.That(split.Count(ContactPhase.Lightning), Is.EqualTo(large.Count(ContactPhase.Lightning)));
+            }
+        }
+
+        [Test]
+        public void Returning_heaven_thunder_waits_exactly_one_strike_interval_before_inbound_with_residual_carry()
+        {
+            using (var split = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            using (var large = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            {
+                split.AddTargets(3); large.AddTargets(3);
+                split.Tick(.04f); split.Tick(.12f); split.Tick(.24f);
+                Assert.That(split.Count(ContactPhase.Lightning), Is.EqualTo(3));
+                Assert.That(split.Count(ContactPhase.Inbound), Is.EqualTo(0));
+                split.Tick(.079f);
+                Assert.That(split.Count(ContactPhase.Inbound), Is.EqualTo(0));
+                split.Tick(.001f);
+                Assert.That(split.Count(ContactPhase.Inbound), Is.EqualTo(3));
+
+                large.Tick(.04f); large.Tick(.44f);
+                Assert.That(large.Count(ContactPhase.Lightning), Is.EqualTo(3));
+                Assert.That(large.Count(ContactPhase.Inbound), Is.EqualTo(3));
             }
         }
 

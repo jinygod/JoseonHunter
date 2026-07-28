@@ -5,6 +5,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace JoseonHunter.Tests.PlayMode
@@ -42,8 +43,10 @@ namespace JoseonHunter.Tests.PlayMode
 
             var cards = choice.GetComponentsInChildren<Button>(true);
             Assert.That(cards, Has.Length.EqualTo(3));
-            cards[0].onClick.Invoke();
-            cards[1].onClick.Invoke();
+            Assert.That(EventSystem.current, Is.Not.Null);
+            Assert.That(EventSystem.current.GetComponent<BaseInputModule>(), Is.Not.Null);
+            ExecuteEvents.Execute<IPointerClickHandler>(cards[0].gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
+            ExecuteEvents.Execute<IPointerClickHandler>(cards[1].gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
             yield return new WaitForSecondsRealtime(.25f);
 
             Assert.That(controller.AppliedUpgradeCount, Is.EqualTo(1));
@@ -91,6 +94,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(scaler.referenceResolution, Is.EqualTo(new Vector2(1080f, 1920f)));
             Assert.That(root.GetComponentInChildren<CombatHudPresenter>(true), Is.Not.Null);
             Assert.That(root.GetComponentInChildren<WeaponRackPresenter>(true), Is.Not.Null);
+            Assert.That(Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None), Has.Length.EqualTo(1));
+            Assert.That(EventSystem.current.GetComponent<BaseInputModule>(), Is.Not.Null);
 
             bootstrap.ApplySafeArea(new Rect(0f, 120f, 1000f, 1760f), new Vector2(1000f, 2000f));
             Assert.That(bootstrap.SafeAreaContainer.anchorMin, Is.EqualTo(new Vector2(0f, .06f)));

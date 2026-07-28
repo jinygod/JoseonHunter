@@ -1,7 +1,9 @@
+using System;
 using JoseonHunter.Runtime.Gameplay;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 
 namespace JoseonHunter.Editor.Scenes
@@ -27,6 +29,11 @@ namespace JoseonHunter.Editor.Scenes
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.78f, 0.88f, 0.72f);
             camera.transform.position = new Vector3(0f, 0f, -10f);
+
+            var eventSystemObject = new GameObject("EventSystem");
+            eventSystemObject.AddComponent<EventSystem>();
+            var inputModuleType = Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+            if (inputModuleType != null) eventSystemObject.AddComponent(inputModuleType);
 
             var controllerObject = new GameObject("FirstPlayable");
             var controller = controllerObject.AddComponent<FirstPlayableController>();

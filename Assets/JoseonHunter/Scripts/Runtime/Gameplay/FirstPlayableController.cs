@@ -106,6 +106,13 @@ namespace JoseonHunter.Runtime.Gameplay
         }
         public int WeaponLevelForTests(WeaponId weaponId) => weaponLevels[weaponId.Value];
         public void UnlockEvolutionForTests(string evolutionId) => unlockedUpgradeIds.Add(evolutionId);
+        public ICombatTarget SpawnEnemyForTests(Vector2 position)
+        {
+            SpawnEnemy(false);
+            var target = enemies[enemies.Count - 1].CombatTarget;
+            enemies[enemies.Count - 1].Object.transform.position = position;
+            return target;
+        }
 #endif
 
         public bool IsCombatTargetAlive(int runtimeId) =>
@@ -115,6 +122,12 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
             return enemy != null && enemy.IsBoss;
+        }
+
+        public bool HasJangseungWardMark(int runtimeId)
+        {
+            var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
+            return enemy != null && enemy.HasJangseungWard;
         }
 
         private sealed class EnemyState
@@ -131,6 +144,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public ICombatTarget CombatTarget;
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
+            private readonly Dictionary<int, float> jangseungWardSources = new Dictionary<int, float>();
             private readonly List<int> statusSourceScratch = new List<int>();
             private float slowDecayRemaining;
             private float slowDecayStartMultiplier = 1f;
@@ -150,6 +164,12 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             public void ApplyFreeze(int sourceId, float durationSeconds) => freezeSources[sourceId] = Mathf.Max(freezeSources.TryGetValue(sourceId, out var remaining) ? remaining : 0f, Mathf.Max(0f, durationSeconds));
+
+            public void ApplyJangseungWard(int sourceId, float strength) => jangseungWardSources[sourceId] = Mathf.Clamp01(strength);
+
+            public void RemoveJangseungWard(int sourceId) => jangseungWardSources.Remove(sourceId);
+
+            public bool HasJangseungWard => jangseungWardSources.Count > 0;
 
             public void TickStatuses(float delta)
             {
@@ -171,6 +191,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 {
                     if (freezeSources.Count > 0) return 0f;
                     if (frostSlowSources.Count > 0) return SlowMultiplier();
+                    if (jangseungWardSources.Count > 0) return WardMultiplier();
                     return slowDecayRemaining <= 0f ? 1f : Mathf.Lerp(1f, slowDecayStartMultiplier, slowDecayRemaining / 0.35f);
                 }
             }
@@ -181,9 +202,16 @@ namespace JoseonHunter.Runtime.Gameplay
                 foreach (var source in frostSlowSources) multiplier = Mathf.Min(multiplier, source.Value);
                 return multiplier;
             }
+
+            private float WardMultiplier()
+            {
+                var multiplier = 1f;
+                foreach (var source in jangseungWardSources) multiplier = Mathf.Min(multiplier, 1f - source.Value);
+                return multiplier;
+            }
         }
 
-        private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget
+        private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget, IJangseungWardStatusTarget
         {
             private readonly FirstPlayableController owner;
             private readonly EnemyState state;
@@ -213,10 +241,25 @@ namespace JoseonHunter.Runtime.Gameplay
             public PixelHitMask HurtMask => owner.MaskFor(state.Renderer);
             public PixelMaskTransform HurtMaskTransform => owner.TransformFor(state.Renderer, WorldPosition);
             public void ApplyResolvedDamage(int damage) => owner.ApplyEnemyDamage(state, damage);
-            public void ApplyKnockback(Float2 direction, float force) { }
+            public void ApplyKnockback(Float2 direction, float force)
+            {
+                if (state.Object == null || force <= 0f || float.IsNaN(force) || float.IsInfinity(force) ||
+                    float.IsNaN(direction.X) || float.IsInfinity(direction.X) || float.IsNaN(direction.Y) || float.IsInfinity(direction.Y)) return;
+                var magnitudeSquared = direction.X * direction.X + direction.Y * direction.Y;
+                if (magnitudeSquared <= 0.000001f || float.IsNaN(magnitudeSquared) || float.IsInfinity(magnitudeSquared)) return;
+                var inverseMagnitude = 1f / Mathf.Sqrt(magnitudeSquared);
+                var displacement = Mathf.Min(force, 4f);
+                var position = state.Object.transform.position;
+                state.Object.transform.position = new Vector3(
+                    position.x + direction.X * inverseMagnitude * displacement,
+                    position.y + direction.Y * inverseMagnitude * displacement,
+                    position.z);
+            }
             public void ApplyFrostSlow(int sourceId, float strength) => state.ApplyFrostSlow(sourceId, strength);
             public void RemoveFrostSlow(int sourceId, float decaySeconds) => state.RemoveFrostSlow(sourceId, decaySeconds);
             public void ApplyFreeze(int sourceId, float durationSeconds) => state.ApplyFreeze(sourceId, durationSeconds);
+            public void ApplyJangseungWard(int sourceId, float strength) => state.ApplyJangseungWard(sourceId, strength);
+            public void RemoveJangseungWard(int sourceId) => state.RemoveJangseungWard(sourceId);
         }
 
         private enum PickupKind
