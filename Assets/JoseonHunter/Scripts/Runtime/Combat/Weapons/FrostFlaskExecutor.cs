@@ -55,6 +55,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float LastFieldVisualScale { get; private set; } = 1f;
 #if UNITY_INCLUDE_TESTS
         public int ActiveSpreadResidenceCountForTests => spreadResidences.Count;
+        public float FirstSpreadRemainingForTests => spreadResidences.Count == 0 ? 0f : spreadResidences[0].Remaining;
         public bool SuppressNewCastsForTests { get; set; }
 #endif
 

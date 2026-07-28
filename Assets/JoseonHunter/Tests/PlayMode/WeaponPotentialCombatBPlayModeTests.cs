@@ -280,12 +280,20 @@ namespace JoseonHunter.Tests.PlayMode
             one.Advance(.16f); // launch, then capacity-evict at the next cooldown boundary
             Assert.That(((FrostFlaskExecutor)one.Executor).ActiveSpreadResidenceCountForTests, Is.GreaterThan(0));
             ((FrostFlaskExecutor)one.Executor).SuppressNewCastsForTests = true;
-            one.TickExact(.25f);
+            one.TickExact(.189f);
+            Assert.That(((FrostFlaskExecutor)one.Executor).ActiveSpreadResidenceCountForTests, Is.EqualTo(1));
+            Assert.That(((FrostFlaskExecutor)one.Executor).FirstSpreadRemainingForTests, Is.EqualTo(.001f).Within(.002f));
+            Assert.That(oneNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+            one.TickExact(.001f);
             Assert.That(oneNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
 
             var split = Drive(WeaponPotentialId.FrostSpread, false, MaskFor(WeaponPotentialId.FrostSpread), frostCooldown: .1f);
             var splitNear = split.AddTarget(2, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.FrostSpread));
-            split.Advance(.16f); ((FrostFlaskExecutor)split.Executor).SuppressNewCastsForTests = true; split.TickExact(.1f); split.TickExact(.15f);
+            split.Advance(.16f); ((FrostFlaskExecutor)split.Executor).SuppressNewCastsForTests = true; split.TickExact(.1f); split.TickExact(.089f);
+            Assert.That(((FrostFlaskExecutor)split.Executor).ActiveSpreadResidenceCountForTests, Is.EqualTo(1));
+            Assert.That(((FrostFlaskExecutor)split.Executor).FirstSpreadRemainingForTests, Is.EqualTo(.001f).Within(.002f));
+            Assert.That(splitNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+            split.TickExact(.001f);
             Assert.That(splitNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
             Assert.That(((FrostFlaskExecutor)one.Executor).ActiveSpreadResidenceCountForTests, Is.EqualTo(((FrostFlaskExecutor)split.Executor).ActiveSpreadResidenceCountForTests));
             one.Dispose(); split.Dispose();
