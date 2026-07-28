@@ -27,6 +27,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float outboundElapsed;
         private float inboundPauseRemaining;
         private Float2 lightningDirection;
+        private readonly List<Bleed> bleeds = new List<Bleed>();
+        private PendingChain pendingChain;
 
         public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -56,6 +58,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime);
+            AdvanceBleeds(step, context);
+            AdvancePotentialChain(step, context);
             cooldown -= step;
             if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()) StartCast();
             switch (State)
@@ -79,7 +83,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             if (attack != null) runtime.DamageService.RetireAttack(attack.InstanceId);
-            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
+            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); bleeds.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
         }
 
@@ -110,6 +114,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Wind, context.SimulationTick), out _))
                 {
                     marked.Add(target); LastWindContactCount++;
+                    if (Potentials.HasPotential(WeaponPotentialId.FanVacuumEdge) && TryPotentialContact(WeaponPotentialId.FanVacuumEdge, target, contact)) RefreshBleed(target, contact);
                 }
             }
             gustIndex++;
@@ -126,7 +131,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var target in marked)
             {
                 if (target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f)), false, contact, ContactPhase.Lightning, context.SimulationTick), out _)) LastLightningContactCount++;
+                var multiplier = LightningMultiplier(target, contact, false);
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * multiplier), false, contact, ContactPhase.Lightning, context.SimulationTick), out _)) LastLightningContactCount++;
             }
             LastLightningSimulationTick = context.SimulationTick;
             runtime.DamageService.RetireAttack(attack.InstanceId);
@@ -162,7 +168,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 outboundElapsed += strikeDueIn;
                 var target = marked[lightningIndex++];
                 if (target != null && target.IsAlive && TryGustContact(target, out var contact) &&
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f)), false, contact, ContactPhase.Lightning, context.SimulationTick), out _))
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * LightningMultiplier(target, contact, false)), false, contact, ContactPhase.Lightning, context.SimulationTick), out _))
                 {
                     LastLightningContactCount++;
                     if (successfulOutboundTargetIdSet.Add(target.RuntimeId)) successfulOutboundTargetIds.Add(target.RuntimeId);
@@ -203,7 +209,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             for (var index = successfulOutboundTargetIds.Count - 1; index >= 0; index--)
             {
                 if (!runtime.Targets.TryGet(successfulOutboundTargetIds[index], out var target) || target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * 0.6f), false, contact, ContactPhase.Inbound, context.SimulationTick), out _)) LastInboundContactCount++;
+                var hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * .6f * LightningMultiplier(target, contact, true)), false, contact, ContactPhase.Inbound, context.SimulationTick), out _);
+                if (hit) { LastInboundContactCount++; if (Potentials.HasPotential(WeaponPotentialId.FanReturningChain) && !target.IsAlive && TryPotentialContact(WeaponPotentialId.FanReturningChain, target, contact) && !pendingChain.Scheduled) ScheduleChain(target); }
             }
             runtime.DamageService.RetireAttack(attack.InstanceId);
             attack = null; marked.Clear(); State = WindThunderFanState.Complete;
@@ -257,6 +264,44 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
 
         private static float DistanceSquared(Float2 left, Float2 right) { var x = left.X - right.X; var y = left.Y - right.Y; return x * x + y * y; }
+        private bool TryPotentialContact(WeaponPotentialId potential, ICombatTarget target, Float2 contact) => target != null && target.HurtMask != null && WeaponPotentialVisuals.TryGet(potential, out _, out var mask) && PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _);
+        private float LightningMultiplier(ICombatTarget target, Float2 contact, bool inbound)
+        {
+            if (!Potentials.HasPotential(WeaponPotentialId.FanDistantThunder) || !TryPotentialContact(WeaponPotentialId.FanDistantThunder, target, contact)) return 1f;
+            var projection = (target.WorldPosition.X * lightningDirection.X + target.WorldPosition.Y * lightningDirection.Y);
+            var distance = Mathf.Clamp01(projection / Mathf.Max(.01f, Range)); return 1f + distance * .75f;
+        }
+        private void RefreshBleed(ICombatTarget target, Float2 contact)
+        {
+            for (var i = 0; i < bleeds.Count; i++) if (bleeds[i].TargetId == target.RuntimeId) { var refreshed = bleeds[i]; refreshed.Remaining = 4; refreshed.Elapsed = 0f; refreshed.Contact = contact; bleeds[i] = refreshed; return; }
+            bleeds.Add(new Bleed { TargetId = target.RuntimeId, Contact = contact, Remaining = 4, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .4f) });
+        }
+        private void AdvanceBleeds(float step, in WeaponExecutionContext context)
+        {
+            for (var i = bleeds.Count - 1; i >= 0; i--)
+            {
+                var bleed = bleeds[i]; bleed.Elapsed += step;
+                while (bleed.Elapsed + .00001f >= .4f && bleed.Remaining > 0)
+                {
+                    bleed.Elapsed -= .4f; if (!runtime.Targets.TryGet(bleed.TargetId, out var target) || target == null || !target.IsAlive) { bleed.Remaining = 0; break; }
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(bleed.Attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * .15f), false, bleed.Contact, ContactPhase.Bleed, context.SimulationTick), out _); bleed.Remaining--;
+                }
+                if (bleed.Remaining <= 0) { runtime.DamageService.RetireAttack(bleed.Attack.InstanceId); bleeds.RemoveAt(i); } else bleeds[i] = bleed;
+            }
+        }
+        private void ScheduleChain(ICombatTarget killed)
+        {
+            ICombatTarget best = null; foreach (var candidate in marked) { if (candidate == null || !candidate.IsAlive || candidate.RuntimeId == killed.RuntimeId) continue; var d = DistanceSquared(candidate.WorldPosition, killed.WorldPosition); if (d > 9f) continue; if (best == null || d < DistanceSquared(best.WorldPosition, killed.WorldPosition) || (Mathf.Approximately(d, DistanceSquared(best.WorldPosition, killed.WorldPosition)) && candidate.RuntimeId < best.RuntimeId)) best = candidate; }
+            if (best != null) pendingChain = new PendingChain { Scheduled = true, Remaining = .08f, TargetId = best.RuntimeId, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f) };
+        }
+        private void AdvancePotentialChain(float step, in WeaponExecutionContext context)
+        {
+            if (!pendingChain.Scheduled) return; pendingChain.Remaining -= step; if (pendingChain.Remaining > .00001f) return;
+            if (runtime.Targets.TryGet(pendingChain.TargetId, out var target) && target != null && target.IsAlive && target.HurtMask != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FanReturningChain, out _, out var mask) && PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) runtime.DamageService.TryApply(WeaponDamageRequest.Create(pendingChain.Attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * .5f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+            runtime.DamageService.RetireAttack(pendingChain.Attack.InstanceId); pendingChain = default;
+        }
+        private struct Bleed { public int TargetId; public Float2 Contact; public int Remaining; public float Elapsed; public AttackInstance Attack; }
+        private struct PendingChain { public bool Scheduled; public float Remaining; public int TargetId; public AttackInstance Attack; }
         private static readonly Float2[] CardinalDirections = { new Float2(1f, 0f), new Float2(0f, 1f), new Float2(-1f, 0f), new Float2(0f, -1f) };
     }
 }

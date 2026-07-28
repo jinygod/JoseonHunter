@@ -96,7 +96,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             field.ActiveAge += step;
             if (field.ActiveAge >= Duration) { Expire(field, context); return; }
             runtime.Targets.CopyTo(targets);
-            var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f, Radius * 2f));
+            var radiusScale = Potentials.HasPotential(WeaponPotentialId.FrostMist) ? Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(field.ActiveAge / Duration)) : 1f;
+            var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f * radiusScale, Radius * 2f * radiusScale));
             var inside = field.InsideScratch;
             inside.Clear();
             foreach (var target in targets)
@@ -105,6 +106,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!PixelMaskContactService.TryFindContact(diskMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 inside.Add(target.RuntimeId);
                 field.Residence.TryGetValue(target.RuntimeId, out var residence); residence += step; field.Residence[target.RuntimeId] = residence;
+                if (Potentials.HasPotential(WeaponPotentialId.FrostCrackMark) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostCrackMark, out _, out var crackMask) &&
+                    PixelMaskContactService.TryFindContact(crackMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
+                {
+                    field.CrackElapsed.TryGetValue(target.RuntimeId, out var crackElapsed); crackElapsed += step;
+                    while (crackElapsed + .00001f >= .5f) { crackElapsed -= .5f; field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); field.CrackStacks[target.RuntimeId] = Mathf.Min(3, stacks + 1); }
+                    field.CrackElapsed[target.RuntimeId] = crackElapsed;
+                }
                 if (target is IFrostStatusTarget status)
                 {
                     status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f);
@@ -124,7 +132,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (!IsEvolved && Level == 5)
             {
                 field.SpikeTimer += step;
-                if (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context); }
+                while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context); }
             }
         }
 
@@ -137,7 +145,24 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                 if (!PixelMaskContactService.TryFindContact(spikeMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
+                var damage = BaseDamage;
+                if (Potentials.HasPotential(WeaponPotentialId.FrostCrackMark) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostCrackMark, out _, out var crackMask) &&
+                    PixelMaskContactService.TryFindContact(crackMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
+                {
+                    field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); damage *= 1f + stacks * .25f; field.CrackStacks.Remove(target.RuntimeId); field.CrackElapsed.Remove(target.RuntimeId);
+                }
+                var hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(damage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
+                if (hit && Potentials.HasPotential(WeaponPotentialId.FrostSpread) && !field.SpreadResolved && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostSpread, out _, out var spreadMask))
+                {
+                    field.SpreadResolved = true;
+                    foreach (var other in targets)
+                    {
+                        if (other == null || !other.IsAlive || other.HurtMask == null || other.RuntimeId == target.RuntimeId) continue;
+                        var dx = other.WorldPosition.X - target.WorldPosition.X; var dy = other.WorldPosition.Y - target.WorldPosition.Y;
+                        if (dx * dx + dy * dy > 2.25f || !PixelMaskContactService.TryFindContact(spreadMask, PixelMaskTransform.Translation(other.WorldPosition.X, other.WorldPosition.Y), other.HurtMask, other.HurtMaskTransform, out _)) continue;
+                        field.Residence.TryGetValue(other.RuntimeId, out var current); field.Residence[other.RuntimeId] = Mathf.Max(current, .25f);
+                    }
+                }
             }
             runtime.DamageService.RetireAttack(spike.InstanceId);
         }
@@ -176,9 +201,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 // that spike's location; storage alone never authorizes damage.
                 var spike = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
                 var transform = PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y);
-                if (PixelMaskContactService.TryFindContact(spikeMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact) &&
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _))
-                    LastResolvedStoredTargetCount++;
+                if (PixelMaskContactService.TryFindContact(spikeMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact))
+                {
+                    var damage = BaseDamage;
+                    if (Potentials.HasPotential(WeaponPotentialId.FrostCrackMark) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostCrackMark, out _, out var crackMask) &&
+                        PixelMaskContactService.TryFindContact(crackMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
+                    { field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); damage *= 1f + stacks * .25f; field.CrackStacks.Remove(target.RuntimeId); }
+                    if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(damage), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) LastResolvedStoredTargetCount++;
+                }
                 runtime.DamageService.RetireAttack(spike.InstanceId);
             }
             AllStoredTargetsResolvedOnce = LastResolvedStoredTargetCount == LastStoredFrozenTargetCount;
@@ -231,6 +261,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public HashSet<int> StoredFrozen { get; } = new HashSet<int>();
             public HashSet<int> Inside { get; } = new HashSet<int>();
             public HashSet<int> InsideScratch { get; } = new HashSet<int>();
+            public Dictionary<int, float> CrackElapsed { get; } = new Dictionary<int, float>();
+            public Dictionary<int, int> CrackStacks { get; } = new Dictionary<int, int>();
+            public bool SpreadResolved { get; set; }
         }
     }
 }
