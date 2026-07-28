@@ -110,6 +110,22 @@ namespace JoseonHunter.Runtime.Gameplay
             upgradeOfferData.Clear();
             upgradeOfferData.AddRange(offers);
         }
+        /// <summary>Publishes forced offers atomically so tests exercise the same controller and visible-card identities.</summary>
+        public void OpenUpgradeOffersForTests(params UpgradeOffer[] offers)
+        {
+            upgradeOpen = true;
+            upgradeOffers.Clear();
+            upgradeOfferData.Clear();
+            if (offers != null) upgradeOfferData.AddRange(offers);
+            var choices = new List<UpgradeChoiceView>(upgradeOfferData.Count);
+            foreach (var offer in upgradeOfferData)
+            {
+                upgradeOffers.Add(FormatUpgradeOffer(offer));
+                choices.Add(BuildUpgradeChoiceView(offer));
+            }
+            UpgradeOpened?.Invoke(new UpgradeChoiceState(level, choices));
+        }
+        public bool RegisterCombatTargetForTests(ICombatTarget target) => target != null && combatTargets != null && combatTargets.Register(target);
         public void AddExperienceForTests(int amount) => AddExperience(amount);
         public void ResetRunForTests() => ResetRun();
         public void SetWeaponLevelForTests(WeaponId weaponId, int weaponLevel)

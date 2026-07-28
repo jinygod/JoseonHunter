@@ -47,6 +47,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int PooledBladeCount => pool.Count;
         public int LastVolleyLaunchCount { get; private set; }
         public int ReturnedToPoolCount { get; private set; }
+#if UNITY_INCLUDE_TESTS
+        public int PendingAfterimageCountForTests => afterimages.Count;
+#endif
         public float MaximumDistanceFromLaunch { get; private set; }
         public int DelayedBladeCount
         {

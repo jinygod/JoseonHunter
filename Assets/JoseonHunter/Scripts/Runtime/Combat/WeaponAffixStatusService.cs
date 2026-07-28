@@ -120,6 +120,7 @@ namespace JoseonHunter.Runtime.Combat
             IsPeriodicPhase(phase) || !vulnerabilityRemaining.ContainsKey(targetRuntimeId) ? 1f : 1.2f;
 
 #if UNITY_INCLUDE_TESTS
+        public int PeriodicEffectCountForTests => periodicEffects.Count;
         public bool HasVulnerabilityForTests(int targetRuntimeId) => vulnerabilityRemaining.ContainsKey(targetRuntimeId);
         public float VulnerabilityRemainingForTests(int targetRuntimeId) => vulnerabilityRemaining.TryGetValue(targetRuntimeId, out var remaining) ? remaining : 0f;
 #endif

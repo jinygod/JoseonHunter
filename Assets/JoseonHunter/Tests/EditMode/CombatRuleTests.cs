@@ -200,17 +200,15 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(potentials, Has.Length.EqualTo(24));
             Assert.That(potentials, Is.Unique, "A potential ID must belong to exactly one launch weapon.");
 
-            foreach (var weapon in WeaponRoster.All)
-            {
-                var compatible = WeaponAffixCatalog.CompatibleStats(weapon);
-                Assert.That(compatible, Does.Contain(WeaponAffixStat.Damage));
-                Assert.That(compatible, Does.Contain(WeaponAffixStat.Cooldown));
-                Assert.That(compatible, Does.Contain(WeaponAffixStat.Area));
-                Assert.That(WeaponAffixCatalog.CompatiblePotentials(weapon), Has.Count.EqualTo(3));
-            }
-
-            Assert.That(WeaponAffixCatalog.CompatibleStats(WeaponId.HwandoFlyingBlade), Has.No.Member(WeaponAffixStat.Duration));
-            Assert.That(WeaponAffixCatalog.CompatibleStats(WeaponId.ThunderCrashBomb), Has.No.Member(WeaponAffixStat.ProjectileSpeed));
+            AssertExactStats(WeaponId.HwandoFlyingBlade, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.ProjectileSpeed);
+            AssertExactStats(WeaponId.GakgungShot, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.ProjectileSpeed);
+            AssertExactStats(WeaponId.TalismanThrow, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.ProjectileSpeed);
+            AssertExactStats(WeaponId.ThunderCrashBomb, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.Duration);
+            AssertExactStats(WeaponId.JangseungWard, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.Duration);
+            AssertExactStats(WeaponId.SingijeonVolley, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.ProjectileSpeed);
+            AssertExactStats(WeaponId.FrostFlask, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.Duration);
+            AssertExactStats(WeaponId.WindThunderFan, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.Duration);
+            foreach (var weapon in WeaponRoster.All) Assert.That(WeaponAffixCatalog.CompatiblePotentials(weapon), Has.Count.EqualTo(3));
 
             AssertExactRange(WeaponId.HwandoFlyingBlade, WeaponAffixStat.Damage, 10d, 30d);
             AssertExactRange(WeaponId.HwandoFlyingBlade, WeaponAffixStat.Cooldown, -5d, -12d);
@@ -224,6 +222,10 @@ namespace JoseonHunter.Tests.EditMode
             AssertJackpotThreshold(0.019999d, true, WeaponPotentialId.HwandoVenomFang);
             AssertJackpotThreshold(0.005d, false, WeaponPotentialId.HwandoVenomFang, WeaponPotentialId.HwandoReturningAfterimage);
             AssertJackpotThreshold(0.004999d, true, WeaponPotentialId.HwandoVenomFang, WeaponPotentialId.HwandoReturningAfterimage);
+            AssertContinuationThreshold(.079999d, .009999d, 3);
+            AssertContinuationThreshold(.08d, .009999d, 1);
+            AssertContinuationThreshold(.079999d, .01d, 2);
+            AssertThreeLineCapConsumesNoPotentialRandomness();
 
             var presentation = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
             Assert.That(presentation, Is.Not.Null);
@@ -245,6 +247,28 @@ namespace JoseonHunter.Tests.EditMode
             var max = WeaponAffixRoller.RollAndApply(new WeaponRunAffixState(), weapon, new FixedAffixRandom(statIndex, .999999d)).General;
             Assert.That(min.Value, Is.EqualTo(expectedMin).Within(.0001d));
             Assert.That(max.Value, Is.EqualTo(expectedMax).Within(.001d));
+        }
+
+        private static void AssertExactStats(WeaponId weapon, params WeaponAffixStat[] expected) =>
+            Assert.That(WeaponAffixCatalog.CompatibleStats(weapon), Is.EqualTo(expected), weapon.Value);
+
+        private static void AssertContinuationThreshold(double secondLineRoll, double thirdLineRoll, int expectedLines)
+        {
+            var result = WeaponAffixRoller.RollAndApply(new WeaponRunAffixState(), WeaponId.HwandoFlyingBlade,
+                new FixedAffixRandom(0, .5d, 0d, secondLineRoll, thirdLineRoll));
+            Assert.That(result.NewPotentials, Has.Count.EqualTo(expectedLines));
+        }
+
+        private static void AssertThreeLineCapConsumesNoPotentialRandomness()
+        {
+            var state = new WeaponRunAffixState();
+            var fill = WeaponAffixRoller.RollAndApply(state, WeaponId.HwandoFlyingBlade, new FixedAffixRandom(0, .5d, 0d, 0d, 0d));
+            Assert.That(fill.NewPotentials, Has.Count.EqualTo(3));
+            var random = new CountingAffixRandom();
+            var capped = WeaponAffixRoller.RollAndApply(state, WeaponId.HwandoFlyingBlade, random);
+            Assert.That(capped.NewPotentials, Is.Empty);
+            Assert.That(random.IndexCalls, Is.EqualTo(1));
+            Assert.That(random.UnitCalls, Is.EqualTo(1));
         }
 
         private static void AssertJackpotThreshold(double initialRoll, bool expected, params WeaponPotentialId[] existing)
@@ -269,6 +293,14 @@ namespace JoseonHunter.Tests.EditMode
             public FixedAffixRandom(int statIndex, params double[] units) { this.statIndex = statIndex; this.units = units; }
             public int NextIndex(int exclusiveMax) => Mathf.Clamp(statIndex, 0, exclusiveMax - 1);
             public double NextUnit() => units[Mathf.Min(unitIndex++, units.Length - 1)];
+        }
+
+        private sealed class CountingAffixRandom : IAffixRandom
+        {
+            public int IndexCalls { get; private set; }
+            public int UnitCalls { get; private set; }
+            public int NextIndex(int exclusiveMax) { IndexCalls++; return 0; }
+            public double NextUnit() { UnitCalls++; return .5d; }
         }
 
         private static UpgradeState State(
