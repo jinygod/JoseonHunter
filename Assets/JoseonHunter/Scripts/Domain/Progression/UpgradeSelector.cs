@@ -11,7 +11,6 @@ namespace JoseonHunter.Domain.Progression
         private const int MaxLevel = 5;
         private static readonly string[] WeaponIds = WeaponRoster.All.Select(id => id.Value).ToArray();
         private static readonly string[] SupportIds = { "talisman", "boots", "warding_bell" };
-        private static readonly Evolution[] Evolutions = { new("hwando_evolution", WeaponId.HwandoFlyingBlade.Value) };
 
         public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed)
         {
@@ -25,6 +24,13 @@ namespace JoseonHunter.Domain.Progression
 
             var random = new Random(seed);
             var offers = new List<UpgradeOffer>(3);
+            var evolutions = eligible.Where(offer => offer.Kind == UpgradeKind.Evolution).ToList();
+            if (evolutions.Count > 0)
+            {
+                offers.Add(evolutions[random.Next(evolutions.Count)]);
+                eligible.RemoveAll(offer => offers.Any(selected => selected.Id == offer.Id));
+            }
+
             var ownedWeapons = WeaponIds
                 .Where(id => state.WeaponLevels.TryGetValue(id, out var level) && level < MaxLevel)
                 .Select(id => WeaponOffer(id, state.WeaponLevels[id]))
@@ -75,11 +81,11 @@ namespace JoseonHunter.Domain.Progression
                 if (level < MaxLevel) yield return new UpgradeOffer(id, UpgradeKind.Support, level + 1);
             }
 
-            foreach (var evolution in Evolutions)
+            foreach (var evolution in WeaponEvolutionCatalog.All)
             {
                 if (state.UnlockedIds.Contains(evolution.Id) &&
                     !state.AcquiredEvolutionIds.Contains(evolution.Id) &&
-                    state.WeaponLevels.TryGetValue(evolution.RequiredWeaponId, out var level) && level >= MaxLevel)
+                    state.WeaponLevels.TryGetValue(evolution.RequiredWeaponId.Value, out var level) && level >= MaxLevel)
                 {
                     yield return new UpgradeOffer(evolution.Id, UpgradeKind.Evolution, 1);
                 }
@@ -96,18 +102,6 @@ namespace JoseonHunter.Domain.Progression
                 var nextIndex = random.Next(index + 1);
                 (items[index], items[nextIndex]) = (items[nextIndex], items[index]);
             }
-        }
-
-        private readonly struct Evolution
-        {
-            public Evolution(string id, string requiredWeaponId)
-            {
-                Id = id;
-                RequiredWeaponId = requiredWeaponId;
-            }
-
-            public string Id { get; }
-            public string RequiredWeaponId { get; }
         }
     }
 }
