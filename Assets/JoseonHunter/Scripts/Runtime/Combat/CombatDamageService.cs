@@ -56,7 +56,20 @@ namespace JoseonHunter.Runtime.Combat
         public event Action<ConfirmedDamageEvent> DamageConfirmed;
         public int TrackedAttackCount => attacks.Count;
 
-        internal void SetAffixStatuses(WeaponAffixStatusService statuses) => affixStatuses = statuses;
+        /// <summary>Attaches the sole live affix-status owner for this shared damage service.</summary>
+        public void AttachAffixStatuses(WeaponAffixStatusService provider)
+        {
+            if (provider == null) throw new ArgumentNullException(nameof(provider));
+            if (ReferenceEquals(affixStatuses, provider)) return;
+            if (affixStatuses != null) throw new InvalidOperationException("A different weapon runtime already owns affix statuses for this damage service.");
+            affixStatuses = provider;
+        }
+
+        /// <summary>Detaches only the matching owner, so stale runtime disposal cannot affect a replacement.</summary>
+        public void DetachAffixStatuses(WeaponAffixStatusService provider)
+        {
+            if (provider != null && ReferenceEquals(affixStatuses, provider)) affixStatuses = null;
+        }
 
         /// <summary>Forgets a completed attack after its executor has permanently stopped producing contacts.</summary>
         public bool RetireAttack(int attackInstanceId) => attacks.Remove(attackInstanceId);

@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
@@ -157,6 +159,74 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
             controller.Dispose();
             Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Dispose_while_periodic_effect_is_live_retires_its_attack()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(25, 100);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var controller = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            Assert.That(controller.AffixStatuses.ApplyPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, 25,
+                new Float2(0f, 0f), 5, 2, new AttackInstance(99, RepeatHitPolicy.TimedTicks, .5f), true)), Is.True);
+            controller.AffixStatuses.Tick(.5f, 1);
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(1));
+
+            controller.Dispose();
+            Assert.That(damage.TrackedAttackCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Dispose_unsubscribes_target_removal_before_runtime_id_reuse()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(26, 100);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var controller = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            Assert.That(TargetUnregisteredSubscriberCount(registry), Is.EqualTo(1));
+
+            controller.Dispose();
+            Assert.That(TargetUnregisteredSubscriberCount(registry), Is.EqualTo(0));
+            Assert.That(registry.Unregister(target), Is.True);
+            var replacement = new Target(26, 100);
+            registry.Register(replacement);
+            Assert.That(damage.TryApply(WeaponDamageRequest.Create(100, WeaponId.GakgungShot, replacement, 10, false,
+                new Float2(0f, 0f), ContactPhase.Direct, 1), out var normal), Is.True);
+            Assert.That(normal.FinalDamage, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void Shared_damage_service_rejects_second_controller_until_first_disposes_without_side_effects()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new Target(27, 100);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var first = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            Assert.That(TargetUnregisteredSubscriberCount(registry), Is.EqualTo(1));
+            Assert.That(() => new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1")), Throws.TypeOf<InvalidOperationException>());
+            Assert.That(TargetUnregisteredSubscriberCount(registry), Is.EqualTo(1));
+            Assert.That(first.AffixStatuses.ApplyVulnerability(27, new Float2(0f, 0f), 2f, true), Is.True);
+            Assert.That(damage.TryApply(WeaponDamageRequest.Create(101, WeaponId.GakgungShot, target, 10, false,
+                new Float2(0f, 0f), ContactPhase.Direct, 1), out var firstBoosted), Is.True);
+            Assert.That(firstBoosted.FinalDamage, Is.EqualTo(12));
+
+            first.Dispose();
+            var replacement = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            Assert.That(replacement.AffixStatuses.ApplyVulnerability(27, new Float2(0f, 0f), 2f, true), Is.True);
+            Assert.That(damage.TryApply(WeaponDamageRequest.Create(102, WeaponId.GakgungShot, target, 10, false,
+                new Float2(0f, 0f), ContactPhase.Direct, 2), out var replacementBoosted), Is.True);
+            Assert.That(replacementBoosted.FinalDamage, Is.EqualTo(12));
+            replacement.Dispose();
+        }
+
+        private static int TargetUnregisteredSubscriberCount(CombatTargetRegistry registry)
+        {
+            var field = typeof(CombatTargetRegistry).GetField("TargetUnregistered", BindingFlags.Instance | BindingFlags.NonPublic);
+            return (field?.GetValue(registry) as Delegate)?.GetInvocationList().Length ?? 0;
         }
 
         [Test]
