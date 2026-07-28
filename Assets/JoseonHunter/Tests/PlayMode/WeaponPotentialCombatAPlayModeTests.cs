@@ -118,12 +118,32 @@ namespace JoseonHunter.Tests.PlayMode
         public void Earth_current_requires_a_confirmed_main_blast_before_it_can_schedule(bool evolved)
         {
             var rig = Drive(WeaponPotentialId.ThunderEarthCurrent, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("0"));
+            var thunder = (ThunderBombExecutor)rig.Executor;
+            AdvanceUntilMainBlastCompletes(rig, thunder);
+            Assert.That(thunder.PendingEarthCurrentCountForTests, Is.Zero, "an empty main blast must not allocate Earth Current");
             var lateTarget = rig.AddTarget(2, new Float2(20f, 0f), MaskFor(WeaponPotentialId.ThunderEarthCurrent));
-            rig.Advance(1f); // the bomb's main blast resolves while neither target has a confirmed mask contact.
             lateTarget.Position = new Float2(0f, 0f);
             rig.Advance(.8f); // an erroneously allocated Earth Current would now hit this target.
             Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.PotentialBlast && value.TargetRuntimeId == lateTarget.RuntimeId), Is.False);
             rig.Dispose();
+
+            var positive = Drive(WeaponPotentialId.ThunderEarthCurrent, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.ThunderEarthCurrent));
+            var positiveThunder = (ThunderBombExecutor)positive.Executor;
+            AdvanceUntilMainBlastCompletes(positive, positiveThunder);
+            Assert.That(positiveThunder.PendingEarthCurrentCountForTests, Is.EqualTo(1), "a confirmed main blast schedules exactly one Earth Current child");
+            positive.Advance(.35f);
+            Assert.That(positive.Events.Any(value => value.Phase == ContactPhase.PotentialBlast), Is.True);
+            positive.Dispose();
+        }
+
+        private static void AdvanceUntilMainBlastCompletes(DrivenExecutor rig, ThunderBombExecutor thunder)
+        {
+            for (var step = 0; step < 100; step++)
+            {
+                rig.Advance(.01f);
+                if (thunder.ActiveBombCount == 0 && thunder.LastState == ThunderBombState.Complete) return;
+            }
+            Assert.Fail("Thunder main blast did not complete in the deterministic test window.");
         }
 
         [Test]

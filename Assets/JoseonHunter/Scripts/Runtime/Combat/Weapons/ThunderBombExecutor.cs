@@ -45,6 +45,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public IReadOnlyList<string> StateOrder => stateOrder;
         public int LastPulledTargetCount { get; private set; }
         public int LastLightningRodTargetRuntimeId { get; private set; }
+#if UNITY_INCLUDE_TESTS
+        public int PendingEarthCurrentCountForTests
+        {
+            get
+            {
+                var count = 0;
+                foreach (var strike in delayedStrikes)
+                    if (strike.Phase == ContactPhase.PotentialBlast) count++;
+                return count;
+            }
+        }
+#endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
