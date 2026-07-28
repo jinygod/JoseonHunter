@@ -13,6 +13,7 @@ namespace JoseonHunter.Presentation.UI
         private FirstPlayableController boundController;
         private CombatHudPresenter combatHud;
         private WeaponRackPresenter weaponRack;
+        private UpgradeChoicePresenter upgradeChoice;
         private RectTransform safeAreaContainer;
         private Rect lastSafeArea;
         private Vector2 lastScreenSize;
@@ -51,11 +52,23 @@ namespace JoseonHunter.Presentation.UI
             var rackRoot = RuntimeUiFactory.Rect("Weapon Rack", safeAreaContainer);
             RuntimeUiFactory.Stretch(rackRoot, 0f, 0f, 0f, 0f);
             weaponRack = rackRoot.gameObject.AddComponent<WeaponRackPresenter>();
+            var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", safeAreaContainer);
+            RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
+            upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
+            upgradeChoice.Build();
+            upgradeChoice.PresentationClosed += NotifyUpgradePresentationClosed;
         }
 
         private void OnDestroy()
         {
+            UnbindController();
+            if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (instance == this) instance = null;
+        }
+
+        private void OnDisable()
+        {
+            upgradeChoice?.CloseImmediately();
         }
 
         private void Update()
@@ -64,7 +77,7 @@ namespace JoseonHunter.Presentation.UI
             var screenSize = new Vector2(Screen.width, Screen.height);
             if (safeArea != lastSafeArea || screenSize != lastScreenSize) ApplySafeArea(safeArea, screenSize);
 
-            if (boundController == null) boundController = FindFirstObjectByType<FirstPlayableController>();
+            if (boundController == null) BindController(FindFirstObjectByType<FirstPlayableController>());
             if (boundController == null || Time.unscaledTime < nextRenderTime) return;
 
             nextRenderTime = Time.unscaledTime + RenderInterval;
@@ -74,6 +87,39 @@ namespace JoseonHunter.Presentation.UI
             if (signature == weaponSignature) return;
             weaponSignature = signature;
             weaponRack.Render(state.Weapons);
+        }
+
+        private void BindController(FirstPlayableController controller)
+        {
+            if (boundController == controller) return;
+            UnbindController();
+            boundController = controller;
+            if (boundController == null) return;
+            boundController.UpgradeOpened += OpenUpgradeChoice;
+            boundController.RunReset += CloseUpgradeChoice;
+        }
+
+        private void UnbindController()
+        {
+            if (boundController == null) return;
+            boundController.UpgradeOpened -= OpenUpgradeChoice;
+            boundController.RunReset -= CloseUpgradeChoice;
+            boundController = null;
+        }
+
+        private void OpenUpgradeChoice(UpgradeChoiceState state)
+        {
+            upgradeChoice?.Open(state, boundController.TryChooseUpgrade);
+        }
+
+        private void CloseUpgradeChoice()
+        {
+            upgradeChoice?.CloseImmediately();
+        }
+
+        private void NotifyUpgradePresentationClosed()
+        {
+            boundController?.NotifyUpgradePresentationClosed();
         }
 
         public void ApplySafeArea(Rect safeArea, Vector2 screenSize)

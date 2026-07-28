@@ -236,6 +236,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnDestroy()
         {
+            Time.timeScale = 1f;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
             if (solidSprite != null)
@@ -247,6 +248,11 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 Destroy(solidTexture);
             }
+        }
+
+        private void OnDisable()
+        {
+            Time.timeScale = 1f;
         }
 
         private void Update()
@@ -357,6 +363,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ResetRun()
         {
+            Time.timeScale = 1f;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
             if (runtimeObjects != null)
