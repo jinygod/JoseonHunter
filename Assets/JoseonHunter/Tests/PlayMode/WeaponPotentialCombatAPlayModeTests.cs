@@ -5,6 +5,7 @@ using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Content.Weapons;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -23,17 +24,25 @@ namespace JoseonHunter.Tests.PlayMode
         };
 
         [TestCaseSource(nameof(PotentialIds))]
-        public void Every_potential_contact_gate_rejects_overlapping_bounds_when_active_pixels_do_not_overlap(WeaponPotentialId potential)
+        public void Every_potential_uses_the_committed_cell_mask_for_a_real_negative_pixel_overlap(WeaponPotentialId potential)
         {
+            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            Assert.That(catalog, Is.Not.Null, "Task 4 catalog must be present for potential combat tests.");
+            var sprite = catalog.SpriteForPotential(potential);
+            var texture = catalog.MaskForPotential(potential);
+            Assert.That(sprite, Is.Not.Null, potential.Value); Assert.That(texture, Is.Not.Null, potential.Value);
+            var potentialMask = PixelHitMask.FromTexture(texture, sprite.pivot, sprite.pixelsPerUnit);
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
             var target = new TestTarget(1, new Float2(0f, 0f), PixelHitMask.FromRows("0"));
             registry.Register(target);
             var potentialAttack = new AttackInstance(100 + potential.GetHashCode(), RepeatHitPolicy.OncePerInstance, 0f);
 
+            var overlaps = PixelMaskContactService.TryFindContact(potentialMask, PixelMaskTransform.Translation(0f, 0f), target.HurtMask, target.HurtMaskTransform, out _);
             var applied = damage.TryApply(WeaponDamageRequest.Create(potentialAttack, WeaponId.HwandoFlyingBlade, target, 10, false,
-                new Float2(0f, 0f), ContactPhase.PotentialBlast, 1, false), out _);
+                new Float2(0f, 0f), ContactPhase.PotentialBlast, 1, overlaps), out _);
 
+            Assert.That(overlaps, Is.False, potential.Value);
             Assert.That(applied, Is.False, potential.Value);
             Assert.That(target.Health, Is.EqualTo(100), potential.Value);
         }
