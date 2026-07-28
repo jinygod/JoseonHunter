@@ -50,6 +50,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Launch(context, target);
             }
             projectiles.Tick(deltaTime, context);
+            LastProjectileScale = projectiles.LastVisualScale;
             for (var index = splitArrows.Count - 1; index >= 0; index--)
             {
                 var child = splitArrows[index]; child.Delay -= Mathf.Max(0f, deltaTime);

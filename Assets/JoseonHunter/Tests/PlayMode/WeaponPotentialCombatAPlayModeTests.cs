@@ -27,15 +27,12 @@ namespace JoseonHunter.Tests.PlayMode
         public void Every_potential_uses_the_committed_cell_mask_for_a_real_negative_pixel_overlap(WeaponPotentialId potential)
         {
             var mask = MaskFor(potential);
-            var registry = new CombatTargetRegistry();
-            var damage = new CombatDamageService(registry);
-            var target = new TestTarget(1, new Float2(0f, 0f), PixelHitMask.FromRows("0"));
-            registry.Register(target);
-            var overlaps = PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(0f, 0f), target.HurtMask, target.HurtMaskTransform, out _);
-            var applied = damage.TryApply(WeaponDamageRequest.Create(new AttackInstance(100 + (int)potential.Value[0], RepeatHitPolicy.OncePerInstance, 0f), WeaponFor(potential), target, 10, false,
-                new Float2(0f, 0f), ContactPhase.PotentialBlast, 1, overlaps), out _);
+            var transparent = PixelHitMask.FromRows("0");
+            var overlaps = PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(0f, 0f), transparent, PixelMaskTransform.Translation(0f, 0f), out _);
+            var rig = Drive(potential, false, targetMask: transparent);
             Assert.That(overlaps, Is.False, potential.Value);
-            Assert.That(applied, Is.False, potential.Value);
+            Assert.That(rig.Events, Is.Empty, potential.Value + " must not produce base, status, child, or delayed damage without an active target pixel.");
+            rig.Dispose();
         }
 
         // This is deliberately a construction-and-tick matrix: each case instantiates its actual production executor twice,
@@ -70,11 +67,16 @@ namespace JoseonHunter.Tests.PlayMode
         [Test]
         public void Gakgung_full_draw_scales_primary_endpoints_and_split_children_do_not_recurse()
         {
-            var near = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(.01f, 0f));
-            var far = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(8f, 0f));
+            var near = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(.1f, 0f), advanceSeconds: 0f);
+            var far = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(8f, 0f), advanceSeconds: 0f);
+            near.Advance(.05f); // near impact is before the 80% ramp interval
+            far.Advance(.25f); // arrow has traveled 50% of its allowed range but has not reached the target
             var nearBow = (GakgungExecutor)near.Executor; var farBow = (GakgungExecutor)far.Executor;
             Assert.That(nearBow.LastProjectileScale, Is.EqualTo(1f).Within(.01f));
-            Assert.That(farBow.LastProjectileScale, Is.LessThanOrEqualTo(1.35f).And.GreaterThan(1f));
+            Assert.That(farBow.LastProjectileScale, Is.GreaterThan(1f).And.LessThan(1.35f));
+            far.Advance(.20f); // post-80% impact clamps at 1.6x damage / 1.35x visual scale
+            Assert.That(near.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(10));
+            Assert.That(far.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(16));
             var split = Drive(WeaponPotentialId.GakgungSplitFletching, false);
             Assert.That(split.Events.Count(e => e.Phase == ContactPhase.PotentialChain), Is.LessThanOrEqualTo(2), "split arrows are terminal child attacks and cannot recurse");
             near.Dispose(); far.Dispose(); split.Dispose();
@@ -126,14 +128,17 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
-        public void Talisman_frost_is_removed_when_the_completed_cast_is_removed_in_normal_and_evolved_paths()
+        public void Talisman_frost_lasts_1_2_seconds_then_clears_once_in_normal_and_evolved_paths()
         {
             foreach (var evolved in new[] { false, true })
             {
                 var rig = Drive(WeaponPotentialId.TalismanFiveElementCycle, evolved, advanceSeconds: 0f);
-                var talisman = (TalismanExecutor)rig.Executor;
-                // The first cycle is fire; the second cast is frost.  A short manual run is intentionally executor-owned.
-                rig.Advance(.75f);
+                for (var elapsed = 0f; elapsed < 3f && !rig.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)); elapsed += .05f) rig.Advance(.05f);
+                Assert.That(rig.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+                rig.Runtime.Targets.Unregister(rig.Target); // freeze the source sequence; the cast-owned slow record must outlive the completed cast.
+                rig.Advance(1.15f);
+                Assert.That(rig.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+                rig.Advance(.10f);
                 Assert.That(rig.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
                 rig.Dispose();
             }
@@ -155,6 +160,33 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
+        public void Overcharged_core_uses_its_own_catalog_mask_for_negative_and_positive_executor_damage()
+        {
+            var negative = Drive(WeaponPotentialId.ThunderOverchargedCore, true, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+            negative.Advance(1f);
+            var positive = Drive(WeaponPotentialId.ThunderOverchargedCore, true, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.ThunderOverchargedCore));
+            positive.Advance(1f);
+            var negativeDamage = negative.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
+            var positiveDamage = positive.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
+            Assert.That(negativeDamage, Is.EqualTo(20));
+            Assert.That(positiveDamage, Is.EqualTo(22));
+            negative.Dispose(); positive.Dispose();
+        }
+
+        [Test]
+        public void All_twelve_potentials_have_their_exact_owner_executor_mapping()
+        {
+            foreach (var potential in PotentialIds)
+            {
+                var weapon = WeaponFor(potential);
+                var expected = potential.Value.StartsWith("hwando_", StringComparison.Ordinal) ? WeaponId.HwandoFlyingBlade :
+                    potential.Value.StartsWith("gakgung_", StringComparison.Ordinal) ? WeaponId.GakgungShot :
+                    potential.Value.StartsWith("talisman_", StringComparison.Ordinal) ? WeaponId.TalismanThrow : WeaponId.ThunderCrashBomb;
+                Assert.That(weapon, Is.EqualTo(expected), potential.Value);
+            }
+        }
+
+        [Test]
         public void Lightning_rod_tracks_live_position_and_skips_unregistered_target_in_normal_and_evolved_paths()
         {
             foreach (var evolved in new[] { false, true })
@@ -173,7 +205,7 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
-        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, WeaponPotentialId secondary = default, Float2? targetPosition = null, float advanceSeconds = 2f)
+        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, WeaponPotentialId secondary = default, Float2? targetPosition = null, float advanceSeconds = 2f, PixelHitMask targetMask = null)
         {
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
@@ -182,7 +214,7 @@ namespace JoseonHunter.Tests.PlayMode
             var all = secondary.Value == null ? new[] { primary } : new[] { primary, secondary };
             var modifiers = WeaponRuntimeModifiers.From(new WeaponRunAffixProfile(Array.Empty<WeaponAffixRoll>(), all));
             var position = targetPosition ?? new Float2(1f, 0f);
-            var target = new TestTarget(1, position, MaskFor(primary));
+            var target = new TestTarget(1, position, targetMask ?? MaskFor(primary));
             registry.Register(target);
             var executor = CreateExecutor(primary, runtime, evolved, modifiers);
             var events = new List<ConfirmedDamageEvent>();

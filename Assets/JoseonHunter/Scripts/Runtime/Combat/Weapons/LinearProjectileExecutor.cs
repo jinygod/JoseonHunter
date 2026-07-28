@@ -28,6 +28,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveCount => active.Count;
         public int PooledCount => pool.Count;
         public int ReturnedToPoolCount { get; private set; }
+        /// <summary>Latest active visual scale, retained for deterministic combat telemetry.</summary>
+        public float LastVisualScale { get; private set; } = 1f;
 
         public bool Launch(in WeaponExecutionContext context, in LinearProjectileSpec spec)
         {
@@ -58,6 +60,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 projectile.Visual.transform.position = new Vector3(projectile.Position.X, projectile.Position.Y, 0f);
                 if (projectile.FullDraw)
                     projectile.Visual.transform.localScale = Vector3.one * projectile.BaseScale * (1f + .35f * FullDrawProgress(projectile));
+                LastVisualScale = projectile.Visual.transform.localScale.x;
                 if (processedTime > 0f)
                 {
                     projectile.PendingSimulationTime -= processedTime;
@@ -81,6 +84,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 runtime.DamageService.RetireAttack(projectile.Attack.InstanceId);
             }
             active.Clear();
+            LastVisualScale = 1f;
         }
 
         /// <summary>Terminal cleanup for a containing executor; pooled visuals must not survive runtime replacement.</summary>
