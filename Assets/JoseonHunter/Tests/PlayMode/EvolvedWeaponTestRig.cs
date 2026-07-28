@@ -114,7 +114,9 @@ namespace JoseonHunter.Tests.PlayMode
         public int Health { get; private set; } = 100;
         public bool IsBoss => false;
         public bool IsElite => false;
-        public float ThreatScore => 0f;
+        public float ThreatScore => Threat;
+        public float Threat { get; set; }
+        public bool MovesWithKnockback { get; set; } = true;
         public Float2 Position { get; set; }
         public Float2 WorldPosition => Position;
         public PixelHitMask HurtMask => mask;
@@ -122,7 +124,10 @@ namespace JoseonHunter.Tests.PlayMode
         public ISet<string> Statuses { get; } = new HashSet<string>();
 
         public void ApplyResolvedDamage(int damage) => Health -= damage;
-        public void ApplyKnockback(Float2 direction, float force) => Position = new Float2(Position.X + direction.X * force, Position.Y + direction.Y * force);
+        public void ApplyKnockback(Float2 direction, float force)
+        {
+            if (MovesWithKnockback) Position = new Float2(Position.X + direction.X * force, Position.Y + direction.Y * force);
+        }
         public void ApplyFrostSlow(int sourceId, float strength) => Statuses.Add($"frost:{sourceId}");
         public void RemoveFrostSlow(int sourceId, float decaySeconds) => Statuses.Remove($"frost:{sourceId}");
         public void ApplyFreeze(int sourceId, float durationSeconds) => Statuses.Add($"freeze:{sourceId}");

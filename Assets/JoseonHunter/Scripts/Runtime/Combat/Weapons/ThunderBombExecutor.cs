@@ -43,6 +43,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public ThunderBombState LastState { get; private set; } = ThunderBombState.Complete;
         public Float2 LastLandingPosition { get; private set; }
         public IReadOnlyList<string> StateOrder => stateOrder;
+        public int LastPulledTargetCount { get; private set; }
+        public int LastLightningRodTargetRuntimeId { get; private set; }
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -93,6 +95,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             bombs.Clear(); stateOrder.Clear(); cooldown = 0f; LastState = ThunderBombState.Complete; LastLandingPosition = default;
             foreach (var strike in delayedStrikes) runtime.DamageService.RetireAttack(strike.Attack.InstanceId);
             delayedStrikes.Clear();
+            LastPulledTargetCount = 0;
+            LastLightningRodTargetRuntimeId = 0;
         }
 
         public void Dispose() => Reset();
@@ -209,6 +213,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveCompressedBlast(Bomb bomb, in WeaponExecutionContext context)
         {
+            LastPulledTargetCount = bomb.PulledTargetIds.Count;
             runtime.Targets.CopyTo(targets);
             var transform = new PixelMaskTransform(bomb.Landing, 0, false, new Vector2(BlastRadius * 2f, BlastRadius * 2f));
             foreach (var target in targets)
@@ -224,7 +229,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var earthMask))
                 delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), 0, bomb.Landing, earthMask, .35f, .65f, ContactPhase.PotentialBlast));
             if (bomb.LightningRodTarget != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderLightningRod, out _, out var rodMask))
+            {
+                LastLightningRodTargetRuntimeId = bomb.LightningRodTarget.RuntimeId;
                 delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), bomb.LightningRodTarget.RuntimeId, bomb.Landing, rodMask, .45f, .90f, ContactPhase.PotentialChain, true));
+            }
         }
 
         private bool SweepRing(Bomb bomb, float desiredRadius, in WeaponExecutionContext context)
@@ -251,7 +259,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (Potentials.HasPotential(WeaponPotentialId.ThunderEarthCurrent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderEarthCurrent, out _, out var crackMask))
                     delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), 0, bomb.Landing, crackMask, .35f, .65f, ContactPhase.PotentialBlast));
                 if (bomb.LightningRodTarget != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.ThunderLightningRod, out _, out var rodMask))
+                {
+                    LastLightningRodTargetRuntimeId = bomb.LightningRodTarget.RuntimeId;
                     delayedStrikes.Add(new DelayedPotentialStrike(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), bomb.LightningRodTarget.RuntimeId, bomb.LightningRodTarget.WorldPosition, rodMask, .45f, .90f, ContactPhase.PotentialChain, true));
+                }
             }
             return bomb.SweptRadius + 0.0001f >= desiredRadius;
         }

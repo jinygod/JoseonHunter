@@ -102,6 +102,77 @@ namespace JoseonHunter.Tests.PlayMode
             rig.Dispose();
         }
 
+        [Test]
+        public void Talisman_transfer_is_once_has_no_transfer_contact_damage_and_ghost_seeks_nearest_live_mask_contact()
+        {
+            var rig = Drive(WeaponPotentialId.TalismanSealTransfer, false, WeaponPotentialId.TalismanVengefulGhostBurst, advanceSeconds: 0f);
+            var second = rig.AddTarget(2, new Float2(1.5f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer));
+            var third = rig.AddTarget(3, new Float2(2f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer));
+            rig.Advance(.40f); // first seal chooses the next legal target
+            second.ApplyResolvedDamage(1000);
+            rig.Advance(.05f); // the sealed cast transfers exactly once to target three
+            var talisman = (TalismanExecutor)rig.Executor;
+            Assert.That(talisman.TransferCount, Is.EqualTo(1));
+            rig.Advance(.10f);
+            Assert.That(rig.Events.Any(e => e.TargetRuntimeId == third.RuntimeId && (e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Attach)), Is.False,
+                "transfer flight must not apply contact damage");
+            third.ApplyResolvedDamage(1000);
+            var ghostTarget = rig.AddTarget(4, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.TalismanVengefulGhostBurst));
+            rig.Advance(.35f);
+            Assert.That(talisman.TransferCount, Is.EqualTo(1), "a transferred seal cannot transfer again");
+            Assert.That(talisman.LastGhostSeekTargetRuntimeId, Is.EqualTo(ghostTarget.RuntimeId));
+            Assert.That(rig.Events.Any(e => e.TargetRuntimeId == ghostTarget.RuntimeId && e.Phase == ContactPhase.PotentialBlast), Is.True);
+            rig.Dispose();
+        }
+
+        [Test]
+        public void Talisman_frost_is_removed_when_the_completed_cast_is_removed_in_normal_and_evolved_paths()
+        {
+            foreach (var evolved in new[] { false, true })
+            {
+                var rig = Drive(WeaponPotentialId.TalismanFiveElementCycle, evolved, advanceSeconds: 0f);
+                var talisman = (TalismanExecutor)rig.Executor;
+                // The first cycle is fire; the second cast is frost.  A short manual run is intentionally executor-owned.
+                rig.Advance(.75f);
+                Assert.That(rig.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
+                rig.Dispose();
+            }
+        }
+
+        [Test]
+        public void Evolved_thunder_counts_only_actual_pull_motion_caps_it_and_breaks_equal_threat_by_runtime_id()
+        {
+            var rig = Drive(WeaponPotentialId.ThunderOverchargedCore, true, WeaponPotentialId.ThunderLightningRod, advanceSeconds: 0f);
+            rig.Target.Threat = 10f;
+            var immobile = rig.AddTarget(2, new Float2(1.2f, 0f), MaskFor(WeaponPotentialId.ThunderOverchargedCore));
+            immobile.MovesWithKnockback = false; immobile.Threat = 10f;
+            rig.Advance(1f);
+            var thunder = (ThunderBombExecutor)rig.Executor;
+            Assert.That(thunder.LastPulledTargetCount, Is.EqualTo(1), "movement-immune targets cannot raise Overcharged Core damage");
+            Assert.That(thunder.LastLightningRodTargetRuntimeId, Is.EqualTo(rig.Target.RuntimeId), "equal threat resolves to lower runtime id");
+            Assert.That(thunder.LastPulledTargetCount * .08f, Is.LessThanOrEqualTo(.80f));
+            rig.Dispose();
+        }
+
+        [Test]
+        public void Lightning_rod_tracks_live_position_and_skips_unregistered_target_in_normal_and_evolved_paths()
+        {
+            foreach (var evolved in new[] { false, true })
+            {
+                var rig = Drive(WeaponPotentialId.ThunderLightningRod, evolved, advanceSeconds: 0f);
+                rig.Target.Threat = 9f;
+                rig.Advance(.55f); // scheduled, but before the 0.45s delayed resolution for both timing paths
+                rig.Target.Position = new Float2(1.25f, 0f);
+                rig.Advance(.55f);
+                Assert.That(rig.Events.Any(e => e.TargetRuntimeId == rig.Target.RuntimeId && e.Phase == ContactPhase.PotentialChain), Is.True);
+                var skipped = Drive(WeaponPotentialId.ThunderLightningRod, evolved, advanceSeconds: .55f);
+                skipped.Runtime.Targets.Unregister(skipped.Target);
+                skipped.Advance(.55f);
+                Assert.That(skipped.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.False);
+                rig.Dispose(); skipped.Dispose();
+            }
+        }
+
         private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, WeaponPotentialId secondary = default, Float2? targetPosition = null, float advanceSeconds = 2f)
         {
             var registry = new CombatTargetRegistry();
@@ -126,7 +197,7 @@ namespace JoseonHunter.Tests.PlayMode
             var weapon = WeaponFor(potential);
             if (weapon.Equals(WeaponId.HwandoFlyingBlade)) return new FlyingBladeExecutor(runtime, 10f, 10f, 4f, 20f, 1, evolved, modifiers);
             if (weapon.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, 10f, 10f, 10f, 20f, 1, evolved, modifiers);
-            if (weapon.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, 10f, 10f, 4f, 20f, 1, 1, evolved, modifiers);
+            if (weapon.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, 10f, .05f, 4f, 20f, 3, 1, evolved, modifiers);
             return new ThunderBombExecutor(runtime, 10f, 10f, 4f, .1f, 0f, 2f, 1, evolved, modifiers);
         }
 
@@ -164,6 +235,10 @@ namespace JoseonHunter.Tests.PlayMode
             { Runtime = runtime; Root = root; Executor = executor; Target = target; Events = events; Potential = potential; }
             public WeaponRuntimeController Runtime { get; } public GameObject Root { get; } public IWeaponExecutor Executor { get; } public TestTarget Target { get; } public List<ConfirmedDamageEvent> Events { get; } public WeaponPotentialId Potential { get; }
             public void Advance(float seconds) { for (var elapsed = 0f; elapsed < seconds; elapsed += .05f) Executor.Tick(.05f, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick)); }
+            public TestTarget AddTarget(int runtimeId, Float2 position, PixelHitMask mask)
+            {
+                var target = new TestTarget(runtimeId, position, mask); Runtime.Targets.Register(target); return target;
+            }
             public void Dispose() { Executor.Dispose(); Runtime.Dispose(); UnityEngine.Object.DestroyImmediate(Root); }
         }
     }

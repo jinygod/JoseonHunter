@@ -44,6 +44,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int TotalLaunchedTalismanCount { get; private set; }
         public TalismanState LastState { get; private set; } = TalismanState.Complete;
         public int LastFinalBurstCount { get; private set; }
+        public int TransferCount { get; private set; }
+        public int LastGhostSeekTargetRuntimeId { get; private set; }
         public IReadOnlyList<ContactPhase> LastContactPhases => lastContactPhases;
         private readonly List<ContactPhase> lastContactPhases = new List<ContactPhase>();
 
@@ -75,7 +77,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (flame.Remaining > 0f) { ghostFlames[index] = flame; continue; }
                 if (TryFindNearestLegal(flame.Position, null, out var target) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanVengefulGhostBurst, out _, out var ghostMask) &&
                     PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact))
+                {
+                    LastGhostSeekTargetRuntimeId = target.RuntimeId;
                     runtime.DamageService.TryApply(WeaponDamageRequest.Create(flame.Attack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage * .75f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick), out _);
+                }
                 runtime.DamageService.RetireAttack(flame.Attack.InstanceId); ghostFlames.RemoveAt(index);
             }
             if (!IsEvolved && Level == 5 && active.Count == 0)
@@ -102,7 +107,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             ghostFlames.Clear(); elementCastOrdinal = 0;
             if (bindingAttack != null) runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
             bindingAttack = null; cooldown = 0f; LastState = TalismanState.Complete; LastFinalBurstCount = 0;
-            LastLaunchCount = 0; TotalLaunchedTalismanCount = 0; lastContactPhases.Clear();
+            LastLaunchCount = 0; TotalLaunchedTalismanCount = 0; lastContactPhases.Clear(); TransferCount = 0; LastGhostSeekTargetRuntimeId = 0;
         }
 
         public void Dispose() => Reset();
@@ -167,7 +172,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     TryFindNearestLegal(cast.Position, cast.AttemptedTargets, out var transfer) && DistanceSquared(transfer.WorldPosition, cast.Position) <= 16f)
                 {
                     cast.Target = transfer; cast.AttemptedTargets.Add(transfer.RuntimeId); cast.ReservedTargets.Add(transfer.RuntimeId);
-                    cast.SealedConfirmed = false; cast.HasTransferred = true; cast.State = TalismanState.Transferring; return;
+                    cast.SealedConfirmed = false; cast.HasTransferred = true; TransferCount++; cast.State = TalismanState.Transferring; return;
                 }
                 if (cast.SealedConfirmed && Potentials.HasPotential(WeaponPotentialId.TalismanVengefulGhostBurst))
                     ghostFlames.Add(new GhostFlame(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), cast.Position));
