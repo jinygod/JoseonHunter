@@ -63,7 +63,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 cooldown = CooldownSeconds;
                 if (fields.Count >= FieldCapacity)
                 {
-                    Expire(fields[0], context);
+                    // Capacity eviction happens before this frame advances the replacement field;
+                    // its spawned spread therefore has no current-frame residual to consume.
+                    Expire(fields[0], context, 0f);
                     fields.RemoveAt(0);
                 }
                 fields.Add(new Field(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, TickInterval), context.OwnerPosition, landing));

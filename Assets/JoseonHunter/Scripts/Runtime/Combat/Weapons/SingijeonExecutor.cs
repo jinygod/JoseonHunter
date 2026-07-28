@@ -128,7 +128,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             foreach (var trail in trails) runtime.DamageService.RetireAttack(trail.Attack.InstanceId);
-            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); trails.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false; projectiles.Reset();
+            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); trails.Clear(); priorTargetTransforms.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false; projectiles.Reset();
         }
 
         public void Dispose() { Reset(); runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.ProjectileTravelled -= OnProjectileTravelled; projectiles.Dispose(); }
