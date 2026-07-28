@@ -3,6 +3,7 @@ using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -10,6 +11,52 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class CombatHudPlayModeTests
     {
+        [TearDown]
+        public void RestoreTimeScale()
+        {
+            Time.timeScale = 1f;
+        }
+
+        [UnityTest]
+        public IEnumerator Level_up_opens_cards_accepts_one_choice_restores_combat_and_sequences_the_queue()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            var rewardReveal = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(bootstrap, Is.Not.Null);
+            Assert.That(choice, Is.Not.Null);
+            Assert.That(rewardReveal, Is.Not.Null);
+            Assert.That(bootstrap.BoundController, Is.EqualTo(controller));
+
+            controller.OpenUpgradeForTests();
+            controller.AddExperienceForTests(100);
+            yield return new WaitForSecondsRealtime(.35f);
+            Assert.That(Time.timeScale, Is.EqualTo(0f));
+            Assert.That(choice.IsOpen, Is.True);
+
+            var cards = choice.GetComponentsInChildren<Button>(true);
+            Assert.That(cards, Has.Length.EqualTo(3));
+            cards[0].onClick.Invoke();
+            cards[1].onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.25f);
+
+            Assert.That(controller.AppliedUpgradeCount, Is.EqualTo(1));
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Assert.That(rewardReveal.IsRevealing, Is.True);
+            Assert.That(controller.IsUpgradeOpen, Is.False,
+                "The queued choice must wait until the unscaled reward reveal completes.");
+
+            yield return new WaitForSecondsRealtime(.5f);
+            Assert.That(rewardReveal.IsRevealing, Is.False);
+            Assert.That(controller.IsUpgradeOpen, Is.True);
+        }
+
         [UnityTest]
         public IEnumerator Bootstrap_creates_one_portrait_hud_with_a_safe_area_container()
         {

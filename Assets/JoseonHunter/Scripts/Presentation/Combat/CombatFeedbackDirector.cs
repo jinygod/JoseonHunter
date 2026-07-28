@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Combat;
 using UnityEngine;
