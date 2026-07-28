@@ -45,6 +45,117 @@ namespace JoseonHunter.Tests.PlayMode
             AssertBaseOnlyFixture(potential, PixelHitMask.FromRows("1"));
         }
 
+        [TestCase("jangseung_ghost_face", false)] [TestCase("jangseung_ghost_face", true)]
+        [TestCase("jangseung_four_direction_barrier", false)] [TestCase("jangseung_four_direction_barrier", true)]
+        [TestCase("jangseung_guardian_descent", false)] [TestCase("jangseung_guardian_descent", true)]
+        public void Each_jangseung_potential_uses_a_moving_pixel_confirmed_crossing(string potentialValue, bool evolved)
+        {
+            var potential = new WeaponPotentialId(potentialValue);
+            var rig = Drive(potential, evolved, MaskFor(potential));
+            rig.Target.Position = new Float2(-3f, 0f); rig.TickExact(.01f);
+            rig.Target.Position = new Float2(0f, 0f); rig.Advance(1.25f);
+            Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.BoundaryCrossing), Is.True, potential.Value);
+            if (potential.Equals(WeaponPotentialId.JangseungGhostFace)) Assert.That(rig.Target.Position.X, Is.GreaterThan(1f), "Ghost Face adds its center-outward 1.25 knockback after the ordinary crossing response.");
+            if (potential.Equals(WeaponPotentialId.JangseungFourDirectionBarrier)) Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.PotentialBlast && value.FinalDamage == 7), Is.True);
+            if (potential.Equals(WeaponPotentialId.JangseungGuardianDescent))
+            {
+                Assert.That(rig.Events.Count(value => value.Phase == ContactPhase.PotentialChain), Is.EqualTo(1));
+                Assert.That(((JangseungWardExecutor)rig.Executor).ActiveGuardianCountForTests, Is.GreaterThanOrEqualTo(0));
+            }
+            rig.Dispose();
+        }
+
+        [TestCase("singijeon_powder_trail", false)] [TestCase("singijeon_powder_trail", true)]
+        [TestCase("singijeon_submunition_split", false)] [TestCase("singijeon_submunition_split", true)]
+        [TestCase("singijeon_chain_ignition", false)] [TestCase("singijeon_chain_ignition", true)]
+        public void Each_singijeon_potential_has_an_explicit_reachable_or_focus_only_contract(string potentialValue, bool evolved)
+        {
+            var potential = new WeaponPotentialId(potentialValue);
+            var rig = Drive(potential, evolved, MaskFor(potential));
+            var executor = (SingijeonExecutor)rig.Executor;
+            if (potential.Equals(WeaponPotentialId.SingijeonPowderTrail))
+            {
+                rig.Target.Position = new Float2(3f, 0f); rig.TickExact(.1f);
+                rig.Target.Position = new Float2(.7f, 0f); rig.Advance(.45f);
+                Assert.That(executor.ActiveTrailCountForTests, Is.GreaterThan(0));
+                Assert.That(rig.Events.Count(value => value.Phase == ContactPhase.Burn), Is.GreaterThan(0));
+            }
+            else if (!evolved)
+            {
+                // Split and retarget are focus-rocket-only; normal volleys must own the
+                // profile safely without inventing a scout/normal child branch.
+                rig.Advance(1f);
+                Assert.That(executor.FocusProjectileCount, Is.Zero);
+                Assert.That(executor.UnlaunchedFocusCountForTests, Is.Zero);
+            }
+            else
+            {
+                rig.Advance(1.2f);
+                Assert.That(executor.FocusProjectileCount, Is.EqualTo(8));
+                if (potential.Equals(WeaponPotentialId.SingijeonSubmunitionSplit))
+                    Assert.That(rig.Events.Select(value => value.AttackInstanceId).Distinct().Count(), Is.GreaterThan(1), "focus children must be terminal fresh attacks");
+            }
+            rig.Dispose();
+        }
+
+        [TestCase("frost_crack_mark", false)] [TestCase("frost_crack_mark", true)]
+        [TestCase("frost_spread", false)] [TestCase("frost_spread", true)]
+        [TestCase("frost_mist", false)] [TestCase("frost_mist", true)]
+        public void Each_frost_potential_has_one_isolated_natural_expiry(string potentialValue, bool evolved)
+        {
+            var potential = new WeaponPotentialId(potentialValue);
+            var rig = Drive(potential, evolved, MaskFor(potential));
+            var nearby = rig.AddTarget(2, new Float2(1.1f, 0f), MaskFor(potential));
+            rig.Advance(.86f);
+            var frost = (FrostFlaskExecutor)rig.Executor;
+            Assert.That(frost.ExpiredFieldCount, Is.EqualTo(1));
+            if (potential.Equals(WeaponPotentialId.FrostCrackMark)) Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Blast && value.FinalDamage == 13), Is.True);
+            if (potential.Equals(WeaponPotentialId.FrostSpread)) Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+            if (potential.Equals(WeaponPotentialId.FrostMist)) Assert.That(frost.LastFieldVisualScale, Is.EqualTo(1.5f).Within(.01f));
+            rig.Dispose();
+        }
+
+        [TestCase("fan_vacuum_edge", false)] [TestCase("fan_vacuum_edge", true)]
+        [TestCase("fan_distant_thunder", false)] [TestCase("fan_distant_thunder", true)]
+        [TestCase("fan_returning_chain", false)] [TestCase("fan_returning_chain", true)]
+        public void Each_fan_potential_uses_its_reachable_phase_contract(string potentialValue, bool evolved)
+        {
+            var potential = new WeaponPotentialId(potentialValue);
+            var rig = Drive(potential, evolved, MaskFor(potential));
+            var next = rig.AddTarget(2, new Float2(1.25f, 0f), MaskFor(potential));
+            rig.TickExact(.01f); // confirmed gust schedules the only possible bleed source.
+            var fan = (WindThunderFanExecutor)rig.Executor;
+            if (potential.Equals(WeaponPotentialId.FanVacuumEdge))
+            {
+                Assert.That(fan.ActiveBleedCountForTests, Is.EqualTo(1));
+                rig.Advance(.4f);
+                Assert.That(rig.Events.Count(value => value.Phase == ContactPhase.Bleed && value.FinalDamage == 2), Is.EqualTo(1));
+            }
+            else if (potential.Equals(WeaponPotentialId.FanDistantThunder))
+            {
+                rig.Advance(evolved ? .25f : .15f);
+                Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Lightning && value.FinalDamage >= 11), Is.True);
+            }
+            else if (!evolved)
+            {
+                rig.Advance(.3f);
+                Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Inbound), Is.False, "normal fan has no inbound return leg to schedule a chain");
+            }
+            else
+            {
+                // Gust and the first outbound strike leave the primary alive.  Lower it only
+                // after that outbound event so the inbound hit itself is the killing event.
+                rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.Advance(.08f);
+                Assert.That(fan.PendingChainForTests, Is.True);
+                rig.Advance(.08f);
+                var chains = rig.Events.Where(value => value.Phase == ContactPhase.PotentialChain).ToArray();
+                Assert.That(chains.Length, Is.EqualTo(1));
+                Assert.That(chains[0].TargetRuntimeId, Is.EqualTo(next.RuntimeId));
+                Assert.That(chains[0].FinalDamage, Is.EqualTo(5));
+            }
+            rig.Dispose();
+        }
+
         [TestCase(false)]
         [TestCase(true)]
         public void Jangseung_ghost_barrier_and_guardian_require_their_own_cells_and_keep_distinct_attacks(bool evolved)
