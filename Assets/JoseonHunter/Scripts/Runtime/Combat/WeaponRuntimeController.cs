@@ -87,16 +87,14 @@ namespace JoseonHunter.Runtime.Combat
             executorsByWeapon.Add(weaponId, executor);
         }
 
-#if UNITY_INCLUDE_TESTS
-        public bool IsDisposedForTests => disposed;
-        public int RegisteredExecutorSlotCountForTests => executors.Count;
-        public int RegistrationCountForTests(WeaponId weaponId) => executorsByWeapon.ContainsKey(weaponId) ? 1 : 0;
-        public IWeaponExecutor ExecutorForTests(WeaponId weaponId) =>
+        internal bool IsDisposedForTests => disposed;
+        internal int RegisteredExecutorSlotCountForTests => executors.Count;
+        internal int RegistrationCountForTests(WeaponId weaponId) => executorsByWeapon.ContainsKey(weaponId) ? 1 : 0;
+        internal IWeaponExecutor ExecutorForTests(WeaponId weaponId) =>
             executorsByWeapon.TryGetValue(weaponId, out var executor) ? executor : null;
-        public bool IsEvolvedForTests(WeaponId weaponId) =>
+        internal bool IsEvolvedForTests(WeaponId weaponId) =>
             executorsByWeapon.TryGetValue(weaponId, out var executor) &&
             executor is IWeaponEvolutionProfile profile && profile.IsEvolved;
-#endif
 
         public void SetSpriteResolver(Func<WeaponId, Sprite> resolver) => spriteResolver = resolver;
         public void SetMaskResolver(Func<WeaponId, PixelHitMask> resolver) => maskResolver = resolver;
