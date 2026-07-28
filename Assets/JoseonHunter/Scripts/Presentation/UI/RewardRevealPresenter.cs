@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
 using UnityEngine;
@@ -18,6 +19,9 @@ namespace JoseonHunter.Presentation.UI
         private TextMeshProUGUI title;
         private TextMeshProUGUI detail;
         private Coroutine revealRoutine;
+
+        public bool IsRevealing => revealRoutine != null;
+        public event Action RevealCompleted;
 
         public static int IntensityFor(ProgressionRewardKind kind) => kind switch
         {
@@ -65,7 +69,9 @@ namespace JoseonHunter.Presentation.UI
                 yield return null;
             }
 
-            HideImmediately();
+            revealRoutine = null;
+            root.SetActive(false);
+            RevealCompleted?.Invoke();
         }
 
         private void Build()

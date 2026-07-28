@@ -20,6 +20,8 @@ namespace JoseonHunter.Presentation.UI
         private Vector2 lastScreenSize;
         private float nextRenderTime;
         private int weaponSignature = int.MinValue;
+        private bool waitingForRewardReveal;
+        private bool waitingForChoiceClose;
 
         public FirstPlayableController BoundController => boundController;
         public RectTransform SafeAreaContainer => safeAreaContainer;
@@ -56,6 +58,7 @@ namespace JoseonHunter.Presentation.UI
             var rewardRoot = RuntimeUiFactory.Rect("Reward Reveal", safeAreaContainer);
             RuntimeUiFactory.Stretch(rewardRoot, 0f, 0f, 0f, 0f);
             rewardReveal = rewardRoot.gameObject.AddComponent<RewardRevealPresenter>();
+            rewardReveal.RevealCompleted += OnRewardRevealCompleted;
             var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", safeAreaContainer);
             RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
@@ -67,12 +70,14 @@ namespace JoseonHunter.Presentation.UI
         {
             UnbindController();
             if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
+            if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (instance == this) instance = null;
         }
 
         private void OnDisable()
         {
             upgradeChoice?.CloseImmediately();
+            CloseRewardReveal();
         }
 
         private void Update()
@@ -127,6 +132,8 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnUpgradeChosen(ProgressionRewardEvent reward)
         {
+            waitingForRewardReveal = true;
+            waitingForChoiceClose = true;
             if (reward.Kind != ProgressionRewardKind.Support)
             {
                 var state = boundController.UiState;
@@ -140,11 +147,27 @@ namespace JoseonHunter.Presentation.UI
 
         private void CloseRewardReveal()
         {
+            waitingForRewardReveal = false;
+            waitingForChoiceClose = false;
             rewardReveal?.HideImmediately();
+            weaponRack?.ResetPulses();
         }
 
         private void NotifyUpgradePresentationClosed()
         {
+            waitingForChoiceClose = false;
+            NotifyUpgradeWhenPresentationComplete();
+        }
+
+        private void OnRewardRevealCompleted()
+        {
+            waitingForRewardReveal = false;
+            NotifyUpgradeWhenPresentationComplete();
+        }
+
+        private void NotifyUpgradeWhenPresentationComplete()
+        {
+            if (waitingForChoiceClose || waitingForRewardReveal) return;
             boundController?.NotifyUpgradePresentationClosed();
         }
 

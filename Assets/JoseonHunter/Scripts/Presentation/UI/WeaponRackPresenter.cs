@@ -18,6 +18,7 @@ namespace JoseonHunter.Presentation.UI
             public TextMeshProUGUI Name;
             public TextMeshProUGUI Level;
             public string WeaponId;
+            public Coroutine PulseRoutine;
         }
 
         private readonly List<Slot> slots = new();
@@ -44,8 +45,16 @@ namespace JoseonHunter.Presentation.UI
         {
             if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
             slot.Level.text = $"LEVEL {newLevel}";
-            StartCoroutine(PulseRoutine(slot));
+            StopPulse(slot);
+            slot.PulseRoutine = StartCoroutine(PulseRoutine(slot));
         }
+
+        public void ResetPulses()
+        {
+            foreach (var slot in slots) StopPulse(slot);
+        }
+
+        private void OnDisable() => ResetPulses();
 
         private Slot CreateSlot(int index)
         {
@@ -93,7 +102,7 @@ namespace JoseonHunter.Presentation.UI
             slot.Level.text = $"LEVEL {weapon.Level}";
         }
 
-        private static IEnumerator PulseRoutine(Slot slot)
+        private IEnumerator PulseRoutine(Slot slot)
         {
             var elapsed = 0f;
             while (elapsed < .24f)
@@ -104,6 +113,14 @@ namespace JoseonHunter.Presentation.UI
                 yield return null;
             }
 
+            slot.PulseRoutine = null;
+            if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+        }
+
+        private void StopPulse(Slot slot)
+        {
+            if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
+            slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
         }
     }
