@@ -64,11 +64,12 @@ namespace JoseonHunter.Tests.PlayMode
             rig.Dispose();
         }
 
-        [Test]
-        public void Gakgung_full_draw_scales_primary_endpoints_and_split_children_do_not_recurse()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Gakgung_full_draw_scales_primary_endpoints_and_split_children_do_not_recurse(bool evolved)
         {
-            var near = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(.1f, 0f), advanceSeconds: 0f);
-            var far = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(8f, 0f), advanceSeconds: 0f);
+            var near = Drive(WeaponPotentialId.GakgungFullDraw, evolved, targetPosition: new Float2(.1f, 0f), advanceSeconds: 0f);
+            var far = Drive(WeaponPotentialId.GakgungFullDraw, evolved, targetPosition: new Float2(8f, 0f), advanceSeconds: 0f);
             near.Advance(.05f); // near impact is before the 80% ramp interval
             far.Advance(.25f); // arrow has traveled 50% of its allowed range but has not reached the target
             var nearBow = (GakgungExecutor)near.Executor; var farBow = (GakgungExecutor)far.Executor;
@@ -77,15 +78,18 @@ namespace JoseonHunter.Tests.PlayMode
             far.Advance(.20f); // post-80% impact clamps at 1.6x damage / 1.35x visual scale
             Assert.That(near.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(10));
             Assert.That(far.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(16));
-            var split = Drive(WeaponPotentialId.GakgungSplitFletching, false);
+            var split = Drive(WeaponPotentialId.GakgungSplitFletching, evolved);
             Assert.That(split.Events.Count(e => e.Phase == ContactPhase.PotentialChain), Is.LessThanOrEqualTo(2), "split arrows are terminal child attacks and cannot recurse");
             near.Dispose(); far.Dispose(); split.Dispose();
         }
 
-        [Test]
-        public void Full_draw_mask_negative_keeps_base_damage_while_visual_grows_continuously()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Full_draw_mask_negative_keeps_base_damage_while_visual_grows_continuously(bool evolved)
         {
-            var rig = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(5f, 0f), advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+            var baseOnly = PixelHitMask.FromRows("1");
+            Assert.That(PixelMaskContactService.TryFindContact(MaskFor(WeaponPotentialId.GakgungFullDraw), PixelMaskTransform.Translation(5f, 0f), baseOnly, PixelMaskTransform.Translation(5f, 0f), out _), Is.False);
+            var rig = Drive(WeaponPotentialId.GakgungFullDraw, evolved, targetPosition: new Float2(5f, 0f), advanceSeconds: 0f, targetMask: baseOnly);
             rig.Advance(.30f);
             var bow = (GakgungExecutor)rig.Executor;
             Assert.That(bow.LastProjectileScale, Is.GreaterThan(1f));
@@ -116,10 +120,11 @@ namespace JoseonHunter.Tests.PlayMode
             rig.Dispose();
         }
 
-        [Test]
-        public void Talisman_transfer_is_once_has_no_transfer_contact_damage_and_ghost_seeks_nearest_live_mask_contact()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Talisman_transfer_is_once_has_no_transfer_contact_damage_and_ghost_seeks_nearest_live_mask_contact(bool evolved)
         {
-            var rig = Drive(WeaponPotentialId.TalismanSealTransfer, false, WeaponPotentialId.TalismanVengefulGhostBurst, advanceSeconds: 0f);
+            var rig = Drive(WeaponPotentialId.TalismanSealTransfer, evolved, WeaponPotentialId.TalismanVengefulGhostBurst, advanceSeconds: 0f);
             var second = rig.AddTarget(2, new Float2(1.5f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer));
             var third = rig.AddTarget(3, new Float2(2f, 0f), MaskFor(WeaponPotentialId.TalismanSealTransfer));
             rig.Advance(.40f); // first seal chooses the next legal target
@@ -171,17 +176,18 @@ namespace JoseonHunter.Tests.PlayMode
             rig.Dispose();
         }
 
-        [Test]
-        public void Overcharged_core_uses_its_own_catalog_mask_for_negative_and_positive_executor_damage()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Overcharged_core_uses_its_own_catalog_mask_for_negative_and_positive_executor_damage(bool evolved)
         {
-            var negative = Drive(WeaponPotentialId.ThunderOverchargedCore, true, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+            var negative = Drive(WeaponPotentialId.ThunderOverchargedCore, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
             negative.Advance(1f);
-            var positive = Drive(WeaponPotentialId.ThunderOverchargedCore, true, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.ThunderOverchargedCore));
+            var positive = Drive(WeaponPotentialId.ThunderOverchargedCore, evolved, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.ThunderOverchargedCore));
             positive.Advance(1f);
             var negativeDamage = negative.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
             var positiveDamage = positive.Events.Where(e => e.Phase == ContactPhase.Blast).Select(e => e.FinalDamage).First();
             Assert.That(negativeDamage, Is.EqualTo(20));
-            Assert.That(positiveDamage, Is.EqualTo(22));
+            Assert.That(positiveDamage, Is.EqualTo(evolved ? 22 : 20));
             negative.Dispose(); positive.Dispose();
         }
 
@@ -253,27 +259,6 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
-        [TestCase("hwando_flying_blade_dance")]
-        [TestCase("gakgung_armor_break_arrowhead")]
-        [TestCase("gakgung_full_draw")]
-        [TestCase("talisman_seal_transfer")]
-        [TestCase("talisman_vengeful_ghost_burst")]
-        [TestCase("thunder_overcharged_core")]
-        public void Remaining_potentials_run_their_owner_executor_in_both_forms_with_base_overlap_negative_and_catalog_positive(string potentialValue)
-        {
-            var potential = new WeaponPotentialId(potentialValue);
-            foreach (var evolved in new[] { false, true })
-            {
-                var negative = Drive(potential, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
-                negative.Advance(2f);
-                Assert.That(negative.Events.Any(e => e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Blast), Is.True, potentialValue);
-                var positive = Drive(potential, evolved, advanceSeconds: 0f, targetMask: MaskFor(potential));
-                positive.Advance(2f);
-                Assert.That(positive.Events.Count, Is.GreaterThanOrEqualTo(negative.Events.Count), potentialValue);
-                negative.Dispose(); positive.Dispose();
-            }
-        }
-
         [Test]
         public void Five_element_rotation_has_mask_negative_and_exact_fire_ice_lightning_results_in_both_forms()
         {
@@ -298,9 +283,9 @@ namespace JoseonHunter.Tests.PlayMode
                 AdvanceUntil(ice, () => ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), 3f);
                 Assert.That(ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
                 ice.Runtime.Targets.Unregister(ice.Target);
-                ice.Advance(1.19f);
+                ice.Advance(1.15f);
                 Assert.That(ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
-                ice.Advance(.02f);
+                ice.Advance(.05f);
                 Assert.That(ice.Target.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
                 ice.Dispose();
 
@@ -406,10 +391,13 @@ namespace JoseonHunter.Tests.PlayMode
             public WeaponRuntimeController Runtime { get; } public GameObject Root { get; } public IWeaponExecutor Executor { get; } public TestTarget Target { get; } public List<ConfirmedDamageEvent> Events { get; } public WeaponPotentialId Potential { get; }
             public void Advance(float seconds)
             {
-                for (var elapsed = 0f; elapsed < seconds; elapsed += .05f)
+                var remaining = Mathf.Max(0f, seconds);
+                while (remaining > .00001f)
                 {
-                    Executor.Tick(.05f, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick));
-                    Runtime.AffixStatuses.Tick(.05f, tick);
+                    var delta = Mathf.Min(.05f, remaining);
+                    Executor.Tick(delta, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick));
+                    Runtime.AffixStatuses.Tick(delta, tick);
+                    remaining -= delta;
                 }
             }
             public TestTarget AddTarget(int runtimeId, Float2 position, PixelHitMask mask)
