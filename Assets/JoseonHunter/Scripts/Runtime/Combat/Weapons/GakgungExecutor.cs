@@ -112,16 +112,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastLaunchCount = Level == 5 ? 3 : 1;
             LastProjectileMaximumImpacts = impacts;
             LastProjectileScale = scale;
-            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer, true, targetDistance);
+            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer, true, targetDistance, target);
             if (Level != 5) return;
-            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance);
-            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance);
+            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
+            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
         }
 
-        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary, float targetDistance)
+        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary, float targetDistance, ICombatTarget target)
         {
             var shotDirection = Rotate(direction, degrees);
-            if (primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw))
+            if (primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && target != null && target.HurtMask != null &&
+                WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out var drawMask) &&
+                PixelMaskContactService.TryFindContact(drawMask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out _))
             {
                 var progress = Mathf.Clamp01(targetDistance / Mathf.Max(.01f, Range * .8f));
                 damage = Mathf.CeilToInt(damage * (1f + .6f * progress));
