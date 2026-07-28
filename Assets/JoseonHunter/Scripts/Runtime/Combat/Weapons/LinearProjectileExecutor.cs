@@ -58,7 +58,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     previousPosition.X + projectile.Direction.X * travel,
                     previousPosition.Y + projectile.Direction.Y * travel);
                 projectile.Visual.transform.position = new Vector3(projectile.Position.X, projectile.Position.Y, 0f);
-                if (projectile.FullDraw && projectile.FullDrawEligible)
+                if (projectile.FullDraw)
                     projectile.Visual.transform.localScale = Vector3.one * projectile.BaseScale * (1f + .35f * FullDrawProgress(projectile));
                 LastVisualScale = projectile.Visual.transform.localScale.x;
                 if (processedTime > 0f)
@@ -123,7 +123,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var potentialContact = projectile.FullDraw && PotentialMaskOverlaps(projectile, target, contact);
                     if (potentialContact)
                     {
-                        projectile.FullDrawEligible = true;
                         damage = Mathf.CeilToInt(damage * (1f + .6f * FullDrawProgress(projectile, sample)));
                     }
                     if (!runtime.DamageService.TryApply(
@@ -205,7 +204,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public PixelHitMask Mask { get; }
             public Float2 Origin { get; }
             public float InitialLifetime { get; } public float AllowedRange { get; } public float BaseScale { get; } public bool FullDraw { get; } public PixelHitMask PotentialMask { get; }
-            public bool FullDrawEligible { get; set; }
         }
     }
 
