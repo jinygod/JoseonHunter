@@ -47,28 +47,56 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
-            if (IsEvolved && awaitingFocus)
+            if (!IsEvolved)
             {
-                focusDelay -= Mathf.Max(0f, deltaTime);
-                if (focusDelay <= 0f)
+                TickNormal(deltaTime, context);
+                return;
+            }
+
+            var remaining = Mathf.Max(0f, deltaTime);
+            while (remaining > 0.0001f)
+            {
+                if (awaitingFocus)
                 {
+                    var untilFocus = Mathf.Min(remaining, focusDelay);
+                    projectiles.Tick(untilFocus, context);
+                    remaining -= untilFocus;
+                    focusDelay -= untilFocus;
+                    if (focusDelay > 0.0001f) break;
+                    focusDelay = 0f;
                     LaunchFocus(context);
                     awaitingFocus = false;
                     cooldown = CooldownSeconds;
+                    continue;
                 }
-            }
-            else
-            {
-                cooldown -= deltaTime;
-                if (cooldown <= 0f && TryFindDensestDirection(context.OwnerPosition, out var direction, out var densePosition))
+
+                if (cooldown > 0.0001f)
                 {
-                    if (IsEvolved) LaunchScout(context, direction, densePosition);
-                    else
-                    {
-                        cooldown = CooldownSeconds;
-                        Launch(context, direction);
-                    }
+                    var untilReady = Mathf.Min(remaining, cooldown);
+                    projectiles.Tick(untilReady, context);
+                    remaining -= untilReady;
+                    cooldown -= untilReady;
+                    if (cooldown > 0.0001f) break;
+                    cooldown = 0f;
+                    continue;
                 }
+
+                if (!TryFindDensestDirection(context.OwnerPosition, out var direction, out var densePosition))
+                {
+                    projectiles.Tick(remaining, context);
+                    break;
+                }
+                LaunchScout(context, direction, densePosition);
+            }
+        }
+
+        private void TickNormal(float deltaTime, in WeaponExecutionContext context)
+        {
+            cooldown -= deltaTime;
+            if (cooldown <= 0f && TryFindDensestDirection(context.OwnerPosition, out var direction, out _))
+            {
+                cooldown = CooldownSeconds;
+                Launch(context, direction);
             }
             projectiles.Tick(deltaTime, context);
         }
@@ -83,7 +111,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private bool TryFindDensestDirection(Float2 origin, out Float2 direction, out Float2 densePosition)
         {
             targets.Clear(); runtime.Targets.CopyTo(targets);
-            var counts = new Dictionary<int, int>(); var positions = new Dictionary<int, Float2>();
+            var counts = new int[BucketCount];
+            var sumX = new float[BucketCount];
+            var sumY = new float[BucketCount];
             foreach (var target in targets)
             {
                 if (target == null || !target.IsAlive) continue;
@@ -91,22 +121,23 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (x * x + y * y < 0.0001f) continue;
                 var rawBucket = Mathf.FloorToInt((Mathf.Atan2(y, x) * Mathf.Rad2Deg + BucketDegrees * 0.5f) / BucketDegrees);
                 var bucket = ((rawBucket % BucketCount) + BucketCount) % BucketCount;
-                counts.TryGetValue(bucket, out var count); counts[bucket] = count + 1;
-                if (!positions.ContainsKey(bucket)) positions.Add(bucket, target.WorldPosition);
+                counts[bucket]++;
+                sumX[bucket] += target.WorldPosition.X;
+                sumY[bucket] += target.WorldPosition.Y;
             }
             var selectedBucket = 0; var highestCount = 0;
-            foreach (var pair in counts)
+            for (var bucket = 0; bucket < BucketCount; bucket++)
             {
-                if (pair.Value > highestCount || pair.Value == highestCount && pair.Key < selectedBucket)
+                if (counts[bucket] > highestCount)
                 {
-                    selectedBucket = pair.Key; highestCount = pair.Value;
+                    selectedBucket = bucket; highestCount = counts[bucket];
                 }
             }
             if (highestCount == 0) { direction = default; densePosition = default; return false; }
             LastDirectionBucket = selectedBucket;
             var radians = selectedBucket * BucketDegrees * Mathf.Deg2Rad;
             direction = new Float2(Mathf.Cos(radians), Mathf.Sin(radians));
-            densePosition = positions[selectedBucket];
+            densePosition = new Float2(sumX[selectedBucket] / highestCount, sumY[selectedBucket] / highestCount);
             return true;
         }
 

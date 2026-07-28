@@ -14,3 +14,10 @@ One requested Unity PlayMode invocation was run. It stopped at compilation with 
 
 - `EvolvedExecutorFactory.cs` and `EvolvedWeaponTestRig.cs` are the minimal test seams changed to expose the new volley telemetry and represent the completed guardian mark.
 - The eight pre-existing untracked weapon `.meta` files were left untouched.
+
+## Review round 1
+
+- Reworked evolved Singijeon ticking to consume simulation time at the exact scout-to-focus boundary.  A large tick now simulates scouts only to 0.35 seconds, launches focus there, then applies only the residual time to focus rockets and the following cooldown.
+- Dense target selection now uses ascending bucket tie-breaks and the centroid of all valid targets in the selected bucket.
+- Added coverage for split-versus-large ticks, focus carry, tied multi-cluster centroid selection, non-vacuous rocket contact uniqueness, sequential ward activation, pre-completion/non-marked/stationary ward exclusions, and normal-form preservation.
+- One Unity PlayMode command was issued for this round. The workspace's pre-existing Unity processes prevented it from reaching test execution or producing result XML during the command window; it was not repeated per instruction.

@@ -277,6 +277,50 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Twelve_guardians_activates_sequentially_and_never_pulses_before_completion()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.JangseungWard))
+            {
+                var target = rig.AddTarget(Vector2.zero);
+                rig.Tick(0.05f);
+                Assert.That(rig.Telemetry.SecondaryObservedCount, Is.EqualTo(1));
+                target.Position = new Float2(5f, 0f);
+                rig.Tick(0.1f);
+                Assert.That(rig.Telemetry.SecondaryObservedCount, Is.EqualTo(2));
+                rig.Tick(0.1f);
+                Assert.That(rig.Telemetry.SecondaryObservedCount, Is.EqualTo(3));
+                Assert.That(rig.DamageEvents, Is.Empty);
+                rig.Tick(0.1f);
+                yield return null;
+
+                Assert.That(rig.Telemetry.SecondaryObservedCount, Is.EqualTo(4));
+                Assert.That(target.Statuses, Does.Not.Contain("guardian_mark"));
+                Assert.That(rig.DamageEvents, Is.Empty);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Twelve_guardians_excludes_unmarked_crossings_and_stationary_marked_targets()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.JangseungWard))
+            {
+                var marked = rig.AddTarget(Vector2.zero);
+                var unmarked = rig.AddTarget(new Vector2(9f, 0f));
+                yield return rig.AdvanceSeconds(0.35f);
+                var stationaryCount = rig.Count(ContactPhase.BoundaryCrossing);
+                yield return rig.AdvanceSeconds(0.2f);
+                Assert.That(rig.Count(ContactPhase.BoundaryCrossing), Is.EqualTo(stationaryCount));
+                unmarked.Position = new Float2(-5f, 0f);
+                rig.Tick(0.05f);
+                yield return null;
+
+                Assert.That(marked.Statuses, Contains.Item("guardian_mark"));
+                Assert.That(unmarked.Statuses, Does.Not.Contain("guardian_mark"));
+                Assert.That(rig.Count(ContactPhase.BoundaryCrossing), Is.EqualTo(stationaryCount));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Fire_dragon_barrage_scouts_then_focuses_marked_position()
         {
             using (var rig = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
@@ -295,11 +339,79 @@ namespace JoseonHunter.Tests.PlayMode
         {
             using (var rig = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
             {
-                rig.AddTarget(new Vector2(2f, 0f));
+                rig.AddTarget(new Vector2(0.4f, 0f));
                 yield return rig.AdvanceSeconds(0.45f);
 
+                Assert.That(rig.DamageEvents, Is.Not.Empty);
                 Assert.That(rig.DamageEvents.GroupBy(value => new { value.AttackInstanceId, value.TargetRuntimeId }).All(group => group.Count() == 1), Is.True);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Fire_dragon_focus_delay_and_residual_simulation_match_split_and_large_ticks()
+        {
+            using (var split = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
+            using (var large = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
+            {
+                split.AddTarget(new Vector2(0.4f, 0f));
+                large.AddTarget(new Vector2(0.4f, 0f));
+                split.Tick(0.35f);
+                split.Tick(0.15f);
+                large.Tick(0.5f);
+                yield return null;
+
+                Assert.That(split.Telemetry.VolleyKinds, Is.EqualTo(new[] { "scout", "focus" }));
+                Assert.That(large.Telemetry.VolleyKinds, Is.EqualTo(split.Telemetry.VolleyKinds));
+                Assert.That(large.Telemetry.ScoutProjectileCount, Is.EqualTo(3));
+                Assert.That(large.Telemetry.FocusProjectileCount, Is.GreaterThanOrEqualTo(8));
+                Assert.That(large.Telemetry.SecondaryObservedCount, Is.EqualTo(split.Telemetry.SecondaryObservedCount));
+                Assert.That(large.DamageEvents.Count, Is.EqualTo(split.DamageEvents.Count));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Fire_dragon_uses_lowest_tied_dense_bucket_centroid_as_focus_position()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.SingijeonVolley))
+            {
+                rig.AddTarget(new Vector2(0f, 2f));
+                rig.AddTarget(new Vector2(0f, 2.2f));
+                rig.AddTarget(new Vector2(2f, -0.1f));
+                rig.AddTarget(new Vector2(2f, 0.1f));
+                rig.Tick(0.01f);
+                var executor = (SingijeonExecutor)rig.Executor;
+                yield return null;
+
+                Assert.That(executor.LastDirectionBucket, Is.EqualTo(0));
+                Assert.That(executor.RecordedFocusPosition.X, Is.EqualTo(2f).Within(0.001f));
+                Assert.That(executor.RecordedFocusPosition.Y, Is.EqualTo(0f).Within(0.001f));
+            }
+        }
+
+        [Test]
+        public void Normal_ward_and_singijeon_keep_their_existing_launch_and_crossing_behavior()
+        {
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
+            var wardTarget = new TestTarget(1, new Float2(0f, -2f), PixelHitMask.FromRows("1"));
+            var rocketTarget = new TestTarget(2, new Float2(2f, 0f), PixelHitMask.FromRows("1"));
+            registry.Register(wardTarget); registry.Register(rocketTarget);
+            var root = new GameObject("Normal ward and Singijeon preservation root");
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0f, 1);
+            var singijeon = new SingijeonExecutor(runtime, 10f, 10f, 4f, 8f, 2, 5);
+
+            ward.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+            wardTarget.Position = new Float2(0f, 2f);
+            ward.Tick(0.1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            singijeon.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
+
+            Assert.That(ward.ActivePostCount, Is.EqualTo(2));
+            Assert.That(ward.IsEvolved, Is.False);
+            Assert.That(wardTarget.Health, Is.LessThan(100));
+            Assert.That(singijeon.LastLaunchCount, Is.EqualTo(6));
+            Assert.That(singijeon.VolleyKinds, Is.Empty);
+            ward.Dispose(); singijeon.Dispose(); Object.DestroyImmediate(root);
         }
 
         private sealed class CountingExecutor : IWeaponExecutor
