@@ -31,6 +31,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly Dictionary<string, int> weaponLevels = new Dictionary<string, int>();
         private readonly Dictionary<string, int> supportLevels = new Dictionary<string, int>();
         private readonly HashSet<string> unlockedUpgradeIds = new HashSet<string>();
+        private readonly HashSet<string> acquiredEvolutionIds = new HashSet<string>();
         private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
         private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
@@ -68,6 +69,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private int coins;
         private int kills;
         private int nextCombatTargetRuntimeId;
+        private int pendingUpgradeCount;
         private bool bossSpawned;
         private bool bossAlive;
         private bool upgradeOpen;
@@ -82,6 +84,20 @@ namespace JoseonHunter.Runtime.Gameplay
         public CombatDamageService CombatDamageService => combatDamageService;
         public WeaponRuntimeController WeaponRuntime => weaponRuntime;
         public IReadOnlyList<WeaponId> RegisteredWeaponIds => registeredWeaponIds;
+        public FirstPlayableUiState UiState => BuildUiState();
+        public bool IsUpgradeOpen => upgradeOpen;
+        public event Action<UpgradeChoiceState> UpgradeOpened;
+        public event Action<ProgressionRewardEvent> UpgradeChosen;
+        public event Action RunReset;
+
+#if UNITY_INCLUDE_TESTS
+        public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
+        public int AppliedUpgradeCount { get; private set; }
+        public void OpenUpgradeForTests() => OpenUpgrade();
+#endif
+
+        public bool IsCombatTargetAlive(int runtimeId) =>
+            combatTargets != null && combatTargets.TryGet(runtimeId, out var target) && target.IsAlive;
 
         public bool IsBossCombatTarget(int runtimeId)
         {
@@ -356,6 +372,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponLevels.Add(WeaponId.HwandoFlyingBlade.Value, 1);
             supportLevels.Clear();
             unlockedUpgradeIds.Clear();
+            acquiredEvolutionIds.Clear();
             combatTargets = new CombatTargetRegistry();
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
@@ -381,6 +398,7 @@ namespace JoseonHunter.Runtime.Gameplay
             coins = 0;
             kills = 0;
             nextCombatTargetRuntimeId = 1;
+            pendingUpgradeCount = 0;
             bossSpawned = false;
             bossAlive = false;
             upgradeOpen = false;
@@ -413,6 +431,10 @@ namespace JoseonHunter.Runtime.Gameplay
             geumjulRenderer.positionCount = 0;
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
+#if UNITY_INCLUDE_TESTS
+            AppliedUpgradeCount = 0;
+#endif
+            RunReset?.Invoke();
         }
 
         private void ReadMovement()
@@ -859,15 +881,19 @@ namespace JoseonHunter.Runtime.Gameplay
         private void AddExperience(int amount)
         {
             experience += amount;
-            if (experience < experienceToNext)
+            while (experience >= experienceToNext)
             {
-                return;
+                experience -= experienceToNext;
+                level++;
+                experienceToNext = 7 + level * 4;
+                pendingUpgradeCount++;
             }
 
-            experience -= experienceToNext;
-            level++;
-            experienceToNext = 7 + level * 4;
-            OpenUpgrade();
+            if (!upgradeOpen && pendingUpgradeCount > 0)
+            {
+                pendingUpgradeCount--;
+                OpenUpgrade();
+            }
         }
 
         private void RebuildWeaponExecutorsForLevel()
@@ -887,37 +913,61 @@ namespace JoseonHunter.Runtime.Gameplay
             upgradeOpen = true;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
-            var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds);
+            var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds, acquiredEvolutionIds);
             var selected = UpgradeSelector.Select(state, level * 397 ^ kills);
             foreach (var offer in selected)
             {
                 upgradeOfferData.Add(offer);
                 upgradeOffers.Add(FormatUpgradeOffer(offer));
             }
+            var choices = new List<UpgradeChoiceView>(upgradeOfferData.Count);
+            foreach (var offer in upgradeOfferData) choices.Add(BuildUpgradeChoiceView(offer));
+            UpgradeOpened?.Invoke(new UpgradeChoiceState(level, choices));
         }
 
-        private void ChooseUpgrade(int index)
+        public bool TryChooseUpgrade(int index)
         {
             if (!upgradeOpen || index < 0 || index >= upgradeOfferData.Count)
             {
-                return;
+                return false;
             }
 
-            var offer = upgradeOfferData[index];
+            var reward = ApplyUpgrade(upgradeOfferData[index]);
+            upgradeOpen = false;
+            upgradeOffers.Clear();
+            upgradeOfferData.Clear();
+#if UNITY_INCLUDE_TESTS
+            AppliedUpgradeCount++;
+#endif
+            UpgradeChosen?.Invoke(reward);
+            if (pendingUpgradeCount > 0)
+            {
+                pendingUpgradeCount--;
+                OpenUpgrade();
+            }
+            return true;
+        }
+
+        private ProgressionRewardEvent ApplyUpgrade(UpgradeOffer offer)
+        {
             if (offer.Kind == UpgradeKind.Weapon)
             {
                 weaponLevels[offer.Id] = offer.NextLevel;
                 RebuildWeaponExecutorsForLevel();
+                return new ProgressionRewardEvent(offer.Id, offer.Id, offer.NextLevel,
+                    offer.NextLevel == 1 ? ProgressionRewardKind.NewWeapon : ProgressionRewardKind.WeaponLevel,
+                    WeaponDisplayName(offer.Id), offer.NextLevel == 1 ? "새 무기 획득" : $"레벨 {offer.NextLevel} 효과 적용", ResolveWeaponSprite(new WeaponId(offer.Id)));
             }
-            else if (offer.Kind == UpgradeKind.Support)
+            if (offer.Kind == UpgradeKind.Support)
             {
                 supportLevels[offer.Id] = offer.NextLevel;
                 ApplySupportUpgrade(offer.Id);
+                return new ProgressionRewardEvent(offer.Id, null, offer.NextLevel, ProgressionRewardKind.Support,
+                    SupportDisplayName(offer.Id), SupportDelta(offer.Id), null);
             }
-
-            upgradeOpen = false;
-            upgradeOffers.Clear();
-            upgradeOfferData.Clear();
+            acquiredEvolutionIds.Add(offer.Id);
+            return new ProgressionRewardEvent(offer.Id, WeaponId.HwandoFlyingBlade.Value, 1,
+                ProgressionRewardKind.Evolution, "환도 비검 진화", "진화 완료", ResolveWeaponSprite(WeaponId.HwandoFlyingBlade));
         }
 
         private static string FormatUpgradeOffer(UpgradeOffer offer)
@@ -949,6 +999,87 @@ namespace JoseonHunter.Runtime.Gameplay
             if (id == WeaponId.FrostFlask.Value) return "서리병";
             if (id == WeaponId.WindThunderFan.Value) return "풍뢰선";
             return id;
+        }
+
+        private FirstPlayableUiState BuildUiState()
+        {
+            var weapons = new List<WeaponSlotView>(weaponLevels.Count);
+            foreach (var weapon in weaponLevels)
+            {
+                weapons.Add(new WeaponSlotView(
+                    weapon.Key,
+                    WeaponDisplayName(weapon.Key),
+                    weapon.Value,
+                    ResolveWeaponSprite(new WeaponId(weapon.Key))));
+            }
+
+            var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null);
+            return new FirstPlayableUiState(
+                level, experience, experienceToNext, coins, kills, elapsed, TestDuration,
+                playerHealth, playerMaxHealth, !bossSpawned && elapsed >= BossWarningTime, bossAlive,
+                boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons);
+        }
+
+        private UpgradeChoiceView BuildUpgradeChoiceView(UpgradeOffer offer)
+        {
+            if (offer.Kind == UpgradeKind.Weapon)
+            {
+                return new UpgradeChoiceView(
+                    offer.Id, offer.Kind, offer.NextLevel,
+                    offer.NextLevel == 1 ? "신규 무기" : "무기 강화",
+                    WeaponDisplayName(offer.Id),
+                    WeaponBehavior(offer.Id),
+                    offer.NextLevel == 1 ? "신규" : $"레벨 {offer.NextLevel}",
+                    ResolveWeaponSprite(new WeaponId(offer.Id)));
+            }
+
+            if (offer.Kind == UpgradeKind.Support)
+            {
+                return new UpgradeChoiceView(
+                    offer.Id, offer.Kind, offer.NextLevel, "능력 강화", SupportDisplayName(offer.Id),
+                    SupportBehavior(offer.Id), SupportDelta(offer.Id), null);
+            }
+
+            return new UpgradeChoiceView(
+                offer.Id, offer.Kind, offer.NextLevel, "진화", "환도 비검 진화",
+                "환도의 힘을 해방", "진화", ResolveWeaponSprite(WeaponId.HwandoFlyingBlade));
+        }
+
+        private static string WeaponBehavior(string id)
+        {
+            if (id == WeaponId.HwandoFlyingBlade.Value) return "주변 적을 베는 비검";
+            if (id == WeaponId.GakgungShot.Value) return "직선 관통 공격";
+            if (id == WeaponId.TalismanThrow.Value) return "적 사이를 잇는 부적";
+            if (id == WeaponId.ThunderCrashBomb.Value) return "범위 폭발 공격";
+            if (id == WeaponId.JangseungWard.Value) return "주변을 지키는 장승";
+            if (id == WeaponId.SingijeonVolley.Value) return "다발 화살 일제사격";
+            if (id == WeaponId.FrostFlask.Value) return "빙결 지대 생성";
+            if (id == WeaponId.WindThunderFan.Value) return "부채 바람으로 밀쳐냄";
+            return "무기 효과 강화";
+        }
+
+        private static string SupportDisplayName(string id)
+        {
+            if (id == "talisman") return "호신부적";
+            if (id == "boots") return "경쾌한 버선";
+            if (id == "warding_bell") return "수호 방울";
+            return id;
+        }
+
+        private static string SupportBehavior(string id)
+        {
+            if (id == "talisman") return "최대 체력 증가";
+            if (id == "boots") return "이동 속도 증가";
+            if (id == "warding_bell") return "획득 범위 증가";
+            return "지원 능력 강화";
+        }
+
+        private static string SupportDelta(string id)
+        {
+            if (id == "talisman") return "+20";
+            if (id == "boots") return "+12%";
+            if (id == "warding_bell") return "+0.7";
+            return "강화";
         }
 
         private void ApplySupportUpgrade(string id)
@@ -1230,7 +1361,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     if (GUI.Button(new Rect(160f, 650f + index * 155f, 760f, 120f),
                             upgradeOffers[index].Replace("|", "\n"), button))
                     {
-                        ChooseUpgrade(index);
+                        TryChooseUpgrade(index);
                     }
                 }
             }
