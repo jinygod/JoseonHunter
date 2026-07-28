@@ -117,6 +117,9 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(direct.Select(e => e.TargetRuntimeId).Distinct().Count(), Is.GreaterThanOrEqualTo(5));
             Assert.That(direct.Max(e => e.FinalDamage), Is.EqualTo(Mathf.CeilToInt(hwando.BaseDamage * 1.6f)), "Blade Dance caps its distinct-target ramp at 60%.");
             Assert.That(poison.Concat(shadow).Select(e => e.AttackInstanceId).Distinct().Count(), Is.EqualTo(poison.Concat(shadow).Count()));
+            var cappedRamp = direct.First(value => value.FinalDamage == Mathf.CeilToInt(hwando.BaseDamage * 1.6f));
+            Assert.That(poison.All(value => value.AttackInstanceId != cappedRamp.AttackInstanceId), Is.True, "poison owns a child attack identity, never the ramp parent.");
+            Assert.That(shadow.All(value => value.AttackInstanceId != cappedRamp.AttackInstanceId), Is.True, "afterimage owns a child attack identity, never the ramp parent.");
 
             // Continue only until a new inbound shadow and an active poison stream coexist, then reset the real run.
             for (var tick = 0; tick < 80 && (hwando.PendingAfterimageCountForTests == 0 || controller.WeaponRuntime.AffixStatuses.PeriodicEffectCountForTests == 0); tick++)
@@ -125,8 +128,15 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.WeaponRuntime.AffixStatuses.PeriodicEffectCountForTests, Is.GreaterThan(0));
             Assert.That(controller.CombatDamageService.TrackedAttackCount, Is.GreaterThan(0));
             rack.Pulse(WeaponId.HwandoFlyingBlade.Value, 5, 3);
+            yield return null;
+            var pulsingCell = rack.GetComponentsInChildren<Image>(true).First(image => image.name == "Potential Cell 2");
+            Assert.That(pulsingCell.transform.localScale, Is.Not.EqualTo(Vector3.one));
             var liveRuntime = controller.WeaponRuntime;
             var liveDamage = controller.CombatDamageService;
+            var liveStatuses = liveRuntime.AffixStatuses;
+            reveal.Play(new WeaponAffixRollResult(
+                new WeaponAffixRoll(WeaponAffixStat.Damage, WeaponAffixTier.Perfect, 30d), profile.PotentialIds));
+            Assert.That(reveal.IsRevealing, Is.True);
 
             controller.ResetRunForTests();
             yield return null;
@@ -134,9 +144,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(beforeEvolution.IsDisposedForTests, Is.True);
             Assert.That(liveRuntime.IsDisposedForTests, Is.True);
             Assert.That(liveDamage.TrackedAttackCount, Is.Zero);
+            Assert.That(liveStatuses.PeriodicEffectCountForTests, Is.Zero);
+            Assert.That(hwando.PendingAfterimageCountForTests, Is.Zero);
             Assert.That(controller.CombatDamageService.TrackedAttackCount, Is.Zero);
             Assert.That(controller.WeaponRuntime.AffixStatuses.PeriodicEffectCountForTests, Is.Zero);
             Assert.That(reveal.IsRevealing, Is.False);
+            Assert.That(pulsingCell.transform.localScale, Is.EqualTo(Vector3.one));
             Assert.That(rack.GetComponentsInChildren<Image>(true).Where(image => image.name.StartsWith("Potential Cell")).All(cell => cell.transform.localScale == Vector3.one), Is.True);
             Object.Destroy(combatRoot);
         }
