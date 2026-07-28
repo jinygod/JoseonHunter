@@ -24,6 +24,21 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void Level_above_max_does_not_offer_its_evolution()
+        {
+            var state = new UpgradeState(
+                new Dictionary<string, int> { [WeaponId.FrostFlask.Value] = 6 },
+                new Dictionary<string, int>(),
+                new HashSet<string> { "frost_bloom_evolution" },
+                new HashSet<string>());
+
+            var offers = UpgradeSelector.Select(state, 27);
+
+            Assert.That(offers, Has.None.Matches<UpgradeOffer>(
+                offer => offer.Kind == UpgradeKind.Evolution && offer.Id == "frost_bloom_evolution"));
+        }
+
+        [Test]
         public void Eligible_evolution_is_the_first_offer_without_breaking_weapon_guarantees()
         {
             var state = new UpgradeState(

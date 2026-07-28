@@ -85,7 +85,7 @@ namespace JoseonHunter.Domain.Progression
             {
                 if (state.UnlockedIds.Contains(evolution.Id) &&
                     !state.AcquiredEvolutionIds.Contains(evolution.Id) &&
-                    state.WeaponLevels.TryGetValue(evolution.RequiredWeaponId.Value, out var level) && level >= MaxLevel)
+                    state.WeaponLevels.TryGetValue(evolution.RequiredWeaponId.Value, out var level) && level == MaxLevel)
                 {
                     yield return new UpgradeOffer(evolution.Id, UpgradeKind.Evolution, 1);
                 }
