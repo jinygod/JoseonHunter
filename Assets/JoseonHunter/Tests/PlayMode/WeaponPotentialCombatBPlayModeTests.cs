@@ -126,7 +126,14 @@ namespace JoseonHunter.Tests.PlayMode
             var frost = (FrostFlaskExecutor)rig.Executor;
             Assert.That(frost.ExpiredFieldCount, Is.EqualTo(1));
             if (potential.Equals(WeaponPotentialId.FrostCrackMark)) Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Blast && value.FinalDamage == 13), Is.True);
-            if (potential.Equals(WeaponPotentialId.FrostSpread)) Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+            if (potential.Equals(WeaponPotentialId.FrostSpread))
+            {
+                Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+                rig.Advance(.24f);
+                Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
+                rig.Advance(.011f);
+                Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
+            }
             if (potential.Equals(WeaponPotentialId.FrostMist)) Assert.That(frost.LastFieldVisualScale, Is.EqualTo(1.5f).Within(.01f));
             rig.Dispose();
         }
@@ -258,6 +265,24 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
+        public void Frost_spread_capacity_eviction_consumes_the_current_frame_residual_once()
+        {
+            var one = Drive(WeaponPotentialId.FrostSpread, false, MaskFor(WeaponPotentialId.FrostSpread), frostCooldown: .1f);
+            var oneNear = one.AddTarget(2, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.FrostSpread));
+            one.Advance(.16f); // launch, then capacity-evict at the next cooldown boundary
+            Assert.That(((FrostFlaskExecutor)one.Executor).ActiveSpreadResidenceCountForTests, Is.GreaterThan(0));
+            one.TickExact(.25f);
+            Assert.That(oneNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
+
+            var split = Drive(WeaponPotentialId.FrostSpread, false, MaskFor(WeaponPotentialId.FrostSpread), frostCooldown: .1f);
+            var splitNear = split.AddTarget(2, new Float2(1.1f, 0f), MaskFor(WeaponPotentialId.FrostSpread));
+            split.Advance(.16f); split.TickExact(.1f); split.TickExact(.15f);
+            Assert.That(splitNear.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
+            Assert.That(EventSignature(one.Events), Is.EqualTo(EventSignature(split.Events)));
+            one.Dispose(); split.Dispose();
+        }
+
+        [Test]
         public void Task7_delayed_boundaries_are_frame_independent_and_consume_residual_once()
         {
             AssertFrameSplit(WeaponPotentialId.SingijeonPowderTrail, .3f);
@@ -359,7 +384,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(materialized.Select(value => value.AttackInstanceId).Distinct().Count(), Is.EqualTo(materialized.Length), "each child potential attack must use a fresh terminal identity");
         }
 
-        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, PixelHitMask targetMask, WeaponPotentialId secondary = default, WeaponPotentialId tertiary = default, Action<TestTarget, ConfirmedDamageEvent> beforeExecutorDamage = null)
+        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, PixelHitMask targetMask, WeaponPotentialId secondary = default, WeaponPotentialId tertiary = default, Action<TestTarget, ConfirmedDamageEvent> beforeExecutorDamage = null, float frostCooldown = 99f)
         {
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
@@ -372,19 +397,19 @@ namespace JoseonHunter.Tests.PlayMode
             var target = new TestTarget(1, new Float2(1f, 0f), targetMask);
             registry.Register(target);
             if (beforeExecutorDamage != null) damage.DamageConfirmed += value => beforeExecutorDamage(target, value);
-            var executor = CreateExecutor(primary, runtime, evolved, modifiers);
+            var executor = CreateExecutor(primary, runtime, evolved, modifiers, frostCooldown);
             var events = new List<ConfirmedDamageEvent>(); damage.DamageConfirmed += events.Add;
             return new DrivenExecutor(runtime, root, executor, target, events);
         }
 
-        private static IWeaponExecutor CreateExecutor(WeaponPotentialId potential, WeaponRuntimeController runtime, bool evolved, WeaponRuntimeModifiers modifiers)
+        private static IWeaponExecutor CreateExecutor(WeaponPotentialId potential, WeaponRuntimeController runtime, bool evolved, WeaponRuntimeModifiers modifiers, float frostCooldown)
         {
             var value = potential.Value;
             if (value.StartsWith("jangseung_", StringComparison.Ordinal)) return new JangseungWardExecutor(runtime, PixelHitMask.FromRows("111", "111", "111"), 10f, .2f, 2f, 4, 1, 0f, 5, evolved, modifiers);
             if (value.StartsWith("singijeon_", StringComparison.Ordinal)) return new SingijeonExecutor(runtime, 10f, .2f, 5f, 15f, 1, 5, evolved, modifiers);
             // One field only: expiry assertions must never be satisfied by a cooldown
             // relaunch or capacity eviction from the generic rig.
-            if (value.StartsWith("frost_", StringComparison.Ordinal)) return new FrostFlaskExecutor(runtime, 10f, 99f, 3f, .05f, .8f, 2f, 1, 5, evolved, modifiers);
+            if (value.StartsWith("frost_", StringComparison.Ordinal)) return new FrostFlaskExecutor(runtime, 10f, frostCooldown, 3f, .05f, .8f, 2f, 1, 5, evolved, modifiers);
             return new WindThunderFanExecutor(runtime, 10f, .2f, 5f, 0f, 8, 5, evolved, modifiers);
         }
 
