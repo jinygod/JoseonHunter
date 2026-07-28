@@ -53,6 +53,7 @@ namespace JoseonHunter.Tests.PlayMode
             var potential = new WeaponPotentialId(potentialValue);
             var rig = Drive(potential, evolved, MaskFor(potential));
             rig.Target.Position = new Float2(-3f, 0f); rig.TickExact(.01f);
+            if (evolved) rig.Advance(.4f); // all four posts must be active before a crossing is legal.
             rig.Target.Position = new Float2(0f, 0f); rig.Advance(1.25f);
             Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.BoundaryCrossing), Is.True, potential.Value);
             if (potential.Equals(WeaponPotentialId.JangseungGhostFace)) Assert.That(((JangseungWardExecutor)rig.Executor).GhostFaceApplicationsForTests, Is.EqualTo(1));
@@ -129,9 +130,9 @@ namespace JoseonHunter.Tests.PlayMode
             if (potential.Equals(WeaponPotentialId.FrostSpread))
             {
                 Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
-                rig.Advance(.24f);
+                rig.Advance(.239f);
                 Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.True);
-                rig.Advance(.011f);
+                rig.Advance(.001f);
                 Assert.That(nearby.Statuses.Any(value => value.StartsWith("frost:", StringComparison.Ordinal)), Is.False);
             }
             if (potential.Equals(WeaponPotentialId.FrostMist)) Assert.That(frost.LastFieldVisualScale, Is.EqualTo(1.5f).Within(.01f));
@@ -157,7 +158,8 @@ namespace JoseonHunter.Tests.PlayMode
             else if (potential.Equals(WeaponPotentialId.FanDistantThunder))
             {
                 rig.Advance(evolved ? .25f : .15f); if (!evolved) rig.TickExact(.01f);
-                Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Lightning && value.FinalDamage >= 11), Is.True);
+                Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.Lightning && value.FinalDamage == 18), Is.True,
+                    "cast-relative projection 1 / range 5 gives 1.15x over the level-five 15-damage lightning base");
             }
             else if (!evolved)
             {
