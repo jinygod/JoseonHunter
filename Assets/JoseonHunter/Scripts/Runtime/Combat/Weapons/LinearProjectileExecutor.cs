@@ -11,7 +11,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     {
         public const int MaxActiveProjectiles = 32;
         public const int MaxPooledProjectiles = 32;
-        public const int MaxImpactsPerProjectile = 3;
+        public const int MaxImpactsPerProjectile = 8;
         private const int MaxSweepSamples = 64;
         private readonly WeaponRuntimeController runtime;
         private readonly List<Projectile> active = new List<Projectile>();
@@ -31,7 +31,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool Launch(in WeaponExecutionContext context, in LinearProjectileSpec spec)
         {
             if (active.Count >= MaxActiveProjectiles) return false;
-            var visual = Acquire(context, spec.WeaponId, spec.VisualName);
+            var visual = Acquire(context, spec.WeaponId, spec.VisualName, spec.Scale);
             visual.transform.position = new Vector3(spec.Position.X, spec.Position.Y, 0f);
             active.Add(new Projectile(spec, visual, context.MaskFor(spec.WeaponId) ?? ResolveMask(visual.GetComponent<SpriteRenderer>())));
             return true;
@@ -121,7 +121,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
 
-        private GameObject Acquire(in WeaponExecutionContext context, WeaponId weaponId, string visualName)
+        private GameObject Acquire(in WeaponExecutionContext context, WeaponId weaponId, string visualName, float scale)
         {
             var visual = pool.Count > 0 ? pool.Pop() : new GameObject(visualName);
             visual.transform.SetParent(context.PresentationRoot, false);
@@ -130,7 +130,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             renderer.sprite = context.SpriteFor(weaponId);
             renderer.sortingOrder = context.SortingOrder;
             renderer.color = Color.white;
-            visual.transform.localScale = Vector3.one;
+            visual.transform.localScale = Vector3.one * scale;
             visual.SetActive(true);
             return visual;
         }
@@ -186,12 +186,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
     public readonly struct LinearProjectileSpec
     {
-        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName)
+        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f)
         {
             Attack = attack ?? throw new ArgumentNullException(nameof(attack));
             WeaponId = weaponId; Position = position; Direction = direction; Speed = Mathf.Max(0.01f, speed);
             Lifetime = Mathf.Max(0.01f, lifetime); Damage = Mathf.Max(1, damage); MaxImpacts = Mathf.Clamp(maxImpacts, 1, LinearProjectileExecutor.MaxImpactsPerProjectile);
             VisualName = string.IsNullOrEmpty(visualName) ? "Linear Projectile" : visualName;
+            Scale = Mathf.Max(0.01f, scale);
         }
         public AttackInstance Attack { get; }
         public WeaponId WeaponId { get; }
@@ -202,5 +203,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int Damage { get; }
         public int MaxImpacts { get; }
         public string VisualName { get; }
+        public float Scale { get; }
     }
 }

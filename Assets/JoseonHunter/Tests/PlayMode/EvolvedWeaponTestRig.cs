@@ -74,8 +74,8 @@ namespace JoseonHunter.Tests.PlayMode
         {
             for (var index = 0; index < count; index++)
             {
-                Executor.Tick(0.01f, new WeaponExecutionContext(default, root.transform, null, 0, ++tick));
-                Executor.Tick(0.2f, new WeaponExecutionContext(default, root.transform, null, 0, ++tick));
+                var delta = index == 0 ? 0.01f : 0.1f;
+                Executor.Tick(delta, new WeaponExecutionContext(default, root.transform, null, 0, ++tick));
                 yield return null;
             }
         }

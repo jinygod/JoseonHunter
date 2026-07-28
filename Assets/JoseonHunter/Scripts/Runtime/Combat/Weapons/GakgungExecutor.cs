@@ -12,6 +12,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly LinearProjectileExecutor projectiles;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private float cooldown;
+        private int shotSequence;
 
         public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false)
         {
@@ -31,6 +32,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastSelectedTargetRuntimeId { get; private set; }
         public int LastLaunchCount { get; private set; }
         public int ActiveProjectileCount => projectiles.ActiveCount;
+        public int LastProjectileMaximumImpacts { get; private set; }
+        public float LastProjectileScale { get; private set; } = 1f;
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -45,7 +48,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            cooldown = 0f; LastLaunchCount = 0; LastSelectedTargetRuntimeId = 0; projectiles.Reset();
+            cooldown = 0f; shotSequence = 0; LastLaunchCount = 0; LastSelectedTargetRuntimeId = 0;
+            LastProjectileMaximumImpacts = 0; LastProjectileScale = 1f; projectiles.Reset();
         }
 
         public void Dispose() => projectiles.Dispose();
@@ -73,20 +77,28 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
             var direction = Direction(context.OwnerPosition, target.WorldPosition);
+            shotSequence++;
+            var sunPiercer = IsEvolved && shotSequence % 4 == 0;
+            var impacts = sunPiercer ? 8 : 1 + Level;
+            var damage = Mathf.CeilToInt(BaseDamage * (sunPiercer ? 3f : 1f));
+            var scale = sunPiercer ? 1.75f : 1f;
+            var speed = sunPiercer ? Speed * 0.7f : Speed;
             LastSelectedTargetRuntimeId = target.RuntimeId;
             LastLaunchCount = Level == 5 ? 3 : 1;
-            LaunchArrow(context, direction, 0f, Level == 5 ? 3 : 1);
+            LastProjectileMaximumImpacts = impacts;
+            LastProjectileScale = scale;
+            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale);
             if (Level != 5) return;
-            LaunchArrow(context, direction, -8f, 1);
-            LaunchArrow(context, direction, 8f, 1);
+            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f);
+            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f);
         }
 
-        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts)
+        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale)
         {
             var shotDirection = Rotate(direction, degrees);
             projectiles.Launch(context, new LinearProjectileSpec(
                 new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.GakgungShot,
-                context.OwnerPosition, shotDirection, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), impacts, "Gakgung Arrow"));
+                context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale));
         }
 
         private static Float2 Direction(Float2 origin, Float2 target)

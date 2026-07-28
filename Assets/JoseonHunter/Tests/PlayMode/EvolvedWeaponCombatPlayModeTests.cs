@@ -96,6 +96,34 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.WeaponRuntime.RegisteredExecutorSlotCountForTests, Is.EqualTo(1));
         }
 
+        [UnityTest]
+        public IEnumerator Moon_eclipse_keeps_outbound_and_return_contact_then_blasts_at_crossing()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.HwandoFlyingBlade))
+            {
+                rig.AddTarget(new Vector2(2f, 0f));
+                rig.AddTarget(new Vector2(0.2f, 0f));
+                yield return rig.AdvanceSeconds(2f);
+
+                CollectionAssert.Contains(rig.ContactPhases, ContactPhase.Direct);
+                CollectionAssert.Contains(rig.ContactPhases, ContactPhase.Inbound);
+                CollectionAssert.Contains(rig.ContactPhases, ContactPhase.Blast);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Sun_piercer_fires_one_high_pierce_shot_on_cadence()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.GakgungShot))
+            {
+                rig.AddTarget(new Vector2(3f, 0f));
+                yield return rig.AdvanceCasts(4);
+
+                Assert.That(rig.Telemetry.LastProjectileMaximumImpacts, Is.GreaterThanOrEqualTo(6));
+                Assert.That(rig.Telemetry.LastProjectileScale, Is.GreaterThan(1f));
+            }
+        }
+
         private sealed class CountingExecutor : IWeaponExecutor
         {
             public int TickCount { get; private set; }
