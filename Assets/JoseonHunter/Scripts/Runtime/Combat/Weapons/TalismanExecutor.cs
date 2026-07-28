@@ -173,7 +173,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (!IsCurrentTargetValid(cast.Target))
             {
-                if (cast.SealedConfirmed && !cast.HasTransferred && Potentials.HasPotential(WeaponPotentialId.TalismanSealTransfer) &&
+                if (cast.SealedConfirmed && cast.SealTransferConfirmed && !cast.HasTransferred && Potentials.HasPotential(WeaponPotentialId.TalismanSealTransfer) &&
                     TryFindNearestLegal(cast.Position, cast.AttemptedTargets, out var transfer) && DistanceSquared(transfer.WorldPosition, cast.Position) <= 16f)
                 {
                     cast.Target = transfer; cast.AttemptedTargets.Add(transfer.RuntimeId); cast.ReservedTargets.Add(transfer.RuntimeId);
@@ -198,6 +198,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 Apply(cast, cast.Target, contact, ContactPhase.Direct, context.SimulationTick);
                 Apply(cast, cast.Target, contact, ContactPhase.Attach, context.SimulationTick);
+                if (!cast.SealTransferEligibilityEvaluated && Potentials.HasPotential(WeaponPotentialId.TalismanSealTransfer) &&
+                    WeaponPotentialVisuals.TryGet(WeaponPotentialId.TalismanSealTransfer, out _, out var transferMask) &&
+                    PixelMaskContactService.TryFindContact(transferMask, PixelMaskTransform.Translation(contact.X, contact.Y), cast.Target.HurtMask, cast.Target.HurtMaskTransform, out _))
+                    cast.SealTransferConfirmed = true;
+                cast.SealTransferEligibilityEvaluated = true;
             }
             cast.State = TalismanState.Attached;
             cast.SuppressTransferContact = false;
@@ -391,6 +396,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool SealedConfirmed { get; set; }
             public bool HasTransferred { get; set; }
             public bool SuppressTransferContact { get; set; }
+            public bool SealTransferConfirmed { get; set; }
+            public bool SealTransferEligibilityEvaluated { get; set; }
 
             public void RecordLinkedTarget(ICombatTarget target)
             {
