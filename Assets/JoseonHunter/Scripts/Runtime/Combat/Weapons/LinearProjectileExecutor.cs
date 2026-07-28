@@ -19,6 +19,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
+        public event Action<LinearProjectileTravel> ProjectileTravelled;
 
         public LinearProjectileExecutor(WeaponRuntimeController runtime)
         {
@@ -65,6 +66,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     projectile.PendingSimulationTime -= processedTime;
                     projectile.RemainingLifetime -= processedTime;
+                    ProjectileTravelled?.Invoke(new LinearProjectileTravel(projectile.Attack.InstanceId, projectile.WeaponId, previousPosition, projectile.Position));
                     SweepDamageContacts(projectile, previousPosition, context);
                 }
                 if (projectile.RemainingLifetime <= 0f || projectile.ImpactCount >= projectile.MaxImpacts)
@@ -205,6 +207,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public Float2 Origin { get; }
             public float InitialLifetime { get; } public float AllowedRange { get; } public float BaseScale { get; } public bool FullDraw { get; } public PixelHitMask PotentialMask { get; }
         }
+    }
+
+    public readonly struct LinearProjectileTravel
+    {
+        public LinearProjectileTravel(int attackInstanceId, WeaponId weaponId, Float2 previous, Float2 current) { AttackInstanceId = attackInstanceId; WeaponId = weaponId; Previous = previous; Current = current; }
+        public int AttackInstanceId { get; } public WeaponId WeaponId { get; } public Float2 Previous { get; } public Float2 Current { get; }
     }
 
     public readonly struct LinearProjectileSpec

@@ -24,6 +24,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly WeaponRuntimeController runtime;
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private readonly List<Field> fields = new List<Field>();
+        private readonly List<SpreadResidence> spreadResidences = new List<SpreadResidence>();
         private readonly PixelHitMask diskMask = CreateDiskMask();
         private readonly PixelHitMask spikeMask = CreateSpikeMask();
         private float cooldown;
@@ -71,12 +72,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var field = fields[index]; Advance(field, step, context);
                 if (field.Expired) { fields.RemoveAt(index); continue; }
             }
+            AdvanceSpreadResidences(step);
         }
 
         public void Reset()
         {
             // Reset is a terminal cleanup path too: every live field must release only its own status source.
             foreach (var field in fields) { CleanupFieldStatus(field); Retire(field); }
+            foreach (var spread in spreadResidences) if (runtime.Targets.TryGet(spread.TargetId, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(spread.SourceId, SlowDecaySeconds);
+            spreadResidences.Clear();
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
             LastStoredFrozenTargetCount = 0; LastResolvedStoredTargetCount = 0; AllStoredTargetsResolvedOnce = false;
         }
@@ -167,7 +171,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         if (other == null || !other.IsAlive || other.HurtMask == null || other.RuntimeId == target.RuntimeId) continue;
                         var dx = other.WorldPosition.X - target.WorldPosition.X; var dy = other.WorldPosition.Y - target.WorldPosition.Y;
                         if (dx * dx + dy * dy > 2.25f || !PixelMaskContactService.TryFindContact(spreadMask, PixelMaskTransform.Translation(other.WorldPosition.X, other.WorldPosition.Y), other.HurtMask, other.HurtMaskTransform, out _)) continue;
-                        field.Residence.TryGetValue(other.RuntimeId, out var current); field.Residence[other.RuntimeId] = Mathf.Max(current, .25f);
+                        spreadResidences.Add(new SpreadResidence(other.RuntimeId, field.Attack.InstanceId, .25f));
+                        if (other is IFrostStatusTarget status) status.ApplyFrostSlow(field.Attack.InstanceId, .5f);
                     }
                 }
             }
@@ -236,6 +241,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (field.Visual != null) UnityEngine.Object.Destroy(field.Visual);
             field.AttackRetired = true;
         }
+        private void AdvanceSpreadResidences(float step)
+        {
+            for (var index = spreadResidences.Count - 1; index >= 0; index--)
+            {
+                var spread = spreadResidences[index]; spread.Remaining -= step;
+                if (spread.Remaining > 0f) { spreadResidences[index] = spread; continue; }
+                if (runtime.Targets.TryGet(spread.TargetId, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(spread.SourceId, SlowDecaySeconds);
+                spreadResidences.RemoveAt(index);
+            }
+        }
         private static Float2 Lerp(Float2 left, Float2 right, float progress) => new Float2(Mathf.Lerp(left.X, right.X, progress), Mathf.Lerp(left.Y, right.Y, progress));
         private static PixelHitMask CreateDiskMask() => CreateCircleMask(17, 64);
         private static PixelHitMask CreateSpikeMask() => CreateCircleMask(9, 16);
@@ -275,5 +290,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool SpreadResolved { get; set; }
             public GameObject Visual { get; set; }
         }
+        private struct SpreadResidence { public SpreadResidence(int targetId, int sourceId, float remaining) { TargetId = targetId; SourceId = sourceId; Remaining = remaining; } public int TargetId; public int SourceId; public float Remaining; }
     }
 }

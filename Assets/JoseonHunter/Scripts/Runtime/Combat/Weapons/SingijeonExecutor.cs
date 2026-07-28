@@ -37,6 +37,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); LaneCount = Mathf.Clamp(laneCount, 1, MaxLaneCount); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
             runtime.DamageService.DamageConfirmed += OnDamageConfirmed;
+            projectiles.ProjectileTravelled += OnProjectileTravelled;
         }
 
         public float BaseDamage { get; }
@@ -120,7 +121,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); trails.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false; projectiles.Reset();
         }
 
-        public void Dispose() { Reset(); runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.Dispose(); }
+        public void Dispose() { Reset(); runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.ProjectileTravelled -= OnProjectileTravelled; projectiles.Dispose(); }
 
         private bool TryFindDensestDirection(Float2 origin, out Float2 direction, out Float2 densePosition)
         {
@@ -196,7 +197,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (focus) { focusAttackIds.Add(attack.InstanceId); focusDirections[attack.InstanceId] = direction; } if (child) childAttackIds.Add(attack.InstanceId);
             var lifetime = (child ? Range * .55f : Range) / Speed;
             projectiles.Launch(context, new LinearProjectileSpec(attack, WeaponId.SingijeonVolley, position, direction, Speed, lifetime, Mathf.CeilToInt(child ? BaseDamage * .35f : BaseDamage), 1, name));
-            AddTrailCells(position, direction, child ? Range * .55f : Range);
         }
 
         private static Float2 Normalize(Float2 value)
@@ -221,7 +221,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 projectiles.Launch(context, new LinearProjectileSpec(
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.SingijeonVolley,
                     position, direction, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), 1, "Singijeon Rocket"));
-                AddTrailCells(position, direction, Range);
             }
         }
 
@@ -246,7 +245,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     if (target == null || !target.IsAlive || target.HurtMask == null) continue;
                     if (!PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                    if (!trail.Crossed.Contains(target.RuntimeId)) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
+                    trail.PreviousPositions.TryGetValue(target.RuntimeId, out var previous); var hadPrevious = trail.PreviousPositions.ContainsKey(target.RuntimeId); trail.PreviousPositions[target.RuntimeId] = target.WorldPosition;
+                    var previousContact = false;
+                    if (hadPrevious) previousContact = PixelMaskContactService.TryFindContact(trail.Mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, PixelMaskTransform.Translation(previous.X, previous.Y), out _);
+                    if (!trail.Crossed.Contains(target.RuntimeId) && hadPrevious && !previousContact) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
                 }
                 var ids = new List<int>(trail.TicksByTarget.Keys);
                 foreach (var id in ids)
@@ -258,12 +260,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (trail.Remaining <= 0f) { runtime.DamageService.RetireAttack(trail.Attack.InstanceId); trails.RemoveAt(index); } else trails[index] = trail;
             }
         }
-        private void AddTrailCells(Float2 position, Float2 direction, float range)
+        private void OnProjectileTravelled(LinearProjectileTravel travel)
         {
             if (!Potentials.HasPotential(WeaponPotentialId.SingijeonPowderTrail) || !WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonPowderTrail, out _, out var mask)) return;
-            for (var d = .35f; d <= range; d += .35f) trails.Add(new Trail { Position = new Float2(position.X + direction.X * d, position.Y + direction.Y * d), Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) });
+            var dx = travel.Current.X - travel.Previous.X; var dy = travel.Current.Y - travel.Previous.Y; var distance = Mathf.Sqrt(dx * dx + dy * dy); var count = Mathf.Max(1, Mathf.CeilToInt(distance / .35f));
+            for (var index = 1; index <= count; index++) { var t = index / (float)count; trails.Add(new Trail { Position = new Float2(travel.Previous.X + dx * t, travel.Previous.Y + dy * t), Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) }); }
         }
-        private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); }
+        private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); public Dictionary<int, Float2> PreviousPositions { get; } = new Dictionary<int, Float2>(); }
         private struct TrailTicks { public TrailTicks(Float2 contact) { Contact = contact; Elapsed = 0f; Count = 0; } public Float2 Contact; public float Elapsed; public int Count; }
     }
 }
