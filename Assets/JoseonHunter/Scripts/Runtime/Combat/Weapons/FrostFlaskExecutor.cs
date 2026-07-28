@@ -101,6 +101,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var radiusScale = 1f;
             if (Potentials.HasPotential(WeaponPotentialId.FrostMist) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostMist, out _, out var authoredMistMask)) { mistMask = authoredMistMask; radiusScale = Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(field.ActiveAge / Duration)); }
             LastFieldVisualScale = radiusScale;
+            if (Potentials.HasPotential(WeaponPotentialId.FrostMist) && field.Visual == null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostMist, out var mistSprite, out _))
+            { field.Visual = new GameObject("Frost Mist Field"); field.Visual.transform.SetParent(context.PresentationRoot, false); field.Visual.AddComponent<SpriteRenderer>().sprite = mistSprite; }
+            if (field.Visual != null) { field.Visual.transform.position = new Vector3(field.Landing.X, field.Landing.Y, 0f); field.Visual.transform.localScale = Vector3.one * Radius * 2f * radiusScale; }
             var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f * radiusScale, Radius * 2f * radiusScale));
             var inside = field.InsideScratch;
             inside.Clear();
@@ -188,7 +191,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Expire(Field field, in WeaponExecutionContext context)
         {
             if (field.Expired) return;
-            if (Potentials.HasPotential(WeaponPotentialId.FrostSpread)) RaiseSpike(field, context, true);
+            if (Potentials.HasPotential(WeaponPotentialId.FrostSpread) || Potentials.HasPotential(WeaponPotentialId.FrostCrackMark)) RaiseSpike(field, context, true);
             if (IsEvolved) ResolveStoredFrozenTargets(field, context);
             CleanupFieldStatus(field);
             Retire(field); field.Expired = true; ExpiredFieldCount++;
@@ -230,6 +233,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (field == null || field.AttackRetired) return;
             runtime.DamageService.RetireAttack(field.Attack.InstanceId);
+            if (field.Visual != null) UnityEngine.Object.Destroy(field.Visual);
             field.AttackRetired = true;
         }
         private static Float2 Lerp(Float2 left, Float2 right, float progress) => new Float2(Mathf.Lerp(left.X, right.X, progress), Mathf.Lerp(left.Y, right.Y, progress));
@@ -269,6 +273,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public Dictionary<int, float> CrackElapsed { get; } = new Dictionary<int, float>();
             public Dictionary<int, int> CrackStacks { get; } = new Dictionary<int, int>();
             public bool SpreadResolved { get; set; }
+            public GameObject Visual { get; set; }
         }
     }
 }

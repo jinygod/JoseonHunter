@@ -116,16 +116,22 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (!set.IsCompleted || set.PotentialCompletionStarted) continue;
                 set.PotentialCompletionStarted = true;
+                set.PotentialStartedThisTick = true;
                 if (Potentials.HasPotential(WeaponPotentialId.JangseungFourDirectionBarrier) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungFourDirectionBarrier, out _, out var barrier))
                 {
                     set.RotatingAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
                     set.RotationMask = barrier; set.RotationRemaining = .8f;
                 }
                 if (Potentials.HasPotential(WeaponPotentialId.JangseungGuardianDescent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGuardianDescent, out _, out var guardian))
+                {
                     set.GuardianMask = guardian; set.GuardianRemaining = 1.2f; set.GuardianAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+                    WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGuardianDescent, out var guardianSprite, out _);
+                    set.GuardianVisual = new GameObject("Jangseung Guardian"); set.GuardianVisual.transform.SetParent(context.PresentationRoot, false); set.GuardianVisual.transform.position = new Vector3(set.DesiredCenter.X, set.DesiredCenter.Y, 0f); var renderer = set.GuardianVisual.AddComponent<SpriteRenderer>(); renderer.sprite = guardianSprite; renderer.sortingOrder = context.SortingOrder + 1;
+                }
             }
             foreach (var set in sets)
             {
+                if (set.PotentialStartedThisTick) { set.PotentialStartedThisTick = false; continue; }
                 if (set.RotationRemaining <= 0f || set.RotationMask == null) continue;
                 var residual = Mathf.Min(step, set.RotationRemaining);
                 while (residual > .00001f)
@@ -146,10 +152,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             foreach (var set in sets)
             {
-                if (set.GuardianRemaining <= 0f || set.GuardianMask == null || set.GuardianResolved) continue;
-                set.GuardianRemaining -= step; ResolveGuardian(set, set.GuardianMask, context);
-                if (set.GuardianResolved || set.GuardianRemaining > 0f) continue;
+                if (set.GuardianRemaining <= 0f || set.GuardianMask == null) continue;
+                set.GuardianRemaining -= step; if (!set.GuardianResolved) ResolveGuardian(set, set.GuardianMask, context);
+                if (set.GuardianRemaining > 0f) continue;
                 runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null;
+                if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual); set.GuardianVisual = null;
             }
         }
 
@@ -164,7 +171,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (best == null) return;
             if (PixelMaskContactService.TryFindContact(guardianMask, PixelMaskTransform.Translation(best.WorldPosition.X, best.WorldPosition.Y), best.HurtMask, best.HurtMaskTransform, out var contact))
             { if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.GuardianAttack, WeaponId.JangseungWard, best, Mathf.CeilToInt(BaseDamage * 1.1f), false, contact, ContactPhase.PotentialChain, context.SimulationTick, elapsedSeconds), out _)) set.GuardianResolved = true; }
-            if (set.GuardianResolved) { runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null; }
+            // Keep the authored guardian visible for the full lifetime after its one confirmed strike.
         }
 
         private void MarkEnclosedTargets(WardSet set)
@@ -320,6 +327,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             runtime.DamageService.RetireAttack(set.Attack.InstanceId);
             if (set.RotatingAttack != null) runtime.DamageService.RetireAttack(set.RotatingAttack.InstanceId);
             if (set.GuardianAttack != null) runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId);
+            if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual);
             set.Retired = true;
         }
 
@@ -414,6 +422,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public PixelHitMask GuardianMask { get; set; }
             public float GuardianRemaining { get; set; }
             public bool GuardianResolved { get; set; }
+            public bool PotentialStartedThisTick { get; set; }
+            public GameObject GuardianVisual { get; set; }
             public void ActivateNextPost()
             {
                 if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));
