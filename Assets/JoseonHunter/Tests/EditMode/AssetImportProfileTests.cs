@@ -109,6 +109,23 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void AffixSlotPartsUseReadableUncompressedPixelImportProfile()
+        {
+            foreach (var name in new[] { "reel_frame", "empty_line_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3" })
+            {
+                var texture = AssetImporter.GetAtPath("Assets/JoseonHunter/Art/UI/AffixJackpot/SlotParts/" + name + ".png") as TextureImporter;
+                Assert.That(texture, Is.Not.Null, name);
+                Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Single), name);
+                Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point), name);
+                Assert.That(texture.mipmapEnabled, Is.False, name);
+                Assert.That(texture.isReadable, Is.True, name);
+                Assert.That(texture.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed), name);
+                Assert.That(texture.alphaIsTransparency, Is.True, name);
+                Assert.That(texture.GetPlatformTextureSettings("Android").overridden, Is.False, name);
+            }
+        }
+
+        [Test]
         public void MannequinRuntimeUsesThirtyEightCustomPivotSlices()
         {
             AssetDatabase.ImportAsset(

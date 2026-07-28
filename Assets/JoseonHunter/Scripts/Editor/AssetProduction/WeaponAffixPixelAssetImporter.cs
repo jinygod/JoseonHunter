@@ -35,6 +35,8 @@ namespace JoseonHunter.Editor.AssetProduction
         public static void EnsureImported()
         {
             ConfigureSlotKit();
+            foreach (var slotPart in new[] { "reel_frame", "empty_line_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3" })
+                ConfigureSprite(SlotPartPath(slotPart));
             ConfigureAtlas(StatusSymbolsPath);
             ConfigureAtlas(PotentialPartsAPath);
             ConfigureAtlas(PotentialPartsBPath);
@@ -60,6 +62,14 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
+            foreach (var platform in new[] { "DefaultTexturePlatform", "Standalone", "Android", "WebGL" })
+            {
+                var settings = importer.GetPlatformTextureSettings(platform);
+                settings.name = platform;
+                settings.overridden = false;
+                settings.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SetPlatformTextureSettings(settings);
+            }
             importer.SaveAndReimport();
         }
 
@@ -75,6 +85,14 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
+            foreach (var platform in new[] { "DefaultTexturePlatform", "Standalone", "Android", "WebGL" })
+            {
+                var settings = importer.GetPlatformTextureSettings(platform);
+                settings.name = platform;
+                settings.overridden = false;
+                settings.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.SetPlatformTextureSettings(settings);
+            }
             importer.SaveAndReimport();
         }
 
