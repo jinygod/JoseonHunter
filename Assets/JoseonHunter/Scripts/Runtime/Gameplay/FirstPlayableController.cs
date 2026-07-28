@@ -18,10 +18,15 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite playerSprite;
         [SerializeField] private Sprite enemySprite;
         [SerializeField] private Sprite enemySpriteAlt;
+        [SerializeField] private Sprite[] enemySprites;
+        [SerializeField] private Sprite eliteSprite;
         [SerializeField] private Sprite bossSprite;
         [SerializeField] private Sprite experienceSprite;
         [SerializeField] private Sprite coinSprite;
         [SerializeField] private Sprite treasureChestSprite;
+        [SerializeField] private Sprite battlefieldTilePrimary;
+        [SerializeField] private Sprite battlefieldTileAlternate;
+        [SerializeField] private Sprite[] battlefieldDecals;
         [SerializeField] private WeaponCatalogAsset weaponCatalog;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
@@ -177,9 +182,12 @@ namespace JoseonHunter.Runtime.Gameplay
             public float MaximumHealth;
             public float Speed;
             public float ContactDamage;
+            public Transform HealthFill;
             public float NextContactTime;
             public bool IsBoss;
+            public bool IsElite;
             public bool IsTreasure;
+            public int ExperienceValue = 1;
             public ICombatTarget CombatTarget;
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
@@ -267,8 +275,8 @@ namespace JoseonHunter.Runtime.Gameplay
             public bool IsAlive => state.Object != null && state.Health > 0f;
             public int Health => Mathf.CeilToInt(Mathf.Max(0f, state.Health));
             public bool IsBoss => state.IsBoss;
-            public bool IsElite => false;
-            public float ThreatScore => state.IsBoss ? 100f : 0f;
+            public bool IsElite => state.IsElite;
+            public float ThreatScore => state.IsBoss ? 100f : (state.IsElite ? 25f : 0f);
             public Float2 WorldPosition
             {
                 get
@@ -402,9 +410,9 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             gameplayCamera.orthographic = true;
-            gameplayCamera.orthographicSize = 7.2f;
+            gameplayCamera.orthographicSize = 6.25f;
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
-            gameplayCamera.backgroundColor = new Color(0.78f, 0.88f, 0.72f);
+            gameplayCamera.backgroundColor = new Color(0.075f, 0.07f, 0.08f);
             gameplayCamera.clearFlags = CameraClearFlags.SolidColor;
         }
 
@@ -432,24 +440,11 @@ namespace JoseonHunter.Runtime.Gameplay
 
             flatField = new GameObject("FlatField").transform;
             flatField.SetParent(transform, false);
-
-            var ground = CreateSpriteObject("Soft Grass", solidSprite, new Vector2(0f, 0f), -20, flatField);
-            ground.transform.localScale = new Vector3(22f, 32f, 1f);
-            ground.GetComponent<SpriteRenderer>().color = new Color(0.80f, 0.89f, 0.73f);
-
-            for (var x = -10; x <= 10; x += 2)
-            {
-                var line = CreateSpriteObject("Grass Grid V", solidSprite, new Vector2(x, 0f), -19, flatField);
-                line.transform.localScale = new Vector3(0.025f, 32f, 1f);
-                line.GetComponent<SpriteRenderer>().color = new Color(0.63f, 0.78f, 0.57f, 0.35f);
-            }
-
-            for (var y = -15; y <= 15; y += 2)
-            {
-                var line = CreateSpriteObject("Grass Grid H", solidSprite, new Vector2(0f, y), -19, flatField);
-                line.transform.localScale = new Vector3(22f, 0.025f, 1f);
-                line.GetComponent<SpriteRenderer>().color = new Color(0.63f, 0.78f, 0.57f, 0.35f);
-            }
+            flatField.gameObject.AddComponent<BattlefieldTilePresenter>().Build(
+                battlefieldTilePrimary,
+                battlefieldTileAlternate,
+                battlefieldDecals,
+                solidSprite);
         }
 
         private void ResetRun()
@@ -482,6 +477,7 @@ namespace JoseonHunter.Runtime.Gameplay
             combatDamageService = new CombatDamageService(combatTargets);
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             elapsed = 0f;
             playerMaxHealth = 100f;
@@ -512,12 +508,12 @@ namespace JoseonHunter.Runtime.Gameplay
             victory = false;
 
             player = CreateSpriteObject(
-                "Rookie Constable",
+                "Han Yeonhwa",
                 playerSprite != null ? playerSprite : solidSprite,
                 Vector2.zero,
                 10,
                 runtimeObjects);
-            player.transform.localScale = Vector3.one * 0.3125f;
+            player.transform.localScale = Vector3.one;
             playerRenderer = player.GetComponent<SpriteRenderer>();
             playerHealthFill = CreateHealthBar(player.transform);
             if (playerSprite == null)
@@ -638,20 +634,26 @@ namespace JoseonHunter.Runtime.Gameplay
             var position = (Vector2)player.transform.position +
                            new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
 
+            var isElite = !isBoss && elapsed >= 8f && UnityEngine.Random.value < 0.08f;
+            var rank = isBoss
+                ? EnemyRankProfile.Boss
+                : (isElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal);
             var chosenSprite = isBoss
                 ? bossSprite
-                : (UnityEngine.Random.value < 0.35f ? enemySpriteAlt : enemySprite);
+                : (isElite && eliteSprite != null
+                    ? eliteSprite
+                    : ChooseNormalEnemySprite());
             var enemyObject = CreateSpriteObject(
-                isBoss ? "Fallen General" : "Pursuing Enemy",
+                isBoss ? "Fallen General" : (isElite ? "Dokkaebi Captain" : "Pursuing Enemy"),
                 chosenSprite != null ? chosenSprite : solidSprite,
                 position,
                 isBoss ? 9 : 8,
                 runtimeObjects);
 
             var renderer = enemyObject.GetComponent<SpriteRenderer>();
-            var health = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
-            enemyObject.transform.localScale = Vector3.one *
-                                               (isBoss ? 0.525f : UnityEngine.Random.Range(0.23f, 0.29f));
+            var baseHealth = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
+            var health = baseHealth * rank.HealthMultiplier;
+            enemyObject.transform.localScale = Vector3.one * rank.DisplayScale;
             if (chosenSprite == null)
             {
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
@@ -663,13 +665,37 @@ namespace JoseonHunter.Runtime.Gameplay
                 Renderer = renderer,
                 Health = health,
                 MaximumHealth = health,
-                Speed = isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration),
-                ContactDamage = isBoss ? 24f : 10f,
-                IsBoss = isBoss
+                Speed = (isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration)) *
+                        rank.SpeedMultiplier,
+                ContactDamage = (isBoss ? 24f : 10f) * rank.ContactDamageMultiplier,
+                IsBoss = rank.IsBoss,
+                IsElite = rank.IsElite,
+                ExperienceValue = rank.ExperienceValue
             };
+            if (rank.IsElite)
+            {
+                state.HealthFill = CreateHealthBar(enemyObject.transform);
+                state.HealthFill.parent.localPosition = new Vector3(0f, -0.78f, 0f);
+                state.HealthFill.parent.localScale = Vector3.one * 0.52f;
+            }
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
+        }
+
+        private Sprite ChooseNormalEnemySprite()
+        {
+            if (enemySprites != null && enemySprites.Length > 0)
+            {
+                var start = UnityEngine.Random.Range(0, enemySprites.Length);
+                for (var offset = 0; offset < enemySprites.Length; offset++)
+                {
+                    var candidate = enemySprites[(start + offset) % enemySprites.Length];
+                    if (candidate != null) return candidate;
+                }
+            }
+
+            return UnityEngine.Random.value < 0.35f ? enemySpriteAlt : enemySprite;
         }
 
         private void UpdateTreasureSpawning(float delta)
@@ -757,7 +783,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 enemy.Object.transform.position = enemyPosition + direction * (enemy.Speed * enemy.MovementMultiplier * delta);
                 enemy.Renderer.flipX = direction.x < 0f;
 
-                var hitDistance = enemy.IsBoss ? 0.85f : 0.55f;
+                var hitDistance = enemy.IsBoss ? 1.1f : (enemy.IsElite ? 0.72f : 0.55f);
                 if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
                     contactInvulnerability <= 0f)
                 {
@@ -829,6 +855,18 @@ namespace JoseonHunter.Runtime.Gameplay
                 : solidSprite;
         }
 
+        private Sprite ResolveWeaponPresentationSprite(WeaponId id, int partIndex)
+        {
+            if (weaponCatalog == null || !weaponCatalog.TryGet(id, out var definition) ||
+                definition.PresentationSprites.Count == 0)
+            {
+                return solidSprite;
+            }
+
+            return definition.PresentationSprites[
+                Mathf.Clamp(partIndex, 0, definition.PresentationSprites.Count - 1)];
+        }
+
         private PixelHitMask ResolveWeaponMask(WeaponId id)
         {
             if (weaponCatalog == null || !weaponCatalog.TryGet(id, out var definition)) return null;
@@ -845,6 +883,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
             enemy.Health -= damage;
             enemy.Renderer.color = Color.white;
+            UpdateHealthBar(enemy.HealthFill, enemy.Health / enemy.MaximumHealth);
             if (enemy.Health > 0f)
             {
                 return;
@@ -870,7 +909,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
-            SpawnPickup(deathPosition, PickupKind.Experience, 1);
+            SpawnPickup(deathPosition, PickupKind.Experience, enemy.ExperienceValue);
             if (UnityEngine.Random.value < 0.01f)
             {
                 SpawnPickup(
@@ -1013,6 +1052,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.Dispose();
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
+            weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             registeredWeaponIds.Clear();
             weaponMasks.Load(weaponCatalog);
@@ -1394,6 +1434,10 @@ namespace JoseonHunter.Runtime.Gameplay
             try
             {
                 mask = PixelHitMask.FromSprite(renderer.sprite);
+            }
+            catch (ArgumentException)
+            {
+                mask = PixelHitMask.OpaqueSpriteRect(renderer.sprite);
             }
             catch (UnityException)
             {

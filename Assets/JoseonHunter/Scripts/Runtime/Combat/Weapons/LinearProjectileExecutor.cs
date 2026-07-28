@@ -54,11 +54,26 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var stepSize = Mathf.Max(0.01f, pixelWorldSize * 0.5f);
                 var maxSimulationTime = stepSize * (MaxSweepSamples - 1) / projectile.Speed;
                 var processedTime = Mathf.Min(projectile.PendingSimulationTime, projectile.RemainingLifetime, maxSimulationTime);
-                var travel = projectile.Speed * processedTime;
+                projectile.Elapsed += processedTime;
+                var normalizedTime = Mathf.Clamp01(projectile.Elapsed / projectile.InitialLifetime);
+                var travelProgress = Mathf.Lerp(
+                    normalizedTime,
+                    normalizedTime * normalizedTime,
+                    projectile.Acceleration);
+                var forwardDistance = projectile.AllowedRange * travelProgress;
+                var lateralDistance = Mathf.Sin(normalizedTime * Mathf.PI) * projectile.ArcAmplitude;
                 projectile.Position = new Float2(
-                    previousPosition.X + projectile.Direction.X * travel,
-                    previousPosition.Y + projectile.Direction.Y * travel);
+                    projectile.Origin.X + projectile.Direction.X * forwardDistance -
+                    projectile.Direction.Y * lateralDistance,
+                    projectile.Origin.Y + projectile.Direction.Y * forwardDistance +
+                    projectile.Direction.X * lateralDistance);
                 projectile.Visual.transform.position = new Vector3(projectile.Position.X, projectile.Position.Y, 0f);
+                var visualDelta = new Vector2(
+                    projectile.Position.X - previousPosition.X,
+                    projectile.Position.Y - previousPosition.Y);
+                if (visualDelta.sqrMagnitude > 0.000001f)
+                    projectile.Visual.transform.rotation =
+                        Quaternion.Euler(0f, 0f, Mathf.Atan2(visualDelta.y, visualDelta.x) * Mathf.Rad2Deg);
                 if (projectile.FullDraw)
                     projectile.Visual.transform.localScale = Vector3.one * projectile.BaseScale * (1f + .35f * FullDrawProgress(projectile));
                 LastVisualScale = projectile.Visual.transform.localScale.x;
@@ -191,6 +206,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Attack = spec.Attack; WeaponId = spec.WeaponId; Position = spec.Position; Direction = spec.Direction;
                 Speed = spec.Speed; RemainingLifetime = spec.Lifetime; Damage = spec.Damage; MaxImpacts = spec.MaxImpacts;
                 Visual = visual; Mask = mask; Origin = spec.Position; InitialLifetime = spec.Lifetime; AllowedRange = spec.AllowedRange; BaseScale = spec.Scale; FullDraw = spec.FullDraw; PotentialMask = spec.PotentialMask;
+                ArcAmplitude = spec.ArcAmplitude; Acceleration = spec.Acceleration;
             }
             public AttackInstance Attack { get; }
             public WeaponId WeaponId { get; }
@@ -199,6 +215,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float Speed { get; }
             public float RemainingLifetime { get; set; }
             public float PendingSimulationTime { get; set; }
+            public float Elapsed { get; set; }
             public int Damage { get; }
             public int MaxImpacts { get; }
             public int ImpactCount { get; set; }
@@ -206,6 +223,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public PixelHitMask Mask { get; }
             public Float2 Origin { get; }
             public float InitialLifetime { get; } public float AllowedRange { get; } public float BaseScale { get; } public bool FullDraw { get; } public PixelHitMask PotentialMask { get; }
+            public float ArcAmplitude { get; }
+            public float Acceleration { get; }
         }
     }
 
@@ -217,7 +236,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
     public readonly struct LinearProjectileSpec
     {
-        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f, bool allowExtendedImpacts = false, bool fullDraw = false, PixelHitMask potentialMask = null)
+        public LinearProjectileSpec(AttackInstance attack, WeaponId weaponId, Float2 position, Float2 direction, float speed, float lifetime, int damage, int maxImpacts, string visualName, float scale = 1f, bool allowExtendedImpacts = false, bool fullDraw = false, PixelHitMask potentialMask = null, float arcAmplitude = 0f, float acceleration = 0f)
         {
             Attack = attack ?? throw new ArgumentNullException(nameof(attack));
             WeaponId = weaponId; Position = position; Direction = direction; Speed = Mathf.Max(0.01f, speed);
@@ -226,6 +245,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             VisualName = string.IsNullOrEmpty(visualName) ? "Linear Projectile" : visualName;
             Scale = Mathf.Max(0.01f, scale);
             FullDraw = fullDraw; PotentialMask = potentialMask; AllowedRange = Speed * Lifetime;
+            ArcAmplitude = arcAmplitude;
+            Acceleration = Mathf.Clamp01(acceleration);
         }
         public AttackInstance Attack { get; }
         public WeaponId WeaponId { get; }
@@ -238,5 +259,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public string VisualName { get; }
         public float Scale { get; }
         public bool FullDraw { get; } public PixelHitMask PotentialMask { get; } public float AllowedRange { get; }
+        public float ArcAmplitude { get; }
+        public float Acceleration { get; }
     }
 }
