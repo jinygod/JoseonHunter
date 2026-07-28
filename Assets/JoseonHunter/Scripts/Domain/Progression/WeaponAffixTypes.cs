@@ -82,6 +82,17 @@ namespace JoseonHunter.Domain.Progression
         private readonly List<WeaponAffixRoll> generalRolls = new();
         private readonly List<WeaponPotentialId> potentialIds = new();
 
+        public WeaponRunAffixProfile() { }
+
+        /// <summary>Creates a read-ready run profile for runtime aggregation and deterministic tests.</summary>
+        public WeaponRunAffixProfile(IEnumerable<WeaponAffixRoll> rolls, IEnumerable<WeaponPotentialId> potentials = null)
+        {
+            if (rolls == null) throw new ArgumentNullException(nameof(rolls));
+            generalRolls.AddRange(rolls);
+            if (potentials == null) return;
+            foreach (var potential in potentials) AddPotential(potential);
+        }
+
         public IReadOnlyList<WeaponAffixRoll> GeneralRolls => generalRolls;
         public IReadOnlyList<WeaponPotentialId> PotentialIds => potentialIds;
         internal void AddGeneral(WeaponAffixRoll roll) => generalRolls.Add(roll);

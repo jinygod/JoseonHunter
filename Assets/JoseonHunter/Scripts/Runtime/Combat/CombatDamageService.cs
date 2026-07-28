@@ -46,6 +46,7 @@ namespace JoseonHunter.Runtime.Combat
     {
         private readonly CombatTargetRegistry targetRegistry;
         private readonly Dictionary<int, AttackInstance> attacks = new Dictionary<int, AttackInstance>();
+        private WeaponAffixStatusService affixStatuses;
 
         public CombatDamageService(CombatTargetRegistry targetRegistry)
         {
@@ -54,6 +55,8 @@ namespace JoseonHunter.Runtime.Combat
 
         public event Action<ConfirmedDamageEvent> DamageConfirmed;
         public int TrackedAttackCount => attacks.Count;
+
+        internal void SetAffixStatuses(WeaponAffixStatusService statuses) => affixStatuses = statuses;
 
         /// <summary>Forgets a completed attack after its executor has permanently stopped producing contacts.</summary>
         public bool RetireAttack(int attackInstanceId) => attackInstanceId > 0 && attacks.Remove(attackInstanceId);
@@ -64,7 +67,10 @@ namespace JoseonHunter.Runtime.Combat
         {
             confirmed = default;
             if (!HasValidTarget(request.Target) || !request.HasConfirmedContact || !IsFinite(request.ContactPoint) || request.AttackInstance == null) return false;
-            if (!DamageResolver.TryResolve(request.DamageRequest, out var result)) return false;
+            var incomingMultiplier = affixStatuses == null ? 1f : affixStatuses.IncomingDamageMultiplier(request.Target.RuntimeId, request.Phase);
+            var damageRequest = new DamageRequest(request.DamageRequest.BaseDamage, request.DamageRequest.FlatBonus,
+                request.DamageRequest.IsCritical, request.DamageRequest.Multiplier * incomingMultiplier);
+            if (!DamageResolver.TryResolve(damageRequest, out var result)) return false;
 
             var attack = GetAttack(request.AttackInstance);
             if (!attack.TryRecordHit(request.Target.RuntimeId, request.Phase, request.HitTime)) return false;

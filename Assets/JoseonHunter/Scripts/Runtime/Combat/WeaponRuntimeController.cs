@@ -59,11 +59,14 @@ namespace JoseonHunter.Runtime.Combat
             Targets = targets ?? throw new ArgumentNullException(nameof(targets));
             DamageService = damageService ?? throw new ArgumentNullException(nameof(damageService));
             BladeMask = bladeMask ?? throw new ArgumentNullException(nameof(bladeMask));
+            AffixStatuses = new WeaponAffixStatusService(Targets, DamageService);
+            DamageService.SetAffixStatuses(AffixStatuses);
         }
 
         public CombatTargetRegistry Targets { get; }
         public CombatDamageService DamageService { get; }
         public PixelHitMask BladeMask { get; }
+        public WeaponAffixStatusService AffixStatuses { get; }
 
         /// <summary>Allocates attack IDs across every executor sharing this combat runtime.</summary>
         public int AllocateAttackInstanceId()
@@ -103,6 +106,7 @@ namespace JoseonHunter.Runtime.Combat
         {
             if (disposed || deltaTime < 0f || presentationRoot == null) return;
             simulationTick++;
+            AffixStatuses.Tick(deltaTime, simulationTick);
             var context = new WeaponExecutionContext(
                 new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, maskResolver, sortingOrder, simulationTick);
             foreach (var executor in executors) executor.Tick(deltaTime, context);
@@ -113,6 +117,7 @@ namespace JoseonHunter.Runtime.Combat
             if (disposed) return;
             simulationTick = 0;
             foreach (var executor in executors) executor.Reset();
+            AffixStatuses.Reset();
             DamageService.ClearAttacks();
         }
 
@@ -124,6 +129,8 @@ namespace JoseonHunter.Runtime.Combat
             foreach (var executor in executors) executor.Dispose();
             executors.Clear();
             executorsByWeapon.Clear();
+            AffixStatuses.Reset();
+            DamageService.SetAffixStatuses(null);
             DamageService.ClearAttacks();
             spriteResolver = null;
             maskResolver = null;

@@ -35,7 +35,12 @@ namespace JoseonHunter.Domain.Combat
         BoundaryCrossing,
         Tick,
         Wind,
-        Lightning
+        Lightning,
+        Poison,
+        Burn,
+        Bleed,
+        PotentialBlast,
+        PotentialChain
     }
 
     public enum DamageElement
