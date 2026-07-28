@@ -17,6 +17,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Dictionary<int, ArrowInfo> primaryArrows = new Dictionary<int, ArrowInfo>();
         private readonly HashSet<int> firstImpacts = new HashSet<int>();
         private readonly List<SplitArrow> splitArrows = new List<SplitArrow>();
+#if UNITY_INCLUDE_TESTS
+        private readonly List<int> splitChildAttackIdsForTests = new List<int>();
+#endif
 
         public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -40,6 +43,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveProjectileCount => projectiles.ActiveCount;
         public int LastProjectileMaximumImpacts { get; private set; }
         public float LastProjectileScale { get; private set; } = 1f;
+#if UNITY_INCLUDE_TESTS
+        public int LastArmorBreakPrimaryAttackIdForTests { get; private set; }
+        public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIdsForTests;
+#endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
@@ -76,6 +83,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             cooldown = 0f; shotSequence = 0; LastLaunchCount = 0; LastSelectedTargetRuntimeId = 0;
             LastProjectileMaximumImpacts = 0; LastProjectileScale = 1f; projectiles.Reset(); primaryArrows.Clear(); firstImpacts.Clear();
             foreach (var child in splitArrows) runtime.DamageService.RetireAttack(child.Attack.InstanceId); splitArrows.Clear();
+#if UNITY_INCLUDE_TESTS
+            LastArmorBreakPrimaryAttackIdForTests = 0; splitChildAttackIdsForTests.Clear();
+#endif
         }
 
         public void Dispose() { runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; Reset(); projectiles.Dispose(); }
@@ -139,14 +149,26 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (Potentials.HasPotential(WeaponPotentialId.GakgungArmorBreakArrowhead) && firstImpacts.Add(damage.AttackInstanceId) &&
                 WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungArmorBreakArrowhead, out _, out var armorMask) && runtime.Targets.TryGet(damage.TargetRuntimeId, out var armorTarget) && armorTarget != null && armorTarget.HurtMask != null &&
                 PixelMaskContactService.TryFindContact(armorMask, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), armorTarget.HurtMask, armorTarget.HurtMaskTransform, out _))
-                runtime.AffixStatuses.ApplyVulnerability(damage.TargetRuntimeId, damage.ContactPoint, 2f, true);
+            {
+                if (runtime.AffixStatuses.ApplyVulnerability(damage.TargetRuntimeId, damage.ContactPoint, 2f, true))
+                {
+#if UNITY_INCLUDE_TESTS
+                    LastArmorBreakPrimaryAttackIdForTests = damage.AttackInstanceId;
+#endif
+                }
+            }
             if (Potentials.HasPotential(WeaponPotentialId.GakgungSplitFletching) && firstImpacts.Add(-damage.AttackInstanceId) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungSplitFletching, out _, out var splitMask))
             {
                 var vector = new Float2(damage.ContactPoint.X - arrow.Start.X, damage.ContactPoint.Y - arrow.Start.Y);
                 var length = Mathf.Max(.001f, Mathf.Sqrt(vector.X * vector.X + vector.Y * vector.Y));
                 var direction = new Float2(vector.X / length, vector.Y / length);
-                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.ContactPoint, Rotate(direction, -25f), splitMask, arrow.Range * .65f));
-                splitArrows.Add(new SplitArrow(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), damage.ContactPoint, Rotate(direction, 25f), splitMask, arrow.Range * .65f));
+                var left = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+                var right = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+                splitArrows.Add(new SplitArrow(left, damage.ContactPoint, Rotate(direction, -25f), splitMask, arrow.Range * .65f));
+                splitArrows.Add(new SplitArrow(right, damage.ContactPoint, Rotate(direction, 25f), splitMask, arrow.Range * .65f));
+#if UNITY_INCLUDE_TESTS
+                splitChildAttackIdsForTests.Add(left.InstanceId); splitChildAttackIdsForTests.Add(right.InstanceId);
+#endif
             }
         }
 

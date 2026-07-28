@@ -119,6 +119,11 @@ namespace JoseonHunter.Runtime.Combat
         internal float IncomingDamageMultiplier(int targetRuntimeId, ContactPhase phase) =>
             IsPeriodicPhase(phase) || !vulnerabilityRemaining.ContainsKey(targetRuntimeId) ? 1f : 1.2f;
 
+#if UNITY_INCLUDE_TESTS
+        public bool HasVulnerabilityForTests(int targetRuntimeId) => vulnerabilityRemaining.ContainsKey(targetRuntimeId);
+        public float VulnerabilityRemainingForTests(int targetRuntimeId) => vulnerabilityRemaining.TryGetValue(targetRuntimeId, out var remaining) ? remaining : 0f;
+#endif
+
         private void TickVulnerability(float deltaTime)
         {
             expiredVulnerabilityTargets.Clear();

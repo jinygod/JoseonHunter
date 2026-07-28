@@ -236,13 +236,30 @@ namespace JoseonHunter.Tests.PlayMode
         {
             foreach (var evolved in new[] { false, true })
             {
+                var baseOnly = PixelHitMask.FromRows("1");
+                var negative = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, WeaponPotentialId.GakgungSplitFletching, advanceSeconds: 0f, targetMask: baseOnly);
+                AssertBaseOnlyFixture(WeaponPotentialId.GakgungArmorBreakArrowhead, new Float2(1f, 0f), baseOnly);
+                negative.Advance(.5f);
+                Assert.That(negative.Runtime.AffixStatuses.HasVulnerabilityForTests(negative.Target.RuntimeId), Is.False);
+                negative.Dispose();
+
                 var rig = Drive(WeaponPotentialId.GakgungArmorBreakArrowhead, evolved, WeaponPotentialId.GakgungSplitFletching, advanceSeconds: 0f, targetMask: MaskFor(WeaponPotentialId.GakgungArmorBreakArrowhead));
-                rig.Advance(1f);
+                AdvanceUntil(rig, () => ((GakgungExecutor)rig.Executor).LastArmorBreakPrimaryAttackIdForTests != 0, .5f);
+                var bow = (GakgungExecutor)rig.Executor;
+                Assert.That(rig.Runtime.AffixStatuses.HasVulnerabilityForTests(rig.Target.RuntimeId), Is.True);
+                Assert.That(rig.Runtime.AffixStatuses.VulnerabilityRemainingForTests(rig.Target.RuntimeId), Is.EqualTo(1.95f).Within(.001f));
+                Assert.That(bow.SplitChildAttackIdsForTests, Is.Not.Empty);
+                Assert.That(bow.SplitChildAttackIdsForTests, Does.Not.Contain(bow.LastArmorBreakPrimaryAttackIdForTests));
+                rig.Advance(.25f);
                 var direct = rig.Events.Where(e => e.WeaponId.Equals(WeaponId.GakgungShot) && e.Phase == ContactPhase.Direct).ToArray();
                 Assert.That(direct.Length, Is.GreaterThan(0));
-                Assert.That(direct[0].FinalDamage, Is.EqualTo(10), "armor break is a status on the confirmed primary, never bonus damage on the side arrow itself");
-                Assert.That(direct.Skip(1).All(e => e.FinalDamage == 10 || e.FinalDamage == 12), Is.True);
+                Assert.That(direct.Any(e => e.FinalDamage == 12), Is.True);
                 Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "level-five split child must execute through its terminal PotentialChain path");
+                rig.Executor.Reset(); // stop future primary refreshes; the already executor-applied status owns the 2.0s boundary.
+                rig.Advance(1.90f);
+                Assert.That(rig.Runtime.AffixStatuses.HasVulnerabilityForTests(rig.Target.RuntimeId), Is.True);
+                rig.Advance(.05f);
+                Assert.That(rig.Runtime.AffixStatuses.HasVulnerabilityForTests(rig.Target.RuntimeId), Is.False);
                 rig.Dispose();
             }
         }
@@ -397,7 +414,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var weapon = WeaponFor(potential);
             if (weapon.Equals(WeaponId.HwandoFlyingBlade)) return new FlyingBladeExecutor(runtime, 10f, 10f, 4f, 20f, 1, evolved, modifiers);
-            if (weapon.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, 10f, 10f, 10f, 20f, modifiers.HasPotential(WeaponPotentialId.GakgungSplitFletching) ? 5 : 1, evolved, modifiers);
+            if (weapon.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, 10f, modifiers.HasPotential(WeaponPotentialId.GakgungArmorBreakArrowhead) ? .1f : 10f, 10f, 20f, modifiers.HasPotential(WeaponPotentialId.GakgungSplitFletching) ? 5 : 1, evolved, modifiers);
             if (weapon.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, 10f, .05f, 4f, 20f, 3, 1, evolved, modifiers);
             return new ThunderBombExecutor(runtime, 10f, 10f, 4f, .1f, 0f, 2f, 1, evolved, modifiers);
         }
