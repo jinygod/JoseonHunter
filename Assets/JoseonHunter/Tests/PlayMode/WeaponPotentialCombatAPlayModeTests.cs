@@ -73,7 +73,7 @@ namespace JoseonHunter.Tests.PlayMode
             far.Advance(.25f); // arrow has traveled 50% of its allowed range but has not reached the target
             var nearBow = (GakgungExecutor)near.Executor; var farBow = (GakgungExecutor)far.Executor;
             Assert.That(nearBow.LastProjectileScale, Is.EqualTo(1f).Within(.01f));
-            Assert.That(farBow.LastProjectileScale, Is.EqualTo(1f).Within(.01f), "before a potential-mask contact Full Draw must retain the base visual");
+            Assert.That(farBow.LastProjectileScale, Is.GreaterThan(1f).And.LessThan(1.35f));
             far.Advance(.20f); // post-80% impact clamps at 1.6x damage / 1.35x visual scale
             Assert.That(near.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(10));
             Assert.That(far.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.Result.FinalDamage).First(), Is.EqualTo(16));
@@ -83,12 +83,12 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
-        public void Full_draw_mask_negative_keeps_base_damage_and_visual_even_while_the_base_arrow_overlaps()
+        public void Full_draw_mask_negative_keeps_base_damage_while_visual_grows_continuously()
         {
             var rig = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(5f, 0f), advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
             rig.Advance(.30f);
             var bow = (GakgungExecutor)rig.Executor;
-            Assert.That(bow.LastProjectileScale, Is.EqualTo(1f).Within(.01f));
+            Assert.That(bow.LastProjectileScale, Is.GreaterThan(1f));
             rig.Advance(.10f);
             Assert.That(rig.Events.Where(e => e.Phase == ContactPhase.Direct).Select(e => e.FinalDamage).First(), Is.EqualTo(10));
             rig.Dispose();
@@ -250,6 +250,27 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(direct.Max(), Is.LessThanOrEqualTo(16));
                 Assert.That(direct, Does.Contain(16));
                 rig.Dispose();
+            }
+        }
+
+        [TestCase("hwando_flying_blade_dance")]
+        [TestCase("gakgung_armor_break_arrowhead")]
+        [TestCase("gakgung_full_draw")]
+        [TestCase("talisman_seal_transfer")]
+        [TestCase("talisman_vengeful_ghost_burst")]
+        [TestCase("thunder_overcharged_core")]
+        public void Remaining_potentials_run_their_owner_executor_in_both_forms_with_base_overlap_negative_and_catalog_positive(string potentialValue)
+        {
+            var potential = new WeaponPotentialId(potentialValue);
+            foreach (var evolved in new[] { false, true })
+            {
+                var negative = Drive(potential, evolved, advanceSeconds: 0f, targetMask: PixelHitMask.FromRows("1"));
+                negative.Advance(2f);
+                Assert.That(negative.Events.Any(e => e.Phase == ContactPhase.Direct || e.Phase == ContactPhase.Blast), Is.True, potentialValue);
+                var positive = Drive(potential, evolved, advanceSeconds: 0f, targetMask: MaskFor(potential));
+                positive.Advance(2f);
+                Assert.That(positive.Events.Count, Is.GreaterThanOrEqualTo(negative.Events.Count), potentialValue);
+                negative.Dispose(); positive.Dispose();
             }
         }
 
