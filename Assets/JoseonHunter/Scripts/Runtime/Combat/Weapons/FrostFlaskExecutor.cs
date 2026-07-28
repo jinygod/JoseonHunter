@@ -57,6 +57,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime); cooldown -= step;
+            AdvanceSpreadResidences(step);
             if (cooldown <= 0f && TryFindCrowd(context.OwnerPosition, out var landing))
             {
                 cooldown = CooldownSeconds;
@@ -72,7 +73,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var field = fields[index]; Advance(field, step, context);
                 if (field.Expired) { fields.RemoveAt(index); continue; }
             }
-            AdvanceSpreadResidences(step);
         }
 
         public void Reset()
@@ -145,7 +145,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 field.SpikeTimer += activeStep;
                 while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context, false); }
             }
-            if (field.ActiveAge + .00001f >= Duration) Expire(field, context);
+            if (field.ActiveAge + .00001f >= Duration) Expire(field, context, step - activeStep);
         }
 
         private void RaiseSpike(Field field, in WeaponExecutionContext context, bool expirySpike)
@@ -173,8 +173,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         var dx = other.WorldPosition.X - target.WorldPosition.X; var dy = other.WorldPosition.Y - target.WorldPosition.Y;
                         if (dx * dx + dy * dy > 2.25f || !PixelMaskContactService.TryFindContact(spreadMask, PixelMaskTransform.Translation(other.WorldPosition.X, other.WorldPosition.Y), other.HurtMask, other.HurtMaskTransform, out _)) continue;
                         var spreadSource = runtime.AllocateAttackInstanceId();
-                        spreadResidences.Add(new SpreadResidence(other.RuntimeId, spreadSource, .25f));
-                        if (other is IFrostStatusTarget status) status.ApplyFrostSlow(spreadSource, .5f);
+                        var remaining = Mathf.Max(0f, .25f - field.ExpiryResidual);
+                        if (remaining > 0f) { spreadResidences.Add(new SpreadResidence(other.RuntimeId, spreadSource, remaining)); if (other is IFrostStatusTarget status) status.ApplyFrostSlow(spreadSource, .5f); }
                     }
                 }
             }
@@ -195,9 +195,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return count > 0;
         }
 
-        private void Expire(Field field, in WeaponExecutionContext context)
+        private void Expire(Field field, in WeaponExecutionContext context, float postExpiryResidual = 0f)
         {
             if (field.Expired) return;
+            field.ExpiryResidual = Mathf.Max(0f, postExpiryResidual);
             if (Potentials.HasPotential(WeaponPotentialId.FrostSpread) || Potentials.HasPotential(WeaponPotentialId.FrostCrackMark)) RaiseSpike(field, context, true);
             if (IsEvolved) ResolveStoredFrozenTargets(field, context);
             CleanupFieldStatus(field);
@@ -290,6 +291,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public Dictionary<int, float> CrackElapsed { get; } = new Dictionary<int, float>();
             public Dictionary<int, int> CrackStacks { get; } = new Dictionary<int, int>();
             public bool SpreadResolved { get; set; }
+            public float ExpiryResidual { get; set; }
             public GameObject Visual { get; set; }
         }
         private struct SpreadResidence { public SpreadResidence(int targetId, int sourceId, float remaining) { TargetId = targetId; SourceId = sourceId; Remaining = remaining; } public int TargetId; public int SourceId; public float Remaining; }
