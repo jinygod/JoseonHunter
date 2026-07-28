@@ -73,10 +73,11 @@ namespace JoseonHunter.Presentation.Combat
         private float hitStopRemaining;
         private float timeScaleBeforeHitStop = 1f;
         private bool ownsHitStop;
-        private Camera impulseCamera;
-        private Vector3 appliedCameraOffset;
         private float impulseRemaining;
         private float impulseMagnitude;
+        private Camera renderCamera;
+        private Vector3 renderBaseline;
+        private bool hasRenderScopedImpulse;
 
         /// <summary>Can be set by an accessibility/preferences owner when reduced visual motion is enabled.</summary>
         public bool ReducedEffects { get; set; }
@@ -86,12 +87,19 @@ namespace JoseonHunter.Presentation.Combat
             CreateFlashPool();
         }
 
-        private void OnEnable() => Subscribe();
+        private void OnEnable()
+        {
+            Subscribe();
+            Camera.onPreCull += OnCameraPreCull;
+            Camera.onPostRender += OnCameraPostRender;
+        }
         private void OnDisable()
         {
             Unsubscribe();
+            Camera.onPreCull -= OnCameraPreCull;
+            Camera.onPostRender -= OnCameraPostRender;
             RestoreHitStop();
-            RemoveCameraOffset();
+            RestoreRenderBaseline();
         }
 
         private void OnDestroy()
@@ -109,15 +117,22 @@ namespace JoseonHunter.Presentation.Combat
             impulseRemaining = Mathf.Max(0f, impulseRemaining - delta);
         }
 
-        private void LateUpdate()
+        private void OnCameraPreCull(Camera camera)
         {
-            RemoveCameraOffset();
-            if (impulseRemaining <= 0f || impulseMagnitude <= 0f) return;
-            impulseCamera = Camera.main;
-            if (impulseCamera == null) return;
+            // A previous camera can be skipped when cameras switch or rendering is interrupted.
+            RestoreRenderBaseline();
+            if (camera == null || camera != Camera.main || impulseRemaining <= 0f || impulseMagnitude <= 0f) return;
+
             var amount = impulseMagnitude * (impulseRemaining / 0.035f);
-            appliedCameraOffset = UnityEngine.Random.insideUnitCircle * amount;
-            impulseCamera.transform.position += appliedCameraOffset;
+            renderCamera = camera;
+            renderBaseline = camera.transform.position;
+            camera.transform.position = renderBaseline + (Vector3)(UnityEngine.Random.insideUnitCircle * amount);
+            hasRenderScopedImpulse = true;
+        }
+
+        private void OnCameraPostRender(Camera camera)
+        {
+            if (camera == renderCamera) RestoreRenderBaseline();
         }
 
         public void Bind(CombatDamageService service)
@@ -238,10 +253,12 @@ namespace JoseonHunter.Presentation.Combat
             }
         }
 
-        private void RemoveCameraOffset()
+        private void RestoreRenderBaseline()
         {
-            if (impulseCamera != null && appliedCameraOffset != Vector3.zero) impulseCamera.transform.position -= appliedCameraOffset;
-            appliedCameraOffset = Vector3.zero;
+            if (hasRenderScopedImpulse && renderCamera != null) renderCamera.transform.position = renderBaseline;
+            renderCamera = null;
+            renderBaseline = Vector3.zero;
+            hasRenderScopedImpulse = false;
         }
     }
 }
