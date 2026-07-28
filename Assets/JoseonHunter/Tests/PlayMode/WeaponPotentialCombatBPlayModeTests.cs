@@ -170,7 +170,9 @@ namespace JoseonHunter.Tests.PlayMode
                 // after that outbound event so the inbound hit itself is the killing event.
                 rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.Advance(.08f); rig.Advance(.08f);
                 Assert.That(fan.PendingChainForTests, Is.True);
-                rig.Advance(.08f);
+                rig.Advance(.079f);
+                Assert.That(rig.Events.Any(value => value.Phase == ContactPhase.PotentialChain), Is.False);
+                rig.TickExact(.001f);
                 var chains = rig.Events.Where(value => value.Phase == ContactPhase.PotentialChain).ToArray();
                 Assert.That(chains.Length, Is.EqualTo(1));
                 Assert.That(chains[0].TargetRuntimeId, Is.EqualTo(next.RuntimeId));
@@ -301,21 +303,27 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.GreaterThan(0));
             singijeon.Executor.Reset();
             Assert.That(((SingijeonExecutor)singijeon.Executor).ActiveTrailCountForTests, Is.Zero);
-            singijeon.Runtime.Targets.Unregister(singijeon.Target);
+            singijeon.Target.Position = new Float2(99f, 99f); // live and registered, but outside every new launch.
             var before = singijeon.Events.Count; singijeon.TickExact(.8f);
             Assert.That(singijeon.Events.Count, Is.EqualTo(before), "reset retires live trail attacks");
-            var reused = singijeon.AddTarget(1, new Float2(1f, 0f), PixelHitMask.FromRows("1"));
-            singijeon.Executor.Reset(); singijeon.TickExact(.2f);
+            Assert.That(singijeon.Runtime.DamageService.TrackedAttackCount, Is.Zero);
+            singijeon.Runtime.Targets.Unregister(singijeon.Target);
+            var reused = singijeon.AddTarget(1, new Float2(3f, 0f), MaskFor(WeaponPotentialId.SingijeonPowderTrail));
+            singijeon.Executor.Reset(); singijeon.TickExact(.1f); // fresh ID's first observation cannot be a crossing.
             Assert.That(reused.RuntimeId, Is.EqualTo(1));
+            var freshStart = singijeon.Events.Count;
+            reused.Position = new Float2(.7f, 0f); singijeon.Advance(.4f);
+            Assert.That(singijeon.Events.Skip(freshStart).Count(value => value.Phase == ContactPhase.Burn), Is.EqualTo(1), "fresh observation followed by out-to-in movement crosses exactly once");
             singijeon.Dispose();
 
             var fan = Drive(WeaponPotentialId.FanVacuumEdge, true, MaskFor(WeaponPotentialId.FanVacuumEdge), WeaponPotentialId.FanReturningChain);
             fan.Advance(.5f);
             Assert.That(((WindThunderFanExecutor)fan.Executor).ActiveBleedCountForTests, Is.GreaterThan(0));
             fan.Executor.Dispose();
-            fan.Runtime.Targets.Unregister(fan.Target);
+            fan.Target.Position = new Float2(99f, 99f);
             before = fan.Events.Count; fan.TickExact(.8f);
             Assert.That(fan.Events.Count, Is.EqualTo(before), "dispose retires bleed and pending chain attacks");
+            Assert.That(fan.Runtime.DamageService.TrackedAttackCount, Is.Zero);
             fan.Runtime.Dispose(); UnityEngine.Object.DestroyImmediate(fan.Root);
         }
 
@@ -329,11 +337,20 @@ namespace JoseonHunter.Tests.PlayMode
             PrepareDelayedWork(potential, split);
             var splitStart = split.Events.Count;
             split.TickExact(boundary); split.TickExact(.02f);
-            var oneDelayed = one.Events.Skip(oneStart).ToArray();
-            var splitDelayed = split.Events.Skip(splitStart).ToArray();
+            var oneDelayed = NamedDelayedEvents(potential, one.Events.Skip(oneStart)).ToArray();
+            var splitDelayed = NamedDelayedEvents(potential, split.Events.Skip(splitStart)).ToArray();
             Assert.That(oneDelayed, Is.Not.Empty, potential.Value + " must create and then advance its named delayed work");
             Assert.That(EventSignature(oneDelayed), Is.EqualTo(EventSignature(splitDelayed)), potential.Value + " at " + boundary);
             one.Dispose(); split.Dispose();
+        }
+
+        private static IEnumerable<ConfirmedDamageEvent> NamedDelayedEvents(WeaponPotentialId potential, IEnumerable<ConfirmedDamageEvent> events)
+        {
+            if (potential.Equals(WeaponPotentialId.JangseungFourDirectionBarrier)) return events.Where(value => value.Phase == ContactPhase.PotentialBlast);
+            if (potential.Equals(WeaponPotentialId.FanReturningChain)) return events.Where(value => value.Phase == ContactPhase.PotentialChain);
+            if (potential.Equals(WeaponPotentialId.FanVacuumEdge)) return events.Where(value => value.Phase == ContactPhase.Bleed);
+            if (potential.Equals(WeaponPotentialId.SingijeonPowderTrail)) return events.Where(value => value.Phase == ContactPhase.Burn);
+            return events.Where(value => value.Phase == ContactPhase.Blast);
         }
 
         private static void PrepareDelayedWork(WeaponPotentialId potential, DrivenExecutor rig)
@@ -367,7 +384,7 @@ namespace JoseonHunter.Tests.PlayMode
             // Evolved fan only: make the inbound strike the kill and leave its .08 chain
             // pending before the split comparison begins.
             rig.AddTarget(2, new Float2(1.25f, 0f), MaskFor(WeaponPotentialId.FanReturningChain));
-            rig.TickExact(.01f); rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.TickExact(.08f);
+            rig.TickExact(.01f); rig.Advance(.21f); rig.Target.ApplyResolvedDamage(74); rig.TickExact(.08f); rig.TickExact(.08f);
             Assert.That(((WindThunderFanExecutor)rig.Executor).PendingChainForTests, Is.True);
         }
 
