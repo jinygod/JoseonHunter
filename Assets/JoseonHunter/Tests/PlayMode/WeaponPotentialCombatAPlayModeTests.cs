@@ -250,15 +250,17 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(rig.Runtime.AffixStatuses.VulnerabilityRemainingForTests(rig.Target.RuntimeId), Is.EqualTo(1.95f).Within(.001f));
                 Assert.That(bow.SplitChildAttackIdsForTests, Is.Not.Empty);
                 Assert.That(bow.SplitChildAttackIdsForTests, Does.Not.Contain(bow.LastArmorBreakPrimaryAttackIdForTests));
-                rig.Advance(.25f);
+                rig.Advance(.05f);
                 var direct = rig.Events.Where(e => e.WeaponId.Equals(WeaponId.GakgungShot) && e.Phase == ContactPhase.Direct).ToArray();
                 Assert.That(direct.Length, Is.GreaterThan(0));
                 Assert.That(direct.Any(e => e.FinalDamage == 12), Is.True);
+                Assert.That(bow.LevelFiveSideArrowAttackIdsForTests.Any(id => rig.Events.Any(e => e.AttackInstanceId == id && e.Phase == ContactPhase.Direct)), Is.True);
+                Assert.That(bow.LevelFiveSideArrowAttackIdsForTests, Does.Not.Contain(bow.LastArmorBreakPrimaryAttackIdForTests));
+                CollectionAssert.AreEqual(new[] { bow.LastArmorBreakPrimaryAttackIdForTests }, bow.ArmorBreakApplicationAttackIdsForTests);
                 Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "level-five split child must execute through its terminal PotentialChain path");
-                rig.Executor.Reset(); // stop future primary refreshes; the already executor-applied status owns the 2.0s boundary.
-                rig.Advance(1.90f);
+                rig.AdvanceStatusesOnly(1.90f);
                 Assert.That(rig.Runtime.AffixStatuses.HasVulnerabilityForTests(rig.Target.RuntimeId), Is.True);
-                rig.Advance(.05f);
+                rig.AdvanceStatusesOnly(.05f);
                 Assert.That(rig.Runtime.AffixStatuses.HasVulnerabilityForTests(rig.Target.RuntimeId), Is.False);
                 rig.Dispose();
             }
@@ -469,6 +471,16 @@ namespace JoseonHunter.Tests.PlayMode
                     var delta = Mathf.Min(.05f, remaining);
                     Executor.Tick(delta, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick));
                     Runtime.AffixStatuses.Tick(delta, tick);
+                    remaining -= delta;
+                }
+            }
+            public void AdvanceStatusesOnly(float seconds)
+            {
+                var remaining = Mathf.Max(0f, seconds);
+                while (remaining > .00001f)
+                {
+                    var delta = Mathf.Min(.05f, remaining);
+                    Runtime.AffixStatuses.Tick(delta, ++tick);
                     remaining -= delta;
                 }
             }

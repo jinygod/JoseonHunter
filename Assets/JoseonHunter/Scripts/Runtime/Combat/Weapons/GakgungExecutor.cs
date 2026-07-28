@@ -19,6 +19,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<SplitArrow> splitArrows = new List<SplitArrow>();
 #if UNITY_INCLUDE_TESTS
         private readonly List<int> splitChildAttackIdsForTests = new List<int>();
+        private readonly List<int> levelFiveSideArrowAttackIdsForTests = new List<int>();
+        private readonly List<int> armorBreakApplicationAttackIdsForTests = new List<int>();
 #endif
 
         public GakgungExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
@@ -46,6 +48,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #if UNITY_INCLUDE_TESTS
         public int LastArmorBreakPrimaryAttackIdForTests { get; private set; }
         public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIdsForTests;
+        public IReadOnlyList<int> LevelFiveSideArrowAttackIdsForTests => levelFiveSideArrowAttackIdsForTests;
+        public IReadOnlyList<int> ArmorBreakApplicationAttackIdsForTests => armorBreakApplicationAttackIdsForTests;
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -85,6 +89,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var child in splitArrows) runtime.DamageService.RetireAttack(child.Attack.InstanceId); splitArrows.Clear();
 #if UNITY_INCLUDE_TESTS
             LastArmorBreakPrimaryAttackIdForTests = 0; splitChildAttackIdsForTests.Clear();
+            levelFiveSideArrowAttackIdsForTests.Clear(); armorBreakApplicationAttackIdsForTests.Clear();
 #endif
         }
 
@@ -137,6 +142,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             PixelHitMask drawMask = null;
             var fullDraw = primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out drawMask);
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+#if UNITY_INCLUDE_TESTS
+            if (!primary) levelFiveSideArrowAttackIdsForTests.Add(attack.InstanceId);
+#endif
             if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range);
             projectiles.Launch(context, new LinearProjectileSpec(
                 attack, WeaponId.GakgungShot,
@@ -154,6 +162,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
 #if UNITY_INCLUDE_TESTS
                     LastArmorBreakPrimaryAttackIdForTests = damage.AttackInstanceId;
+                    armorBreakApplicationAttackIdsForTests.Add(damage.AttackInstanceId);
 #endif
                 }
             }
