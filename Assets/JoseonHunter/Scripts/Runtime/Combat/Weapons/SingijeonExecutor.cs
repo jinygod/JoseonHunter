@@ -28,6 +28,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float nextFocusLaunch;
         private bool focusSequenceActive;
         private bool focusRetargeted;
+        private readonly Dictionary<int, PixelMaskTransform> priorTargetTransforms = new Dictionary<int, PixelMaskTransform>();
 
         public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -63,6 +64,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (!IsEvolved)
             {
                 TickNormal(deltaTime, context);
+                RememberTargetTransforms();
                 return;
             }
 
@@ -109,6 +111,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
                 LaunchScout(context, direction, densePosition);
             }
+            RememberTargetTransforms();
         }
 
         private void TickNormal(float deltaTime, in WeaponExecutionContext context)
@@ -271,8 +274,21 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (!Potentials.HasPotential(WeaponPotentialId.SingijeonPowderTrail) || !WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonPowderTrail, out _, out var mask)) return;
             var dx = travel.Current.X - travel.Previous.X; var dy = travel.Current.Y - travel.Previous.Y; var distance = Mathf.Sqrt(dx * dx + dy * dy); var count = Mathf.Max(1, Mathf.CeilToInt(distance / .35f));
-            for (var index = 1; index <= count; index++) { var t = index / (float)count; trails.Add(new Trail { Position = new Float2(travel.Previous.X + dx * t, travel.Previous.Y + dy * t), Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) }); }
+            for (var index = 1; index <= count; index++)
+            {
+                var t = index / (float)count; var trail = new Trail { Position = new Float2(travel.Previous.X + dx * t, travel.Previous.Y + dy * t), Mask = mask, Remaining = .6f, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .3f) };
+                runtime.Targets.CopyTo(targets);
+                foreach (var target in targets) if (target != null && target.IsAlive && target.HurtMask != null && priorTargetTransforms.TryGetValue(target.RuntimeId, out var prior))
+                {
+                    var current = PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, target.HurtMaskTransform, out var contact);
+                    var previous = PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(trail.Position.X, trail.Position.Y), target.HurtMask, prior, out _);
+                    trail.PreviousTransforms[target.RuntimeId] = target.HurtMaskTransform;
+                    if (!previous && current) { trail.Crossed.Add(target.RuntimeId); trail.TicksByTarget[target.RuntimeId] = new TrailTicks(contact); }
+                }
+                trails.Add(trail);
+            }
         }
+        private void RememberTargetTransforms() { runtime.Targets.CopyTo(targets); priorTargetTransforms.Clear(); foreach (var target in targets) if (target != null && target.IsAlive && target.HurtMask != null) priorTargetTransforms[target.RuntimeId] = target.HurtMaskTransform; }
         private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); public Dictionary<int, PixelMaskTransform> PreviousTransforms { get; } = new Dictionary<int, PixelMaskTransform>(); }
         private struct TrailTicks { public TrailTicks(Float2 contact) { Contact = contact; Elapsed = 0f; Count = 0; } public Float2 Contact; public float Elapsed; public int Count; }
     }
