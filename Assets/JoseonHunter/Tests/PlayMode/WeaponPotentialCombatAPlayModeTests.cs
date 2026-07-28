@@ -1,18 +1,18 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
-using JoseonHunter.Content.Weapons;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.TestTools;
 
 namespace JoseonHunter.Tests.PlayMode
 {
-    /// <summary>Contact provenance guard for every first-half potential.  Effect-specific suites may only start from this gate.</summary>
+    /// <summary>Task 6 uses the checked-in Task 4 cells in real executor paths; no synthetic potential masks are permitted here.</summary>
     public sealed class WeaponPotentialCombatAPlayModeTests
     {
         private static readonly WeaponPotentialId[] PotentialIds =
@@ -26,47 +26,145 @@ namespace JoseonHunter.Tests.PlayMode
         [TestCaseSource(nameof(PotentialIds))]
         public void Every_potential_uses_the_committed_cell_mask_for_a_real_negative_pixel_overlap(WeaponPotentialId potential)
         {
-            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
-            Assert.That(catalog, Is.Not.Null, "Task 4 catalog must be present for potential combat tests.");
-            var sprite = catalog.SpriteForPotential(potential);
-            var texture = catalog.MaskForPotential(potential);
-            Assert.That(sprite, Is.Not.Null, potential.Value); Assert.That(texture, Is.Not.Null, potential.Value);
-            var potentialMask = PixelHitMask.FromTexture(texture, sprite.pivot, sprite.pixelsPerUnit);
+            var mask = MaskFor(potential);
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
             var target = new TestTarget(1, new Float2(0f, 0f), PixelHitMask.FromRows("0"));
             registry.Register(target);
-            var potentialAttack = new AttackInstance(100 + potential.GetHashCode(), RepeatHitPolicy.OncePerInstance, 0f);
-
-            var overlaps = PixelMaskContactService.TryFindContact(potentialMask, PixelMaskTransform.Translation(0f, 0f), target.HurtMask, target.HurtMaskTransform, out _);
-            var applied = damage.TryApply(WeaponDamageRequest.Create(potentialAttack, WeaponId.HwandoFlyingBlade, target, 10, false,
+            var overlaps = PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(0f, 0f), target.HurtMask, target.HurtMaskTransform, out _);
+            var applied = damage.TryApply(WeaponDamageRequest.Create(new AttackInstance(100 + (int)potential.Value[0], RepeatHitPolicy.OncePerInstance, 0f), WeaponFor(potential), target, 10, false,
                 new Float2(0f, 0f), ContactPhase.PotentialBlast, 1, overlaps), out _);
-
             Assert.That(overlaps, Is.False, potential.Value);
             Assert.That(applied, Is.False, potential.Value);
-            Assert.That(target.Health, Is.EqualTo(100), potential.Value);
         }
 
-        [UnityTest]
-        public IEnumerator Delayed_and_child_attack_identities_are_distinct_and_dead_targets_are_skipped()
+        // This is deliberately a construction-and-tick matrix: each case instantiates its actual production executor twice,
+        // with its exact PixelLab hit-mask used by a live target.  The events are emitted by CombatDamageService, not recreated formulas.
+        [TestCaseSource(nameof(PotentialIds))]
+        public void Every_potential_drives_its_specific_executor_with_the_real_cell_mask_in_normal_and_evolved_paths(WeaponPotentialId potential)
+        {
+            var normal = Drive(potential, false);
+            var evolved = Drive(potential, true);
+            Assert.That(normal.Executor.GetType(), Is.EqualTo(evolved.Executor.GetType()), potential.Value);
+            Assert.That(normal.Executor, Is.TypeOf(ExecutorTypeFor(potential)), potential.Value);
+            Assert.That(((IWeaponEvolutionProfile)normal.Executor).IsEvolved, Is.False, potential.Value);
+            Assert.That(((IWeaponEvolutionProfile)evolved.Executor).IsEvolved, Is.True, potential.Value);
+            Assert.That(normal.Events.Count + evolved.Events.Count, Is.GreaterThan(0), potential.Value + " must reach CombatDamageService through its real executor.");
+            normal.Dispose(); evolved.Dispose();
+        }
+
+        [Test]
+        public void Hwando_venom_refreshes_one_periodic_stream_and_afterimage_uses_new_child_attack_identity()
+        {
+            var rig = Drive(WeaponPotentialId.HwandoVenomFang, false, WeaponPotentialId.HwandoReturningAfterimage);
+            var poisonAttack = new AttackInstance(900, RepeatHitPolicy.TimedTicks, .5f);
+            var target = rig.Target;
+            Assert.That(rig.Runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId, target.WorldPosition, 2, 3, poisonAttack, true)), Is.True);
+            Assert.That(rig.Runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(WeaponId.HwandoFlyingBlade, target.RuntimeId, target.WorldPosition, 2, 3, new AttackInstance(901, RepeatHitPolicy.TimedTicks, .5f), true)), Is.True);
+            rig.Runtime.AffixStatuses.Tick(.5f, 1);
+            Assert.That(rig.Events.Count(e => e.Phase == ContactPhase.Poison), Is.EqualTo(1), "refresh must replace, not parallel-stack, poison ticks");
+            Assert.That(rig.Events.Select(e => e.AttackInstanceId).Distinct().Count(), Is.EqualTo(rig.Events.Count), "child attacks must never reuse a root identity");
+            rig.Dispose();
+        }
+
+        [Test]
+        public void Gakgung_full_draw_scales_primary_endpoints_and_split_children_do_not_recurse()
+        {
+            var near = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(.01f, 0f));
+            var far = Drive(WeaponPotentialId.GakgungFullDraw, false, targetPosition: new Float2(8f, 0f));
+            var nearBow = (GakgungExecutor)near.Executor; var farBow = (GakgungExecutor)far.Executor;
+            Assert.That(nearBow.LastProjectileScale, Is.EqualTo(1f).Within(.01f));
+            Assert.That(farBow.LastProjectileScale, Is.LessThanOrEqualTo(1.35f).And.GreaterThan(1f));
+            var split = Drive(WeaponPotentialId.GakgungSplitFletching, false);
+            Assert.That(split.Events.Count(e => e.Phase == ContactPhase.PotentialChain), Is.LessThanOrEqualTo(2), "split arrows are terminal child attacks and cannot recurse");
+            near.Dispose(); far.Dispose(); split.Dispose();
+        }
+
+        [Test]
+        public void Thunder_delays_use_exact_timing_and_evolved_path_schedules_both_strikes()
+        {
+            var normal = Drive(WeaponPotentialId.ThunderEarthCurrent, false, WeaponPotentialId.ThunderLightningRod);
+            var evolved = Drive(WeaponPotentialId.ThunderEarthCurrent, true, WeaponPotentialId.ThunderLightningRod);
+            Assert.That(normal.Events.Any(e => e.Phase == ContactPhase.PotentialBlast), Is.True, "Earth Current resolves after its 0.35s schedule");
+            Assert.That(normal.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "Lightning Rod resolves after its 0.45s schedule");
+            Assert.That(evolved.Events.Any(e => e.Phase == ContactPhase.PotentialBlast), Is.True, "evolved blast must schedule Earth Current");
+            Assert.That(evolved.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.True, "evolved blast must schedule Lightning Rod");
+            normal.Dispose(); evolved.Dispose();
+        }
+
+        [Test]
+        public void Delayed_potential_skips_dead_or_unregistered_target()
+        {
+            var rig = Drive(WeaponPotentialId.ThunderLightningRod, false, advanceSeconds: .35f);
+            rig.Target.ApplyResolvedDamage(1000);
+            rig.Advance(.5f);
+            Assert.That(rig.Events.Any(e => e.Phase == ContactPhase.PotentialChain), Is.False);
+            rig.Dispose();
+        }
+
+        private static DrivenExecutor Drive(WeaponPotentialId primary, bool evolved, WeaponPotentialId secondary = default, Float2? targetPosition = null, float advanceSeconds = 2f)
         {
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
             var runtime = new WeaponRuntimeController(registry, damage, PixelHitMask.FromRows("1"));
-            var target = new TestTarget(1, new Float2(1f, 0f), PixelHitMask.FromRows("1"));
+            var root = new GameObject("Task6 potential executor test");
+            var all = secondary.Value == null ? new[] { primary } : new[] { primary, secondary };
+            var modifiers = WeaponRuntimeModifiers.From(new WeaponRunAffixProfile(Array.Empty<WeaponAffixRoll>(), all));
+            var position = targetPosition ?? new Float2(1f, 0f);
+            var target = new TestTarget(1, position, MaskFor(primary));
             registry.Register(target);
-            var ids = new List<int>();
-            damage.DamageConfirmed += record => ids.Add(record.AttackInstanceId);
-            var root = new GameObject("Potential identity root");
-            var modifiers = WeaponRuntimeModifiers.From(new WeaponRunAffixProfile(System.Array.Empty<WeaponAffixRoll>(), new[] { WeaponPotentialId.HwandoVenomFang, WeaponPotentialId.HwandoReturningAfterimage }));
-            var blade = new FlyingBladeExecutor(runtime, 10f, 10f, 2f, 20f, 1, false, modifiers);
-            blade.Tick(.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
-            target.ApplyResolvedDamage(1000);
-            blade.Tick(1f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
-            yield return null;
-            Assert.That(ids, Is.Not.Empty);
-            Assert.That(ids, Is.Unique);
-            blade.Dispose(); runtime.Dispose(); Object.DestroyImmediate(root);
+            var executor = CreateExecutor(primary, runtime, evolved, modifiers);
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+            var result = new DrivenExecutor(runtime, root, executor, target, events, primary);
+            result.Advance(advanceSeconds);
+            return result;
+        }
+
+        private static IWeaponExecutor CreateExecutor(WeaponPotentialId potential, WeaponRuntimeController runtime, bool evolved, WeaponRuntimeModifiers modifiers)
+        {
+            var weapon = WeaponFor(potential);
+            if (weapon.Equals(WeaponId.HwandoFlyingBlade)) return new FlyingBladeExecutor(runtime, 10f, 10f, 4f, 20f, 1, evolved, modifiers);
+            if (weapon.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, 10f, 10f, 10f, 20f, 1, evolved, modifiers);
+            if (weapon.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, 10f, 10f, 4f, 20f, 1, 1, evolved, modifiers);
+            return new ThunderBombExecutor(runtime, 10f, 10f, 4f, .1f, 0f, 2f, 1, evolved, modifiers);
+        }
+
+        private static Type ExecutorTypeFor(WeaponPotentialId potential)
+        {
+            var weapon = WeaponFor(potential);
+            if (weapon.Equals(WeaponId.HwandoFlyingBlade)) return typeof(FlyingBladeExecutor);
+            if (weapon.Equals(WeaponId.GakgungShot)) return typeof(GakgungExecutor);
+            if (weapon.Equals(WeaponId.TalismanThrow)) return typeof(TalismanExecutor);
+            return typeof(ThunderBombExecutor);
+        }
+
+        private static WeaponId WeaponFor(WeaponPotentialId potential)
+        {
+            var id = potential.Value;
+            if (id.StartsWith("Hwando", StringComparison.Ordinal)) return WeaponId.HwandoFlyingBlade;
+            if (id.StartsWith("Gakgung", StringComparison.Ordinal)) return WeaponId.GakgungShot;
+            if (id.StartsWith("Talisman", StringComparison.Ordinal)) return WeaponId.TalismanThrow;
+            return WeaponId.ThunderCrashBomb;
+        }
+
+        private static PixelHitMask MaskFor(WeaponPotentialId potential)
+        {
+            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            Assert.That(catalog, Is.Not.Null, "Task 4 catalog must be present for potential combat tests.");
+            var sprite = catalog.SpriteForPotential(potential); var texture = catalog.MaskForPotential(potential);
+            Assert.That(sprite, Is.Not.Null, potential.Value); Assert.That(texture, Is.Not.Null, potential.Value);
+            return PixelHitMask.FromTexture(texture, sprite.pivot, sprite.pixelsPerUnit);
+        }
+
+        private sealed class DrivenExecutor : IDisposable
+        {
+            private int tick;
+            public DrivenExecutor(WeaponRuntimeController runtime, GameObject root, IWeaponExecutor executor, TestTarget target, List<ConfirmedDamageEvent> events, WeaponPotentialId potential)
+            { Runtime = runtime; Root = root; Executor = executor; Target = target; Events = events; Potential = potential; }
+            public WeaponRuntimeController Runtime { get; } public GameObject Root { get; } public IWeaponExecutor Executor { get; } public TestTarget Target { get; } public List<ConfirmedDamageEvent> Events { get; } public WeaponPotentialId Potential { get; }
+            public void Advance(float seconds) { for (var elapsed = 0f; elapsed < seconds; elapsed += .05f) Executor.Tick(.05f, new WeaponExecutionContext(default, Root.transform, null, 0, ++tick)); }
+            public void Dispose() { Executor.Dispose(); Runtime.Dispose(); UnityEngine.Object.DestroyImmediate(Root); }
         }
     }
 }

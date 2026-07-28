@@ -102,6 +102,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
             var direction = Direction(context.OwnerPosition, target.WorldPosition);
+            var targetDelta = new Float2(target.WorldPosition.X - context.OwnerPosition.X, target.WorldPosition.Y - context.OwnerPosition.Y);
+            var targetDistance = Mathf.Sqrt(targetDelta.X * targetDelta.X + targetDelta.Y * targetDelta.Y);
             shotSequence++;
             var sunPiercer = IsEvolved && shotSequence % 4 == 0;
             var impacts = sunPiercer ? 8 : (Level == 5 ? 3 : 1);
