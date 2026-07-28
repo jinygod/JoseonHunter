@@ -81,12 +81,15 @@ namespace JoseonHunter.Runtime.Combat
 
         public void Register(WeaponId weaponId, IWeaponExecutor executor)
         {
+            if (executorsByWeapon.ContainsKey(weaponId))
+                throw new InvalidOperationException($"Weapon '{weaponId}' is already registered.");
             Register(executor);
-            executorsByWeapon[weaponId] = executor;
+            executorsByWeapon.Add(weaponId, executor);
         }
 
 #if UNITY_INCLUDE_TESTS
         public bool IsDisposedForTests => disposed;
+        public int RegisteredExecutorSlotCountForTests => executors.Count;
         public int RegistrationCountForTests(WeaponId weaponId) => executorsByWeapon.ContainsKey(weaponId) ? 1 : 0;
         public IWeaponExecutor ExecutorForTests(WeaponId weaponId) =>
             executorsByWeapon.TryGetValue(weaponId, out var executor) ? executor : null;

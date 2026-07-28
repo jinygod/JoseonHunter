@@ -11,3 +11,9 @@ Validation: `git diff --check` passed. One focused Unity PlayMode invocation was
 Added the runtime-only `EvolvedWeaponTestRig` and the test-only `EvolvedExecutorFactory`. The factory constructs all eight level-five evolved executors using real registry, damage service, and runtime controller dependencies. Focused coverage now verifies every roster weapon has one unique, queryable evolved executor.
 
 The controller evolution test now captures the normal pre-choice runtime and executor, verifies that selection replaces both, checks the retired runtime's disposal/cleared registration signal, and asserts one evolved replacement registration without a duplicate slot. Unity test infrastructure was not retried.
+
+## Fix Round 2
+
+`WeaponRuntimeController.Register(WeaponId, ...)` now rejects duplicate weapon IDs before modifying its executor list. Test-only slot counts expose the actual executor collection, and coverage verifies a rejected duplicate is neither ticked nor disposed as a registered slot.
+
+Completed `EvolvedWeaponTestRig` with a real registry, damage service, runtime, root object, combat targets, confirmed-event observations, cast/time advancement, and cleanup. Added test-only unified `EvolutionTelemetry` and the all-eight factory reader. Default telemetry remains intentionally neutral until the executor-specific evolution tasks add their real counters; it reports the real evolved profile flag without synthesizing combat events. Unity test infrastructure was not retried.

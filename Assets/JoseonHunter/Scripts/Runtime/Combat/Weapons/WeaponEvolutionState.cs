@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Runtime.Combat;
@@ -38,6 +39,56 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (weaponId.Equals(WeaponId.WindThunderFan)) return new WindThunderFanExecutor(runtime, baseDamage, cooldownSeconds, range, 1f, 5, 5, evolved: true);
             throw new System.ArgumentOutOfRangeException(nameof(weaponId), weaponId, "No evolved test executor is available.");
         }
+
+        public static EvolutionTelemetry ReadTelemetry(IWeaponExecutor executor)
+        {
+            if (executor == null) throw new ArgumentNullException(nameof(executor));
+            switch (executor)
+            {
+                case FlyingBladeExecutor flyingBlade: return EmptyTelemetry(flyingBlade.IsEvolved);
+                case GakgungExecutor gakgung: return EmptyTelemetry(gakgung.IsEvolved);
+                case TalismanExecutor talisman: return EmptyTelemetry(talisman.IsEvolved);
+                case ThunderBombExecutor thunderBomb: return EmptyTelemetry(thunderBomb.IsEvolved);
+                case JangseungWardExecutor jangseungWard: return EmptyTelemetry(jangseungWard.IsEvolved);
+                case SingijeonExecutor singijeon: return EmptyTelemetry(singijeon.IsEvolved);
+                case FrostFlaskExecutor frostFlask: return EmptyTelemetry(frostFlask.IsEvolved);
+                case WindThunderFanExecutor windThunderFan: return EmptyTelemetry(windThunderFan.IsEvolved);
+                default: return EmptyTelemetry(executor is IWeaponEvolutionProfile profile && profile.IsEvolved);
+            }
+        }
+
+        private static EvolutionTelemetry EmptyTelemetry(bool isEvolved) =>
+            new EvolutionTelemetry(0, 0f, Array.Empty<string>(), Array.Empty<string>(), 0, 0, 0f, false, isEvolved);
+    }
+
+    public readonly struct EvolutionTelemetry
+    {
+        public EvolutionTelemetry(
+            int lastProjectileMaximumImpacts, float lastProjectileScale,
+            IReadOnlyList<string> stateOrder, IReadOnlyList<string> volleyKinds,
+            int scoutProjectileCount, int focusProjectileCount, float fieldDuration,
+            bool allStoredTargetsResolvedOnce, bool isEvolved = false)
+        {
+            LastProjectileMaximumImpacts = lastProjectileMaximumImpacts;
+            LastProjectileScale = lastProjectileScale;
+            StateOrder = stateOrder;
+            VolleyKinds = volleyKinds;
+            ScoutProjectileCount = scoutProjectileCount;
+            FocusProjectileCount = focusProjectileCount;
+            FieldDuration = fieldDuration;
+            AllStoredTargetsResolvedOnce = allStoredTargetsResolvedOnce;
+            IsEvolved = isEvolved;
+        }
+
+        public int LastProjectileMaximumImpacts { get; }
+        public float LastProjectileScale { get; }
+        public IReadOnlyList<string> StateOrder { get; }
+        public IReadOnlyList<string> VolleyKinds { get; }
+        public int ScoutProjectileCount { get; }
+        public int FocusProjectileCount { get; }
+        public float FieldDuration { get; }
+        public bool AllStoredTargetsResolvedOnce { get; }
+        public bool IsEvolved { get; }
     }
 #endif
 }
