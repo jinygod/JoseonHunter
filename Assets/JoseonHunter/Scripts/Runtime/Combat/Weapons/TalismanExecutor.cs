@@ -61,9 +61,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 LastState = cast.State;
                 if (cast.State != TalismanState.Complete) continue;
                 runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
+                if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
                 active.RemoveAt(index);
             }
-            if (Level == 5 && active.Count == 0)
+            if (!IsEvolved && Level == 5 && active.Count == 0)
             {
                 if (bindingTargets.Count > 0) ResolveBindingBurst(context);
                 else if (bindingAttack != null)
@@ -76,7 +77,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            foreach (var cast in active) runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
+            foreach (var cast in active)
+            {
+                runtime.DamageService.RetireAttack(cast.Attack.InstanceId);
+                if (cast.BlastAttack != null) runtime.DamageService.RetireAttack(cast.BlastAttack.InstanceId);
+            }
             active.Clear(); bindingTargets.Clear();
             if (bindingAttack != null) runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
             bindingAttack = null; cooldown = 0f; LastState = TalismanState.Complete; LastFinalBurstCount = 0;
@@ -88,7 +93,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
             // Hop count is each talisman's sequential chain length; the master form always starts up to three independent seals.
-            var simultaneous = Level == 5 ? 3 : 1;
+            var simultaneous = !IsEvolved && Level == 5 ? 3 : 1;
             LastFinalBurstCount = 0; lastContactPhases.Clear();
             bindingTargets.Clear();
             bindingAttack = Level == 5 ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null;
@@ -98,7 +103,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (index > 0 && !TryFindNearestLegal(context.OwnerPosition, launchReservations, out target)) break;
                 // Each talisman has its own reservations and hit memory, while IDs remain globally allocated by the runtime.
-                var cast = new TalismanCast(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f), context.OwnerPosition, target, HopCount);
+                var cast = new TalismanCast(
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
+                    IsEvolved ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null,
+                    context.OwnerPosition, target, HopCount);
                 cast.ReservedTargets.Add(target.RuntimeId);
                 cast.AttemptedTargets.Add(target.RuntimeId);
                 launchReservations.Add(target.RuntimeId);
@@ -174,8 +182,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 return;
             }
             cast.CompletedHops++;
+            if (IsEvolved) cast.RecordLinkedTarget(cast.Target);
             if (cast.CompletedHops >= HopCount || !TryFindNearestLegal(cast.Target.WorldPosition, cast.ReservedTargets, out var next))
             {
+                if (IsEvolved)
+                {
+                    ResolveEvolvedChainBurst(cast, context);
+                    cast.State = TalismanState.Complete;
+                    return;
+                }
                 if (Level == 5)
                 {
                     if (!bindingTargets.Contains(cast.Target)) bindingTargets.Add(cast.Target);
@@ -194,6 +209,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveNoTarget(TalismanCast cast, in WeaponExecutionContext context)
         {
+            if (IsEvolved)
+            {
+                if (cast.LinkedTargets.Count >= 3) ResolveEvolvedChainBurst(cast, context);
+                cast.State = TalismanState.Complete;
+                return;
+            }
             // A terminal attached target always gets exactly one safe burst; an initial no-target cast never exists.
             if (IsCurrentTargetValid(cast.Target) && TryContact(cast.Target, out var contact))
             {
@@ -201,6 +222,22 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (Apply(cast, cast.Target, contact, ContactPhase.Blast, context.SimulationTick, multiplier)) LastFinalBurstCount++;
             }
             cast.State = TalismanState.Complete;
+        }
+
+        private void ResolveEvolvedChainBurst(TalismanCast cast, in WeaponExecutionContext context)
+        {
+            if (cast.LinkedTargets.Count < 3) return;
+            var resolved = false;
+            foreach (var target in cast.LinkedTargets)
+            {
+                if (!IsCurrentTargetValid(target) || !TryContact(target, out var contact)) continue;
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(cast.BlastAttack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * 2, false, contact, ContactPhase.Blast, context.SimulationTick), out _))
+                {
+                    lastContactPhases.Add(ContactPhase.Blast);
+                    resolved = true;
+                }
+            }
+            if (resolved) LastFinalBurstCount = 1;
         }
 
         private void ResolveBindingBurst(in WeaponExecutionContext context)
@@ -254,9 +291,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private sealed class TalismanCast
         {
-            public TalismanCast(AttackInstance attack, Float2 position, ICombatTarget target, int hopLimit)
-            { Attack = attack; Position = position; Target = target; HopLimit = hopLimit; }
+            public TalismanCast(AttackInstance attack, AttackInstance blastAttack, Float2 position, ICombatTarget target, int hopLimit)
+            { Attack = attack; BlastAttack = blastAttack; Position = position; Target = target; HopLimit = hopLimit; }
             public AttackInstance Attack { get; }
+            public AttackInstance BlastAttack { get; }
             public Float2 Position { get; set; }
             public ICombatTarget Target { get; set; }
             public int HopLimit { get; }
@@ -264,7 +302,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float SealRemaining { get; set; }
             public HashSet<int> ReservedTargets { get; } = new HashSet<int>();
             public HashSet<int> AttemptedTargets { get; } = new HashSet<int>();
+            public List<ICombatTarget> LinkedTargets { get; } = new List<ICombatTarget>();
+            public HashSet<int> LinkedTargetIds { get; } = new HashSet<int>();
             public TalismanState State { get; set; } = TalismanState.Flying;
+
+            public void RecordLinkedTarget(ICombatTarget target)
+            {
+                if (target != null && LinkedTargetIds.Add(target.RuntimeId)) LinkedTargets.Add(target);
+            }
         }
     }
 }

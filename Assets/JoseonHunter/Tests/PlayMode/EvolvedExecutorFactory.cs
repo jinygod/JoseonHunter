@@ -14,11 +14,12 @@ namespace JoseonHunter.Tests.PlayMode
             const float cooldownSeconds = 0.1f;
             const float range = 4f;
             const float speed = 8f;
+            const float singleCastCooldownSeconds = 10f;
 
             if (weaponId.Equals(WeaponId.HwandoFlyingBlade)) return new FlyingBladeExecutor(runtime, baseDamage, cooldownSeconds, range, speed, 5, evolved: true);
             if (weaponId.Equals(WeaponId.GakgungShot)) return new GakgungExecutor(runtime, baseDamage, cooldownSeconds, range, speed, 5, evolved: true);
-            if (weaponId.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, baseDamage, cooldownSeconds, range, speed, 5, 5, evolved: true);
-            if (weaponId.Equals(WeaponId.ThunderCrashBomb)) return new ThunderBombExecutor(runtime, baseDamage, cooldownSeconds, range, 0.5f, 0.15f, 2f, 5, evolved: true);
+            if (weaponId.Equals(WeaponId.TalismanThrow)) return new TalismanExecutor(runtime, baseDamage, singleCastCooldownSeconds, range, speed, 5, 5, evolved: true);
+            if (weaponId.Equals(WeaponId.ThunderCrashBomb)) return new ThunderBombExecutor(runtime, baseDamage, singleCastCooldownSeconds, range, 0.5f, 0.15f, 2f, 5, evolved: true);
             if (weaponId.Equals(WeaponId.JangseungWard)) return new JangseungWardExecutor(runtime, baseDamage, cooldownSeconds, range, 4, 4, 0.2f, 5, evolved: true);
             if (weaponId.Equals(WeaponId.SingijeonVolley)) return new SingijeonExecutor(runtime, baseDamage, cooldownSeconds, range, speed, 5, 5, evolved: true);
             if (weaponId.Equals(WeaponId.FrostFlask)) return new FrostFlaskExecutor(runtime, baseDamage, cooldownSeconds, range, 0.5f, 1f, 1.4f, 4, 5, evolved: true);
@@ -38,7 +39,7 @@ namespace JoseonHunter.Tests.PlayMode
                 case TalismanExecutor value:
                     return Snapshot(WeaponId.TalismanThrow, "Talisman", value.IsEvolved, value.LastState.ToString(), value.TotalLaunchedTalismanCount, value.ActiveCastCount, value.LastLaunchCount, value.LastFinalBurstCount, 0f, value.LastContactPhases);
                 case ThunderBombExecutor value:
-                    return Snapshot(WeaponId.ThunderCrashBomb, "ThunderBomb", value.IsEvolved, value.LastState.ToString(), value.ActiveBombCount, value.Level, value.ActiveBombCount, 0, value.BlastRadius);
+                    return Snapshot(WeaponId.ThunderCrashBomb, "ThunderBomb", value.IsEvolved, value.LastState.ToString(), value.ActiveBombCount, value.Level, value.ActiveBombCount, 0, value.BlastRadius, value.StateOrder);
                 case JangseungWardExecutor value:
                     return Snapshot(WeaponId.JangseungWard, "JangseungWard", value.IsEvolved, value.ActiveWardSetCount > 0 ? "Active" : "Idle", value.ActiveWardSetCount, value.ActivePostCount, value.ActivePostCount, value.EvictedWardSetCount, value.Radius);
                 case SingijeonExecutor value:

@@ -137,6 +137,33 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Heaven_chain_bursts_once_after_unique_target_chain_completes()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.TalismanThrow))
+            {
+                rig.AddTargets(4);
+                yield return rig.AdvanceSeconds(3f);
+
+                Assert.That(rig.Count(ContactPhase.Blast), Is.EqualTo(4));
+                Assert.That(rig.UniqueDamagedTargets, Is.EqualTo(4));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Thunder_prison_pulls_before_secondary_blast()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.ThunderCrashBomb))
+            {
+                var target = rig.AddTarget(new Vector2(2f, 0f));
+                yield return rig.AdvanceSeconds(1f);
+
+                Assert.That(target.Position.X, Is.LessThan(2f));
+                Assert.That(rig.Telemetry.StateOrder, Is.EqualTo(new[] { "Pull", "CompressionDelay", "CompressedBlast" }));
+                CollectionAssert.Contains(rig.ContactPhases, ContactPhase.Blast);
+            }
+        }
+
         private sealed class CountingExecutor : IWeaponExecutor
         {
             public int TickCount { get; private set; }
