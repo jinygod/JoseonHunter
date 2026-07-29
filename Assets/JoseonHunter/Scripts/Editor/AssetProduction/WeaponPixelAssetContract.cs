@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -31,6 +32,24 @@ namespace JoseonHunter.Editor.AssetProduction
             if (!spriteImporter.isReadable || !binaryMaskImporter.isReadable || !spriteSource.isReadable || !binaryMask.isReadable) return errors;
             if (spriteSource.width == binaryMask.width && spriteSource.height == binaryMask.height)
                 ValidatePixels(spriteSource.GetPixels32(), binaryMask.GetPixels32(), errors);
+            return errors;
+        }
+
+        public static IReadOnlyList<string> ValidatePolishFrame(
+            Texture2D texture,
+            TextureImporter importer,
+            string assetPath)
+        {
+            var errors = new List<string>();
+            if (texture == null) errors.Add("missing polish frame");
+            if (importer == null) errors.Add("missing polish frame importer");
+            if (errors.Count != 0) return errors;
+
+            ValidateImporter(importer, "polish frame", RequiredPixelsPerUnit, errors);
+            if (importer.spriteImportMode != SpriteImportMode.Single)
+                errors.Add("polish frame must be a single sprite");
+            if (!string.Equals(Path.GetExtension(assetPath), ".png", StringComparison.OrdinalIgnoreCase))
+                errors.Add("polish frame must be png");
             return errors;
         }
 

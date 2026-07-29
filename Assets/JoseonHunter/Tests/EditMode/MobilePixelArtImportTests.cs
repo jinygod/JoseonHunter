@@ -51,7 +51,9 @@ namespace JoseonHunter.Tests.EditMode
                 as TextureImporter;
             Assert.That(importer, Is.Not.Null);
             Assert.That(importer.isReadable, Is.True);
-            Assert.That(importer.spritePixelsPerUnit, Is.EqualTo(64f));
+            Assert.That(
+                importer.spritePixelsPerUnit,
+                Is.EqualTo(WeaponPixelAssetContract.RequiredPixelsPerUnit));
             Assert.That(importer.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
             Assert.That(importer.GetPlatformTextureSettings("Android").overridden, Is.False);
         }

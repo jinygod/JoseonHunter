@@ -1,3 +1,4 @@
+using JoseonHunter.Editor.AssetProduction;
 using UnityEditor;
 using UnityEngine;
 
@@ -43,7 +44,11 @@ namespace JoseonHunter.Editor.AssetImport
             texture.textureType = TextureImporterType.Sprite;
             texture.filterMode = IsBilinearArt(assetPath) ? FilterMode.Bilinear : FilterMode.Point;
             texture.mipmapEnabled = false;
-            texture.spritePixelsPerUnit = IsMobilePixelRuntime(assetPath) ? 64f : 32f;
+            texture.spritePixelsPerUnit = assetPath.StartsWith(
+                    WeaponPolishRuntimeRoot,
+                    System.StringComparison.Ordinal)
+                ? WeaponPixelAssetContract.RequiredPixelsPerUnit
+                : IsMobilePixelRuntime(assetPath) ? 64f : 32f;
             texture.alphaIsTransparency = true;
             if (IsSingleRuntimeSprite(assetPath))
             {
