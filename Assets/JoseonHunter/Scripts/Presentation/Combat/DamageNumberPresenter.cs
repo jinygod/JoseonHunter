@@ -20,6 +20,7 @@ namespace JoseonHunter.Presentation.Combat
         private Vector3 startPosition;
         private float elapsed;
         private float lifetime;
+        private float horizontalDrift;
 
         public bool IsActive { get; private set; }
         public bool IsCritical { get; private set; }
@@ -40,7 +41,8 @@ namespace JoseonHunter.Presentation.Combat
             elapsed += Time.deltaTime;
             // Numbers complete their rise before their visibility window ends; boss values then linger in place.
             var progress = Mathf.Clamp01(elapsed / NormalRiseDuration);
-            transform.position = startPosition + Vector3.up * (RiseDistance * progress);
+            var eased = 1f - Mathf.Pow(1f - progress, 3f);
+            transform.position = startPosition + new Vector3(horizontalDrift * eased, RiseDistance * eased, 0f);
             transform.localScale = Vector3.one * (IsCritical && elapsed < CriticalPunchDuration
                 ? Mathf.Lerp(CriticalPunchScale, 1f, elapsed / CriticalPunchDuration)
                 : 1f);
@@ -56,6 +58,7 @@ namespace JoseonHunter.Presentation.Combat
             if (textMesh == null) textMesh = GetComponent<TextMeshPro>();
 
             startPosition = new Vector3(display.ContactPoint.X, display.ContactPoint.Y, transform.position.z);
+            horizontalDrift = Mathf.Sin(display.ContactPoint.X * 12.9898f + display.ContactPoint.Y * 78.233f) * 0.11f;
             transform.position = startPosition;
             elapsed = 0f;
             lifetime = NormalLifetime + (isBoss ? BossLifetimeBonus : 0f);
@@ -78,6 +81,7 @@ namespace JoseonHunter.Presentation.Combat
             elapsed = 0f;
             lifetime = 0f;
             completed = null;
+            horizontalDrift = 0f;
             transform.localScale = Vector3.one;
             transform.localPosition = Vector3.zero;
             if (textMesh != null)

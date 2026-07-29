@@ -20,6 +20,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/";
         private const string WorldRuntimeRoot =
             "Assets/JoseonHunter/Art/World/Runtime/";
+        private const string CombatAnimationRoot =
+            "Assets/JoseonHunter/Art/Animation/";
         private const string EnemyRuntimeRoot =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/";
         private const string EliteRuntimeRoot =
@@ -47,10 +49,12 @@ namespace JoseonHunter.Editor.AssetImport
                 texture.spriteImportMode = SpriteImportMode.Single;
                 texture.isReadable = assetPath.StartsWith(
                     WeaponPolishRuntimeRoot,
-                    System.StringComparison.Ordinal);
+                    System.StringComparison.Ordinal)
+                    || assetPath.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal);
                 SetSingleSpritePivot(
                     texture,
                     assetPath.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal)
+                    || assetPath.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal)
                         ? new Vector2(0.5f, 0.125f)
                         : new Vector2(0.5f, 0.5f));
                 texture.textureCompression = TextureImporterCompression.Uncompressed;
@@ -87,14 +91,16 @@ namespace JoseonHunter.Editor.AssetImport
                 || path.StartsWith(EliteRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(BossRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
-                || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal);
+                || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal);
         }
 
         private static bool IsSingleRuntimeSprite(string path)
         {
             return path.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
-                || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal);
+                || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal);
         }
 
         private static SpriteMetaData[] CharacterSprites(string characterId, int frameCount, int columns)

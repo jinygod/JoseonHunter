@@ -1,0 +1,124 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c874068117a130e4abfd90321e5d8082, type: 3}
+  m_Name: CombatMotionLibrary
+  m_EditorClassIdentifier: JoseonHunter.Runtime::JoseonHunter.Runtime.Gameplay.CombatMotionLibrary
+  sets:
+  - id: han_yeonhwa
+    referenceSprite: {fileID: 21300000, guid: 22a79ed537f9ad04d91c019160bbf724, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: 3fab5c66699a8aa4b930e8dac6053f50, type: 3}
+    - {fileID: 21300000, guid: a3afb499504590a4aaa5308023a522b7, type: 3}
+    - {fileID: 21300000, guid: 7da8123e35bff074285c77a624eb8f44, type: 3}
+    - {fileID: 21300000, guid: 93f986ab4f1e44046b00f12f9690469f, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: 6a800421b9a185946843873a847671de, type: 3}
+    - {fileID: 21300000, guid: c2afda3bd36b24f46a263e453fb834fa, type: 3}
+    - {fileID: 21300000, guid: f2f10a2ec8524b548ac4bafc7d838d7b, type: 3}
+    - {fileID: 21300000, guid: e5bb0651d0d43cb47bc7aee821b1b9fe, type: 3}
+    - {fileID: 21300000, guid: 0c831df85004f8c4e80e5ddaf8d98e74, type: 3}
+    - {fileID: 21300000, guid: 138d08002ccfbf949b65a67962b16cf6, type: 3}
+    - {fileID: 21300000, guid: 57593739b0501ab45a4ea3711d5238b4, type: 3}
+    - {fileID: 21300000, guid: 66343aac808e23440a214e6d757caa53, type: 3}
+    idleFramesPerSecond: 3
+    moveFramesPerSecond: 10
+    weight: 0
+  - id: bandit
+    referenceSprite: {fileID: 21300000, guid: e4f7f85242ee7484f9a003774da3848a, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: e4f7f85242ee7484f9a003774da3848a, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: 7d63e0cfdd8bf424fba27469fae971a8, type: 3}
+    - {fileID: 21300000, guid: 6a759cea2d4d0614b9dbb8bf21cf6a62, type: 3}
+    - {fileID: 21300000, guid: 31897c59f43a0f44f9a81c4f50ef3029, type: 3}
+    - {fileID: 21300000, guid: d39e178ba06c005488e445df3a6d9eff, type: 3}
+    idleFramesPerSecond: 2.4
+    moveFramesPerSecond: 7.5
+    weight: 1
+  - id: dokkaebi
+    referenceSprite: {fileID: 21300000, guid: 9be3d28e55fe05148a54c1f644b77e45, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: 9be3d28e55fe05148a54c1f644b77e45, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: 3f04202608f1de54b9eb3784ba9d700a, type: 3}
+    - {fileID: 21300000, guid: 288ebca22657663459e096701e24a0f9, type: 3}
+    - {fileID: 21300000, guid: 35a78db7dd74f5444b98d5259b8e10e4, type: 3}
+    - {fileID: 21300000, guid: 896ce1c4bf2ded54b84322daf7d7266e, type: 3}
+    idleFramesPerSecond: 2.2
+    moveFramesPerSecond: 6.5
+    weight: 1
+  - id: plague_rat
+    referenceSprite: {fileID: 21300000, guid: 118fd8e8b2e1f28448d30d7d81107d78, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: 118fd8e8b2e1f28448d30d7d81107d78, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: f6fc4613a5ed8874ca56aaa219eabd64, type: 3}
+    - {fileID: 21300000, guid: 8f889af8eb11e35459a11af1f0733564, type: 3}
+    - {fileID: 21300000, guid: db20d1c3e57ea5648962953ae88bcc73, type: 3}
+    - {fileID: 21300000, guid: 40b41ca6e93e0b1469e890544d4fd093, type: 3}
+    idleFramesPerSecond: 3
+    moveFramesPerSecond: 10
+    weight: 0
+  - id: sakkat_specter
+    referenceSprite: {fileID: 21300000, guid: f652076ccede926409352dfaa05a9905, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: f652076ccede926409352dfaa05a9905, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: 39d14fae6b67f1c48a7d1b60da2290c0, type: 3}
+    - {fileID: 21300000, guid: f6c2c715397e34845aceaa5d803d5b4d, type: 3}
+    - {fileID: 21300000, guid: 4a53f899834201845a3bd996f9ccb477, type: 3}
+    - {fileID: 21300000, guid: a6370885cdc10544a8d1ee9a2108e327, type: 3}
+    idleFramesPerSecond: 2
+    moveFramesPerSecond: 5.5
+    weight: 1
+  - id: vengeful_spirit
+    referenceSprite: {fileID: 21300000, guid: f0e07b6063bdeb940a54a68d1cf52525, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: f0e07b6063bdeb940a54a68d1cf52525, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: e99d17d2bc197be499345510c66b8e13, type: 3}
+    - {fileID: 21300000, guid: aa4e34a51918b234fbf7a9d986d454d6, type: 3}
+    - {fileID: 21300000, guid: 8aa50d73d48281f40acd50fe3bc1816c, type: 3}
+    - {fileID: 21300000, guid: 436d2da02ddaa6140920360b53f46336, type: 3}
+    idleFramesPerSecond: 2
+    moveFramesPerSecond: 5.8
+    weight: 1
+  - id: dokkaebi_captain
+    referenceSprite: {fileID: 21300000, guid: 99d04d910709baf499f38be478a9e18e, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: 723d25b36c8bcee4abb0041ef417511f, type: 3}
+    - {fileID: 21300000, guid: 08d2739fa10fc474ca4e35727bc368ea, type: 3}
+    - {fileID: 21300000, guid: 699030b8a34eead4a9d822ef7608ee01, type: 3}
+    - {fileID: 21300000, guid: c777d0d934206c44e8e57fd86cbb66ef, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: 2305551d8297b6340b4e50b7423cc060, type: 3}
+    - {fileID: 21300000, guid: bc7e3634b021ae349b4ba274ebe2b2b7, type: 3}
+    - {fileID: 21300000, guid: b4d08d49ff6de274ab9d6b0e3b99ae89, type: 3}
+    - {fileID: 21300000, guid: 17c9d19609887174bb4f665fddb30e00, type: 3}
+    idleFramesPerSecond: 2.2
+    moveFramesPerSecond: 5.5
+    weight: 2
+  - id: fallen_general
+    referenceSprite: {fileID: 21300000, guid: c14d3d33bed6ba64e93d3db4be4fc7fc, type: 3}
+    idleFrames:
+    - {fileID: 21300000, guid: 6d7e400661640a14291941ecae047b2e, type: 3}
+    - {fileID: 21300000, guid: d9bcadd62b74e0d408daf2e4ceecd16f, type: 3}
+    - {fileID: 21300000, guid: 458fe3903029f8d40ba50f4ab143537c, type: 3}
+    - {fileID: 21300000, guid: f48ba7e563a2ae0428c19904774d8272, type: 3}
+    moveFrames:
+    - {fileID: 21300000, guid: 0397de5ffc9bf224882784f0e7821857, type: 3}
+    - {fileID: 21300000, guid: 21633ce2672d11b4486f47dd50248226, type: 3}
+    - {fileID: 21300000, guid: 0ee844889adf17346b962c4ea3c7d230, type: 3}
+    - {fileID: 21300000, guid: 7c781defc7f774a46b6a7c0e542d8064, type: 3}
+    idleFramesPerSecond: 1.8
+    moveFramesPerSecond: 4.5
+    weight: 2

@@ -46,9 +46,9 @@ namespace JoseonHunter.Presentation.Combat
         {
             var intensity = request.Boss && request.Killed ? 100 : request.Killed || request.Critical ? 80 : 70;
             if (request.ReducedEffects) return new FeedbackProfile(intensity, 0f, 0f, true);
-            return intensity == 80
-                ? new FeedbackProfile(80, 0.035f, 0.08f, true)
-                : new FeedbackProfile(70, 0f, 0f, true);
+            if (intensity >= 100) return new FeedbackProfile(100, 0.055f, 0.14f, true);
+            if (intensity == 80) return new FeedbackProfile(80, 0.03f, 0.075f, true);
+            return new FeedbackProfile(70, 0f, 0f, true);
         }
     }
 
@@ -123,7 +123,7 @@ namespace JoseonHunter.Presentation.Combat
             RestoreRenderBaseline();
             if (camera == null || camera != Camera.main || impulseRemaining <= 0f || impulseMagnitude <= 0f) return;
 
-            var amount = impulseMagnitude * (impulseRemaining / 0.035f);
+            var amount = impulseMagnitude * Mathf.Clamp01(impulseRemaining / 0.055f);
             renderCamera = camera;
             renderBaseline = camera.transform.position;
             camera.transform.position = renderBaseline + (Vector3)(UnityEngine.Random.insideUnitCircle * amount);

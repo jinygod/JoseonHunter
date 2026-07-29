@@ -12,6 +12,8 @@ namespace JoseonHunter.Tests.EditMode
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/ImportTests/";
         private const string SingleAssetFixture = FixtureRoot + "single_asset.png";
         private const string MultiAssetFixture = FixtureRoot + "multi_asset.png";
+        private const string CombatAnimationRoot =
+            "Assets/JoseonHunter/Art/Animation/";
 
         [SetUp]
         public void SetUp()
@@ -88,6 +90,37 @@ namespace JoseonHunter.Tests.EditMode
                 SinglePngAssetValidator.Validate(
                     "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png"),
                 Is.Empty);
+        }
+
+        [Test]
+        public void CombatAnimationBatchContainsExpectedIndividualFrames()
+        {
+            var frames = Directory.GetFiles(CombatAnimationRoot, "*.png", SearchOption.AllDirectories);
+            Assert.That(frames, Has.Length.EqualTo(48));
+            Assert.That(frames, Has.All.Matches<string>(path =>
+                Path.GetFileName(path).StartsWith("walk_") ||
+                Path.GetFileName(path).StartsWith("idle_")));
+        }
+
+        [Test]
+        public void CombatAnimationFramesUseCrispReadableProfile()
+        {
+            foreach (var path in Directory.GetFiles(CombatAnimationRoot, "*.png", SearchOption.AllDirectories))
+            {
+                var assetPath = path.Replace('\\', '/');
+                var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+                Assert.That(importer, Is.Not.Null, assetPath);
+                Assert.That(importer.textureType, Is.EqualTo(TextureImporterType.Sprite), assetPath);
+                Assert.That(importer.spriteImportMode, Is.EqualTo(SpriteImportMode.Single), assetPath);
+                Assert.That(importer.spritePixelsPerUnit, Is.EqualTo(64f), assetPath);
+                Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point), assetPath);
+                Assert.That(importer.mipmapEnabled, Is.False, assetPath);
+                Assert.That(importer.isReadable, Is.True, assetPath);
+                Assert.That(
+                    importer.textureCompression,
+                    Is.EqualTo(TextureImporterCompression.Uncompressed),
+                    assetPath);
+            }
         }
 
         private static void CreateFixture(string path, bool includeSecondAsset)
