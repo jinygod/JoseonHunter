@@ -79,12 +79,12 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void FlyingBlade_LevelFive_FlipsArcSignForItsInboundCrossing()
+        public void FlyingBlade_LevelFive_CrossesToTheOppositeWorldSpaceSideOnInbound()
         {
             var fixture = CreateFixture(new Float2(1f, 0f), 3);
 
             fixture.Executor.Tick(.1f, fixture.Context(1));
-            var outboundSign = fixture.Executor.FirstActiveResolvedArcSignForTests;
+            var outbound = fixture.Executor.FirstActivePositionForTests;
             while (!fixture.Executor.FirstActiveInboundForTests)
                 fixture.Executor.Tick(.1f, fixture.Context(2));
             var turnaround = fixture.Executor.FirstActivePositionForTests;
@@ -94,7 +94,7 @@ namespace JoseonHunter.Tests.EditMode
 
             NUnitMultipleCompat.Run(() =>
             {
-                Assert.That(fixture.Executor.FirstActiveResolvedArcSignForTests, Is.EqualTo(-outboundSign));
+                Assert.That(outbound.Y * inbound.Y, Is.LessThan(0f));
                 Assert.That(inbound.X, Is.LessThan(turnaround.X));
                 Assert.That(Mathf.Abs(inbound.Y), Is.GreaterThan(.01f));
             });

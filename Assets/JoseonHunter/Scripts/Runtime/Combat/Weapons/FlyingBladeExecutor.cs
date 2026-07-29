@@ -54,12 +54,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int PendingAfterimageCountForTests => afterimages.Count;
         public Float2 FirstActivePositionForTests => active.Count > 0 ? active[0].Position : default;
         public bool FirstActiveInboundForTests => active.Count > 0 && active[0].Inbound;
-        public float FirstActiveResolvedArcSignForTests =>
-            active.Count == 0
-                ? 0f
-                : active[0].Inbound
-                    ? ResolveInboundArcSign(active[0])
-                    : active[0].ArcSign;
 #endif
         public float MaximumDistanceFromLaunch { get; private set; }
         public int DelayedBladeCount
@@ -446,7 +440,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
 
         private float ResolveInboundArcSign(Blade blade) =>
-            blade.IsMoonBlade || BladeCount >= 3
+            blade.IsMoonBlade
                 ? -blade.ArcSign
                 : blade.ArcSign;
 
