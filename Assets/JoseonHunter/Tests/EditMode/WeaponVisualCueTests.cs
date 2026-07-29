@@ -25,5 +25,48 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(evolved.ResolvedLifetime, Is.GreaterThan(normal.ResolvedLifetime));
             Assert.That(evolved.ResolvedLifetime, Is.LessThanOrEqualTo(.32f));
         }
+
+        [Test]
+        public void VisualPartRanges_MatchEveryApprovedPolishFrameWithoutOverlap()
+        {
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(WeaponVisualPartIndex.Hwando.Projectile, Is.EqualTo(0));
+                Assert.That(WeaponVisualPartIndex.Hwando.Trail, Is.EqualTo(4));
+                Assert.That(WeaponVisualPartIndex.Hwando.Impact, Is.EqualTo(8));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.HwandoFlyingBlade), Is.EqualTo(12));
+
+                Assert.That(WeaponVisualPartIndex.Gakgung.Windup, Is.EqualTo(0));
+                Assert.That(WeaponVisualPartIndex.Gakgung.Projectile, Is.EqualTo(3));
+                Assert.That(WeaponVisualPartIndex.Gakgung.Impact, Is.EqualTo(6));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.GakgungShot), Is.EqualTo(11));
+
+                Assert.That(WeaponVisualPartIndex.Singijeon.Projectile, Is.EqualTo(0));
+                Assert.That(WeaponVisualPartIndex.Singijeon.Trail, Is.EqualTo(4));
+                Assert.That(WeaponVisualPartIndex.Singijeon.Detonation, Is.EqualTo(9));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.SingijeonVolley), Is.EqualTo(15));
+
+                Assert.That(WeaponVisualPartIndex.Talisman.Field, Is.EqualTo(4));
+                Assert.That(WeaponVisualPartIndex.Talisman.Impact, Is.EqualTo(9));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.TalismanThrow), Is.EqualTo(14));
+
+                Assert.That(WeaponVisualPartIndex.ThunderCrash.Windup, Is.EqualTo(6));
+                Assert.That(WeaponVisualPartIndex.ThunderCrash.Detonation, Is.EqualTo(10));
+                Assert.That(WeaponVisualPartIndex.ThunderCrash.Field, Is.EqualTo(16));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.ThunderCrashBomb), Is.EqualTo(21));
+
+                Assert.That(WeaponVisualPartIndex.Jangseung.Field, Is.EqualTo(5));
+                Assert.That(WeaponVisualPartIndex.Jangseung.Impact, Is.EqualTo(9));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.JangseungWard), Is.EqualTo(14));
+
+                Assert.That(WeaponVisualPartIndex.FrostFlask.Field, Is.EqualTo(6));
+                Assert.That(WeaponVisualPartIndex.FrostFlask.Impact, Is.EqualTo(11));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.FrostFlask), Is.EqualTo(17));
+
+                Assert.That(WeaponVisualPartIndex.WindThunderFan.Field, Is.EqualTo(5));
+                Assert.That(WeaponVisualPartIndex.WindThunderFan.Impact, Is.EqualTo(9));
+                Assert.That(WeaponVisualPartIndex.RequiredCount(WeaponId.WindThunderFan), Is.EqualTo(15));
+            });
+        }
     }
 }

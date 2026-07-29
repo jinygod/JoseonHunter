@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -14,10 +15,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<Blade> active = new List<Blade>();
         private readonly List<MoonCast> moonCasts = new List<MoonCast>();
         private readonly List<Afterimage> afterimages = new List<Afterimage>();
-        private readonly List<TransientEffect> transientEffects = new List<TransientEffect>();
         private readonly List<ICombatTarget> targetBuffer = new List<ICombatTarget>();
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
+        private WeaponTransientVisualPool transientVisuals;
+        private Transform transientVisualRoot;
         private float cooldown;
 
         public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
@@ -50,6 +52,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ReturnedToPoolCount { get; private set; }
 #if UNITY_INCLUDE_TESTS
         public int PendingAfterimageCountForTests => afterimages.Count;
+        public Float2 FirstActivePositionForTests => active.Count > 0 ? active[0].Position : default;
 #endif
         public float MaximumDistanceFromLaunch { get; private set; }
         public int DelayedBladeCount
@@ -64,6 +67,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
+            EnsureTransientVisuals(context.PresentationRoot);
+            transientVisuals?.Tick(deltaTime);
             cooldown -= deltaTime;
             if (cooldown <= 0f && TryFindTarget(context.OwnerPosition, out var target))
             {
@@ -104,14 +109,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 runtime.DamageService.RetireAttack(shadow.Attack.InstanceId); afterimages.RemoveAt(index);
             }
 
-            for (var index = transientEffects.Count - 1; index >= 0; index--)
-            {
-                var effect = transientEffects[index];
-                effect.Remaining -= Mathf.Max(0f, deltaTime);
-                if (effect.Remaining > 0f) continue;
-                if (effect.Visual != null) UnityEngine.Object.Destroy(effect.Visual);
-                transientEffects.RemoveAt(index);
-            }
         }
 
         public void Reset()
@@ -125,11 +122,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var afterimage in afterimages) runtime.DamageService.RetireAttack(afterimage.Attack.InstanceId);
             afterimages.Clear();
             moonCasts.Clear();
-            foreach (var effect in transientEffects)
-                if (effect.Visual != null) UnityEngine.Object.Destroy(effect.Visual);
-            transientEffects.Clear();
             cooldown = 0f;
             MaximumDistanceFromLaunch = 0f;
+            transientVisuals?.Dispose();
+            transientVisuals = null;
+            transientVisualRoot = null;
         }
 
         public void Dispose()
@@ -141,6 +138,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (visual != null) UnityEngine.Object.Destroy(visual);
             }
             masksBySprite.Clear();
+            transientVisuals?.Dispose();
+            transientVisuals = null;
+            transientVisualRoot = null;
         }
 
         private bool TryFindTarget(Float2 owner, out ICombatTarget target)
@@ -178,9 +178,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var stagger = IsEvolved ? 0f : index * 0.1f;
                 var visual = Acquire(context);
                 visual.transform.position = new Vector3(launch.X, launch.Y, 0f);
+                var arcSign = count > 1 && (index & 1) != 0 ? -1f : 1f;
                 var blade = new Blade(
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
-                    launch, endpoint, stagger, visual, context.MaskFor(WeaponId.HwandoFlyingBlade) ?? ResolveMask(visual.GetComponent<SpriteRenderer>()), Range, IsEvolved, castHits);
+                    launch, endpoint, stagger, visual, context.MaskFor(WeaponId.HwandoFlyingBlade) ?? ResolveMask(visual.GetComponent<SpriteRenderer>()), Range, IsEvolved, castHits, arcSign);
                 active.Add(blade);
                 cast?.Blades.Add(blade);
             }
@@ -196,19 +197,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
 
             var previousPosition = blade.Position;
+            blade.VisualAge += Mathf.Max(0f, deltaTime);
+            var bladeRenderer = blade.Visual.GetComponent<SpriteRenderer>();
+            var frame = Mathf.FloorToInt(blade.VisualAge / .05f)
+                % WeaponVisualPartIndex.Hwando.ProjectileFrameCount;
+            bladeRenderer.sprite = context.PresentationSpriteFor(
+                WeaponId.HwandoFlyingBlade,
+                WeaponVisualPartIndex.Hwando.Projectile + frame);
+            var trailRenderer = blade.Visual.transform.Find("Blade Afterimage")?.GetComponent<SpriteRenderer>();
+            if (trailRenderer != null)
+                trailRenderer.sprite = context.PresentationSpriteFor(
+                    WeaponId.HwandoFlyingBlade,
+                    WeaponVisualPartIndex.Hwando.Trail +
+                    frame % WeaponVisualPartIndex.Hwando.TrailFrameCount);
             var contactPhase = blade.Inbound ? ContactPhase.Inbound : ContactPhase.Outbound;
             if (!blade.Inbound)
             {
                 blade.OutboundProgress += deltaTime * Speed / Mathf.Max(0.01f, blade.Distance);
-                var t = Mathf.Clamp01(blade.OutboundProgress);
-                var arc = Mathf.Sin(t * Mathf.PI) * Mathf.Min(0.35f, blade.Distance * 0.12f);
-                var direction = Subtract(blade.End, blade.Start);
-                var length = Mathf.Max(0.01f, blade.Distance);
-                var position = new Float2(
-                    Mathf.Lerp(blade.Start.X, blade.End.X, t) - direction.Y / length * arc,
-                    Mathf.Lerp(blade.Start.Y, blade.End.Y, t) + direction.X / length * arc);
-                blade.Position = ClampToRange(blade.Start, position, blade.Range);
-                if (t >= 1f)
+                var progress = Mathf.Clamp01(blade.OutboundProgress);
+                var easedProgress = Mathf.SmoothStep(0f, 1f, progress);
+                blade.Position = CurvedPosition(
+                    blade.Start,
+                    blade.End,
+                    progress,
+                    easedProgress,
+                    blade.ArcSign,
+                    blade.Range);
+                if (progress >= 1f)
                 {
                     blade.Inbound = true;
                     blade.ReturnStart = blade.Position;
@@ -222,20 +237,21 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             else
             {
                 blade.ReturnProgress += deltaTime * Speed / blade.ReturnDistance;
-                var t = Mathf.Clamp01(blade.ReturnProgress);
-                if (t >= 1f)
+                var progress = Mathf.Clamp01(blade.ReturnProgress);
+                if (progress >= 1f)
                 {
                     blade.Returned = true;
                     return;
                 }
                 blade.ReturnSegmentStart = blade.Position;
-                var direction = Subtract(blade.Start, blade.ReturnStart);
-                var arc = -Mathf.Sin(t * Mathf.PI) * Mathf.Min(0.28f, blade.ReturnDistance * 0.10f);
-                blade.Position = new Float2(
-                    Mathf.Lerp(blade.ReturnStart.X, blade.Start.X, t) -
-                    direction.Y / blade.ReturnDistance * arc,
-                    Mathf.Lerp(blade.ReturnStart.Y, blade.Start.Y, t) +
-                    direction.X / blade.ReturnDistance * arc);
+                var inboundSign = blade.IsMoonBlade ? -blade.ArcSign : blade.ArcSign;
+                blade.Position = CurvedPosition(
+                    blade.ReturnStart,
+                    blade.Start,
+                    progress,
+                    Mathf.SmoothStep(0f, 1f, progress),
+                    inboundSign,
+                    blade.Range);
                 blade.HasReturnSegment = true;
             }
 
@@ -321,7 +337,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             visual.transform.SetParent(context.PresentationRoot, false);
             var renderer = visual.GetComponent<SpriteRenderer>();
             if (renderer == null) renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = context.SpriteFor(WeaponId.HwandoFlyingBlade);
+            renderer.sprite = context.PresentationSpriteFor(
+                WeaponId.HwandoFlyingBlade,
+                WeaponVisualPartIndex.Hwando.Projectile);
             renderer.color = Color.white;
             renderer.sortingOrder = context.SortingOrder;
             visual.transform.localScale = Vector3.one;
@@ -333,7 +351,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             var trailRenderer = trail.GetComponent<SpriteRenderer>();
             if (trailRenderer == null) trailRenderer = trail.gameObject.AddComponent<SpriteRenderer>();
-            trailRenderer.sprite = context.PresentationSpriteFor(WeaponId.HwandoFlyingBlade, 1);
+            trailRenderer.sprite = context.PresentationSpriteFor(
+                WeaponId.HwandoFlyingBlade,
+                WeaponVisualPartIndex.Hwando.Trail);
             trailRenderer.color = new Color(1f, 1f, 1f, 0.58f);
             trailRenderer.sortingOrder = context.SortingOrder - 1;
             trail.localPosition = new Vector3(-0.13f, 0f, 0f);
@@ -345,16 +365,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void SpawnImpact(in WeaponExecutionContext context, Float2 contact)
         {
-            var sprite = context.PresentationSpriteFor(WeaponId.HwandoFlyingBlade, 2);
-            if (sprite == null || context.PresentationRoot == null) return;
-            var visual = new GameObject("Hwando Contact Spark");
-            visual.transform.SetParent(context.PresentationRoot, false);
-            visual.transform.position = new Vector3(contact.X, contact.Y, 0f);
-            visual.transform.rotation = Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0, 4) * 90f);
-            var renderer = visual.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.sortingOrder = context.SortingOrder + 2;
-            transientEffects.Add(new TransientEffect(visual, 0.12f));
+            EnsureTransientVisuals(context.PresentationRoot);
+            var sprite = context.PresentationSpriteFor(
+                WeaponId.HwandoFlyingBlade,
+                WeaponVisualPartIndex.Hwando.Impact);
+            var cue = new WeaponVisualCue(
+                WeaponId.HwandoFlyingBlade,
+                WeaponVisualStage.Impact,
+                BladeCount,
+                IsEvolved,
+                1f,
+                .12f);
+            transientVisuals?.Play(
+                sprite,
+                new Vector3(contact.X, contact.Y, 0f),
+                Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0, 4) * 90f),
+                Vector3.one * cue.ResolvedScale,
+                Color.white,
+                cue.ResolvedLifetime,
+                context.SortingOrder + 2);
+        }
+
+        private void EnsureTransientVisuals(Transform root)
+        {
+            if (root == null || root == transientVisualRoot) return;
+            transientVisuals?.Dispose();
+            transientVisualRoot = root;
+            transientVisuals = new WeaponTransientVisualPool(root);
         }
 
         private void Release(GameObject visual)
@@ -373,6 +410,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
 
         private static Float2 Subtract(Float2 left, Float2 right) => new Float2(left.X - right.X, left.Y - right.Y);
+
+        private Float2 CurvedPosition(
+            Float2 start,
+            Float2 end,
+            float progress,
+            float easedProgress,
+            float arcSign,
+            float range)
+        {
+            var direction = Subtract(end, start);
+            var length = Mathf.Max(
+                .01f,
+                Mathf.Sqrt(direction.X * direction.X + direction.Y * direction.Y));
+            direction = new Float2(direction.X / length, direction.Y / length);
+            var arc = Mathf.Sin(progress * Mathf.PI) *
+                (.10f + .025f * Mathf.Min(4, BladeCount));
+            var perpendicular = new Float2(-direction.Y, direction.X);
+            var straight = new Float2(
+                Mathf.Lerp(start.X, end.X, easedProgress),
+                Mathf.Lerp(start.Y, end.Y, easedProgress));
+            return ClampToRange(
+                start,
+                new Float2(
+                    straight.X + perpendicular.X * arc * arcSign,
+                    straight.Y + perpendicular.Y * arc * arcSign),
+                range);
+        }
 
         private static Float2 Rotate(Float2 value, float degrees)
         {
@@ -427,12 +491,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private sealed class Blade
         {
-            public Blade(AttackInstance attack, Float2 start, Float2 end, float delay, GameObject visual, PixelHitMask mask, float range, bool isMoonBlade, HashSet<int> castHits)
+            public Blade(AttackInstance attack, Float2 start, Float2 end, float delay, GameObject visual, PixelHitMask mask, float range, bool isMoonBlade, HashSet<int> castHits, float arcSign)
             {
                 Attack = attack; Start = start; End = end; Delay = delay; Visual = visual; Mask = mask; Range = range;
                 Position = start;
                 IsMoonBlade = isMoonBlade;
                 CastHits = castHits;
+                ArcSign = arcSign;
                 Distance = Mathf.Sqrt((end.X - start.X) * (end.X - start.X) + (end.Y - start.Y) * (end.Y - start.Y));
             }
             public AttackInstance Attack { get; }
@@ -454,18 +519,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float ReturnDistance { get; set; }
             public float ReturnProgress { get; set; }
             public HashSet<int> CastHits { get; }
-        }
-
-        private sealed class TransientEffect
-        {
-            public TransientEffect(GameObject visual, float remaining)
-            {
-                Visual = visual;
-                Remaining = remaining;
-            }
-
-            public GameObject Visual { get; }
-            public float Remaining { get; set; }
+            public float ArcSign { get; }
+            public float VisualAge { get; set; }
         }
 
         private sealed class Afterimage

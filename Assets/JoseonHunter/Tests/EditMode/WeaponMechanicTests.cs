@@ -66,6 +66,19 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void FlyingBlade_LevelFive_UsesDistinctCurvedOutboundPositions()
+        {
+            var fixture = CreateFixture(new Float2(1f, 0f), 3);
+
+            fixture.Executor.Tick(.08f, fixture.Context(1));
+            var outbound = fixture.Executor.FirstActivePositionForTests;
+            fixture.Executor.Tick(.08f, fixture.Context(2));
+            var later = fixture.Executor.FirstActivePositionForTests;
+
+            Assert.That(Mathf.Abs(later.Y - outbound.Y), Is.GreaterThan(.01f));
+        }
+
+        [Test]
         public void GakgungPrioritizesBossOverCloserNormalAndMissesMovedTarget()
         {
             var mask = PixelHitMask.FromRows("1");
@@ -127,8 +140,97 @@ namespace JoseonHunter.Tests.EditMode
             {
                 Assert.That(singijeon.LastDirection.X, Is.GreaterThan(0f));
                 Assert.That(singijeon.LastLaunchCount, Is.EqualTo(3));
-                Assert.That(singijeon.ActiveProjectileCount, Is.EqualTo(3));
+                Assert.That(singijeon.ActiveProjectileCount, Is.EqualTo(1));
+                Assert.That(singijeon.PendingLaunchCountForTests, Is.EqualTo(2));
             });
+        }
+
+        [Test]
+        public void Singijeon_LevelFive_LaunchesAcrossMultipleTicks()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var singijeon = new SingijeonExecutor(runtime, 10f, 1f, 2f, 10f, 3, 5);
+            registry.Register(new TestTarget(1, new Float2(10f, 0f), mask));
+            var context = new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1);
+
+            singijeon.Tick(.01f, context);
+            var first = singijeon.ActiveProjectileCount;
+            singijeon.Tick(.06f, context);
+
+            Assert.That(singijeon.ActiveProjectileCount, Is.GreaterThan(first));
+        }
+
+        [Test]
+        public void LinearProjectileSpec_ClampsVisualAnimationTiming()
+        {
+            var attack = new AttackInstance(1, RepeatHitPolicy.OncePerInstance, 0f);
+
+            var spec = new LinearProjectileSpec(
+                attack,
+                WeaponId.GakgungShot,
+                default,
+                new Float2(1f, 0f),
+                1f,
+                1f,
+                1,
+                1,
+                "Animated Arrow",
+                visualPartStart: 4,
+                visualFrameCount: 0,
+                visualFrameSeconds: 0f);
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(spec.VisualPartStart, Is.EqualTo(4));
+                Assert.That(spec.VisualFrameCount, Is.EqualTo(1));
+                Assert.That(spec.VisualFrameSeconds, Is.EqualTo(.01f));
+            });
+        }
+
+        [Test]
+        public void LinearProjectile_RecordsOnlyAConfirmedImpactContact()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var linear = new LinearProjectileExecutor(runtime);
+            registry.Register(new TestTarget(1, new Float2(.2f, 0f), mask));
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+            linear.Launch(context, new LinearProjectileSpec(
+                new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f),
+                WeaponId.GakgungShot,
+                default,
+                new Float2(1f, 0f),
+                10f,
+                .1f,
+                10,
+                1,
+                "Contact Probe"));
+
+            linear.Tick(.1f, context);
+
+            Assert.That(linear.HasLastImpactContactForTests, Is.True);
+            Assert.That(linear.LastImpactContactForTests.X, Is.InRange(-.5f, .5f));
+        }
+
+        [Test]
+        public void EvolvedGakgung_ClampsSunPiercerVisualScale()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var bow = new GakgungExecutor(runtime, 10f, .01f, 4f, 10f, 5, evolved: true);
+            registry.Register(new TestTarget(1, new Float2(3f, 0f), mask, health: 10000));
+
+            for (var tick = 1; tick <= 4; tick++)
+                bow.Tick(.02f, new WeaponExecutionContext(default, root.transform, null, 0, tick));
+
+            Assert.That(bow.LastProjectileScale, Is.InRange(.72f, 1.08f));
         }
 
         [Test]
@@ -216,7 +318,10 @@ namespace JoseonHunter.Tests.EditMode
             {
                 Assert.That(singijeon.LaneCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount));
                 Assert.That(singijeon.LastLaunchCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
-                Assert.That(singijeon.ActiveProjectileCount, Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
+                Assert.That(singijeon.ActiveProjectileCount, Is.EqualTo(1));
+                Assert.That(
+                    singijeon.ActiveProjectileCount + singijeon.PendingLaunchCountForTests,
+                    Is.EqualTo(SingijeonExecutor.MaxLaneCount * 3));
             });
 
             var linear = new LinearProjectileExecutor(runtime);

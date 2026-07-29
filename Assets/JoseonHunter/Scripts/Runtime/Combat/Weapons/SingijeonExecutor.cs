@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -23,6 +24,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly HashSet<int> focusAttackIds = new HashSet<int>();
         private readonly HashSet<int> childAttackIds = new HashSet<int>();
         private readonly List<Trail> trails = new List<Trail>();
+        private readonly List<PendingLaunch> pendingLaunches = new List<PendingLaunch>();
         private WeaponExecutionContext latestContext;
         private readonly Dictionary<int, Float2> focusDirections = new Dictionary<int, Float2>();
         private int focusLaunchIndex;
@@ -30,6 +32,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private bool focusSequenceActive;
         private bool focusRetargeted;
         private readonly Dictionary<int, PixelMaskTransform> priorTargetTransforms = new Dictionary<int, PixelMaskTransform>();
+        private WeaponTransientVisualPool transientVisuals;
+        private Transform transientVisualRoot;
 
         public SingijeonExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int laneCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -63,6 +67,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool FocusRetargetedForTests => focusRetargeted;
         public int UnlaunchedFocusCountForTests => Mathf.Max(0, FocusProjectileCount - focusLaunchIndex);
         public int FocusRetargetCountForTests { get; private set; }
+        public int PendingLaunchCountForTests => pendingLaunches.Count;
         public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIds;
         public Func<ICombatTarget, bool> BeforeFocusPotentialCheckForTests { get; set; }
         public bool SuppressNewCastsForTests { get; set; }
@@ -71,7 +76,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
-            latestContext = context; AdvanceTrails(Mathf.Max(0f, deltaTime), context);
+            latestContext = context;
+            EnsureTransientVisuals(context.PresentationRoot);
+            transientVisuals?.Tick(deltaTime);
+            AdvanceTrails(Mathf.Max(0f, deltaTime), context);
 #if UNITY_INCLUDE_TESTS
             if (SuppressNewCastsForTests) { RememberTargetTransforms(); return; }
 #endif
@@ -89,14 +97,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     if (nextFocusLaunch <= .00001f) { var zero = 0f; AdvanceFocusSequence(ref zero, context); continue; }
                     var launchSlice = Mathf.Min(remaining, nextFocusLaunch);
-                    projectiles.Tick(launchSlice, context); remaining -= launchSlice; nextFocusLaunch -= launchSlice;
+                    TickProjectilesAndPending(launchSlice, context); remaining -= launchSlice; nextFocusLaunch -= launchSlice;
                     if (nextFocusLaunch <= .00001f) { var zero = 0f; AdvanceFocusSequence(ref zero, context); }
                     continue;
                 }
                 if (awaitingFocus)
                 {
                     var untilFocus = Mathf.Min(remaining, focusDelay);
-                    projectiles.Tick(untilFocus, context);
+                    TickProjectilesAndPending(untilFocus, context);
                     remaining -= untilFocus;
                     focusDelay -= untilFocus;
                     if (focusDelay > 0.0001f) break;
@@ -110,7 +118,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (cooldown > 0.0001f)
                 {
                     var untilReady = Mathf.Min(remaining, cooldown);
-                    projectiles.Tick(untilReady, context);
+                    TickProjectilesAndPending(untilReady, context);
                     remaining -= untilReady;
                     cooldown -= untilReady;
                     if (cooldown > 0.0001f) break;
@@ -120,7 +128,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
                 if (!TryFindDensestDirection(context.OwnerPosition, out var direction, out var densePosition))
                 {
-                    projectiles.Tick(remaining, context);
+                    TickProjectilesAndPending(remaining, context);
                     break;
                 }
                 LaunchScout(context, direction, densePosition);
@@ -136,13 +144,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 cooldown = CooldownSeconds;
                 Launch(context, direction);
             }
-            projectiles.Tick(deltaTime, context);
+            TickProjectilesAndPending(deltaTime, context);
         }
 
         public void Reset()
         {
             foreach (var trail in trails) runtime.DamageService.RetireAttack(trail.Attack.InstanceId);
-            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); splitChildAttackIds.Clear(); trails.Clear(); priorTargetTransforms.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false;
+            cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); splitChildAttackIds.Clear(); trails.Clear(); pendingLaunches.Clear(); priorTargetTransforms.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false;
+            transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
 #if UNITY_INCLUDE_TESTS
             FocusRetargetCountForTests = 0;
 #endif
@@ -192,7 +201,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 var radians = index * 10f * Mathf.Deg2Rad;
                 var spread = new Float2(direction.X * Mathf.Cos(radians) - direction.Y * Mathf.Sin(radians), direction.X * Mathf.Sin(radians) + direction.Y * Mathf.Cos(radians));
-                LaunchRocket(context, context.OwnerPosition, spread, "Singijeon Scout Rocket", false, false);
+                ScheduleRocket(context.OwnerPosition, spread, "Singijeon Scout Rocket", false, false, (index + 1) * .045f);
                 ScoutProjectileCount++;
             }
         }
@@ -200,6 +209,23 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void LaunchFocus(in WeaponExecutionContext context)
         {
             volleyKinds.Add("focus"); FocusProjectileCount = 8; LastLaunchCount = FocusProjectileCount; focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = true; focusRetargeted = false;
+            var cue = new WeaponVisualCue(
+                WeaponId.SingijeonVolley,
+                WeaponVisualStage.Windup,
+                Level,
+                IsEvolved,
+                .9f,
+                .14f);
+            transientVisuals?.Play(
+                context.PresentationSpriteFor(
+                    WeaponId.SingijeonVolley,
+                    WeaponVisualPartIndex.Singijeon.Windup),
+                new Vector3(focusPosition.X, focusPosition.Y, 0f),
+                Quaternion.identity,
+                Vector3.one * cue.ResolvedScale,
+                new Color(1f, .82f, .45f, .9f),
+                cue.ResolvedLifetime,
+                context.SortingOrder + 1);
             var none = 0f; AdvanceFocusSequence(ref none, context);
         }
 
@@ -208,7 +234,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (!focusSequenceActive) return;
             while (focusLaunchIndex < FocusProjectileCount && available + .00001f >= nextFocusLaunch)
             {
-                available -= nextFocusLaunch; nextFocusLaunch = .05f;
+                available -= nextFocusLaunch; nextFocusLaunch = .035f;
                 var radians = focusLaunchIndex * Mathf.PI * 2f / FocusProjectileCount;
                 var offset = new Float2(Mathf.Cos(radians) * .3f, Mathf.Sin(radians) * .3f);
                 var target = new Float2(focusPosition.X + offset.X, focusPosition.Y + offset.Y);
@@ -224,7 +250,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             if (focus) { focusAttackIds.Add(attack.InstanceId); focusDirections[attack.InstanceId] = direction; } if (child) { childAttackIds.Add(attack.InstanceId); splitChildAttackIds.Add(attack.InstanceId); }
             var lifetime = (child ? Range * .55f : Range) / Speed;
-            projectiles.Launch(context, new LinearProjectileSpec(attack, WeaponId.SingijeonVolley, position, direction, Speed, lifetime, Mathf.CeilToInt(child ? BaseDamage * .35f : BaseDamage), 1, name));
+            projectiles.Launch(context, new LinearProjectileSpec(
+                attack,
+                WeaponId.SingijeonVolley,
+                position,
+                direction,
+                Speed,
+                lifetime,
+                Mathf.CeilToInt(child ? BaseDamage * .35f : BaseDamage),
+                1,
+                name,
+                visualPartStart: WeaponVisualPartIndex.Singijeon.Projectile,
+                visualFrameCount: WeaponVisualPartIndex.Singijeon.ProjectileFrameCount,
+                visualFrameSeconds: .05f));
         }
 
         private static Float2 Normalize(Float2 value)
@@ -246,10 +284,72 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var perpendicular = new Float2(-direction.Y, direction.X);
                 var position = new Float2(context.OwnerPosition.X + perpendicular.X * laneOffset * 0.12f - direction.X * rowOffset,
                     context.OwnerPosition.Y + perpendicular.Y * laneOffset * 0.12f - direction.Y * rowOffset);
-                projectiles.Launch(context, new LinearProjectileSpec(
-                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), WeaponId.SingijeonVolley,
-                    position, direction, Speed, Range / Speed, Mathf.CeilToInt(BaseDamage), 1, "Singijeon Rocket"));
+                ScheduleRocket(position, direction, "Singijeon Rocket", false, false, (row * LaneCount + lane) * .045f);
             }
+        }
+
+        private void ScheduleRocket(
+            Float2 position,
+            Float2 direction,
+            string name,
+            bool focus,
+            bool child,
+            float delay)
+        {
+            if (delay <= .00001f)
+            {
+                LaunchRocket(latestContext, position, direction, name, focus, child);
+                return;
+            }
+            pendingLaunches.Add(new PendingLaunch(position, direction, name, focus, child, delay));
+        }
+
+        private void TickProjectilesAndPending(float deltaTime, in WeaponExecutionContext context)
+        {
+            var remaining = Mathf.Max(0f, deltaTime);
+            while (remaining > .00001f)
+            {
+                var untilLaunch = remaining;
+                for (var index = 0; index < pendingLaunches.Count; index++)
+                    untilLaunch = Mathf.Min(untilLaunch, pendingLaunches[index].Remaining);
+
+                if (untilLaunch > .00001f)
+                {
+                    projectiles.Tick(untilLaunch, context);
+                    remaining -= untilLaunch;
+                    for (var index = 0; index < pendingLaunches.Count; index++)
+                    {
+                        var pending = pendingLaunches[index];
+                        pending.Remaining -= untilLaunch;
+                        pendingLaunches[index] = pending;
+                    }
+                }
+
+                var launched = false;
+                for (var index = pendingLaunches.Count - 1; index >= 0; index--)
+                {
+                    var pending = pendingLaunches[index];
+                    if (pending.Remaining > .00001f) continue;
+                    pendingLaunches.RemoveAt(index);
+                    LaunchRocket(
+                        context,
+                        pending.Position,
+                        pending.Direction,
+                        pending.Name,
+                        pending.Focus,
+                        pending.Child);
+                    launched = true;
+                }
+                if (!launched && untilLaunch <= .00001f) break;
+            }
+        }
+
+        private void EnsureTransientVisuals(Transform root)
+        {
+            if (root == null || root == transientVisualRoot) return;
+            transientVisuals?.Dispose();
+            transientVisualRoot = root;
+            transientVisuals = new WeaponTransientVisualPool(root);
         }
 
         private void OnDamageConfirmed(ConfirmedDamageEvent damage)
@@ -314,6 +414,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
         private void RememberTargetTransforms() { runtime.Targets.CopyTo(targets); priorTargetTransforms.Clear(); foreach (var target in targets) if (target != null && target.IsAlive && target.HurtMask != null) priorTargetTransforms[target.RuntimeId] = target.HurtMaskTransform; }
+        private struct PendingLaunch
+        {
+            public PendingLaunch(Float2 position, Float2 direction, string name, bool focus, bool child, float remaining)
+            {
+                Position = position; Direction = direction; Name = name; Focus = focus; Child = child; Remaining = remaining;
+            }
+            public Float2 Position;
+            public Float2 Direction;
+            public string Name;
+            public bool Focus;
+            public bool Child;
+            public float Remaining;
+        }
         private sealed class Trail { public Float2 Position; public PixelHitMask Mask; public float Remaining; public AttackInstance Attack; public HashSet<int> Crossed { get; } = new HashSet<int>(); public Dictionary<int, TrailTicks> TicksByTarget { get; } = new Dictionary<int, TrailTicks>(); public Dictionary<int, PixelMaskTransform> PreviousTransforms { get; } = new Dictionary<int, PixelMaskTransform>(); }
         private struct TrailTicks { public TrailTicks(Float2 contact) { Contact = contact; Elapsed = 0f; Count = 0; } public Float2 Contact; public float Elapsed; public int Count; }
     }
