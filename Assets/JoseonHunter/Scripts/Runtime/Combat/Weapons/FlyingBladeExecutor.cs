@@ -53,6 +53,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #if UNITY_INCLUDE_TESTS
         public int PendingAfterimageCountForTests => afterimages.Count;
         public Float2 FirstActivePositionForTests => active.Count > 0 ? active[0].Position : default;
+        public bool FirstActiveInboundForTests => active.Count > 0 && active[0].Inbound;
+        public float FirstActiveResolvedArcSignForTests =>
+            active.Count == 0
+                ? 0f
+                : active[0].Inbound
+                    ? ResolveInboundArcSign(active[0])
+                    : active[0].ArcSign;
 #endif
         public float MaximumDistanceFromLaunch { get; private set; }
         public int DelayedBladeCount
@@ -244,7 +251,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     return;
                 }
                 blade.ReturnSegmentStart = blade.Position;
-                var inboundSign = blade.IsMoonBlade ? -blade.ArcSign : blade.ArcSign;
+                var inboundSign = ResolveInboundArcSign(blade);
                 blade.Position = CurvedPosition(
                     blade.ReturnStart,
                     blade.Start,
@@ -437,6 +444,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     straight.Y + perpendicular.Y * arc * arcSign),
                 range);
         }
+
+        private float ResolveInboundArcSign(Blade blade) =>
+            blade.IsMoonBlade || BladeCount >= 3
+                ? -blade.ArcSign
+                : blade.ArcSign;
 
         private static Float2 Rotate(Float2 value, float degrees)
         {

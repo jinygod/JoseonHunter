@@ -79,6 +79,28 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void FlyingBlade_LevelFive_FlipsArcSignForItsInboundCrossing()
+        {
+            var fixture = CreateFixture(new Float2(1f, 0f), 3);
+
+            fixture.Executor.Tick(.1f, fixture.Context(1));
+            var outboundSign = fixture.Executor.FirstActiveResolvedArcSignForTests;
+            while (!fixture.Executor.FirstActiveInboundForTests)
+                fixture.Executor.Tick(.1f, fixture.Context(2));
+            var turnaround = fixture.Executor.FirstActivePositionForTests;
+
+            fixture.Executor.Tick(.1f, fixture.Context(3));
+            var inbound = fixture.Executor.FirstActivePositionForTests;
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(fixture.Executor.FirstActiveResolvedArcSignForTests, Is.EqualTo(-outboundSign));
+                Assert.That(inbound.X, Is.LessThan(turnaround.X));
+                Assert.That(Mathf.Abs(inbound.Y), Is.GreaterThan(.01f));
+            });
+        }
+
+        [Test]
         public void GakgungPrioritizesBossOverCloserNormalAndMissesMovedTarget()
         {
             var mask = PixelHitMask.FromRows("1");
