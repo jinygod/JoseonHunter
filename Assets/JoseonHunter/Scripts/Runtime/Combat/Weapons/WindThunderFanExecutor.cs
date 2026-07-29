@@ -293,7 +293,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                             castOrigin.Y + direction.Y * Range * progress,
                             0f),
                         Quaternion.Euler(0f, 0f, degrees),
-                        new Vector3(Mathf.Lerp(.58f, 1.05f, progress), Mathf.Lerp(.42f, .72f, progress), 1f),
+                        new Vector3(Mathf.Lerp(.58f, 1.05f, progress), Mathf.Lerp(.42f, .72f, progress), 1f) *
+                        WeaponPresentationScale.For(
+                            WeaponId.WindThunderFan,
+                            WeaponVisualStage.Projectile,
+                            1f,
+                            Level,
+                            IsEvolved),
                         new Color(.72f, .94f, 1f, Mathf.Lerp(.48f, .18f, progress)),
                         .09f,
                         context.SortingOrder));
@@ -320,7 +326,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         partStart + frame,
                         new Vector3(contact.X, contact.Y, 0f),
                         Quaternion.identity,
-                        Vector3.one * scale,
+                        Vector3.one * WeaponPresentationScale.For(
+                            WeaponId.WindThunderFan,
+                            WeaponVisualStage.Impact,
+                            scale,
+                            Level,
+                            IsEvolved),
                         reverse ? new Color(.64f, .82f, 1f, .78f) : Color.white,
                         .08f,
                         context.SortingOrder + 2));

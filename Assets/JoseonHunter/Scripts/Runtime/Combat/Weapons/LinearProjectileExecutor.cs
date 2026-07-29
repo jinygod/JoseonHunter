@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -57,8 +58,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 projectile.PendingSimulationTime += Mathf.Max(0f, deltaTime);
                 var previousPosition = projectile.Position;
                 var renderer = projectile.Visual.GetComponent<SpriteRenderer>();
-                var scale = renderer.transform.lossyScale;
-                var pixelWorldSize = Mathf.Min(Mathf.Abs(scale.x), Mathf.Abs(scale.y)) / projectile.Mask.PixelsPerUnit;
+                var pixelWorldSize = 1f / projectile.Mask.PixelsPerUnit;
                 var stepSize = Mathf.Max(0.01f, pixelWorldSize * 0.5f);
                 var maxSimulationTime = stepSize * (MaxSweepSamples - 1) / projectile.Speed;
                 var processedTime = Mathf.Min(projectile.PendingSimulationTime, projectile.RemainingLifetime, maxSimulationTime);
@@ -86,8 +86,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (projectile.FullDraw)
                     projectile.Visual.transform.localScale = Vector3.one * Mathf.Clamp(
                         projectile.BaseScale * (1f + .35f * FullDrawProgress(projectile)),
-                        .72f,
-                        1.08f);
+                        projectile.BaseScale * .92f,
+                        projectile.BaseScale * 1.35f);
                 if (projectile.VisualFrameCount > 1)
                 {
                     var frame = Mathf.FloorToInt(projectile.VisualAge / projectile.VisualFrameSeconds)
@@ -147,8 +147,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var deltaX = projectile.Position.X - previousPosition.X;
             var deltaY = projectile.Position.Y - previousPosition.Y;
             var distance = Mathf.Sqrt(deltaX * deltaX + deltaY * deltaY);
-            var scale = renderer.transform.lossyScale;
-            var pixelWorldSize = Mathf.Min(Mathf.Abs(scale.x), Mathf.Abs(scale.y)) / projectile.Mask.PixelsPerUnit;
+            var pixelWorldSize = 1f / projectile.Mask.PixelsPerUnit;
             var stepSize = Mathf.Max(0.01f, pixelWorldSize * 0.5f);
             var steps = Mathf.Clamp(Mathf.CeilToInt(distance / stepSize), 1, MaxSweepSamples - 1);
             for (var step = 0; step <= steps; step++)
@@ -196,7 +195,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             renderer.sprite = context.SpriteFor(weaponId);
             renderer.sortingOrder = context.SortingOrder;
             renderer.color = Color.white;
-            visual.transform.localScale = Vector3.one * scale;
+            visual.transform.localScale = Vector3.one * WeaponPresentationScale.For(
+                weaponId,
+                WeaponVisualStage.Projectile,
+                scale,
+                1,
+                false);
             visual.SetActive(true);
             return visual;
         }
@@ -233,7 +237,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 Attack = spec.Attack; WeaponId = spec.WeaponId; Position = spec.Position; Direction = spec.Direction;
                 Speed = spec.Speed; RemainingLifetime = spec.Lifetime; Damage = spec.Damage; MaxImpacts = spec.MaxImpacts;
-                Visual = visual; Mask = mask; Origin = spec.Position; InitialLifetime = spec.Lifetime; AllowedRange = spec.AllowedRange; BaseScale = spec.Scale; FullDraw = spec.FullDraw; PotentialMask = spec.PotentialMask;
+                Visual = visual; Mask = mask; Origin = spec.Position; InitialLifetime = spec.Lifetime; AllowedRange = spec.AllowedRange; BaseScale = visual.transform.localScale.x; FullDraw = spec.FullDraw; PotentialMask = spec.PotentialMask;
                 ArcAmplitude = spec.ArcAmplitude; Acceleration = spec.Acceleration;
                 VisualPartStart = spec.VisualPartStart; VisualFrameCount = spec.VisualFrameCount;
                 VisualFrameSeconds = spec.VisualFrameSeconds;

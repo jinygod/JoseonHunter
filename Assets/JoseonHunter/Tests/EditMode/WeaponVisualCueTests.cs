@@ -27,6 +27,42 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ProjectilePresentationStaysSmallerThanACombatantAcrossAllWeapons()
+        {
+            foreach (var weaponId in WeaponRoster.All)
+            {
+                var scale = WeaponPresentationScale.For(
+                    weaponId,
+                    WeaponVisualStage.Projectile,
+                    1f,
+                    level: 5,
+                    evolved: true);
+
+                Assert.That(scale, Is.InRange(0.08f, 0.22f), weaponId.Value);
+            }
+        }
+
+        [Test]
+        public void AreaEffectsGrowWithPowerWithoutReturningToScreenFillingScale()
+        {
+            var normal = WeaponPresentationScale.For(
+                WeaponId.ThunderCrashBomb,
+                WeaponVisualStage.Detonation,
+                1f,
+                level: 1,
+                evolved: false);
+            var evolved = WeaponPresentationScale.For(
+                WeaponId.ThunderCrashBomb,
+                WeaponVisualStage.Detonation,
+                1f,
+                level: 5,
+                evolved: true);
+
+            Assert.That(evolved, Is.GreaterThan(normal));
+            Assert.That(evolved, Is.LessThanOrEqualTo(0.72f));
+        }
+
+        [Test]
         public void VisualPartRanges_MatchEveryApprovedPolishFrameWithoutOverlap()
         {
             NUnitMultipleCompat.Run(() =>

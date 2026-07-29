@@ -27,8 +27,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             Stage = stage;
             Level = Mathf.Clamp(level, 1, 5);
             Evolved = evolved;
-            ResolvedScale = Mathf.Max(.01f, baseScale) *
-                (1f + (Level >= 3 ? .12f : 0f) + (Level >= 5 ? .12f : 0f) + (Evolved ? .16f : 0f));
+            ResolvedScale = WeaponPresentationScale.For(
+                WeaponId,
+                Stage,
+                baseScale,
+                Level,
+                Evolved);
             ResolvedLifetime = Mathf.Min(.32f, Mathf.Max(.04f, lifetime) * (Evolved ? 1.25f : 1f));
         }
 

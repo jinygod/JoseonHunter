@@ -319,7 +319,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var renderer = field.Visual.GetComponent<SpriteRenderer>();
             renderer.sprite = context.PresentationSpriteFor(WeaponId.FrostFlask, field.VisualPartIndex);
             field.Visual.transform.position = new Vector3(field.Position.X, field.Position.Y + field.Height, 0f);
-            field.Visual.transform.localScale = Vector3.one;
+            field.Visual.transform.localScale = Vector3.one * WeaponPresentationScale.For(
+                WeaponId.FrostFlask,
+                WeaponVisualStage.Projectile,
+                1f,
+                Level,
+                IsEvolved);
         }
 
         private void UpdateFieldVisual(Field field, in WeaponExecutionContext context, float radiusScale)

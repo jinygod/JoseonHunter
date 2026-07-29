@@ -525,7 +525,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     WeaponVisualPartIndex.Jangseung.Impact + WeaponVisualPartIndex.Jangseung.ImpactFrameCount - 1),
                 new Vector3(contact.X, contact.Y, 0f),
                 Quaternion.identity,
-                Vector3.one * 1.15f,
+                Vector3.one * WeaponPresentationScale.For(
+                    WeaponId.JangseungWard,
+                    WeaponVisualStage.Impact,
+                    1.15f,
+                    Level,
+                    IsEvolved),
                 Color.white,
                 .14f,
                 context.SortingOrder + 3);

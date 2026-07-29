@@ -244,7 +244,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             else
             {
-                blade.ReturnProgress += deltaTime * Speed / blade.ReturnDistance;
+                blade.ReturnProgress += deltaTime * Speed * 1.35f / blade.ReturnDistance;
                 var progress = Mathf.Clamp01(blade.ReturnProgress);
                 if (progress >= 1f)
                 {
@@ -276,7 +276,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 blade.Visual.transform.rotation = Quaternion.Euler(
                     0f,
                     0f,
-                    Mathf.Atan2(visualDirection.y, visualDirection.x) * Mathf.Rad2Deg);
+                    Mathf.Atan2(visualDirection.y, visualDirection.x) * Mathf.Rad2Deg +
+                    blade.VisualAge * (blade.Inbound ? 980f : 760f) * blade.ArcSign);
             var launchDelta = Subtract(blade.Position, blade.Start);
             MaximumDistanceFromLaunch = Mathf.Max(MaximumDistanceFromLaunch, Mathf.Sqrt(launchDelta.X * launchDelta.X + launchDelta.Y * launchDelta.Y));
             TryDamageContacts(blade, context, blade.IsMoonBlade && !blade.Inbound ? ContactPhase.Direct : contactPhase);
@@ -355,7 +356,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 WeaponVisualPartIndex.Hwando.Projectile);
             renderer.color = Color.white;
             renderer.sortingOrder = context.SortingOrder;
-            visual.transform.localScale = Vector3.one;
+            visual.transform.localScale = Vector3.one * WeaponPresentationScale.For(
+                WeaponId.HwandoFlyingBlade,
+                WeaponVisualStage.Projectile,
+                1f,
+                Level,
+                IsEvolved);
             var trail = visual.transform.Find("Blade Afterimage");
             if (trail == null)
             {
