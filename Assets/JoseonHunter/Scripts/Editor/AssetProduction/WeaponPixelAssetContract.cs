@@ -48,6 +48,12 @@ namespace JoseonHunter.Editor.AssetProduction
             ValidateImporter(importer, "polish frame", RequiredPixelsPerUnit, errors);
             if (importer.spriteImportMode != SpriteImportMode.Single)
                 errors.Add("polish frame must be a single sprite");
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            if (settings.spriteAlignment != (int)SpriteAlignment.Custom
+                || Math.Abs(settings.spritePivot.x - 0.5f) > 0.0001f
+                || Math.Abs(settings.spritePivot.y - 0.5f) > 0.0001f)
+                errors.Add("polish frame pivot must be centered");
             if (!string.Equals(Path.GetExtension(assetPath), ".png", StringComparison.OrdinalIgnoreCase))
                 errors.Add("polish frame must be png");
             return errors;
