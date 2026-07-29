@@ -27,7 +27,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void ProjectilePresentationStaysSmallerThanACombatantAcrossAllWeapons()
+        public void ProjectilePresentationRemainsReadableAtTheExpandedCameraDistance()
         {
             foreach (var weaponId in WeaponRoster.All)
             {
@@ -38,7 +38,7 @@ namespace JoseonHunter.Tests.EditMode
                     level: 5,
                     evolved: true);
 
-                Assert.That(scale, Is.InRange(0.08f, 0.22f), weaponId.Value);
+                Assert.That(scale, Is.InRange(0.36f, 0.58f), weaponId.Value);
             }
         }
 
@@ -59,7 +59,7 @@ namespace JoseonHunter.Tests.EditMode
                 evolved: true);
 
             Assert.That(evolved, Is.GreaterThan(normal));
-            Assert.That(evolved, Is.LessThanOrEqualTo(0.72f));
+            Assert.That(evolved, Is.LessThanOrEqualTo(0.85f));
         }
 
         [Test]

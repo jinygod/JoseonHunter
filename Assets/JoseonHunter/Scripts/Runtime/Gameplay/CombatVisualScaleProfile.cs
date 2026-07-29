@@ -45,8 +45,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 0.32f,
                 0.43f,
                 0.64f,
-                12.25f,
-                15.25f);
+                9.5f,
+                12.25f);
 
         public float BaselineCameraOrthographicSize { get; }
         public float CameraOrthographicSize { get; }

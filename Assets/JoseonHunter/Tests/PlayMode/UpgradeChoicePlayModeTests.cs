@@ -66,7 +66,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Cards_use_three_compact_landscape_columns()
+        public IEnumerator Cards_use_three_centered_vertical_rows()
         {
             var go = new GameObject("Landscape Upgrade Presenter");
             var presenter = go.AddComponent<UpgradeChoicePresenter>();
@@ -74,10 +74,11 @@ namespace JoseonHunter.Tests.PlayMode
             var cards = go.GetComponentsInChildren<Button>(true);
 
             Assert.That(cards, Has.Length.EqualTo(3));
-            Assert.That(cards[0].GetComponent<RectTransform>().sizeDelta, Is.EqualTo(new Vector2(510f, 472f)));
-            Assert.That(cards[0].GetComponent<RectTransform>().anchoredPosition.x, Is.LessThan(0f));
-            Assert.That(cards[1].GetComponent<RectTransform>().anchoredPosition.x, Is.EqualTo(0f));
-            Assert.That(cards[2].GetComponent<RectTransform>().anchoredPosition.x, Is.GreaterThan(0f));
+            Assert.That(cards[0].GetComponent<RectTransform>().sizeDelta, Is.EqualTo(new Vector2(920f, 200f)));
+            Assert.That(cards[0].GetComponent<RectTransform>().anchoredPosition.y, Is.GreaterThan(0f));
+            Assert.That(cards[1].GetComponent<RectTransform>().anchoredPosition.y, Is.EqualTo(0f));
+            Assert.That(cards[2].GetComponent<RectTransform>().anchoredPosition.y, Is.LessThan(0f));
+            Assert.That(cards[0].GetComponent<RectTransform>().anchoredPosition.x, Is.EqualTo(0f));
             Object.Destroy(go);
             yield return null;
         }

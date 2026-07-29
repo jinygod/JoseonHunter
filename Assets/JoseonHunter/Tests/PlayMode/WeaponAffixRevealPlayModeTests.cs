@@ -27,6 +27,17 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(WeaponAffixRevealPresenter.DurationFor(Result(tier, potentialCount)), Is.EqualTo(expected));
         }
 
+        [Test]
+        public void ResultValueUsesAReadableMobileFontSize()
+        {
+            var presenter = new GameObject("Affix Readability Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.Play(Result(WeaponAffixTier.High, 0));
+
+            Assert.That(presenter.DetailFontSize, Is.GreaterThanOrEqualTo(26f));
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
         [UnityTest]
         public IEnumerator Skip_is_idempotent_and_does_not_change_the_roll_result()
         {

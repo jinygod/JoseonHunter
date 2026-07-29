@@ -76,6 +76,7 @@ namespace JoseonHunter.Presentation.UI
         public int VisiblePotentialCount { get; private set; }
         public bool IsFinalAffixVisible => finalSymbols[0] != null && finalSymbols[0].enabled;
         public bool IsAwaitingConfirmation => routine != null && Phase == RevealPhase.Reading;
+        public float DetailFontSize => detail == null ? 0f : detail.fontSize;
         public event Action RevealCompleted;
 
         public void Play(WeaponAffixRollResult result)
@@ -364,7 +365,7 @@ namespace JoseonHunter.Presentation.UI
                 ? activeCatalog.JackpotBurstFor(activeResult.NewPotentials.Count)
                 : null;
             title.text = TierName(activeResult.General.Tier);
-            detail.text = Describe(activeResult.General);
+            detail.text = WeaponAffixValueFormatter.Describe(activeResult.General);
         }
 
         private void ResetVisuals()
@@ -439,7 +440,8 @@ namespace JoseonHunter.Presentation.UI
             title.fontStyle = FontStyles.Bold;
             title.color = new Color(1f, .84f, .38f);
             detail = Label("Affix Detail", shell.transform, new Vector2(0f, 207f),
-                new Vector2(620f, 30f), 21f, TextAlignmentOptions.Center);
+                new Vector2(620f, 38f), 28f, TextAlignmentOptions.Center);
+            detail.fontStyle = FontStyles.Bold;
 
             BuildReel(0, new Vector2(0f, 38f), new Vector2(330f, 82f), new Vector2(88f, 68f));
             rarityFrame = RuntimeUiFactory.Image("Affix Rarity Frame", finalSymbols[0].transform, Color.white);
@@ -542,9 +544,6 @@ namespace JoseonHunter.Presentation.UI
         private static string TierName(WeaponAffixTier tier) =>
             tier == WeaponAffixTier.Perfect ? "완벽한 추가옵션" :
             tier == WeaponAffixTier.High ? "높은 추가옵션" : "추가옵션";
-
-        private static string Describe(WeaponAffixRoll roll) =>
-            roll.Stat + " +" + Mathf.RoundToInt((float)(roll.Value * 100d)) + "%";
 
         private static string PotentialName(WeaponPotentialId id)
         {

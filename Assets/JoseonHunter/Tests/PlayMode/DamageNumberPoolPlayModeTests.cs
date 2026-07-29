@@ -12,6 +12,23 @@ namespace JoseonHunter.Tests.PlayMode
     public sealed class DamageNumberPoolPlayModeTests
     {
         [UnityTest]
+        public IEnumerator NormalDamageNumberIsSmallAndAnchoredJustAboveTheContact()
+        {
+            var root = new GameObject("Damage Number Readability");
+            var presenter = root.AddComponent<DamageNumberPresenter>();
+            var display = new DamageNumberDisplay(27, new Float2(2f, 3f), false,
+                WeaponId.HwandoFlyingBlade, 1, false);
+
+            presenter.Play(display, false, Color.white, _ => { });
+            yield return null;
+
+            Assert.That(presenter.DisplayFontSize, Is.InRange(2f, 4f));
+            Assert.That(presenter.transform.position.y, Is.InRange(3.15f, 3.7f));
+            Assert.That(presenter.transform.localScale.x, Is.LessThanOrEqualTo(1f));
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
         public IEnumerator PoolIsBoundedAndResetAfterPresentersReturn()
         {
             var root = new GameObject("DamageNumberPoolTests");

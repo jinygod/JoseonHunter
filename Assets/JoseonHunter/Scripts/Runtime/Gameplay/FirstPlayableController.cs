@@ -626,7 +626,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateSpawning(float delta)
         {
-            if (enemies.Count >= 48)
+            if (enemies.Count >= EnemyDensityProfile.MaximumActiveEnemies)
             {
                 return;
             }
@@ -638,8 +638,14 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var normalized = elapsed / TestDuration;
-            spawnTimer = Mathf.Lerp(0.72f, 0.28f, normalized);
-            SpawnEnemy(false);
+            spawnTimer = EnemyDensityProfile.SpawnInterval(normalized);
+            var batchSize = EnemyDensityProfile.BatchSize(normalized);
+            for (var index = 0;
+                 index < batchSize && enemies.Count < EnemyDensityProfile.MaximumActiveEnemies;
+                 index++)
+            {
+                SpawnEnemy(false);
+            }
         }
 
         private void SpawnEnemy(bool isBoss)

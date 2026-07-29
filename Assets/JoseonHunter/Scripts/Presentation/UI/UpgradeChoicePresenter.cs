@@ -179,28 +179,28 @@ namespace JoseonHunter.Presentation.UI
                 card.Button.image.type = Image.Type.Sliced;
             }
             var rect = card.Button.GetComponent<RectTransform>();
-            Position(rect, new Vector2(.5f, .5f), new Vector2((index - 1) * 548f, -18f),
-                new Vector2(510f, 472f), new Vector2(.5f, .5f));
+            Position(rect, new Vector2(.5f, .5f), new Vector2(0f, 220f - index * 220f),
+                new Vector2(920f, 200f), new Vector2(.5f, .5f));
             card.Accent = RuntimeUiFactory.Image("Accent", card.Button.transform, JoseonUiPalette.Hanji);
             card.Accent.rectTransform.anchorMin = new Vector2(0f, 0f);
             card.Accent.rectTransform.anchorMax = new Vector2(0f, 1f);
             card.Accent.rectTransform.sizeDelta = new Vector2(10f, 0f);
             card.Icon = RuntimeUiFactory.Image("Icon", card.Button.transform, Color.white);
-            Position(card.Icon.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -62f),
-                new Vector2(132f, 132f), new Vector2(.5f, 1f));
+            Position(card.Icon.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
+                new Vector2(104f, 104f), new Vector2(0f, .5f));
             card.Icon.preserveAspect = true;
             card.Glyph = RuntimeUiFactory.Text("Glyph", card.Button.transform, string.Empty, 72f, TextAlignmentOptions.Center);
-            Position(card.Glyph.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -62f),
-                new Vector2(132f, 132f), new Vector2(.5f, 1f));
-            card.Category = CenteredLabel("Category", card.Button.transform, new Vector2(0f, 46f),
-                new Vector2(430f, 30f), 18f);
-            card.Name = CenteredLabel("Name", card.Button.transform, new Vector2(0f, -2f),
-                new Vector2(430f, 46f), 29f);
-            card.Behavior = CenteredLabel("Behavior", card.Button.transform, new Vector2(0f, -76f),
-                new Vector2(420f, 72f), 19f);
+            Position(card.Glyph.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
+                new Vector2(104f, 104f), new Vector2(0f, .5f));
+            card.Category = Label("Category", card.Button.transform, new Vector2(170f, -22f),
+                new Vector2(680f, 26f), 17f, TextAlignmentOptions.Left);
+            card.Name = Label("Name", card.Button.transform, new Vector2(170f, -54f),
+                new Vector2(680f, 38f), 27f, TextAlignmentOptions.Left);
+            card.Behavior = Label("Behavior", card.Button.transform, new Vector2(170f, -98f),
+                new Vector2(680f, 48f), 18f, TextAlignmentOptions.Left);
             card.Behavior.enableWordWrapping = true;
-            card.Delta = CenteredLabel("Delta", card.Button.transform, new Vector2(0f, -154f),
-                new Vector2(430f, 34f), 22f);
+            card.Delta = Label("Delta", card.Button.transform, new Vector2(170f, -158f),
+                new Vector2(680f, 28f), 20f, TextAlignmentOptions.Left);
             card.Button.onClick.AddListener(() => Choose(choiceIndex));
             return card;
         }
