@@ -118,5 +118,41 @@ namespace JoseonHunter.Tests.PlayMode
             foreach (var frame in frames) Object.Destroy(frame);
             Object.Destroy(texture);
         }
+
+        [UnityTest]
+        public IEnumerator EvolvedFrostStoredShatterRendersAtAcceptedTargetsCurrentPosition()
+        {
+            var root = new GameObject("Stored Frost Shatter Root");
+            var texture = new Texture2D(WeaponVisualPartIndex.FrostFlask.RequiredCount, 1);
+            var frames = new Sprite[WeaponVisualPartIndex.FrostFlask.RequiredCount];
+            for (var index = 0; index < frames.Length; index++)
+                frames[index] = Sprite.Create(texture, new Rect(index, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            Sprite Resolve(WeaponId _, int partIndex) => frames[partIndex];
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var target = new TestTarget(1, new Float2(.4f, 0f), mask);
+            registry.Register(target);
+            var frost = new FrostFlaskExecutor(runtime, 10f, 10f, 2f, .1f, 1f, 1f, 1, 5, evolved: true);
+            var context = new WeaponExecutionContext(default, root.transform, frames[0], null, Resolve, null, 4, 1);
+
+            frost.Tick(.1f, context);
+            frost.Tick(.75f, context);
+            target.Position = new Float2(1.2f, .3f);
+            frost.Tick(.25f, context);
+            yield return null;
+
+            var shatter = root.GetComponentsInChildren<SpriteRenderer>()
+                .Single(renderer => renderer.gameObject.name == "Weapon Transient Visual" &&
+                                    renderer.sprite == frames[WeaponVisualPartIndex.FrostFlask.RequiredCount - 1]);
+            Assert.That(shatter.transform.position.x, Is.EqualTo(1.2f).Within(.001f));
+            Assert.That(shatter.transform.position.y, Is.EqualTo(.3f).Within(.001f));
+
+            frost.Dispose();
+            runtime.Dispose();
+            Object.Destroy(root);
+            foreach (var frame in frames) Object.Destroy(frame);
+            Object.Destroy(texture);
+        }
     }
 }

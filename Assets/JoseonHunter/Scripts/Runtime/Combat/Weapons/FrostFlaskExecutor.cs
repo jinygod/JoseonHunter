@@ -59,6 +59,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float LastFieldVisualScale { get; private set; } = 1f;
 #if UNITY_INCLUDE_TESTS
         public int FirstVisualPartIndexForTests => fields.Count == 0 ? -1 : fields[0].VisualPartIndex;
+        public int ConfirmedStoredShatterVisualCountForTests { get; private set; }
+        public Float2 LastConfirmedStoredShatterPositionForTests { get; private set; }
         public int ActiveSpreadResidenceCountForTests => spreadResidences.Count;
         public float FirstSpreadRemainingForTests => spreadResidences.Count == 0 ? 0f : spreadResidences[0].Remaining;
         public bool SuppressNewCastsForTests { get; set; }
@@ -105,6 +107,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
             LastStoredFrozenTargetCount = 0; LastResolvedStoredTargetCount = 0; AllStoredTargetsResolvedOnce = false;
             LastFieldVisualScale = 1f;
+#if UNITY_INCLUDE_TESTS
+            ConfirmedStoredShatterVisualCountForTests = 0;
+            LastConfirmedStoredShatterPositionForTests = default;
+#endif
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
         }
 
@@ -260,7 +266,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     if (Potentials.HasPotential(WeaponPotentialId.FrostCrackMark) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostCrackMark, out _, out var crackMask) &&
                         PixelMaskContactService.TryFindContact(crackMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
                     { field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); damage *= 1f + stacks * .25f; field.CrackStacks.Remove(target.RuntimeId); }
-                    if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(damage), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) LastResolvedStoredTargetCount++;
+                    if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(damage), false, contact, ContactPhase.Blast, context.SimulationTick), out _))
+                    {
+                        LastResolvedStoredTargetCount++;
+                        PlayConfirmedStoredShatter(context, target.WorldPosition);
+                    }
                 }
                 runtime.DamageService.RetireAttack(spike.InstanceId);
             }
@@ -354,6 +364,21 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     WeaponId.FrostFlask,
                     WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
                 new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
+                Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 3);
+        }
+
+        private void PlayConfirmedStoredShatter(in WeaponExecutionContext context, Float2 position)
+        {
+#if UNITY_INCLUDE_TESTS
+            ConfirmedStoredShatterVisualCountForTests++;
+            LastConfirmedStoredShatterPositionForTests = position;
+#endif
+            var cue = new WeaponVisualCue(WeaponId.FrostFlask, WeaponVisualStage.Detonation, Level, IsEvolved, .9f, .16f);
+            transientVisuals?.Play(
+                context.PresentationSpriteFor(
+                    WeaponId.FrostFlask,
+                    WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
+                new Vector3(position.X, position.Y, 0f), Quaternion.identity,
                 Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 3);
         }
 

@@ -724,6 +724,32 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ThunderBombSecondaryCurrentBeginsOnTheTickAfterPrimaryRingFinishes()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var bomb = new ThunderBombExecutor(runtime, 10f, 10f, 3f, .01f, 0f, 1f, 5);
+            registry.Register(new TestTarget(1, new Float2(.5f, 0f), mask));
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            bomb.Tick(.01f, context);
+            bomb.Tick(.01f, context);
+            bomb.Tick(.24f, context);
+            var primaryCompletionFrame = bomb.FirstVisualPartIndexForTests;
+
+            bomb.Tick(.01f, context);
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(primaryCompletionFrame, Is.EqualTo(15),
+                    "The primary ring's final render tick must remain in the detonation range.");
+                Assert.That(bomb.FirstVisualPartIndexForTests, Is.InRange(16, 20),
+                    "Ground current may begin only on a later presentation tick.");
+            });
+        }
+
+        [Test]
         public void FrostFieldLevelFiveGrowsBeforeItShatters()
         {
             var mask = PixelHitMask.FromRows("1");
@@ -742,6 +768,30 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(start, Is.EqualTo(.65f).Within(.001f));
                 Assert.That(frost.LastFieldVisualScale, Is.GreaterThan(start));
                 Assert.That(frost.FirstVisualPartIndexForTests, Is.InRange(6, 10));
+            });
+        }
+
+        [Test]
+        public void EvolvedFrostStoredTargetEmitsConfirmedShatterAtAcceptedContactPosition()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var frost = new FrostFlaskExecutor(runtime, 10f, 10f, 2f, .1f, 1f, 1f, 1, 5, evolved: true);
+            var target = new TestTarget(1, new Float2(.4f, 0f), mask);
+            registry.Register(target);
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            frost.Tick(.1f, context);
+            frost.Tick(.75f, context);
+            target.MoveTo(new Float2(1.2f, .3f));
+            frost.Tick(.25f, context);
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(frost.ConfirmedStoredShatterVisualCountForTests, Is.EqualTo(1));
+                Assert.That(frost.LastConfirmedStoredShatterPositionForTests.X, Is.EqualTo(1.2f).Within(.001f));
+                Assert.That(frost.LastConfirmedStoredShatterPositionForTests.Y, Is.EqualTo(.3f).Within(.001f));
             });
         }
 

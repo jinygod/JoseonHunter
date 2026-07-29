@@ -85,6 +85,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var bomb = bombs[index];
                 Advance(bomb, step, context);
                 UpdateVisual(bomb, context);
+                bomb.SecondaryPresentationPending = false;
                 LastState = bomb.State;
                 if (bomb.State != ThunderBombState.Complete) continue;
                 runtime.DamageService.RetireAttack(bomb.Attack.InstanceId);
@@ -156,7 +157,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var blastComplete = SweepRing(bomb, BlastRadius * Mathf.Clamp01(bomb.Elapsed / BlastDuration), context);
                     if (bomb.Elapsed >= BlastDuration && blastComplete)
                     {
-                        if (Level == 5) { bomb.State = ThunderBombState.SecondaryShockwave; bomb.Elapsed = 0f; }
+                        if (Level == 5)
+                        {
+                            bomb.State = ThunderBombState.SecondaryShockwave;
+                            bomb.Elapsed = 0f;
+                            bomb.SecondaryPresentationPending = true;
+                        }
                         else bomb.State = ThunderBombState.Complete;
                     }
                     break;
@@ -278,6 +284,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                             Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / BlastDuration) *
                                 WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount));
                 case ThunderBombState.SecondaryShockwave:
+                    if (bomb.SecondaryPresentationPending)
+                        return WeaponVisualPartIndex.ThunderCrash.Detonation +
+                            WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount - 1;
                     return WeaponVisualPartIndex.ThunderCrash.Field +
                         Mathf.Min(WeaponVisualPartIndex.ThunderCrash.FieldFrameCount - 1,
                             Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / SecondaryDuration) *
@@ -484,6 +493,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public GameObject Visual { get; set; }
             public GameObject Shadow { get; set; }
             public int VisualPartIndex { get; set; } = WeaponVisualPartIndex.ThunderCrash.Projectile;
+            public bool SecondaryPresentationPending { get; set; }
         }
 
         private struct DelayedPotentialStrike
