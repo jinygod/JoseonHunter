@@ -63,5 +63,50 @@ namespace JoseonHunter.Tests.PlayMode
 
             Object.Destroy(root);
         }
+
+        [UnityTest]
+        public IEnumerator PlayerRoleCreatesReadableLayersWithoutChangingCollisionScale()
+        {
+            var root = new GameObject("Player");
+            root.transform.localScale = Vector3.one * 0.62f;
+
+            var rig = CombatantVisualRig.Create(
+                root,
+                null,
+                10,
+                null,
+                MotionWeight.Light,
+                0f,
+                CombatantVisualRole.Player);
+            yield return null;
+
+            Assert.That(root.transform.Find("Soft Shadow"), Is.Not.Null);
+            Assert.That(root.transform.Find("Player Aura"), Is.Not.Null);
+            Assert.That(root.transform.Find("Visual Pivot"), Is.Not.Null);
+            Assert.That(rig.CollisionTransform(default).Scale.x, Is.EqualTo(0.62f).Within(0.001f));
+            Assert.That(rig.CollisionTransform(default).Scale.y, Is.EqualTo(0.62f).Within(0.001f));
+
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator EnemyRoleHasShadowButNoPlayerAura()
+        {
+            var root = new GameObject("Enemy");
+            CombatantVisualRig.Create(
+                root,
+                null,
+                8,
+                null,
+                MotionWeight.Medium,
+                0f,
+                CombatantVisualRole.Enemy);
+            yield return null;
+
+            Assert.That(root.transform.Find("Soft Shadow"), Is.Not.Null);
+            Assert.That(root.transform.Find("Player Aura"), Is.Null);
+
+            Object.Destroy(root);
+        }
     }
 }

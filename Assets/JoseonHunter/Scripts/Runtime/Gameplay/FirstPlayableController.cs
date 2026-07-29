@@ -532,7 +532,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 runtimeObjects,
                 MotionWeight.Light,
                 0f,
-                out playerVisualRig);
+                out playerVisualRig,
+                CombatantVisualRole.Player);
             player.transform.localScale = Vector3.one * VisualScale.PlayerScale;
             playerRenderer = playerVisualRig.Renderer;
             playerHealthFill = CreateHealthBar(player.transform);
@@ -667,7 +668,9 @@ namespace JoseonHunter.Runtime.Gameplay
                 runtimeObjects,
                 isBoss || isElite ? MotionWeight.Heavy : MotionWeight.Medium,
                 nextCombatTargetRuntimeId * 0.173f,
-                out var visualRig);
+                out var visualRig,
+                isBoss ? CombatantVisualRole.Boss :
+                isElite ? CombatantVisualRole.Elite : CombatantVisualRole.Enemy);
 
             var renderer = visualRig.Renderer;
             var baseHealth = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
@@ -1541,7 +1544,8 @@ namespace JoseonHunter.Runtime.Gameplay
             Transform parent,
             MotionWeight weight,
             float phaseOffset,
-            out CombatantVisualRig visualRig)
+            out CombatantVisualRig visualRig,
+            CombatantVisualRole role = CombatantVisualRole.Enemy)
         {
             var result = new GameObject(objectName);
             result.transform.SetParent(parent, false);
@@ -1552,7 +1556,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 sortingOrder,
                 motionLibrary == null ? null : motionLibrary.Find(sprite),
                 weight,
-                phaseOffset);
+                phaseOffset,
+                role);
             return result;
         }
 

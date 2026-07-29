@@ -4,6 +4,14 @@ using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
 {
+    public enum CombatantVisualRole
+    {
+        Player,
+        Enemy,
+        Elite,
+        Boss
+    }
+
     /// <summary>Owns presentation below a stable gameplay root.</summary>
     public sealed class CombatantVisualRig
     {
@@ -14,6 +22,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly CombatantMotionState motionState;
         private readonly Vector3 baseScale;
         private readonly float phaseOffset;
+        private readonly SpriteRenderer shadowRenderer;
+        private readonly SpriteRenderer outlineRenderer;
+        private readonly SpriteRenderer auraRenderer;
 
         private float animationTime;
         private int frameIndex = -1;
@@ -25,7 +36,10 @@ namespace JoseonHunter.Runtime.Gameplay
             SpriteRenderer renderer,
             CombatMotionSet motionSet,
             MotionWeight weight,
-            float phaseOffset)
+            float phaseOffset,
+            SpriteRenderer shadowRenderer,
+            SpriteRenderer outlineRenderer,
+            SpriteRenderer auraRenderer)
         {
             this.logicalRoot = logicalRoot;
             this.visualPivot = visualPivot;
@@ -35,6 +49,9 @@ namespace JoseonHunter.Runtime.Gameplay
             motionState = new CombatantMotionState(this.phaseOffset);
             baseScale = visualPivot.localScale;
             animationTime = this.phaseOffset;
+            this.shadowRenderer = shadowRenderer;
+            this.outlineRenderer = outlineRenderer;
+            this.auraRenderer = auraRenderer;
         }
 
         public SpriteRenderer Renderer => renderer;
@@ -47,14 +64,53 @@ namespace JoseonHunter.Runtime.Gameplay
             int sortingOrder,
             CombatMotionSet motionSet,
             MotionWeight weight,
-            float phaseOffset = 0f)
+            float phaseOffset = 0f,
+            CombatantVisualRole role = CombatantVisualRole.Enemy)
         {
+            var shadow = CreateLayer(
+                logicalRoot.transform,
+                "Soft Shadow",
+                sprite,
+                sortingOrder - 3,
+                new Color(0.025f, 0.035f, 0.04f, role == CombatantVisualRole.Boss ? 0.48f : 0.36f));
+            shadow.transform.localPosition = new Vector3(0f, -0.10f, 0f);
+            shadow.transform.localScale = role == CombatantVisualRole.Boss
+                ? new Vector3(0.90f, 0.18f, 1f)
+                : new Vector3(0.72f, 0.14f, 1f);
+
+            var outline = CreateLayer(
+                logicalRoot.transform,
+                "Silhouette Outline",
+                sprite,
+                sortingOrder - 1,
+                new Color(0.025f, 0.04f, 0.055f, 0.92f));
+
+            SpriteRenderer aura = null;
+            if (role == CombatantVisualRole.Player)
+            {
+                aura = CreateLayer(
+                    logicalRoot.transform,
+                    "Player Aura",
+                    sprite,
+                    sortingOrder - 2,
+                    new Color(0.18f, 0.94f, 0.88f, 0.16f));
+            }
+
             var pivot = new GameObject("Visual Pivot").transform;
             pivot.SetParent(logicalRoot.transform, false);
             var renderer = pivot.gameObject.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = sortingOrder;
-            return new CombatantVisualRig(logicalRoot.transform, pivot, renderer, motionSet, weight, phaseOffset);
+            return new CombatantVisualRig(
+                logicalRoot.transform,
+                pivot,
+                renderer,
+                motionSet,
+                weight,
+                phaseOffset,
+                shadow,
+                outline,
+                aura);
         }
 
         public void Tick(Vector2 desiredVelocity, float deltaTime, MotionWeight weight)
@@ -77,13 +133,22 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 frameIndex = nextFrame;
                 var sprite = motionSet == null ? null : motionSet.Frame(moving, nextFrame);
-                if (sprite != null) renderer.sprite = sprite;
+                if (sprite != null)
+                {
+                    renderer.sprite = sprite;
+                    shadowRenderer.sprite = sprite;
+                    outlineRenderer.sprite = sprite;
+                    if (auraRenderer != null) auraRenderer.sprite = sprite;
+                }
             }
 
             visualPivot.localPosition = new Vector3(pose.VisualOffset.x, pose.VisualOffset.y, 0f);
             visualPivot.localRotation = Quaternion.Euler(0f, 0f, pose.TiltDegrees);
             visualPivot.localScale = Vector3.Scale(baseScale, new Vector3(pose.Scale.x, pose.Scale.y, 1f));
             renderer.flipX = pose.FacingLeft;
+            SyncFollower(outlineRenderer, pose, 1.045f);
+            if (auraRenderer != null) SyncFollower(auraRenderer, pose, 1.13f);
+            shadowRenderer.flipX = pose.FacingLeft;
             var color = renderer.color;
             color.a = 1f - pose.DeathProgress;
             renderer.color = color;
@@ -102,6 +167,30 @@ namespace JoseonHunter.Runtime.Gameplay
                 0,
                 FacingLeft,
                 new Vector2(Mathf.Abs(scale.x), Mathf.Abs(scale.y)));
+        }
+
+        private static SpriteRenderer CreateLayer(
+            Transform parent,
+            string name,
+            Sprite sprite,
+            int sortingOrder,
+            Color color)
+        {
+            var layer = new GameObject(name);
+            layer.transform.SetParent(parent, false);
+            var result = layer.AddComponent<SpriteRenderer>();
+            result.sprite = sprite;
+            result.sortingOrder = sortingOrder;
+            result.color = color;
+            return result;
+        }
+
+        private static void SyncFollower(SpriteRenderer follower, CombatantMotionPose pose, float scale)
+        {
+            follower.transform.localPosition = new Vector3(pose.VisualOffset.x, pose.VisualOffset.y, 0f);
+            follower.transform.localRotation = Quaternion.Euler(0f, 0f, pose.TiltDegrees);
+            follower.transform.localScale = new Vector3(pose.Scale.x * scale, pose.Scale.y * scale, 1f);
+            follower.flipX = pose.FacingLeft;
         }
     }
 }
