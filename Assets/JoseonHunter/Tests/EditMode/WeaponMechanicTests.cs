@@ -85,15 +85,16 @@ namespace JoseonHunter.Tests.EditMode
 
             fixture.Executor.Tick(.1f, fixture.Context(1));
             var outbound = fixture.Executor.FirstActivePositionForTests;
+            var simulationTick = 2;
             for (var step = 0; step < 12 && !fixture.Executor.FirstActiveInboundForTests; step++)
-                fixture.Executor.Tick(.1f, fixture.Context(step + 2));
+                fixture.Executor.Tick(.1f, fixture.Context(simulationTick++));
             Assert.That(
                 fixture.Executor.FirstActiveInboundForTests,
                 Is.True,
                 "Level-five Hwando must enter inbound travel within 1.2 simulated seconds.");
             var turnaround = fixture.Executor.FirstActivePositionForTests;
 
-            fixture.Executor.Tick(.1f, fixture.Context(3));
+            fixture.Executor.Tick(.1f, fixture.Context(simulationTick));
             var inbound = fixture.Executor.FirstActivePositionForTests;
 
             NUnitMultipleCompat.Run(() =>
