@@ -78,6 +78,32 @@ namespace JoseonHunter.Tests.EditMode
             }
         }
 
+        [Test]
+        public void Micro_slot_uses_one_point_filtered_sprite_per_png()
+        {
+            var names = new[]
+            {
+                "slot_machine_shell", "reel_window", "locked_potential_slot", "reel_symbol_stat",
+                "reel_symbol_rarity", "reel_symbol_potential", "reel_stop_flash",
+                "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3"
+            };
+            foreach (var name in names)
+            {
+                var path = WeaponAffixPixelAssetImporter.MicroSlotRoot + "/" + name + ".png";
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                Assert.That(texture, Is.Not.Null, path);
+                Assert.That(texture.width, Is.GreaterThanOrEqualTo(48), path);
+                Assert.That(texture.height, Is.GreaterThanOrEqualTo(48), path);
+                AssertPixelImport(path);
+                var sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToArray();
+                Assert.That(sprites, Has.Length.EqualTo(1), path);
+            }
+
+            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            Assert.That(catalog, Is.Not.Null);
+            Assert.That(catalog.HasRequiredUiSprites, Is.True);
+        }
+
         private static void AssertPixelImport(string path)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;

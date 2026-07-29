@@ -17,6 +17,7 @@ namespace JoseonHunter.Editor.AssetProduction
         public const string PotentialPartsBPath = "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/potential-parts-b.png";
         public const string PotentialPartsBMaskPath = "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/potential-parts-b-hit-mask.png";
         public const string CatalogPath = "Assets/JoseonHunter/Resources/WeaponAffixPresentationCatalog.asset";
+        public const string MicroSlotRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot";
 
         private const float PixelsPerUnit = 32f;
         private static readonly string[] SlotSpriteNames = { "reel_frame", "standard_frame", "high_frame", "perfect_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3", "rarity_flash" };
@@ -37,6 +38,13 @@ namespace JoseonHunter.Editor.AssetProduction
             ConfigureSlotKit();
             foreach (var slotPart in new[] { "reel_frame", "empty_line_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3" })
                 ConfigureSprite(SlotPartPath(slotPart));
+            foreach (var slotPart in new[]
+                     {
+                         "slot_machine_shell", "reel_window", "locked_potential_slot", "reel_symbol_stat",
+                         "reel_symbol_rarity", "reel_symbol_potential", "reel_stop_flash",
+                         "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3"
+                     })
+                ConfigureSprite(MicroSlotPath(slotPart));
             ConfigureAtlas(StatusSymbolsPath);
             ConfigureAtlas(PotentialPartsAPath);
             ConfigureAtlas(PotentialPartsBPath);
@@ -134,6 +142,17 @@ namespace JoseonHunter.Editor.AssetProduction
             catalog.SetSlotKitForImport(
                 AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("reel_frame")), AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("empty_line_frame")),
                 AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("jackpot_burst_1")), AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("jackpot_burst_2")), AssetDatabase.LoadAssetAtPath<Sprite>(SlotPartPath("jackpot_burst_3")));
+            catalog.SetMicroSlotKitForImport(
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("slot_machine_shell")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("reel_window")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("locked_potential_slot")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("reel_symbol_stat")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("reel_symbol_rarity")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("reel_symbol_potential")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("reel_stop_flash")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("jackpot_burst_1")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("jackpot_burst_2")),
+                AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("jackpot_burst_3")));
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }
@@ -176,5 +195,6 @@ namespace JoseonHunter.Editor.AssetProduction
             "Assets/JoseonHunter/Art/UI/AffixJackpot/RarityFrames/" + tier + ".png";
         private static string SlotPartPath(string name) =>
             "Assets/JoseonHunter/Art/UI/AffixJackpot/SlotParts/" + name + ".png";
+        private static string MicroSlotPath(string name) => MicroSlotRoot + "/" + name + ".png";
     }
 }

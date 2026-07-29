@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-07-29T00:00:00+09:00",
+  "provider": "PixelLab MCP",
+  "approved": {
+    "slot_machine_shell.png": "97a6f46f-2c9e-48dc-84fe-c8b4454495fe",
+    "reel_window.png": "310e4858-92f7-4b81-bd02-30e8f2f661cf",
+    "locked_potential_slot.png": "2356465d-fcfd-4eb9-a4e5-e1b77daf21f5",
+    "reel_symbol_stat.png": "c7dc68c4-ad1d-4963-a52c-62ef024dd674",
+    "reel_symbol_rarity.png": "3587e973-32b5-4f11-b183-0de42a2183f9",
+    "reel_symbol_potential.png": "b8a5e87c-078d-4e73-9660-a235ab9f21ed",
+    "reel_stop_flash.png": "a46d2736-4cea-49ad-a745-9a32cf7c9646",
+    "jackpot_burst_1.png": "267ef115-c65f-4bf2-a4bf-4ba0dac2fea7",
+    "jackpot_burst_2.png": "3ba324b4-7002-4a5f-9dbf-b78fbda1beb2",
+    "jackpot_burst_3.png": "cede5671-5fe7-4103-805c-3a1b17634ee0"
+  },
+  "rejected": {
+    "slot_machine_shell.png": {
+      "jobId": "1cc61022-e6fe-44ec-86ea-4403df2302d7",
+      "reason": "modern casino symbols and pseudo-text"
+    },
+    "locked_potential_slot.png": {
+      "jobId": "33939eb8-33d0-4b71-8846-840aee1f614d",
+      "reason": "tiny floating seal instead of a slot-sized shutter"
+    },
+    "jackpot_burst_2.png": {
+      "jobId": "496955af-184c-490d-b038-a9ac6cea5aaa",
+      "reason": "did not match tier-one crest style"
+    },
+    "jackpot_burst_3.png": {
+      "jobId": "2534eb8-fe27-4d1a-8c22-a20a09863821",
+      "reason": "visually weaker and smaller than lower jackpot tiers"
+    }
+  }
+}

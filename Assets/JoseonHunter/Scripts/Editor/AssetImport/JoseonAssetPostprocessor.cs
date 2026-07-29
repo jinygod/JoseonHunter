@@ -10,6 +10,7 @@ namespace JoseonHunter.Editor.AssetImport
         private const string SfxRoot = "Assets/JoseonHunter/Audio/SFX/";
         private const string UiAudioRoot = "Assets/JoseonHunter/Audio/UI/";
         private const string UiArtRoot = "Assets/JoseonHunter/Art/UI/";
+        private const string MicroSlotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
@@ -50,7 +51,8 @@ namespace JoseonHunter.Editor.AssetImport
                 texture.isReadable = assetPath.StartsWith(
                     WeaponPolishRuntimeRoot,
                     System.StringComparison.Ordinal)
-                    || assetPath.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal);
+                    || assetPath.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal)
+                    || assetPath.StartsWith(MicroSlotUiRoot, System.StringComparison.Ordinal);
                 SetSingleSpritePivot(
                     texture,
                     assetPath.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal)
@@ -92,7 +94,8 @@ namespace JoseonHunter.Editor.AssetImport
                 || path.StartsWith(BossRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal)
-                || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal);
+                || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(MicroSlotUiRoot, System.StringComparison.Ordinal);
         }
 
         private static bool IsSingleRuntimeSprite(string path)
@@ -100,7 +103,8 @@ namespace JoseonHunter.Editor.AssetImport
             return path.StartsWith(StaticSpriteRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal)
-                || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal);
+                || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(MicroSlotUiRoot, System.StringComparison.Ordinal);
         }
 
         private static SpriteMetaData[] CharacterSprites(string characterId, int frameCount, int columns)
@@ -162,6 +166,7 @@ namespace JoseonHunter.Editor.AssetImport
         private static bool IsBilinearArt(string path)
         {
             return path.StartsWith(UiArtRoot, System.StringComparison.Ordinal)
+                && !path.StartsWith(MicroSlotUiRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(LobbyArtRoot, System.StringComparison.Ordinal);
         }
     }

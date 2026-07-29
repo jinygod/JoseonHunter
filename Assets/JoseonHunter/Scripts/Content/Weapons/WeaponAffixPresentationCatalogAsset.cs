@@ -52,9 +52,17 @@ namespace JoseonHunter.Content.Weapons
 
         [SerializeField] private RarityFrame[] rarityFrames;
         [SerializeField] private PotentialPresentation[] potentials;
-        [Header("PixelLab slot-kit slices")]
+        [Header("Legacy PixelLab slot-kit slices")]
         [SerializeField] private Sprite reelFrame;
         [SerializeField] private Sprite emptyLineFrame;
+        [Header("PixelLab micro-slot sprites")]
+        [SerializeField] private Sprite slotMachineShell;
+        [SerializeField] private Sprite reelWindow;
+        [SerializeField] private Sprite lockedPotentialSlot;
+        [SerializeField] private Sprite reelSymbolStat;
+        [SerializeField] private Sprite reelSymbolRarity;
+        [SerializeField] private Sprite reelSymbolPotential;
+        [SerializeField] private Sprite reelStopFlash;
         [SerializeField] private Sprite jackpotBurst1;
         [SerializeField] private Sprite jackpotBurst2;
         [SerializeField] private Sprite jackpotBurst3;
@@ -68,11 +76,20 @@ namespace JoseonHunter.Content.Weapons
         public Texture2D MaskForPotential(WeaponPotentialId potentialId) =>
             (potentials ?? Array.Empty<PotentialPresentation>()).FirstOrDefault(entry => entry.Matches(potentialId)).HitMask;
 
-        public Sprite ReelFrame => reelFrame;
-        public Sprite EmptyLineFrame => emptyLineFrame;
+        public Sprite ReelFrame => slotMachineShell != null ? slotMachineShell : reelFrame;
+        public Sprite EmptyLineFrame => lockedPotentialSlot != null ? lockedPotentialSlot : emptyLineFrame;
+        public Sprite SlotMachineShell => slotMachineShell;
+        public Sprite ReelWindow => reelWindow;
+        public Sprite LockedPotentialSlot => lockedPotentialSlot;
+        public Sprite ReelSymbolStat => reelSymbolStat;
+        public Sprite ReelSymbolRarity => reelSymbolRarity;
+        public Sprite ReelSymbolPotential => reelSymbolPotential;
+        public Sprite ReelStopFlash => reelStopFlash;
         public Sprite JackpotBurstFor(int lines) => lines == 1 ? jackpotBurst1 : lines == 2 ? jackpotBurst2 : jackpotBurst3;
 
-        public bool HasRequiredUiSprites => reelFrame != null && emptyLineFrame != null &&
+        public bool HasRequiredUiSprites => SlotMachineShell != null && ReelWindow != null &&
+            LockedPotentialSlot != null && ReelSymbolStat != null && ReelSymbolRarity != null &&
+            ReelSymbolPotential != null && ReelStopFlash != null &&
             jackpotBurst1 != null && jackpotBurst2 != null && jackpotBurst3 != null;
 
         public bool TryGetPotentialPresentation(WeaponPotentialId potentialId, out PotentialPresentation presentation)
@@ -88,8 +105,12 @@ namespace JoseonHunter.Content.Weapons
             var errors = new List<string>();
             foreach (var tier in new[] { WeaponAffixTier.Standard, WeaponAffixTier.High, WeaponAffixTier.Perfect })
                 if (SpriteForAffix(tier) == null) errors.Add($"missing rarity frame for {tier}");
-            if (reelFrame == null) errors.Add("missing PixelLab reel frame");
-            if (emptyLineFrame == null) errors.Add("missing PixelLab empty-line frame");
+            if (SlotMachineShell == null) errors.Add("missing PixelLab micro-slot shell");
+            if (ReelWindow == null) errors.Add("missing PixelLab reel window");
+            if (LockedPotentialSlot == null) errors.Add("missing PixelLab locked potential slot");
+            if (ReelSymbolStat == null || ReelSymbolRarity == null || ReelSymbolPotential == null)
+                errors.Add("missing PixelLab reel anticipation symbols");
+            if (ReelStopFlash == null) errors.Add("missing PixelLab reel stop flash");
             if (jackpotBurst1 == null || jackpotBurst2 == null || jackpotBurst3 == null)
                 errors.Add("missing PixelLab jackpot burst frame");
 
@@ -118,10 +139,29 @@ namespace JoseonHunter.Content.Weapons
             jackpotBurst3 = importedBurst3;
         }
 
+        public void SetMicroSlotKitForImport(Sprite importedShell, Sprite importedReelWindow,
+            Sprite importedLockedSlot, Sprite importedStatSymbol, Sprite importedRaritySymbol,
+            Sprite importedPotentialSymbol, Sprite importedStopFlash, Sprite importedBurst1,
+            Sprite importedBurst2, Sprite importedBurst3)
+        {
+            slotMachineShell = importedShell;
+            reelWindow = importedReelWindow;
+            lockedPotentialSlot = importedLockedSlot;
+            reelSymbolStat = importedStatSymbol;
+            reelSymbolRarity = importedRaritySymbol;
+            reelSymbolPotential = importedPotentialSymbol;
+            reelStopFlash = importedStopFlash;
+            jackpotBurst1 = importedBurst1;
+            jackpotBurst2 = importedBurst2;
+            jackpotBurst3 = importedBurst3;
+        }
+
 #if UNITY_INCLUDE_TESTS
         public void SetSlotKitForTests(Sprite importedReelFrame, Sprite importedEmptyLineFrame,
             Sprite importedBurst1, Sprite importedBurst2, Sprite importedBurst3) =>
-            SetSlotKitForImport(importedReelFrame, importedEmptyLineFrame, importedBurst1, importedBurst2, importedBurst3);
+            SetMicroSlotKitForImport(importedReelFrame, importedReelFrame, importedEmptyLineFrame,
+                importedReelFrame, importedReelFrame, importedReelFrame, importedReelFrame,
+                importedBurst1, importedBurst2, importedBurst3);
 #endif
     }
 }
