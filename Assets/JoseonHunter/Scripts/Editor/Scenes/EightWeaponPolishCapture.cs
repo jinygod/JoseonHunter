@@ -14,11 +14,83 @@ using Object = UnityEngine.Object;
 
 namespace JoseonHunter.Editor.Scenes
 {
+    internal enum CapturePhaseAction
+    {
+        Wait,
+        Capture,
+        Fail
+    }
+
+    internal enum CapturePredicateKind
+    {
+        WeaponPresentation,
+        NearPlayerPresentation,
+        SpecialEvolved,
+        SunPiercer
+    }
+
+    internal static class CapturePhasePolicy
+    {
+        public static CapturePhaseAction Evaluate(
+            bool predicateSatisfied,
+            double elapsedSeconds,
+            double earliestCaptureSeconds,
+            double timeoutSeconds)
+        {
+            if (predicateSatisfied && elapsedSeconds >= earliestCaptureSeconds)
+                return CapturePhaseAction.Capture;
+            return elapsedSeconds >= timeoutSeconds
+                ? CapturePhaseAction.Fail
+                : CapturePhaseAction.Wait;
+        }
+
+        public static CapturePredicateKind PredicateFor(EightWeaponPolishCapture.CaptureCase captureCase)
+        {
+            if (captureCase.Evolved &&
+                (captureCase.WeaponId.Equals(WeaponId.FrostFlask) ||
+                 captureCase.WeaponId.Equals(WeaponId.JangseungWard) ||
+                 captureCase.WeaponId.Equals(WeaponId.SingijeonVolley)))
+            {
+                return CapturePredicateKind.SpecialEvolved;
+            }
+
+            if (captureCase.Evolved && captureCase.WeaponId.Equals(WeaponId.GakgungShot))
+                return CapturePredicateKind.SunPiercer;
+            if (captureCase.WeaponId.Equals(WeaponId.GakgungShot) ||
+                captureCase.WeaponId.Equals(WeaponId.WindThunderFan))
+            {
+                return CapturePredicateKind.NearPlayerPresentation;
+            }
+
+            return CapturePredicateKind.WeaponPresentation;
+        }
+    }
+
+    internal static class CaptureSessionState
+    {
+        private const string PendingKey = "JoseonHunter.EightWeaponPolishCapture.Pending";
+        private const string WeaponKey = PendingKey + ".Weapon";
+
+        public static bool IsPending => SessionState.GetBool(PendingKey, false);
+        public static string WeaponFilter => SessionState.GetString(WeaponKey, string.Empty);
+
+        public static void Begin(string selectedWeapon)
+        {
+            SessionState.SetBool(PendingKey, true);
+            SessionState.SetString(WeaponKey, selectedWeapon ?? string.Empty);
+        }
+
+        public static void Clear()
+        {
+            SessionState.EraseBool(PendingKey);
+            SessionState.EraseString(WeaponKey);
+        }
+    }
+
     public static class EightWeaponPolishCapture
     {
         private const string GameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
         private const string MenuPath = "Tools/Joseon Hunter/Capture/Eight Weapon Polish";
-        private const string PendingSessionKey = "JoseonHunter.EightWeaponPolishCapture.Pending";
         private const int CaptureWidth = 360;
         private const int CaptureHeight = 800;
         private const double SettleSeconds = 0.35d;
@@ -106,26 +178,33 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void BeginCapture(string selectedWeapon)
         {
-            if (SessionState.GetBool(PendingSessionKey, false))
+            if (CaptureSessionState.IsPending)
             {
                 Debug.LogWarning("Eight-weapon polish capture is already running.");
                 return;
             }
 
-            ValidateReflectionHooks();
-            SessionState.SetBool(PendingSessionKey, true);
-            SessionState.SetString(PendingSessionKey + ".Weapon", selectedWeapon ?? string.Empty);
-            caseIndex = 0;
-            EditorSceneManager.OpenScene(GameplayScenePath);
-            EditorApplication.playModeStateChanged -= HandlePlayModeState;
-            EditorApplication.playModeStateChanged += HandlePlayModeState;
-            EditorApplication.isPlaying = true;
+            try
+            {
+                ValidateReflectionHooks();
+                CaptureSessionState.Begin(selectedWeapon);
+                caseIndex = 0;
+                currentCase = default;
+                EditorSceneManager.OpenScene(GameplayScenePath);
+                EditorApplication.playModeStateChanged -= HandlePlayModeState;
+                EditorApplication.playModeStateChanged += HandlePlayModeState;
+                EditorApplication.isPlaying = true;
+            }
+            catch (Exception exception)
+            {
+                Fail(exception, "Unable to begin capture session.");
+            }
         }
 
         [InitializeOnLoadMethod]
         private static void ResumeAfterDomainReload()
         {
-            if (!SessionState.GetBool(PendingSessionKey, false)) return;
+            if (!CaptureSessionState.IsPending) return;
             EditorApplication.playModeStateChanged -= HandlePlayModeState;
             EditorApplication.playModeStateChanged += HandlePlayModeState;
             if (EditorApplication.isPlaying) BeginPlayModeCapture();
@@ -140,30 +219,30 @@ namespace JoseonHunter.Editor.Scenes
             }
 
             if (state != PlayModeStateChange.EnteredEditMode) return;
-            EditorApplication.update -= Tick;
-            EditorApplication.playModeStateChanged -= HandlePlayModeState;
-            SessionState.EraseBool(PendingSessionKey);
-            SessionState.EraseString(PendingSessionKey + ".Weapon");
-            controller = null;
+            CleanupCaptureSession(exitPlayMode: false);
             Debug.Log($"Eight-weapon polish capture finished. Output: {OutputDirectory()}");
         }
 
         private static void BeginPlayModeCapture()
         {
-            Screen.SetResolution(CaptureWidth, CaptureHeight, false);
-            caseIndex = 0;
-            weaponFilter = SessionState.GetString(PendingSessionKey + ".Weapon", string.Empty);
-            controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            if (controller == null)
+            try
             {
-                Fail(new InvalidOperationException("Gameplay scene did not create FirstPlayableController."));
-                return;
-            }
+                Screen.SetResolution(CaptureWidth, CaptureHeight, false);
+                caseIndex = 0;
+                weaponFilter = CaptureSessionState.WeaponFilter;
+                controller = Object.FindFirstObjectByType<FirstPlayableController>();
+                if (controller == null)
+                    throw new InvalidOperationException("Gameplay scene did not create FirstPlayableController.");
 
-            Directory.CreateDirectory(OutputDirectory());
-            ConfigureCase(ActiveCases()[caseIndex]);
-            EditorApplication.update -= Tick;
-            EditorApplication.update += Tick;
+                Directory.CreateDirectory(OutputDirectory());
+                ConfigureCase(ActiveCases()[caseIndex]);
+                EditorApplication.update -= Tick;
+                EditorApplication.update += Tick;
+            }
+            catch (Exception exception)
+            {
+                Fail(exception, "Unable to initialize play-mode capture.");
+            }
         }
 
         private static void ConfigureCase(CaptureCase captureCase)
@@ -186,12 +265,25 @@ namespace JoseonHunter.Editor.Scenes
             foreach (var position in TargetPositions) controller.SpawnEnemyForTests(position);
             MakeEnemiesStationaryAndDurable();
             playerTransform = GameObject.Find("Han Yeonhwa")?.transform;
+            DeletePreviousCaseResult(captureCase);
             stage = CaptureStage.Settle;
             stageStartedAt = EditorApplication.timeSinceStartup;
             Debug.Log($"Eight-weapon capture prepared: {captureCase.WeaponId}/{captureCase.Label}");
         }
 
         private static void Tick()
+        {
+            try
+            {
+                TickCapture();
+            }
+            catch (Exception exception)
+            {
+                Fail(exception, $"Capture failed for {currentCase.WeaponId}/{currentCase.Label}.");
+            }
+        }
+
+        private static void TickCapture()
         {
             if (!EditorApplication.isPlaying || controller == null) return;
             PinEnemiesToCapturePositions();
@@ -214,50 +306,52 @@ namespace JoseonHunter.Editor.Scenes
                     stageStartedAt = EditorApplication.timeSinceStartup;
                     break;
                 case CaptureStage.MeaningfulPhase:
-                    if (IsSpecialEvolvedCapture())
+                    var predicateKind = CapturePhasePolicy.PredicateFor(currentCase);
+                    var predicateSatisfied = IsRequiredPhaseActive(predicateKind);
+                    var earliestCapture = predicateKind == CapturePredicateKind.NearPlayerPresentation
+                        ? .04d
+                        : .025d;
+                    var timeout = predicateKind == CapturePredicateKind.SpecialEvolved ||
+                                  predicateKind == CapturePredicateKind.SunPiercer
+                        ? 6d
+                        : MeaningfulPhaseTimeoutSeconds;
+                    var action = CapturePhasePolicy.Evaluate(
+                        predicateSatisfied,
+                        elapsed,
+                        earliestCapture,
+                        timeout);
+                    if (action == CapturePhaseAction.Fail)
                     {
-                        if (IsSpecialEvolvedPhaseActive() || elapsed >= 6d)
-                        {
-                            Time.timeScale = 0f;
-                            CaptureCamera(currentCase);
-                            AdvanceCase();
-                        }
-                        break;
+                        throw new TimeoutException(
+                            $"Meaningful phase predicate '{predicateKind}' timed out after {timeout:F2}s " +
+                            $"for {currentCase.WeaponId}/{currentCase.Label}; no PNG was written.");
                     }
-                    if (currentCase.Evolved &&
-                        currentCase.WeaponId.Equals(WeaponId.GakgungShot) &&
-                        IsSunPiercerActive())
+
+                    if (action != CapturePhaseAction.Capture) break;
+                    if (predicateKind == CapturePredicateKind.WeaponPresentation)
                     {
-                        Time.timeScale = 0f;
-                        CaptureCamera(currentCase);
-                        AdvanceCase();
-                    }
-                    else if (elapsed >= .04d &&
-                        !(currentCase.Evolved && currentCase.WeaponId.Equals(WeaponId.GakgungShot)) &&
-                        (currentCase.WeaponId.Equals(WeaponId.GakgungShot) ||
-                         currentCase.WeaponId.Equals(WeaponId.WindThunderFan)))
-                    {
-                        Time.timeScale = 0f;
-                        CaptureCamera(currentCase);
-                        AdvanceCase();
-                    }
-                    else if (elapsed >= .025d && HasActiveWeaponPresentation())
-                    {
-                        Time.timeScale = 0f;
                         stage = CaptureStage.MeaningfulHold;
                         stageStartedAt = EditorApplication.timeSinceStartup;
+                        break;
                     }
-                    else if (elapsed >= MeaningfulPhaseTimeoutSeconds)
-                    {
-                        CaptureCamera(currentCase);
-                        AdvanceCase();
-                    }
+                    CaptureAndAdvance();
                     break;
                 case CaptureStage.MeaningfulHold when elapsed >= .015d:
-                    CaptureCamera(currentCase);
-                    AdvanceCase();
+                    CaptureAndAdvance();
                     break;
             }
+        }
+
+        private static bool IsRequiredPhaseActive(CapturePredicateKind predicateKind)
+        {
+            return predicateKind switch
+            {
+                CapturePredicateKind.SpecialEvolved => IsSpecialEvolvedPhaseActive(),
+                CapturePredicateKind.SunPiercer => IsSunPiercerActive(),
+                CapturePredicateKind.NearPlayerPresentation => HasActiveWeaponPresentation(),
+                CapturePredicateKind.WeaponPresentation => HasActiveWeaponPresentation(),
+                _ => false
+            };
         }
 
         private static bool IsSunPiercerActive()
@@ -266,12 +360,6 @@ namespace JoseonHunter.Editor.Scenes
                        WeaponId.GakgungShot) is { } gakgung &&
                    gakgung.LastProjectileScale > 1f;
         }
-
-        private static bool IsSpecialEvolvedCapture() =>
-            currentCase.Evolved &&
-            (currentCase.WeaponId.Equals(WeaponId.FrostFlask) ||
-             currentCase.WeaponId.Equals(WeaponId.JangseungWard) ||
-             currentCase.WeaponId.Equals(WeaponId.SingijeonVolley));
 
         private static bool IsSpecialEvolvedPhaseActive()
         {
@@ -391,12 +479,14 @@ namespace JoseonHunter.Editor.Scenes
             var camera = Camera.main ?? Object.FindFirstObjectByType<Camera>();
             if (camera == null) throw new InvalidOperationException("Gameplay capture requires an active camera.");
 
-            var renderTexture = new RenderTexture(CaptureWidth, CaptureHeight, 24, RenderTextureFormat.ARGB32);
-            var texture = new Texture2D(CaptureWidth, CaptureHeight, TextureFormat.RGB24, false);
+            RenderTexture renderTexture = null;
+            Texture2D texture = null;
             var previousTarget = camera.targetTexture;
             var previousActive = RenderTexture.active;
             try
             {
+                renderTexture = new RenderTexture(CaptureWidth, CaptureHeight, 24, RenderTextureFormat.ARGB32);
+                texture = new Texture2D(CaptureWidth, CaptureHeight, TextureFormat.RGB24, false);
                 camera.targetTexture = renderTexture;
                 camera.Render();
                 RenderTexture.active = renderTexture;
@@ -414,9 +504,37 @@ namespace JoseonHunter.Editor.Scenes
             {
                 camera.targetTexture = previousTarget;
                 RenderTexture.active = previousActive;
-                Object.DestroyImmediate(texture);
-                Object.DestroyImmediate(renderTexture);
+                if (texture != null) Object.DestroyImmediate(texture);
+                if (renderTexture != null) Object.DestroyImmediate(renderTexture);
             }
+        }
+
+        private static void CaptureAndAdvance()
+        {
+            var previousTimeScale = Time.timeScale;
+            try
+            {
+                Time.timeScale = 0f;
+                CaptureCamera(currentCase);
+                AdvanceCase();
+            }
+            finally
+            {
+                Time.timeScale = previousTimeScale;
+            }
+        }
+
+        private static string CaseOutputPath(CaptureCase captureCase, string extension) =>
+            Path.Combine(
+                OutputDirectory(),
+                $"{captureCase.WeaponId.Value}-{captureCase.Label}{extension}");
+
+        private static void DeletePreviousCaseResult(CaptureCase captureCase)
+        {
+            var pngPath = CaseOutputPath(captureCase, ".png");
+            var failurePath = CaseOutputPath(captureCase, ".failed.txt");
+            if (File.Exists(pngPath)) File.Delete(pngPath);
+            if (File.Exists(failurePath)) File.Delete(failurePath);
         }
 
         private static string OutputDirectory()
@@ -436,12 +554,59 @@ namespace JoseonHunter.Editor.Scenes
             }
         }
 
-        private static void Fail(Exception exception)
+        private static void Fail(Exception exception, string reason)
         {
+            var label = $"{currentCase.WeaponId}/{currentCase.Label}";
+            var message = $"{reason} Case={label}. {exception.Message}";
+            TryDeleteFailedPng();
+            TryWriteFailureMarker(message);
+            Debug.LogError(message);
             Debug.LogException(exception);
+            CleanupCaptureSession(exitPlayMode: true);
+        }
+
+        private static void TryWriteFailureMarker(string message)
+        {
+            if (string.IsNullOrEmpty(currentCase.Label)) return;
+            try
+            {
+                Directory.CreateDirectory(OutputDirectory());
+                File.WriteAllText(CaseOutputPath(currentCase, ".failed.txt"), message);
+            }
+            catch (Exception markerException)
+            {
+                Debug.LogWarning($"Unable to write capture failure marker: {markerException.Message}");
+            }
+        }
+
+        private static void TryDeleteFailedPng()
+        {
+            if (string.IsNullOrEmpty(currentCase.Label)) return;
+            try
+            {
+                var path = CaseOutputPath(currentCase, ".png");
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception deleteException)
+            {
+                Debug.LogWarning($"Unable to delete failed capture PNG: {deleteException.Message}");
+            }
+        }
+
+        private static void CleanupCaptureSession(bool exitPlayMode)
+        {
             EditorApplication.update -= Tick;
-            SessionState.EraseBool(PendingSessionKey);
-            EditorApplication.isPlaying = false;
+            EditorApplication.playModeStateChanged -= HandlePlayModeState;
+            CaptureSessionState.Clear();
+            Time.timeScale = 1f;
+            stage = CaptureStage.None;
+            caseIndex = 0;
+            currentCase = default;
+            controller = null;
+            playerTransform = null;
+            weaponFilter = null;
+            if (exitPlayMode && EditorApplication.isPlaying)
+                EditorApplication.isPlaying = false;
         }
 
     }
