@@ -14,6 +14,9 @@ namespace JoseonHunter.Runtime.Gameplay
 {
     public sealed class FirstPlayableController : MonoBehaviour
     {
+        private static readonly CombatVisualScaleProfile VisualScale =
+            CombatVisualScaleProfile.MobileLandscape;
+
         [Header("Static sprite assets")]
         [SerializeField] private Sprite playerSprite;
         [SerializeField] private Sprite enemySprite;
@@ -424,7 +427,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             gameplayCamera.orthographic = true;
-            gameplayCamera.orthographicSize = 6.25f;
+            gameplayCamera.orthographicSize = VisualScale.CameraOrthographicSize;
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
             gameplayCamera.backgroundColor = new Color(0.075f, 0.07f, 0.08f);
             gameplayCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -530,7 +533,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 MotionWeight.Light,
                 0f,
                 out playerVisualRig);
-            player.transform.localScale = Vector3.one;
+            player.transform.localScale = Vector3.one * VisualScale.PlayerScale;
             playerRenderer = playerVisualRig.Renderer;
             playerHealthFill = CreateHealthBar(player.transform);
             playerHealthFill.parent.localPosition = new Vector3(0f, -0.30f, 0f);
@@ -546,8 +549,8 @@ namespace JoseonHunter.Runtime.Gameplay
             geumjulRenderer.material = new Material(Shader.Find("Sprites/Default"));
             geumjulRenderer.startColor = new Color(1f, 0.78f, 0.18f, 0.9f);
             geumjulRenderer.endColor = new Color(1f, 0.95f, 0.45f, 0.45f);
-            geumjulRenderer.startWidth = 0.09f;
-            geumjulRenderer.endWidth = 0.04f;
+            geumjulRenderer.startWidth = 0.045f;
+            geumjulRenderer.endWidth = 0.022f;
             geumjulRenderer.sortingOrder = 4;
             geumjulRenderer.positionCount = 0;
 
@@ -616,16 +619,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateField()
         {
-            if (flatField == null)
-            {
-                return;
-            }
-
-            var cameraPosition = gameplayCamera.transform.position;
-            flatField.position = new Vector3(
-                Mathf.Round(cameraPosition.x / 2f) * 2f,
-                Mathf.Round(cameraPosition.y / 2f) * 2f,
-                0f);
+            // The battlefield is deliberately world-anchored. Moving it in camera-sized steps made
+            // its high-contrast landmarks jump underneath the player.
         }
 
         private void UpdateSpawning(float delta)
@@ -649,7 +644,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private void SpawnEnemy(bool isBoss)
         {
             var angle = UnityEngine.Random.value * Mathf.PI * 2f;
-            var radius = isBoss ? 7.5f : UnityEngine.Random.Range(7.5f, 9.5f);
+            var radius = isBoss
+                ? VisualScale.SpawnRadiusMinimum
+                : UnityEngine.Random.Range(VisualScale.SpawnRadiusMinimum, VisualScale.SpawnRadiusMaximum);
             var position = (Vector2)player.transform.position +
                            new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
 
@@ -675,7 +672,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var renderer = visualRig.Renderer;
             var baseHealth = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
             var health = baseHealth * rank.HealthMultiplier;
-            enemyObject.transform.localScale = Vector3.one * rank.DisplayScale;
+            enemyObject.transform.localScale = Vector3.one * VisualScale.ScaleFor(rank);
             if (chosenSprite == null)
             {
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
@@ -808,7 +805,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 enemy.Object.transform.position = enemyPosition + velocity * delta;
                 enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
 
-                var hitDistance = enemy.IsBoss ? 1.1f : (enemy.IsElite ? 0.72f : 0.55f);
+                var rank = enemy.IsBoss
+                    ? EnemyRankProfile.Boss
+                    : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
+                var hitDistance = VisualScale.ContactRadiusFor(rank);
                 if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
                     contactInvulnerability <= 0f)
                 {

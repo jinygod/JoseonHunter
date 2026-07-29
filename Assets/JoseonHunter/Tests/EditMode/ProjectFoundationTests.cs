@@ -21,13 +21,15 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void AndroidPlayerIsPortraitOnly()
+        public void AndroidPlayerUsesLandscapeOrientation()
         {
             Assert.That(
                 PlayerSettings.defaultInterfaceOrientation,
-                Is.EqualTo(UIOrientation.Portrait));
-            Assert.That(PlayerSettings.allowedAutorotateToLandscapeLeft, Is.False);
-            Assert.That(PlayerSettings.allowedAutorotateToLandscapeRight, Is.False);
+                Is.EqualTo(UIOrientation.LandscapeLeft));
+            Assert.That(PlayerSettings.allowedAutorotateToLandscapeLeft, Is.True);
+            Assert.That(PlayerSettings.allowedAutorotateToLandscapeRight, Is.True);
+            Assert.That(PlayerSettings.allowedAutorotateToPortrait, Is.False);
+            Assert.That(PlayerSettings.allowedAutorotateToPortraitUpsideDown, Is.False);
         }
     }
 }
