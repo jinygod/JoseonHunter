@@ -74,7 +74,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Launch(context, target);
             }
             projectiles.Tick(deltaTime, context);
-            LastProjectileScale = projectiles.LastVisualScale;
             for (var index = splitArrows.Count - 1; index >= 0; index--)
             {
                 var child = splitArrows[index]; child.Delay -= Mathf.Max(0f, deltaTime);
@@ -138,7 +137,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 WeaponVisualStage.Windup,
                 Level,
                 IsEvolved,
-                .82f,
+                .24f,
                 .07f);
             transientVisuals?.Play(
                 context.PresentationSpriteFor(
@@ -167,6 +166,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (Level != 5) return;
             LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
             LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
+            LastProjectileScale = scale;
         }
 
         private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary, float targetDistance, ICombatTarget target)
@@ -202,7 +202,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 WeaponVisualStage.Impact,
                 Level,
                 IsEvolved,
-                .86f,
+                .28f,
                 .14f);
             EnsureTransientVisuals(presentationRoot);
             transientVisuals?.Play(

@@ -20,6 +20,23 @@ namespace JoseonHunter.Tests.PlayMode
     public sealed class EvolvedWeaponCombatPlayModeTests
     {
         [Test]
+        public void Capture_matrix_contains_one_evolved_case_per_weapon()
+        {
+            var captureType = Type.GetType(
+                "JoseonHunter.Editor.Scenes.EightWeaponPolishCapture, JoseonHunter.Editor",
+                throwOnError: true);
+            var buildCases = captureType.GetMethod("BuildCases", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            var cases = ((System.Collections.IEnumerable)buildCases.Invoke(null, null)).Cast<object>();
+            var evolved = cases.Where(item =>
+                (string)item.GetType().GetProperty("Label").GetValue(item) == "evolved").ToArray();
+
+            Assert.That(evolved, Has.Length.EqualTo(WeaponRoster.All.Count));
+            Assert.That(
+                evolved.Select(item => (WeaponId)item.GetType().GetProperty("WeaponId").GetValue(item)),
+                Is.EquivalentTo(WeaponRoster.All));
+        }
+
+        [Test]
         public void Runtime_rejects_duplicate_weapon_registration_without_second_tick_or_dispose_slot()
         {
             var registry = new CombatTargetRegistry();

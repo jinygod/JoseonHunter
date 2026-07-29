@@ -344,7 +344,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var renderer = field.Visual.GetComponent<SpriteRenderer>();
             renderer.sprite = context.PresentationSpriteFor(WeaponId.FrostFlask, field.VisualPartIndex);
             field.Visual.transform.position = new Vector3(field.Landing.X, field.Landing.Y, 0f);
-            field.Visual.transform.localScale = Vector3.one * Radius * 2f * radiusScale;
+            field.Visual.transform.localScale = ScaleSpriteToWorldDiameter(renderer.sprite, Radius * 2f * radiusScale);
+            renderer.color = new Color(1f, 1f, 1f, .58f);
         }
 
         private void PlayLandingFragments(Field field, in WeaponExecutionContext context)
@@ -353,7 +354,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             transientVisuals?.Play(
                 context.PresentationSpriteFor(WeaponId.FrostFlask, WeaponVisualPartIndex.FrostFlask.Impact),
                 new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
-                Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 2);
+                ScaleSpriteToWorldDiameter(
+                    context.PresentationSpriteFor(WeaponId.FrostFlask, WeaponVisualPartIndex.FrostFlask.Impact),
+                    cue.ResolvedScale),
+                new Color(1f, 1f, 1f, .82f), cue.ResolvedLifetime, context.SortingOrder + 2);
         }
 
         private void PlayConfirmedShatter(Field field, in WeaponExecutionContext context)
@@ -364,7 +368,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     WeaponId.FrostFlask,
                     WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
                 new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
-                Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 3);
+                ScaleSpriteToWorldDiameter(
+                    context.PresentationSpriteFor(
+                        WeaponId.FrostFlask,
+                        WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
+                    cue.ResolvedScale),
+                new Color(1f, 1f, 1f, .72f), cue.ResolvedLifetime, context.SortingOrder + 3);
         }
 
         private void PlayConfirmedStoredShatter(in WeaponExecutionContext context, Float2 position)
@@ -379,7 +388,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     WeaponId.FrostFlask,
                     WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
                 new Vector3(position.X, position.Y, 0f), Quaternion.identity,
-                Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 3);
+                ScaleSpriteToWorldDiameter(
+                    context.PresentationSpriteFor(
+                        WeaponId.FrostFlask,
+                        WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
+                    cue.ResolvedScale),
+                new Color(1f, 1f, 1f, .72f), cue.ResolvedLifetime, context.SortingOrder + 3);
+        }
+
+        private static Vector3 ScaleSpriteToWorldDiameter(Sprite sprite, float worldDiameter)
+        {
+            if (sprite == null) return Vector3.one;
+            var nativeDiameter = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            return Vector3.one * (worldDiameter / Mathf.Max(.01f, nativeDiameter));
         }
 
         private void EnsureTransientVisuals(Transform root)

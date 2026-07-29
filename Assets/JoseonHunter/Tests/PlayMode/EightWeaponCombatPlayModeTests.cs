@@ -13,11 +13,36 @@ using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using JoseonHunter.Runtime.Combat.Weapons.Presentation;
+using System;
+using Object = UnityEngine.Object;
 
 namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class EightWeaponCombatPlayModeTests
     {
+        [Test]
+        public void CaptureMatrix_ContainsEveryWeaponAtRequiredGrowthStates()
+        {
+            var captureType = Type.GetType(
+                "JoseonHunter.Editor.Scenes.EightWeaponPolishCapture, JoseonHunter.Editor",
+                throwOnError: true);
+            var buildCases = captureType.GetMethod("BuildCases", BindingFlags.Public | BindingFlags.Static);
+            var cases = ((IEnumerable)buildCases.Invoke(null, null)).Cast<object>().ToArray();
+
+            Assert.That(cases, Has.Length.EqualTo(32));
+            Assert.That(cases.Select(CaseKey), Is.Unique);
+            foreach (var weapon in WeaponRoster.All)
+            {
+                foreach (var state in new[] { "level-1", "level-3", "level-5", "evolved" })
+                {
+                    Assert.That(
+                        cases.Any(item => ReadWeaponId(item).Equals(weapon) && ReadLabel(item) == state),
+                        Is.True,
+                        $"Missing capture case {weapon}/{state}.");
+                }
+            }
+        }
+
         [UnityTest]
         public IEnumerator GameplayStartsWithHwandoAndCanAcquireAnOfferedWeapon()
         {
@@ -161,6 +186,41 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator EvolvedJangseungCompletionBurstRunsAfterBoundaryChecks()
+        {
+            var root = new GameObject("Evolved Jangseung completion presentation root");
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            var requestedParts = new List<int>();
+            Sprite Resolve(WeaponId _, int partIndex)
+            {
+                requestedParts.Add(partIndex);
+                return sprite;
+            }
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 4, 1, 0f, 5, evolved: true);
+            var context = new WeaponExecutionContext(default, root.transform, sprite, null, Resolve, null, 0, 1);
+
+            ward.Tick(.5f, context);
+            yield return null;
+
+            Assert.That(ward.EvolvedCompletionAfterBoundaryChecksForTests, Is.True);
+            Assert.That(
+                requestedParts,
+                Contains.Item(
+                    WeaponVisualPartIndex.Jangseung.Impact +
+                    WeaponVisualPartIndex.Jangseung.ImpactFrameCount / 2));
+
+            ward.Dispose();
+            runtime.Dispose();
+            Object.Destroy(root);
+            Object.Destroy(sprite);
+            Object.Destroy(texture);
+        }
+
+        [UnityTest]
         public IEnumerator FanGustMarksAndLightningUseCanonicalFramesWithoutExtraContacts()
         {
             var root = new GameObject("Fan presentation root");
@@ -241,5 +301,13 @@ namespace JoseonHunter.Tests.PlayMode
             foreach (var frame in frames) Object.Destroy(frame);
             Object.Destroy(texture);
         }
+
+        private static string CaseKey(object item) => $"{ReadWeaponId(item).Value}/{ReadLabel(item)}";
+
+        private static WeaponId ReadWeaponId(object item) =>
+            (WeaponId)item.GetType().GetProperty("WeaponId").GetValue(item);
+
+        private static string ReadLabel(object item) =>
+            (string)item.GetType().GetProperty("Label").GetValue(item);
     }
 }

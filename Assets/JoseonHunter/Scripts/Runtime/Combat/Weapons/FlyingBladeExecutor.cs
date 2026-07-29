@@ -382,14 +382,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 WeaponVisualStage.Impact,
                 Level,
                 IsEvolved,
-                1f,
+                .34f,
                 .12f);
             transientVisuals?.Play(
                 sprite,
                 new Vector3(contact.X, contact.Y, 0f),
                 Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0, 4) * 90f),
                 Vector3.one * cue.ResolvedScale,
-                Color.white,
+                new Color(1f, 1f, 1f, .82f),
                 cue.ResolvedLifetime,
                 context.SortingOrder + 2);
         }

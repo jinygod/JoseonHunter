@@ -73,6 +73,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public IReadOnlyList<int> VisibleBoundaryDirectionsForTests => visibleBoundaryDirectionsForTests;
         public int GuardianStrikePresentationCountForTests { get; private set; }
         public bool GuardianStrikeAfterBoundaryChecksForTests { get; private set; } = true;
+        public bool EvolvedCompletionAfterBoundaryChecksForTests { get; private set; } = true;
         public int ActiveBarrierCountForTests { get { var count = 0; foreach (var set in sets) if (set.RotationMask != null) count++; return count; } }
         public int ActiveGuardianCountForTests { get { var count = 0; foreach (var set in sets) if (set.GuardianMask != null) count++; return count; } }
         public int GhostFaceApplicationsForTests { get; private set; }
@@ -105,6 +106,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #if UNITY_INCLUDE_TESTS
             boundaryChecksResolvedThisTickForTests = true;
 #endif
+            PresentEvolvedCompletions(context);
             AdvancePotentialCompletions(step, context);
             RememberCurrentTargetPositions();
         }
@@ -118,7 +120,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             firstPostRiseFrameSequenceForTests.Clear(); visibleBoundaryDirectionsForTests.Clear();
             FirstPostRiseFramesPlayedThisTickForTests = 0;
             GhostFaceApplicationsForTests = 0; GuardianSpawnsForTests = 0; GuardianStrikePresentationCountForTests = 0;
-            GuardianStrikeAfterBoundaryChecksForTests = true; boundaryChecksResolvedThisTickForTests = false;
+            GuardianStrikeAfterBoundaryChecksForTests = true; EvolvedCompletionAfterBoundaryChecksForTests = true;
+            boundaryChecksResolvedThisTickForTests = false;
 #endif
         }
 
@@ -395,7 +398,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                                 WeaponVisualPartIndex.Jangseung.Windup + currentFrame),
                             new Vector3(set.Posts[postIndex].X, set.Posts[postIndex].Y, 0f),
                             Quaternion.identity,
-                            Vector3.one * .9f,
+                            ScaleSpriteToWorldSize(
+                                context.PresentationSpriteFor(
+                                    WeaponId.JangseungWard,
+                                    WeaponVisualPartIndex.Jangseung.Windup + currentFrame),
+                                .72f,
+                                .72f),
                             Color.white,
                             PostRiseDuration / WeaponVisualPartIndex.Jangseung.WindupFrameCount,
                             context.SortingOrder + 1);
@@ -416,7 +424,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                                 WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1),
                             new Vector3(set.Posts[postIndex].X, set.Posts[postIndex].Y, 0f),
                             Quaternion.identity,
-                            Vector3.one * .9f,
+                            ScaleSpriteToWorldSize(
+                                context.PresentationSpriteFor(
+                                    WeaponId.JangseungWard,
+                                    WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1),
+                                .72f,
+                                .72f),
                             Color.white,
                             .06f,
                             context.SortingOrder + 1);
@@ -447,16 +460,51 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         (segment.Start.X + segment.End.X) * .5f,
                         (segment.Start.Y + segment.End.Y) * .5f,
                         0f);
+                    var fieldSprite = context.PresentationSpriteFor(WeaponId.JangseungWard, fieldFrame);
                     transientVisuals?.Play(
-                        context.PresentationSpriteFor(WeaponId.JangseungWard, fieldFrame),
+                        fieldSprite,
                         midpoint,
                         Quaternion.Euler(0f, 0f, Mathf.Atan2(y, x) * Mathf.Rad2Deg),
-                        new Vector3(Mathf.Sqrt(x * x + y * y), .65f, 1f),
-                        new Color(1f, .86f, .48f, .68f * alpha),
+                        ScaleSpriteToWorldSize(fieldSprite, Mathf.Sqrt(x * x + y * y), .22f),
+                        new Color(1f, .86f, .48f, .42f * alpha),
                         .06f,
                         context.SortingOrder);
                 }
             }
+        }
+
+        private void PresentEvolvedCompletions(in WeaponExecutionContext context)
+        {
+            foreach (var set in sets)
+            {
+                if (!set.IsEvolved || !set.IsCompleted || set.EvolvedCompletionPresented) continue;
+#if UNITY_INCLUDE_TESTS
+                EvolvedCompletionAfterBoundaryChecksForTests &= boundaryChecksResolvedThisTickForTests;
+#endif
+                var guardianBurst = context.PresentationSpriteFor(
+                    WeaponId.JangseungWard,
+                    WeaponVisualPartIndex.Jangseung.Impact +
+                    WeaponVisualPartIndex.Jangseung.ImpactFrameCount / 2);
+                var visual = new GameObject("Jangseung Evolved Guardian Burst");
+                visual.transform.SetParent(context.PresentationRoot, false);
+                visual.transform.position = new Vector3(set.DesiredCenter.X, set.DesiredCenter.Y, 0f);
+                visual.transform.localScale = ScaleSpriteToWorldSize(guardianBurst, 1.25f, 1.25f);
+                var renderer = visual.AddComponent<SpriteRenderer>();
+                renderer.sprite = guardianBurst;
+                renderer.color = new Color(1f, .90f, .52f, .86f);
+                renderer.sortingOrder = context.SortingOrder + 3;
+                set.EvolvedCompletionVisual = visual;
+                set.EvolvedCompletionPresented = true;
+            }
+        }
+
+        private static Vector3 ScaleSpriteToWorldSize(Sprite sprite, float worldWidth, float worldHeight)
+        {
+            if (sprite == null) return Vector3.one;
+            return new Vector3(
+                worldWidth / Mathf.Max(.01f, sprite.bounds.size.x),
+                worldHeight / Mathf.Max(.01f, sprite.bounds.size.y),
+                1f);
         }
 
         private float PostVisualElapsed(WardSet set, int postIndex)
@@ -506,6 +554,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (set.RotatingAttack != null) runtime.DamageService.RetireAttack(set.RotatingAttack.InstanceId);
             if (set.GuardianAttack != null) runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId);
             if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual);
+            if (set.EvolvedCompletionVisual != null) UnityEngine.Object.Destroy(set.EvolvedCompletionVisual);
             set.Retired = true;
         }
 
@@ -611,6 +660,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float CompletionResidual { get; set; }
             public float PotentialTickStep { get; set; }
             public bool PotentialCreatedThisTick { get; set; }
+            public bool EvolvedCompletionPresented { get; set; }
+            public GameObject EvolvedCompletionVisual { get; set; }
             public void ActivateNextPost()
             {
                 if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));

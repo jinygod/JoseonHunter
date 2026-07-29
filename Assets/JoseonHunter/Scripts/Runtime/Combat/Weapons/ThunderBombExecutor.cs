@@ -252,14 +252,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var renderer = bomb.Visual.GetComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             bomb.Visual.transform.position = new Vector3(bomb.Position.X, bomb.Position.Y + bomb.Height, 0f);
-            bomb.Visual.transform.localScale = ResolveVisualScale(bomb);
+            bomb.Visual.transform.localScale = ResolveVisualScale(bomb, sprite);
 
             if (bomb.Shadow == null) return;
             var shadowRenderer = bomb.Shadow.GetComponent<SpriteRenderer>();
             shadowRenderer.sprite = context.PresentationSpriteFor(
                 WeaponId.ThunderCrashBomb, WeaponVisualPartIndex.ThunderCrash.Projectile);
             bomb.Shadow.transform.position = new Vector3(bomb.Position.X, bomb.Position.Y, 0f);
-            bomb.Shadow.transform.localScale = Vector3.one * Mathf.Lerp(.52f, .30f, Mathf.Clamp01(bomb.Height / .55f));
+            bomb.Shadow.transform.localScale = ScaleSpriteToWorldDiameter(
+                shadowRenderer.sprite,
+                Mathf.Lerp(.48f, .28f, Mathf.Clamp01(bomb.Height / .55f)));
             bomb.Shadow.SetActive(bomb.State == ThunderBombState.Lob);
         }
 
@@ -297,15 +299,25 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
 
-        private Vector3 ResolveVisualScale(Bomb bomb)
+        private Vector3 ResolveVisualScale(Bomb bomb, Sprite sprite)
         {
+            float diameter;
             if (bomb.State == ThunderBombState.Blast)
-                return Vector3.one * Mathf.Max(.1f, bomb.SweptRadius * 2f);
-            if (bomb.State == ThunderBombState.SecondaryShockwave)
-                return Vector3.one * Mathf.Max(.1f, bomb.SweptRadius * 2f);
-            if (bomb.State == ThunderBombState.CompressedBlast)
-                return Vector3.one * BlastRadius * 2f;
-            return Vector3.one;
+                diameter = Mathf.Max(.1f, bomb.SweptRadius * 2f);
+            else if (bomb.State == ThunderBombState.SecondaryShockwave)
+                diameter = Mathf.Max(.1f, bomb.SweptRadius * 2f);
+            else if (bomb.State == ThunderBombState.CompressedBlast)
+                diameter = BlastRadius * 2f;
+            else
+                diameter = .62f;
+            return ScaleSpriteToWorldDiameter(sprite, diameter);
+        }
+
+        private static Vector3 ScaleSpriteToWorldDiameter(Sprite sprite, float worldDiameter)
+        {
+            if (sprite == null) return Vector3.one;
+            var nativeDiameter = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            return Vector3.one * (worldDiameter / Mathf.Max(.01f, nativeDiameter));
         }
 
         private void EnsureTransientVisuals(Transform root)
