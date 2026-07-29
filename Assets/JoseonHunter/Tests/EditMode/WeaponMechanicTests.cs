@@ -4,6 +4,7 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -700,6 +701,51 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void WindThunderFanUsesExactGustMarkAndLightningFrameRanges()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            registry.Register(new TestTarget(1, new Float2(.5f, 0f), mask));
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 2f, 0f, 1, 1);
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            fan.Tick(.01f, context);
+            CollectionAssert.AreEqual(
+                Enumerable.Range(WeaponVisualPartIndex.WindThunderFan.Projectile, WeaponVisualPartIndex.WindThunderFan.ProjectileFrameCount),
+                fan.GustPresentationPartsForTests);
+            CollectionAssert.AreEqual(
+                Enumerable.Range(WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount),
+                fan.WindMarkPresentationPartsForTests);
+
+            fan.Tick(.12f, context);
+            fan.Tick(.01f, context);
+
+            CollectionAssert.AreEqual(
+                Enumerable.Range(WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount),
+                fan.OutboundLightningPresentationPartsForTests);
+        }
+
+        [Test]
+        public void WindThunderFanRejectedContactCreatesNoMarkOrLightningPresentation()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            registry.Register(new TestTarget(1, new Float2(.5f, 0f), PixelHitMask.FromRows("0")));
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 2f, 0f, 1, 1);
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            fan.Tick(.01f, context);
+            fan.Tick(.12f, context);
+            fan.Tick(.01f, context);
+
+            Assert.That(fan.WindMarkPresentationPartsForTests, Is.Empty);
+            Assert.That(fan.OutboundLightningPresentationPartsForTests, Is.Empty);
+            Assert.That(fan.LightningPresentationTimesForTests, Is.Empty);
+        }
+
+        [Test]
         public void ThunderBombDealsDamageOnlyWhenItsExpandingPixelRingReachesTheTarget()
         {
             var mask = PixelHitMask.FromRows("1");
@@ -1020,7 +1066,52 @@ namespace JoseonHunter.Tests.EditMode
 
             ward.Tick(.04f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
 
-            Assert.That(ward.FirstWardVisualRiseForTests, Is.InRange(0f, 1f));
+            Assert.That(ward.FirstWardVisualRiseForTests, Is.InRange(float.Epsilon, .999f));
+        }
+
+        [Test]
+        public void JangseungWardPlaysFiveRiseFramesWithoutBurstingMissedFrames()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var normal = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 3, 1, 0f, 3);
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            normal.Tick(.001f, context);
+            for (var frame = 1; frame < WeaponVisualPartIndex.Jangseung.WindupFrameCount; frame++)
+                normal.Tick(.032f, context);
+
+            CollectionAssert.AreEqual(
+                Enumerable.Range(0, WeaponVisualPartIndex.Jangseung.WindupFrameCount),
+                normal.FirstPostRiseFrameSequenceForTests);
+
+            var largeTick = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 3, 1, 0f, 3);
+            largeTick.Tick(.16f, context);
+
+            CollectionAssert.AreEqual(
+                new[] { WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1 },
+                largeTick.FirstPostRiseFrameSequenceForTests);
+            Assert.That(largeTick.FirstPostRiseFramesPlayedThisTickForTests, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void LevelFiveJangseungRevealsEachBoundaryAfterItsOwnStaggeredRise()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0f, 5);
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            ward.Tick(.07f, context);
+            CollectionAssert.AreEqual(new[] { 0 }, ward.VisibleBoundaryDirectionsForTests);
+            ward.Tick(.10f, context);
+            CollectionAssert.AreEqual(new[] { 0, 1 }, ward.VisibleBoundaryDirectionsForTests);
+            ward.Tick(.10f, context);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2 }, ward.VisibleBoundaryDirectionsForTests);
+            ward.Tick(.10f, context);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3 }, ward.VisibleBoundaryDirectionsForTests);
         }
 
         [Test]

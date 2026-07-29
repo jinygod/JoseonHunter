@@ -36,6 +36,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<Bleed> bleeds = new List<Bleed>();
         private PendingChain pendingChain;
         private Float2 castOrigin;
+#if UNITY_INCLUDE_TESTS
+        private readonly List<int> gustPresentationPartsForTests = new List<int>();
+        private readonly List<int> windMarkPresentationPartsForTests = new List<int>();
+        private readonly List<int> outboundLightningPresentationPartsForTests = new List<int>();
+        private readonly List<int> inboundPresentationPartsForTests = new List<int>();
+#endif
 
         public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -63,6 +69,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public IReadOnlyList<float> LastOutboundStrikeTimes => outboundStrikeTimes;
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<float> LightningPresentationTimesForTests => lightningPresentationTimes;
+        public IReadOnlyList<int> GustPresentationPartsForTests => gustPresentationPartsForTests;
+        public IReadOnlyList<int> WindMarkPresentationPartsForTests => windMarkPresentationPartsForTests;
+        public IReadOnlyList<int> OutboundLightningPresentationPartsForTests => outboundLightningPresentationPartsForTests;
+        public IReadOnlyList<int> InboundPresentationPartsForTests => inboundPresentationPartsForTests;
         public int ActiveBleedCountForTests => bleeds.Count;
         public bool PendingChainForTests => pendingChain.Scheduled;
         public bool SuppressNewCastsForTests { get; set; }
@@ -108,6 +118,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); lightningPresentationTimes.Clear(); pendingVisuals.Clear(); bleeds.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
+#if UNITY_INCLUDE_TESTS
+            gustPresentationPartsForTests.Clear(); windMarkPresentationPartsForTests.Clear();
+            outboundLightningPresentationPartsForTests.Clear(); inboundPresentationPartsForTests.Clear();
+#endif
         }
 
         public void Dispose() => Reset();
@@ -116,6 +130,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             castOrigin = origin;
             cooldown = CooldownSeconds; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); lightningPresentationTimes.Clear();
+#if UNITY_INCLUDE_TESTS
+            gustPresentationPartsForTests.Clear(); windMarkPresentationPartsForTests.Clear();
+            outboundLightningPresentationPartsForTests.Clear(); inboundPresentationPartsForTests.Clear();
+#endif
             gustIndex = 0; lightningIndex = 0; strikeDueIn = LightningStrikeInterval; outboundElapsed = 0f; inboundPauseRemaining = 0f;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0;
             attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f);
@@ -139,7 +157,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Wind, context.SimulationTick), out _))
                 {
                     marked.Add(target); LastWindContactCount++;
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount, false, .62f);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount, false, .62f, PresentationSequenceKind.WindMark);
                     if (Potentials.HasPotential(WeaponPotentialId.FanVacuumEdge) && TryPotentialContact(WeaponPotentialId.FanVacuumEdge, target, contact)) RefreshBleed(target, contact);
                 }
             }
@@ -162,7 +180,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     LastLightningContactCount++;
                     lightningPresentationTimes.Add(0f);
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f, PresentationSequenceKind.OutboundLightning);
                 }
             }
             LastLightningSimulationTick = context.SimulationTick;
@@ -203,7 +221,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     LastLightningContactCount++;
                     lightningPresentationTimes.Add(outboundElapsed);
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f, PresentationSequenceKind.OutboundLightning);
                     if (successfulOutboundTargetIdSet.Add(target.RuntimeId)) successfulOutboundTargetIds.Add(target.RuntimeId);
                 }
                 outboundStrikeTimes.Add(outboundElapsed);
@@ -248,7 +266,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (hit)
                 {
                     LastInboundContactCount++;
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, true, .72f);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, true, .72f, PresentationSequenceKind.Inbound);
                     if (Potentials.HasPotential(WeaponPotentialId.FanReturningChain) && !target.IsAlive && TryPotentialContact(WeaponPotentialId.FanReturningChain, target, contact) && !pendingChain.Scheduled) ScheduleChain(target);
                 }
             }
@@ -261,6 +279,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var degrees = Mathf.Atan2(direction.Y, direction.X) * Mathf.Rad2Deg;
             for (var frame = 0; frame < WeaponVisualPartIndex.WindThunderFan.ProjectileFrameCount; frame++)
             {
+                RecordPresentationPartForTests(
+                    PresentationSequenceKind.Gust,
+                    WeaponVisualPartIndex.WindThunderFan.Projectile + frame);
                 var progress = (frame + 1f) / WeaponVisualPartIndex.WindThunderFan.ProjectileFrameCount;
                 QueueVisual(
                     context,
@@ -285,11 +306,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             int partStart,
             int frameCount,
             bool reverse,
-            float scale)
+            float scale,
+            PresentationSequenceKind kind)
         {
             for (var sequenceIndex = 0; sequenceIndex < frameCount; sequenceIndex++)
             {
                 var frame = reverse ? frameCount - 1 - sequenceIndex : sequenceIndex;
+                RecordPresentationPartForTests(kind, partStart + frame);
                 QueueVisual(
                     context,
                     new PendingVisual(
@@ -302,6 +325,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         .08f,
                         context.SortingOrder + 2));
             }
+        }
+
+        private void RecordPresentationPartForTests(PresentationSequenceKind kind, int partIndex)
+        {
+#if UNITY_INCLUDE_TESTS
+            switch (kind)
+            {
+                case PresentationSequenceKind.Gust: gustPresentationPartsForTests.Add(partIndex); break;
+                case PresentationSequenceKind.WindMark: windMarkPresentationPartsForTests.Add(partIndex); break;
+                case PresentationSequenceKind.OutboundLightning: outboundLightningPresentationPartsForTests.Add(partIndex); break;
+                case PresentationSequenceKind.Inbound: inboundPresentationPartsForTests.Add(partIndex); break;
+            }
+#endif
         }
 
         private void QueueVisual(in WeaponExecutionContext context, PendingVisual visual)
@@ -437,6 +473,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
         private struct Bleed { public int TargetId; public Float2 Contact; public int Remaining; public float Elapsed; public AttackInstance Attack; }
         private struct PendingChain { public bool Scheduled; public float Remaining; public int TargetId; public AttackInstance Attack; }
+        private enum PresentationSequenceKind { Gust, WindMark, OutboundLightning, Inbound }
         private struct PendingVisual
         {
             public PendingVisual(float dueIn, int partIndex, Vector3 position, Quaternion rotation, Vector3 scale, Color color, float lifetime, int sortingOrder)

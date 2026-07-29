@@ -34,6 +34,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private Transform transientVisualRoot;
         private float cooldown;
         private float elapsedSeconds;
+#if UNITY_INCLUDE_TESTS
+        private readonly List<int> firstPostRiseFrameSequenceForTests = new List<int>();
+        private readonly List<int> visibleBoundaryDirectionsForTests = new List<int>();
+        private bool boundaryChecksResolvedThisTickForTests;
+#endif
 
         public JangseungWardExecutor(WeaponRuntimeController runtime, PixelHitMask wardSegmentMask, float baseDamage, float cooldownSeconds, float radius, int postCount, int setCapacity, float reentryInterval, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
@@ -63,6 +68,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int CompletedWardSetCount { get { var count = 0; foreach (var set in sets) if (set.IsCompleted) count++; return count; } }
 #if UNITY_INCLUDE_TESTS
         public float FirstWardVisualRiseForTests => sets.Count > 0 ? sets[0].FirstPostRise : -1f;
+        public IReadOnlyList<int> FirstPostRiseFrameSequenceForTests => firstPostRiseFrameSequenceForTests;
+        public int FirstPostRiseFramesPlayedThisTickForTests { get; private set; }
+        public IReadOnlyList<int> VisibleBoundaryDirectionsForTests => visibleBoundaryDirectionsForTests;
+        public int GuardianStrikePresentationCountForTests { get; private set; }
+        public bool GuardianStrikeAfterBoundaryChecksForTests { get; private set; } = true;
         public int ActiveBarrierCountForTests { get { var count = 0; foreach (var set in sets) if (set.RotationMask != null) count++; return count; } }
         public int ActiveGuardianCountForTests { get { var count = 0; foreach (var set in sets) if (set.GuardianMask != null) count++; return count; } }
         public int GhostFaceApplicationsForTests { get; private set; }
@@ -72,6 +82,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime);
+#if UNITY_INCLUDE_TESTS
+            FirstPostRiseFramesPlayedThisTickForTests = 0;
+            visibleBoundaryDirectionsForTests.Clear();
+            boundaryChecksResolvedThisTickForTests = false;
+#endif
             EnsureTransientVisuals(context.PresentationRoot);
             transientVisuals?.Tick(step);
             var frameStartElapsed = elapsedSeconds;
@@ -87,6 +102,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (IsEvolved) AdvanceEvolvedPostActivation(step);
             AdvanceWardPresentation(context);
             ResolveCrossings(context, frameStartElapsed, step);
+#if UNITY_INCLUDE_TESTS
+            boundaryChecksResolvedThisTickForTests = true;
+#endif
             AdvancePotentialCompletions(step, context);
             RememberCurrentTargetPositions();
         }
@@ -97,7 +115,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
 #if UNITY_INCLUDE_TESTS
-            GhostFaceApplicationsForTests = 0; GuardianSpawnsForTests = 0;
+            firstPostRiseFrameSequenceForTests.Clear(); visibleBoundaryDirectionsForTests.Clear();
+            FirstPostRiseFramesPlayedThisTickForTests = 0;
+            GhostFaceApplicationsForTests = 0; GuardianSpawnsForTests = 0; GuardianStrikePresentationCountForTests = 0;
+            GuardianStrikeAfterBoundaryChecksForTests = true; boundaryChecksResolvedThisTickForTests = false;
 #endif
         }
 
@@ -357,8 +378,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 for (var postIndex = 0; postIndex < set.Posts.Count; postIndex++)
                 {
-                    var delay = set.StaggerPostVisuals ? postIndex * EvolvedPostActivationInterval : 0f;
-                    var localElapsed = elapsedSeconds - set.CreatedAt - delay;
+                    var localElapsed = PostVisualElapsed(set, postIndex);
                     if (localElapsed < 0f) continue;
 
                     var rise = Mathf.Clamp01(localElapsed / PostRiseDuration);
@@ -367,18 +387,25 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1,
                         Mathf.FloorToInt(rise * WeaponVisualPartIndex.Jangseung.WindupFrameCount));
                     var previousFrame = set.LastRiseFramePlayed[postIndex];
-                    for (var frame = previousFrame + 1; frame <= currentFrame; frame++)
+                    if (previousFrame != currentFrame)
                     {
                         transientVisuals?.Play(
                             context.PresentationSpriteFor(
                                 WeaponId.JangseungWard,
-                                WeaponVisualPartIndex.Jangseung.Windup + frame),
+                                WeaponVisualPartIndex.Jangseung.Windup + currentFrame),
                             new Vector3(set.Posts[postIndex].X, set.Posts[postIndex].Y, 0f),
                             Quaternion.identity,
                             Vector3.one * .9f,
                             Color.white,
                             PostRiseDuration / WeaponVisualPartIndex.Jangseung.WindupFrameCount,
                             context.SortingOrder + 1);
+#if UNITY_INCLUDE_TESTS
+                        if (postIndex == 0)
+                        {
+                            firstPostRiseFrameSequenceForTests.Add(currentFrame);
+                            FirstPostRiseFramesPlayedThisTickForTests++;
+                        }
+#endif
                     }
                     set.LastRiseFramePlayed[postIndex] = currentFrame;
                     if (rise >= 1f && previousFrame == currentFrame)
@@ -396,14 +423,24 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     }
                 }
 
-                var boundaryRise = set.FirstPostRise;
                 var boundaryStart = 2f / WeaponVisualPartIndex.Jangseung.WindupFrameCount;
-                if (boundaryRise <= boundaryStart || set.Posts.Count < 2) continue;
-                var alpha = Mathf.InverseLerp(boundaryStart, 1f, boundaryRise);
+                if (set.Posts.Count < 2) continue;
                 var fieldFrame = WeaponVisualPartIndex.Jangseung.Field +
                     Mathf.FloorToInt(elapsedSeconds / .05f) % WeaponVisualPartIndex.Jangseung.FieldFrameCount;
-                foreach (var segment in Segments(set))
+                for (var directionIndex = 0; directionIndex < set.Posts.Count; directionIndex++)
                 {
+                    if (set.Posts.Count == 2 && directionIndex == 1) break;
+                    var localElapsed = PostVisualElapsed(set, directionIndex);
+                    if (localElapsed < 0f) continue;
+                    var boundaryRise = Mathf.Clamp01(localElapsed / PostRiseDuration);
+                    if (boundaryRise <= boundaryStart) continue;
+                    var alpha = Mathf.InverseLerp(boundaryStart, 1f, boundaryRise);
+                    var segment = new Segment(
+                        set.Posts[directionIndex],
+                        set.Posts[(directionIndex + 1) % set.Posts.Count]);
+#if UNITY_INCLUDE_TESTS
+                    visibleBoundaryDirectionsForTests.Add(directionIndex);
+#endif
                     var x = segment.End.X - segment.Start.X;
                     var y = segment.End.Y - segment.Start.Y;
                     var midpoint = new Vector3(
@@ -422,8 +459,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
 
+        private float PostVisualElapsed(WardSet set, int postIndex)
+        {
+            var delay = set.StaggerPostVisuals ? postIndex * EvolvedPostActivationInterval : 0f;
+            return elapsedSeconds - set.CreatedAt - delay;
+        }
+
         private void PlayGuardianStrike(in WeaponExecutionContext context, Float2 contact)
         {
+#if UNITY_INCLUDE_TESTS
+            GuardianStrikePresentationCountForTests++;
+            GuardianStrikeAfterBoundaryChecksForTests &= boundaryChecksResolvedThisTickForTests;
+#endif
             transientVisuals?.Play(
                 context.PresentationSpriteFor(
                     WeaponId.JangseungWard,

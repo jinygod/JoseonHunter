@@ -1,15 +1,19 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -359,6 +363,32 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [Test]
+        public void Twelve_guardians_presents_guardian_only_after_completed_boundary_checks()
+        {
+            var mask = PixelHitMask.FromRows("111", "111", "111");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            registry.Register(new TestTarget(1, default, mask));
+            var modifiers = WeaponRuntimeModifiers.From(new WeaponRunAffixProfile(
+                Array.Empty<WeaponAffixRoll>(),
+                new[] { WeaponPotentialId.JangseungGuardianDescent }));
+            var root = new GameObject("Guardian ordering root");
+            var ward = new JangseungWardExecutor(runtime, mask, 10f, 10f, 2f, 4, 1, 0f, 5, true, modifiers);
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            ward.Tick(.299f, context);
+            Assert.That(ward.GuardianStrikePresentationCountForTests, Is.Zero);
+            ward.Tick(.001f, context);
+
+            Assert.That(ward.GuardianStrikePresentationCountForTests, Is.EqualTo(1));
+            Assert.That(ward.GuardianStrikeAfterBoundaryChecksForTests, Is.True);
+
+            ward.Dispose();
+            runtime.Dispose();
+            Object.DestroyImmediate(root);
+        }
+
         [UnityTest]
         public IEnumerator Fire_dragon_barrage_scouts_then_focuses_marked_position()
         {
@@ -507,6 +537,26 @@ namespace JoseonHunter.Tests.PlayMode
                 CollectionAssert.AreEqual(splitFan.LastOutboundStrikeTimes, splitFan.LightningPresentationTimesForTests);
                 CollectionAssert.AreEqual(largeFan.LastOutboundStrikeTimes, largeFan.LightningPresentationTimesForTests);
                 Assert.That(split.Count(ContactPhase.Lightning), Is.EqualTo(large.Count(ContactPhase.Lightning)));
+            }
+        }
+
+        [Test]
+        public void Returning_heaven_thunder_reverses_the_canonical_inbound_frames()
+        {
+            using (var rig = EvolvedWeaponTestRig.For(WeaponId.WindThunderFan))
+            {
+                rig.AddTarget(new Vector2(1f, 0f));
+                for (var index = 0; index < 4; index++) rig.Tick(.01f);
+                rig.Tick(.12f);
+                rig.Tick(.08f);
+                rig.Tick(.08f);
+
+                CollectionAssert.AreEqual(
+                    Enumerable.Range(
+                            WeaponVisualPartIndex.WindThunderFan.Impact,
+                            WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount)
+                        .Reverse(),
+                    ((WindThunderFanExecutor)rig.Executor).InboundPresentationPartsForTests);
             }
         }
 
