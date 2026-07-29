@@ -454,6 +454,31 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void TalismanVisualFollowsFlightAttachmentAndSealStages()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var talisman = new TalismanExecutor(runtime, 10f, 10f, 3f, 1f, 1, 1);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            talisman.Tick(.1f, context);
+            Assert.That(talisman.ActiveVisualStageForTests, Is.EqualTo(TalismanState.Flying));
+
+            talisman.Tick(.9f, context);
+            Assert.That(talisman.ActiveVisualStageForTests, Is.EqualTo(TalismanState.Attached));
+
+            talisman.Tick(.01f, context);
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(talisman.ActiveVisualStageForTests, Is.EqualTo(TalismanState.Sealing));
+                Assert.That(talisman.FirstVisualPartIndexForTests, Is.EqualTo(4));
+            });
+        }
+
+        [Test]
         public void TalismanSafelyBurstsOnceWhenNoTransferTargetExists()
         {
             var mask = PixelHitMask.FromRows("1");
@@ -674,6 +699,49 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(events, Has.Count.EqualTo(2));
                 Assert.That(events[0].Phase, Is.EqualTo(ContactPhase.Blast));
                 Assert.That(target.Health, Is.EqualTo(90));
+            });
+        }
+
+        [Test]
+        public void ThunderBombLobVisualHeightPeaksBeforeFuse()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var bomb = new ThunderBombExecutor(runtime, 10f, 10f, 3f, 1f, .1f, 1f, 3);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            bomb.Tick(.05f, context);
+            var early = bomb.FirstBombVisualHeightForTests;
+            bomb.Tick(bomb.LobDuration * .45f, context);
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(bomb.FirstBombVisualHeightForTests, Is.GreaterThan(early));
+                Assert.That(bomb.FirstVisualPartIndexForTests, Is.InRange(0, 5));
+            });
+        }
+
+        [Test]
+        public void FrostFieldLevelFiveGrowsBeforeItShatters()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var frost = new FrostFlaskExecutor(runtime, 10f, 10f, 2f, .1f, 1f, 1f, 1, 5);
+            registry.Register(new TestTarget(1, new Float2(.4f, 0f), mask));
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            frost.Tick(.1f, context);
+            var start = frost.LastFieldVisualScale;
+            frost.Tick(.09f, context);
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(start, Is.EqualTo(.65f).Within(.001f));
+                Assert.That(frost.LastFieldVisualScale, Is.GreaterThan(start));
+                Assert.That(frost.FirstVisualPartIndexForTests, Is.InRange(6, 10));
             });
         }
 

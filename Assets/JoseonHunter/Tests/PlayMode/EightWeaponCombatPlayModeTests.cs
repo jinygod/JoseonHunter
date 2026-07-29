@@ -12,6 +12,7 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -82,6 +83,39 @@ namespace JoseonHunter.Tests.PlayMode
             Object.Destroy(root);
             Object.Destroy(first);
             Object.Destroy(second);
+            Object.Destroy(texture);
+        }
+
+        [UnityTest]
+        public IEnumerator StatefulWeaponsRenderCanonicalFramesAtTheirLogicalStages()
+        {
+            var root = new GameObject("Stateful Weapon Presentation Root");
+            var texture = new Texture2D(WeaponVisualPartIndex.ThunderCrash.RequiredCount, 1);
+            var frames = new Sprite[WeaponVisualPartIndex.ThunderCrash.RequiredCount];
+            for (var index = 0; index < frames.Length; index++)
+                frames[index] = Sprite.Create(texture, new Rect(index, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            Sprite Resolve(WeaponId _, int partIndex) => frames[partIndex];
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+            var thunder = new ThunderBombExecutor(runtime, 10f, 10f, 3f, 1f, .2f, 1f, 3);
+            var context = new WeaponExecutionContext(default, root.transform, frames[0], null, Resolve, null, 4, 1);
+
+            thunder.Tick(.5f, context);
+            yield return null;
+
+            var bomb = root.transform.Find("Thunder Crash Bomb");
+            var shadow = root.transform.Find("Bomb Shadow");
+            Assert.That(bomb, Is.Not.Null);
+            Assert.That(bomb.GetComponent<SpriteRenderer>().sprite, Is.SameAs(frames[3]));
+            Assert.That(bomb.position.y, Is.GreaterThan(shadow.position.y));
+            Assert.That(shadow.gameObject.activeSelf, Is.True);
+
+            thunder.Dispose();
+            runtime.Dispose();
+            Object.Destroy(root);
+            foreach (var frame in frames) Object.Destroy(frame);
             Object.Destroy(texture);
         }
     }

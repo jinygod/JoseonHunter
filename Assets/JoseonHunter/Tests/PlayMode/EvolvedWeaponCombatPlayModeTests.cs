@@ -202,6 +202,8 @@ namespace JoseonHunter.Tests.PlayMode
                 var target = rig.AddTarget(new Vector2(2f, 0f));
                 rig.Tick(0.5f);
                 Assert.That(rig.DamageEvents, Is.Empty, "Lob and pull entry cannot deal damage.");
+                Assert.That(((ThunderBombExecutor)rig.Executor).FirstVisualPartIndexForTests, Is.InRange(6, 9),
+                    "The pull warning must use the canonical fuse/windup range.");
                 rig.Tick(0.24f);
                 Assert.That(rig.DamageEvents, Is.Empty, "Pull cannot deal damage.");
                 rig.Tick(0.01f);

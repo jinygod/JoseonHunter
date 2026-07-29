@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -20,6 +21,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly PixelHitMask compressedMask = CreateCompressedMask();
         private readonly List<string> stateOrder = new List<string>();
         private readonly List<DelayedPotentialStrike> delayedStrikes = new List<DelayedPotentialStrike>();
+        private WeaponTransientVisualPool transientVisuals;
+        private Transform transientVisualRoot;
         private float cooldown;
 
         public ThunderBombExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float fuseDuration, float blastRadius, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
@@ -46,6 +49,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastPulledTargetCount { get; private set; }
         public int LastLightningRodTargetRuntimeId { get; private set; }
 #if UNITY_INCLUDE_TESTS
+        public float FirstBombVisualHeightForTests => bombs.Count == 0 ? 0f : bombs[0].Height;
+        public int FirstVisualPartIndexForTests => bombs.Count == 0 ? -1 : bombs[0].VisualPartIndex;
         public int PendingEarthCurrentCountForTests
         {
             get
@@ -61,13 +66,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime);
+            EnsureTransientVisuals(context.PresentationRoot);
+            transientVisuals?.Tick(step);
             cooldown -= step;
             if (cooldown <= 0f && bombs.Count < MaximumBombs && (!IsEvolved || bombs.Count == 0) && TryFindPredictedCrowd(context.OwnerPosition, out var landing))
             {
                 cooldown = CooldownSeconds;
                 if (IsEvolved) stateOrder.Clear();
                 if (IsEvolved) landing = Lerp(context.OwnerPosition, landing, 0.5f);
-                bombs.Add(new Bomb(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), context.OwnerPosition, landing));
+                var bomb = new Bomb(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), context.OwnerPosition, landing);
+                CreateVisual(bomb, context);
+                bombs.Add(bomb);
                 LastLandingPosition = landing;
             }
 
@@ -75,9 +84,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 var bomb = bombs[index];
                 Advance(bomb, step, context);
+                UpdateVisual(bomb, context);
                 LastState = bomb.State;
                 if (bomb.State != ThunderBombState.Complete) continue;
                 runtime.DamageService.RetireAttack(bomb.Attack.InstanceId);
+                DestroyVisual(bomb);
                 bombs.RemoveAt(index);
             }
             for (var index = delayedStrikes.Count - 1; index >= 0; index--)
@@ -103,12 +114,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Reset()
         {
-            foreach (var bomb in bombs) runtime.DamageService.RetireAttack(bomb.Attack.InstanceId);
+            foreach (var bomb in bombs)
+            {
+                runtime.DamageService.RetireAttack(bomb.Attack.InstanceId);
+                DestroyVisual(bomb);
+            }
             bombs.Clear(); stateOrder.Clear(); cooldown = 0f; LastState = ThunderBombState.Complete; LastLandingPosition = default;
             foreach (var strike in delayedStrikes) runtime.DamageService.RetireAttack(strike.Attack.InstanceId);
             delayedStrikes.Clear();
             LastPulledTargetCount = 0;
             LastLightningRodTargetRuntimeId = 0;
+            transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
         }
 
         public void Dispose() => Reset();
@@ -127,7 +143,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var progress = Mathf.Clamp01(bomb.Elapsed / LobDuration);
                     // The arc height is presentation-ready deterministic state; landing always remains the predicted center.
                     bomb.Position = Lerp(bomb.Start, bomb.Landing, progress);
-                    bomb.Height = 4f * progress * (1f - progress) * Mathf.Min(0.75f, Range * 0.25f);
+                    bomb.Height = 4f * progress * (1f - progress) * .55f;
                     if (progress >= 1f) Transition(bomb, ThunderBombState.Fuse);
                     break;
                 case ThunderBombState.Fuse:
@@ -165,7 +181,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         remaining -= lobSlice;
                         var progress = Mathf.Clamp01(bomb.Elapsed / LobDuration);
                         bomb.Position = Lerp(bomb.Start, bomb.Landing, progress);
-                        bomb.Height = 4f * progress * (1f - progress) * Mathf.Min(0.75f, Range * 0.25f);
+                        bomb.Height = 4f * progress * (1f - progress) * .55f;
                         if (bomb.Elapsed >= LobDuration) Transition(bomb, ThunderBombState.Pull);
                         break;
                     case ThunderBombState.Pull:
@@ -205,6 +221,109 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 stateOrder.Add(next.ToString());
         }
 
+        private void CreateVisual(Bomb bomb, in WeaponExecutionContext context)
+        {
+            if (context.PresentationRoot == null) return;
+            bomb.Visual = new GameObject("Thunder Crash Bomb");
+            bomb.Visual.transform.SetParent(context.PresentationRoot, false);
+            var renderer = bomb.Visual.AddComponent<SpriteRenderer>();
+            renderer.sortingOrder = context.SortingOrder + 1;
+            var shadow = new GameObject("Bomb Shadow");
+            shadow.transform.SetParent(context.PresentationRoot, false);
+            var shadowRenderer = shadow.AddComponent<SpriteRenderer>();
+            shadowRenderer.color = new Color(.08f, .09f, .12f, .32f);
+            shadowRenderer.sortingOrder = context.SortingOrder - 1;
+            bomb.Shadow = shadow;
+            UpdateVisual(bomb, context);
+        }
+
+        private void UpdateVisual(Bomb bomb, in WeaponExecutionContext context)
+        {
+            if (bomb.Visual == null) return;
+            var partIndex = ResolveVisualPartIndex(bomb);
+            bomb.VisualPartIndex = partIndex;
+            var sprite = context.PresentationSpriteFor(WeaponId.ThunderCrashBomb, partIndex);
+            var renderer = bomb.Visual.GetComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            bomb.Visual.transform.position = new Vector3(bomb.Position.X, bomb.Position.Y + bomb.Height, 0f);
+            bomb.Visual.transform.localScale = ResolveVisualScale(bomb);
+
+            if (bomb.Shadow == null) return;
+            var shadowRenderer = bomb.Shadow.GetComponent<SpriteRenderer>();
+            shadowRenderer.sprite = context.PresentationSpriteFor(
+                WeaponId.ThunderCrashBomb, WeaponVisualPartIndex.ThunderCrash.Projectile);
+            bomb.Shadow.transform.position = new Vector3(bomb.Position.X, bomb.Position.Y, 0f);
+            bomb.Shadow.transform.localScale = Vector3.one * Mathf.Lerp(.52f, .30f, Mathf.Clamp01(bomb.Height / .55f));
+            bomb.Shadow.SetActive(bomb.State == ThunderBombState.Lob);
+        }
+
+        private int ResolveVisualPartIndex(Bomb bomb)
+        {
+            switch (bomb.State)
+            {
+                case ThunderBombState.Lob:
+                    return WeaponVisualPartIndex.ThunderCrash.Projectile +
+                        Mathf.Min(WeaponVisualPartIndex.ThunderCrash.ProjectileFrameCount - 1,
+                            Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / LobDuration) *
+                                WeaponVisualPartIndex.ThunderCrash.ProjectileFrameCount));
+                case ThunderBombState.Fuse:
+                case ThunderBombState.Pull:
+                case ThunderBombState.CompressionDelay:
+                    return WeaponVisualPartIndex.ThunderCrash.Windup +
+                        Mathf.FloorToInt(bomb.Elapsed / .05f) % WeaponVisualPartIndex.ThunderCrash.WindupFrameCount;
+                case ThunderBombState.Blast:
+                case ThunderBombState.CompressedBlast:
+                    return WeaponVisualPartIndex.ThunderCrash.Detonation +
+                        Mathf.Min(WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount - 1,
+                            Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / BlastDuration) *
+                                WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount));
+                case ThunderBombState.SecondaryShockwave:
+                    return WeaponVisualPartIndex.ThunderCrash.Field +
+                        Mathf.Min(WeaponVisualPartIndex.ThunderCrash.FieldFrameCount - 1,
+                            Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / SecondaryDuration) *
+                                WeaponVisualPartIndex.ThunderCrash.FieldFrameCount));
+                default:
+                    return WeaponVisualPartIndex.ThunderCrash.Detonation +
+                        WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount - 1;
+            }
+        }
+
+        private Vector3 ResolveVisualScale(Bomb bomb)
+        {
+            if (bomb.State == ThunderBombState.Blast)
+                return Vector3.one * Mathf.Max(.1f, bomb.SweptRadius * 2f);
+            if (bomb.State == ThunderBombState.SecondaryShockwave)
+                return Vector3.one * Mathf.Max(.1f, bomb.SweptRadius * 2f);
+            if (bomb.State == ThunderBombState.CompressedBlast)
+                return Vector3.one * BlastRadius * 2f;
+            return Vector3.one;
+        }
+
+        private void EnsureTransientVisuals(Transform root)
+        {
+            if (!Application.isPlaying || root == null || root == transientVisualRoot) return;
+            transientVisuals?.Dispose();
+            transientVisualRoot = root;
+            transientVisuals = new WeaponTransientVisualPool(root);
+        }
+
+        private static void DestroyVisual(Bomb bomb)
+        {
+            if (bomb?.Visual != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(bomb.Visual);
+                else UnityEngine.Object.DestroyImmediate(bomb.Visual);
+            }
+            if (bomb?.Shadow != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(bomb.Shadow);
+                else UnityEngine.Object.DestroyImmediate(bomb.Shadow);
+            }
+            if (bomb == null) return;
+            bomb.Visual = null;
+            bomb.Shadow = null;
+        }
+
         private void PullTargets(Bomb bomb, float step)
         {
             runtime.Targets.CopyTo(targets);
@@ -238,6 +357,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (coreContact) multiplier *= 1f + Mathf.Min(.80f, bomb.PulledTargetIds.Count * .08f);
                 if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage * multiplier), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) continue;
                 bomb.MainBlastConfirmed = true;
+                PlayConfirmedBlast(context, contact);
                 if (Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
                     bomb.LightningRodTarget = target;
             }
@@ -266,6 +386,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!PixelMaskContactService.TryFindContact(ringMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                 if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(bomb.Attack, WeaponId.ThunderCrashBomb, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick), out _)) continue;
                 bomb.MainBlastConfirmed = true;
+                PlayConfirmedBlast(context, contact);
                 if (Potentials.HasPotential(WeaponPotentialId.ThunderLightningRod) && (bomb.LightningRodTarget == null || target.ThreatScore > bomb.LightningRodTarget.ThreatScore || target.ThreatScore == bomb.LightningRodTarget.ThreatScore && target.RuntimeId < bomb.LightningRodTarget.RuntimeId))
                     bomb.LightningRodTarget = target;
             }
@@ -281,6 +402,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
             }
             return bomb.SweptRadius + 0.0001f >= desiredRadius;
+        }
+
+        private void PlayConfirmedBlast(in WeaponExecutionContext context, Float2 contact)
+        {
+            var cue = new WeaponVisualCue(WeaponId.ThunderCrashBomb, WeaponVisualStage.Detonation, Level, IsEvolved, .72f, .10f);
+            transientVisuals?.Play(
+                context.PresentationSpriteFor(WeaponId.ThunderCrashBomb, WeaponVisualPartIndex.ThunderCrash.Detonation),
+                new Vector3(contact.X, contact.Y, 0f), Quaternion.identity, Vector3.one * cue.ResolvedScale,
+                Color.white, cue.ResolvedLifetime, context.SortingOrder + 2);
         }
 
         private bool TryFindPredictedCrowd(Float2 origin, out Float2 landing)
@@ -351,6 +481,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public ThunderBombState State { get; set; } = ThunderBombState.Lob;
             public HashSet<int> PulledTargetIds { get; } = new HashSet<int>();
             public ICombatTarget LightningRodTarget { get; set; }
+            public GameObject Visual { get; set; }
+            public GameObject Shadow { get; set; }
+            public int VisualPartIndex { get; set; } = WeaponVisualPartIndex.ThunderCrash.Projectile;
         }
 
         private struct DelayedPotentialStrike

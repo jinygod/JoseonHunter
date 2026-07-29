@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -28,6 +29,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<SpreadResidence> spreadResidences = new List<SpreadResidence>();
         private readonly PixelHitMask diskMask = CreateDiskMask();
         private readonly PixelHitMask spikeMask = CreateSpikeMask();
+        private WeaponTransientVisualPool transientVisuals;
+        private Transform transientVisualRoot;
         private float cooldown;
 
         public FrostFlaskExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float duration, float radius, int fieldCapacity, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
@@ -55,6 +58,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool AllStoredTargetsResolvedOnce { get; private set; }
         public float LastFieldVisualScale { get; private set; } = 1f;
 #if UNITY_INCLUDE_TESTS
+        public int FirstVisualPartIndexForTests => fields.Count == 0 ? -1 : fields[0].VisualPartIndex;
         public int ActiveSpreadResidenceCountForTests => spreadResidences.Count;
         public float FirstSpreadRemainingForTests => spreadResidences.Count == 0 ? 0f : spreadResidences[0].Remaining;
         public bool SuppressNewCastsForTests { get; set; }
@@ -62,7 +66,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
-            var step = Mathf.Max(0f, deltaTime); cooldown -= step;
+            var step = Mathf.Max(0f, deltaTime);
+            EnsureTransientVisuals(context.PresentationRoot);
+            transientVisuals?.Tick(step);
+            cooldown -= step;
             AdvanceSpreadResidences(step);
             if (cooldown <= 0f
 #if UNITY_INCLUDE_TESTS
@@ -78,7 +85,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     Expire(fields[0], context, step);
                     fields.RemoveAt(0);
                 }
-                fields.Add(new Field(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, TickInterval), context.OwnerPosition, landing));
+                var field = new Field(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, TickInterval), context.OwnerPosition, landing);
+                CreateVisual(field, context);
+                fields.Add(field);
             }
             for (var index = fields.Count - 1; index >= 0; index--)
             {
@@ -95,6 +104,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             spreadResidences.Clear();
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
             LastStoredFrozenTargetCount = 0; LastResolvedStoredTargetCount = 0; AllStoredTargetsResolvedOnce = false;
+            LastFieldVisualScale = 1f;
+            transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
         }
 
         public void Dispose() => Reset();
@@ -107,19 +118,29 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var progress = Mathf.Clamp01(field.Age / LobDuration);
                 field.Position = Lerp(field.Start, field.Landing, progress);
                 field.Height = 4f * progress * (1f - progress) * Mathf.Min(0.6f, Range * 0.2f);
-                if (progress >= 1f) { field.Active = true; field.Age = 0f; }
+                UpdateFlightVisual(field, context, progress);
+                if (progress >= 1f)
+                {
+                    field.Active = true; field.Age = 0f;
+                    LastFieldVisualScale = .65f;
+                    UpdateFieldVisual(field, context, .65f);
+                    PlayLandingFragments(field, context);
+                }
                 return;
             }
             var activeStep = Mathf.Min(step, Mathf.Max(0f, Duration - field.ActiveAge));
             field.ActiveAge += activeStep;
             runtime.Targets.CopyTo(targets);
             var mistMask = diskMask;
+            var visualScale = Mathf.Lerp(.65f, 1f, Mathf.Clamp01(field.ActiveAge / .18f));
             var radiusScale = 1f;
-            if (Potentials.HasPotential(WeaponPotentialId.FrostMist) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostMist, out _, out var authoredMistMask)) { mistMask = authoredMistMask; radiusScale = Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(field.ActiveAge / Duration)); }
-            LastFieldVisualScale = radiusScale;
-            if (Potentials.HasPotential(WeaponPotentialId.FrostMist) && field.Visual == null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostMist, out var mistSprite, out _))
-            { field.Visual = new GameObject("Frost Mist Field"); field.Visual.transform.SetParent(context.PresentationRoot, false); field.Visual.AddComponent<SpriteRenderer>().sprite = mistSprite; }
-            if (field.Visual != null) { field.Visual.transform.position = new Vector3(field.Landing.X, field.Landing.Y, 0f); field.Visual.transform.localScale = Vector3.one * Radius * 2f * radiusScale; }
+            if (Potentials.HasPotential(WeaponPotentialId.FrostMist) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostMist, out _, out var authoredMistMask))
+            {
+                mistMask = authoredMistMask;
+                radiusScale *= Mathf.Lerp(1f, 1.5f, Mathf.Clamp01(field.ActiveAge / Duration));
+            }
+            LastFieldVisualScale = visualScale * radiusScale;
+            UpdateFieldVisual(field, context, LastFieldVisualScale);
             var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f * radiusScale, Radius * 2f * radiusScale));
             var inside = field.InsideScratch;
             inside.Clear();
@@ -156,6 +177,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 field.SpikeTimer += activeStep;
                 while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context, false); }
+                UpdateFieldVisual(field, context, LastFieldVisualScale);
             }
             if (field.ActiveAge + .00001f >= Duration) Expire(field, context, step - activeStep);
         }
@@ -165,6 +187,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var spike = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
             runtime.Targets.CopyTo(targets);
             var transform = new PixelMaskTransform(field.Landing, 0, false, new Vector2(Radius * 2f, Radius * 2f));
+            var hitConfirmed = false;
             foreach (var target in targets)
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
@@ -176,6 +199,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     field.CrackStacks.TryGetValue(target.RuntimeId, out var stacks); damage *= 1f + stacks * .25f; field.CrackStacks.Remove(target.RuntimeId); field.CrackElapsed.Remove(target.RuntimeId);
                 }
                 var hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(spike, WeaponId.FrostFlask, target, Mathf.CeilToInt(damage), false, contact, ContactPhase.Blast, context.SimulationTick), out _);
+                hitConfirmed |= hit;
                 if (hit && expirySpike && Potentials.HasPotential(WeaponPotentialId.FrostSpread) && !field.SpreadResolved && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FrostSpread, out _, out var spreadMask))
                 {
                     field.SpreadResolved = true;
@@ -190,6 +214,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     }
                 }
             }
+            if (hitConfirmed) PlayConfirmedShatter(field, context);
             runtime.DamageService.RetireAttack(spike.InstanceId);
         }
 
@@ -253,8 +278,91 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (field == null || field.AttackRetired) return;
             runtime.DamageService.RetireAttack(field.Attack.InstanceId);
-            if (field.Visual != null) UnityEngine.Object.Destroy(field.Visual);
+            if (field.Visual != null)
+            {
+                if (Application.isPlaying) UnityEngine.Object.Destroy(field.Visual);
+                else UnityEngine.Object.DestroyImmediate(field.Visual);
+            }
             field.AttackRetired = true;
+        }
+
+        private void CreateVisual(Field field, in WeaponExecutionContext context)
+        {
+            if (context.PresentationRoot == null) return;
+            field.Visual = new GameObject("Frost Flask");
+            field.Visual.transform.SetParent(context.PresentationRoot, false);
+            var renderer = field.Visual.AddComponent<SpriteRenderer>();
+            renderer.sortingOrder = context.SortingOrder + 1;
+            UpdateFlightVisual(field, context, 0f);
+        }
+
+        private static int FrameFromProgress(int start, int count, float progress) =>
+            start + Mathf.Min(count - 1, Mathf.FloorToInt(Mathf.Clamp01(progress) * count));
+
+        private void UpdateFlightVisual(Field field, in WeaponExecutionContext context, float progress)
+        {
+            if (field.Visual == null) return;
+            field.VisualPartIndex = FrameFromProgress(
+                WeaponVisualPartIndex.FrostFlask.Projectile,
+                WeaponVisualPartIndex.FrostFlask.ProjectileFrameCount,
+                progress);
+            var renderer = field.Visual.GetComponent<SpriteRenderer>();
+            renderer.sprite = context.PresentationSpriteFor(WeaponId.FrostFlask, field.VisualPartIndex);
+            field.Visual.transform.position = new Vector3(field.Position.X, field.Position.Y + field.Height, 0f);
+            field.Visual.transform.localScale = Vector3.one;
+        }
+
+        private void UpdateFieldVisual(Field field, in WeaponExecutionContext context, float radiusScale)
+        {
+            if (field.Visual == null) return;
+            var warning = !IsEvolved && Level == 5 && .5f - field.SpikeTimer <= .12f;
+            if (warning)
+            {
+                var warningProgress = Mathf.Clamp01((field.SpikeTimer - .38f) / .12f);
+                field.VisualPartIndex = FrameFromProgress(
+                    WeaponVisualPartIndex.FrostFlask.Impact,
+                    WeaponVisualPartIndex.FrostFlask.ImpactFrameCount,
+                    warningProgress);
+            }
+            else
+            {
+                field.VisualPartIndex = FrameFromProgress(
+                    WeaponVisualPartIndex.FrostFlask.Field,
+                    WeaponVisualPartIndex.FrostFlask.FieldFrameCount,
+                    Mathf.Clamp01(field.ActiveAge / .18f));
+            }
+            var renderer = field.Visual.GetComponent<SpriteRenderer>();
+            renderer.sprite = context.PresentationSpriteFor(WeaponId.FrostFlask, field.VisualPartIndex);
+            field.Visual.transform.position = new Vector3(field.Landing.X, field.Landing.Y, 0f);
+            field.Visual.transform.localScale = Vector3.one * Radius * 2f * radiusScale;
+        }
+
+        private void PlayLandingFragments(Field field, in WeaponExecutionContext context)
+        {
+            var cue = new WeaponVisualCue(WeaponId.FrostFlask, WeaponVisualStage.Impact, Level, IsEvolved, .72f, .12f);
+            transientVisuals?.Play(
+                context.PresentationSpriteFor(WeaponId.FrostFlask, WeaponVisualPartIndex.FrostFlask.Impact),
+                new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
+                Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 2);
+        }
+
+        private void PlayConfirmedShatter(Field field, in WeaponExecutionContext context)
+        {
+            var cue = new WeaponVisualCue(WeaponId.FrostFlask, WeaponVisualStage.Detonation, Level, IsEvolved, Radius, .16f);
+            transientVisuals?.Play(
+                context.PresentationSpriteFor(
+                    WeaponId.FrostFlask,
+                    WeaponVisualPartIndex.FrostFlask.Impact + WeaponVisualPartIndex.FrostFlask.ImpactFrameCount - 1),
+                new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
+                Vector3.one * cue.ResolvedScale, Color.white, cue.ResolvedLifetime, context.SortingOrder + 3);
+        }
+
+        private void EnsureTransientVisuals(Transform root)
+        {
+            if (!Application.isPlaying || root == null || root == transientVisualRoot) return;
+            transientVisuals?.Dispose();
+            transientVisualRoot = root;
+            transientVisuals = new WeaponTransientVisualPool(root);
         }
         private void AdvanceSpreadResidences(float step)
         {
@@ -305,6 +413,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool SpreadResolved { get; set; }
             public float ExpiryResidual { get; set; }
             public GameObject Visual { get; set; }
+            public int VisualPartIndex { get; set; } = WeaponVisualPartIndex.FrostFlask.Projectile;
         }
         private struct SpreadResidence { public SpreadResidence(int targetId, int sourceId, float remaining) { TargetId = targetId; SourceId = sourceId; Remaining = remaining; } public int TargetId; public int SourceId; public float Remaining; }
     }
