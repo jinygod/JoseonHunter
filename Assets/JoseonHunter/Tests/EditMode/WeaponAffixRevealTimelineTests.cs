@@ -6,12 +6,12 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WeaponAffixRevealTimelineTests
     {
-        [TestCase(WeaponAffixTier.Standard, 0, .86f)]
-        [TestCase(WeaponAffixTier.High, 0, 1.08f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 1.28f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 1.38f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 1.66f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 1.96f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 2.36f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.54f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.72f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.82f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 3.06f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 3.32f)]
         public void Duration_matches_the_pacing_contract(WeaponAffixTier tier, int potentialCount, float expected)
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(tier, potentialCount));
@@ -30,6 +30,27 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void Reel_has_a_visible_fast_spin_and_deceleration_window()
+        {
+            var timeline = WeaponAffixRevealTimeline.For(Result(WeaponAffixTier.Standard, 0));
+            Assert.That(timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(1.18f));
+            Assert.That(timeline.AffixStopsAt - timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(.3f));
+            Assert.That(timeline.Duration, Is.GreaterThanOrEqualTo(2.3f));
+        }
+
+        [Test]
+        public void Reel_motion_decelerates_before_the_stop()
+        {
+            const float spinEndsAt = 1.2f;
+            const float stopAt = 1.8f;
+            var earlyDistance = WeaponAffixReelMotion.TravelAt(1.4f, spinEndsAt, stopAt, 0) -
+                WeaponAffixReelMotion.TravelAt(1.2f, spinEndsAt, stopAt, 0);
+            var lateDistance = WeaponAffixReelMotion.TravelAt(1.8f, spinEndsAt, stopAt, 0) -
+                WeaponAffixReelMotion.TravelAt(1.6f, spinEndsAt, stopAt, 0);
+            Assert.That(lateDistance, Is.LessThan(earlyDistance));
+        }
+
+        [Test]
         public void Unawarded_lines_never_receive_a_stop_time()
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(WeaponAffixTier.Standard, 1));
@@ -42,9 +63,9 @@ namespace JoseonHunter.Tests.EditMode
         public void Skip_preserves_final_stop_and_readability()
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(WeaponAffixTier.Perfect, 3));
-            Assert.That(timeline.SkipFinishAt(0f), Is.GreaterThan(timeline.PotentialStopsAt(2)));
+            Assert.That(timeline.SkipFinishAt(0f), Is.GreaterThanOrEqualTo(1.1f));
             Assert.That(timeline.SkipFinishAt(0f), Is.LessThan(timeline.Duration));
-            Assert.That(timeline.SkipFinishAt(1.9f), Is.EqualTo(timeline.Duration));
+            Assert.That(timeline.SkipFinishAt(3.3f), Is.EqualTo(timeline.Duration));
         }
 
         private static WeaponAffixRollResult Result(WeaponAffixTier tier, int potentialCount)

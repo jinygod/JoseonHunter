@@ -12,6 +12,7 @@ namespace JoseonHunter.Presentation.UI
     public sealed class UpgradeChoicePresenter : MonoBehaviour
     {
         private const float SlowdownDuration = .3f;
+        private const float CardEntranceDuration = .18f;
         private const float CloseDuration = .15f;
 
         private sealed class Card
@@ -51,9 +52,9 @@ namespace JoseonHunter.Presentation.UI
             overlay = root.AddComponent<CanvasGroup>();
             overlay.alpha = 0f;
             cardsRoot = RuntimeUiFactory.Rect("Upgrade Cards", root.transform).gameObject;
-            RuntimeUiFactory.Stretch(cardsRoot.GetComponent<RectTransform>(), 36f, 150f, 36f, 150f);
-            heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "CHOOSE A BLESSING", 38f, TextAlignmentOptions.Center);
-            Position(heading.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -12f), new Vector2(820f, 64f), new Vector2(.5f, 1f));
+            RuntimeUiFactory.Stretch(cardsRoot.GetComponent<RectTransform>(), 64f, 84f, 64f, 84f);
+            heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "CHOOSE A BLESSING", 34f, TextAlignmentOptions.Center);
+            Position(heading.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -8f), new Vector2(920f, 58f), new Vector2(.5f, 1f));
 
             for (var index = 0; index < cards.Length; index++) cards[index] = CreateCard(index);
             root.SetActive(false);
@@ -113,6 +114,23 @@ namespace JoseonHunter.Presentation.UI
             Time.timeScale = 0f;
             overlay.alpha = 1f;
             cardsRoot.SetActive(true);
+            for (var index = 0; index < cards.Length; index++)
+                cards[index].Button.transform.localScale = Vector3.one * .92f;
+
+            elapsed = 0f;
+            while (elapsed < CardEntranceDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                for (var index = 0; index < cards.Length; index++)
+                {
+                    var staggered = Mathf.Clamp01(elapsed / CardEntranceDuration * 1.45f - index * .18f);
+                    cards[index].Button.transform.localScale =
+                        Vector3.one * Mathf.LerpUnclamped(.92f, 1f, EaseOutBack(staggered));
+                }
+                yield return null;
+            }
+            for (var index = 0; index < cards.Length; index++)
+                cards[index].Button.transform.localScale = Vector3.one;
             openRoutine = null;
         }
 
@@ -153,22 +171,36 @@ namespace JoseonHunter.Presentation.UI
         {
             var choiceIndex = index;
             var card = new Card { Button = RuntimeUiFactory.Button("Upgrade Card " + index, cardsRoot.transform, JoseonUiPalette.Ink) };
+            var cardFrame = Resources.Load<Sprite>("UI/UpgradeCardFrame");
+            if (cardFrame != null)
+            {
+                card.Button.image.sprite = cardFrame;
+                card.Button.image.color = Color.white;
+                card.Button.image.type = Image.Type.Sliced;
+            }
             var rect = card.Button.GetComponent<RectTransform>();
-            Position(rect, new Vector2(.5f, 1f), new Vector2(0f, -112f - index * 255f), new Vector2(900f, 228f), new Vector2(.5f, 1f));
+            Position(rect, new Vector2(.5f, .5f), new Vector2((index - 1) * 548f, -18f),
+                new Vector2(510f, 472f), new Vector2(.5f, .5f));
             card.Accent = RuntimeUiFactory.Image("Accent", card.Button.transform, JoseonUiPalette.Hanji);
             card.Accent.rectTransform.anchorMin = new Vector2(0f, 0f);
             card.Accent.rectTransform.anchorMax = new Vector2(0f, 1f);
             card.Accent.rectTransform.sizeDelta = new Vector2(10f, 0f);
             card.Icon = RuntimeUiFactory.Image("Icon", card.Button.transform, Color.white);
-            Position(card.Icon.rectTransform, new Vector2(0f, .5f), new Vector2(42f, 0f), new Vector2(108f, 108f), new Vector2(0f, .5f));
+            Position(card.Icon.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -62f),
+                new Vector2(132f, 132f), new Vector2(.5f, 1f));
             card.Icon.preserveAspect = true;
             card.Glyph = RuntimeUiFactory.Text("Glyph", card.Button.transform, string.Empty, 72f, TextAlignmentOptions.Center);
-            Position(card.Glyph.rectTransform, new Vector2(0f, .5f), new Vector2(42f, 0f), new Vector2(108f, 108f), new Vector2(0f, .5f));
-            card.Category = Label("Category", card.Button.transform, new Vector2(176f, -24f), new Vector2(660f, 30f), 19f, TextAlignmentOptions.Left);
-            card.Name = Label("Name", card.Button.transform, new Vector2(176f, -62f), new Vector2(660f, 45f), 31f, TextAlignmentOptions.Left);
-            card.Behavior = Label("Behavior", card.Button.transform, new Vector2(176f, -116f), new Vector2(660f, 50f), 20f, TextAlignmentOptions.Left);
+            Position(card.Glyph.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -62f),
+                new Vector2(132f, 132f), new Vector2(.5f, 1f));
+            card.Category = CenteredLabel("Category", card.Button.transform, new Vector2(0f, 46f),
+                new Vector2(430f, 30f), 18f);
+            card.Name = CenteredLabel("Name", card.Button.transform, new Vector2(0f, -2f),
+                new Vector2(430f, 46f), 29f);
+            card.Behavior = CenteredLabel("Behavior", card.Button.transform, new Vector2(0f, -76f),
+                new Vector2(420f, 72f), 19f);
             card.Behavior.enableWordWrapping = true;
-            card.Delta = Label("Delta", card.Button.transform, new Vector2(176f, -184f), new Vector2(660f, 30f), 22f, TextAlignmentOptions.Left);
+            card.Delta = CenteredLabel("Delta", card.Button.transform, new Vector2(0f, -154f),
+                new Vector2(430f, 34f), 22f);
             card.Button.onClick.AddListener(() => Choose(choiceIndex));
             return card;
         }
@@ -204,12 +236,28 @@ namespace JoseonHunter.Presentation.UI
             return label;
         }
 
+        private static TextMeshProUGUI CenteredLabel(string name, Transform parent, Vector2 position,
+            Vector2 size, float fontSize)
+        {
+            var label = RuntimeUiFactory.Text(name, parent, string.Empty, fontSize, TextAlignmentOptions.Center);
+            Position(label.rectTransform, new Vector2(.5f, .5f), position, size, new Vector2(.5f, .5f));
+            return label;
+        }
+
         private static void Position(RectTransform rect, Vector2 anchor, Vector2 position, Vector2 size, Vector2 pivot)
         {
             rect.anchorMin = rect.anchorMax = anchor;
             rect.pivot = pivot;
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
+        }
+
+        private static float EaseOutBack(float value)
+        {
+            value = Mathf.Clamp01(value);
+            const float c1 = 1.70158f;
+            const float c3 = c1 + 1f;
+            return 1f + c3 * Mathf.Pow(value - 1f, 3f) + c1 * Mathf.Pow(value - 1f, 2f);
         }
     }
 }

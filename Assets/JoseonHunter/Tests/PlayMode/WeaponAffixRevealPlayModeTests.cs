@@ -16,12 +16,12 @@ namespace JoseonHunter.Tests.PlayMode
     {
         [TearDown]
         public void RestoreTimeScale() => Time.timeScale = 1f;
-        [TestCase(WeaponAffixTier.Standard, 0, .86f)]
-        [TestCase(WeaponAffixTier.High, 0, 1.08f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 1.28f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 1.38f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 1.66f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 1.96f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 2.36f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.54f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.72f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.82f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 3.06f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 3.32f)]
         public void Duration_uses_the_exact_affix_and_jackpot_caps(WeaponAffixTier tier, int potentialCount, float expected)
         {
             Assert.That(WeaponAffixRevealPresenter.DurationFor(Result(tier, potentialCount)), Is.EqualTo(expected));
@@ -35,9 +35,13 @@ namespace JoseonHunter.Tests.PlayMode
             var completions = 0;
             presenter.RevealCompleted += () => completions++;
             Time.timeScale = 0f;
+            presenter.SetCatalogForTests(TestCatalog());
             presenter.Play(result);
             presenter.Skip(); presenter.Skip();
-            yield return new WaitForSecondsRealtime(.88f);
+            yield return new WaitForSecondsRealtime(1.16f);
+            Assert.That(presenter.IsAwaitingConfirmation, Is.True);
+            presenter.Confirm();
+            yield return new WaitForSecondsRealtime(.16f);
             Assert.That(presenter.IsRevealing, Is.False);
             Assert.That(presenter.LastCompletedResult, Is.SameAs(result));
             Assert.That(completions, Is.EqualTo(1));
@@ -56,7 +60,9 @@ namespace JoseonHunter.Tests.PlayMode
             var pointer = new PointerEventData(eventSystem);
             ExecuteEvents.Execute<IPointerClickHandler>(presenter.gameObject, pointer, ExecuteEvents.pointerClickHandler);
             ExecuteEvents.Execute<IPointerClickHandler>(presenter.gameObject, pointer, ExecuteEvents.pointerClickHandler);
-            yield return new WaitForSecondsRealtime(.66f);
+            yield return new WaitForSecondsRealtime(.86f);
+            ExecuteEvents.Execute<IPointerClickHandler>(presenter.gameObject, pointer, ExecuteEvents.pointerClickHandler);
+            yield return new WaitForSecondsRealtime(.16f);
             Assert.That(presenter.LastCompletedResult, Is.SameAs(result));
             Object.Destroy(presenter.gameObject); Object.Destroy(eventSystem.gameObject);
         }
@@ -89,7 +95,10 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(affix.IsRevealing, Is.True);
             affix.Skip();
             affix.Skip();
-            yield return new WaitForSecondsRealtime(.68f);
+            yield return new WaitForSecondsRealtime(1.16f);
+            Assert.That(affix.IsAwaitingConfirmation, Is.True);
+            affix.Confirm();
+            yield return new WaitForSecondsRealtime(.16f);
             Assert.That(controller.IsUpgradeOpen, Is.True);
             Assert.That(completions, Is.EqualTo(1));
             Assert.That(queuedOpens, Is.EqualTo(1));
@@ -133,7 +142,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Every_result_auto_completes_on_its_unscaled_boundary()
+        public IEnumerator Every_result_holds_until_explicit_confirmation()
         {
             var presenter = new GameObject("Boundary Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
@@ -142,6 +151,10 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 presenter.Play(result);
                 yield return new WaitForSecondsRealtime(WeaponAffixRevealPresenter.DurationFor(result) + .04f);
+                Assert.That(presenter.IsAwaitingConfirmation, Is.True);
+                Assert.That(presenter.LastCompletedResult, Is.Not.SameAs(result));
+                presenter.Confirm();
+                yield return new WaitForSecondsRealtime(.16f);
                 Assert.That(presenter.IsRevealing, Is.False);
                 Assert.That(presenter.LastCompletedResult, Is.SameAs(result));
             }
@@ -169,7 +182,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return new WaitForSecondsRealtime(.08f);
             Assert.That(presenter.TensionScale, Is.EqualTo(1f));
             presenter.Play(Result(WeaponAffixTier.High, 0));
-            yield return new WaitForSecondsRealtime(.7f);
+            yield return new WaitForSecondsRealtime(1.9f);
             Assert.That(presenter.TensionScale, Is.Not.EqualTo(1f));
             Object.Destroy(presenter.gameObject);
         }
@@ -180,10 +193,10 @@ namespace JoseonHunter.Tests.PlayMode
             var presenter = new GameObject("Slot Phase Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
             presenter.Play(Result(WeaponAffixTier.Standard, 0));
-            yield return new WaitForSecondsRealtime(.2f);
+            yield return new WaitForSecondsRealtime(.6f);
             Assert.That(presenter.Phase, Is.EqualTo(WeaponAffixRevealPresenter.RevealPhase.Spinning));
             Assert.That(presenter.IsFinalAffixVisible, Is.False);
-            yield return new WaitForSecondsRealtime(.34f);
+            yield return new WaitForSecondsRealtime(1.0f);
             Assert.That(presenter.IsFinalAffixVisible, Is.True);
             Object.Destroy(presenter.gameObject);
         }
@@ -194,11 +207,11 @@ namespace JoseonHunter.Tests.PlayMode
             var presenter = new GameObject("Slot Lines Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
             presenter.Play(Result(WeaponAffixTier.Perfect, 3));
-            yield return new WaitForSecondsRealtime(.8f);
+            yield return new WaitForSecondsRealtime(1.98f);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(1));
-            yield return new WaitForSecondsRealtime(.18f);
+            yield return new WaitForSecondsRealtime(.26f);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(2));
-            yield return new WaitForSecondsRealtime(.18f);
+            yield return new WaitForSecondsRealtime(.26f);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(3));
             Object.Destroy(presenter.gameObject);
         }

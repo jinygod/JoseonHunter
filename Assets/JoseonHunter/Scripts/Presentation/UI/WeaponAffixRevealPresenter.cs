@@ -32,6 +32,8 @@ namespace JoseonHunter.Presentation.UI
         private Image burst;
         private TextMeshProUGUI title;
         private TextMeshProUGUI detail;
+        private Button confirmButton;
+        private TextMeshProUGUI confirmLabel;
         private readonly Image[] reelWindows = new Image[ReelCount];
         private readonly Image[,] spinningSymbols = new Image[ReelCount, 2];
         private readonly Image[] finalSymbols = new Image[ReelCount];
@@ -47,6 +49,7 @@ namespace JoseonHunter.Presentation.UI
         private float skipSourceElapsed;
         private float skipTargetElapsed;
         private bool skipActive;
+        private bool confirmRequested;
         private bool completed;
         private WeaponAffixPresentationCatalogAsset catalogForTests;
 
@@ -72,6 +75,7 @@ namespace JoseonHunter.Presentation.UI
         public RevealPhase Phase { get; private set; } = RevealPhase.Hidden;
         public int VisiblePotentialCount { get; private set; }
         public bool IsFinalAffixVisible => finalSymbols[0] != null && finalSymbols[0].enabled;
+        public bool IsAwaitingConfirmation => routine != null && Phase == RevealPhase.Reading;
         public event Action RevealCompleted;
 
         public void Play(WeaponAffixRollResult result)
@@ -98,6 +102,7 @@ namespace JoseonHunter.Presentation.UI
             completed = false;
             elapsed = 0f;
             skipActive = false;
+            confirmRequested = false;
             timeline = WeaponAffixRevealTimeline.For(result);
             finishAt = timeline.Duration;
             TensionScale = 1f;
@@ -113,10 +118,24 @@ namespace JoseonHunter.Presentation.UI
         {
             if (routine == null || completed || skipActive)
                 return;
+            if (Phase == RevealPhase.Reading)
+            {
+                Confirm();
+                return;
+            }
             skipActive = true;
             skipSourceElapsed = elapsed;
             skipTargetElapsed = timeline.SkipFinishAt(elapsed);
             finishAt = skipTargetElapsed;
+        }
+
+        public void Confirm()
+        {
+            if (routine == null || completed || Phase != RevealPhase.Reading)
+                return;
+            confirmRequested = true;
+            if (confirmButton != null)
+                confirmButton.interactable = false;
         }
 
         public void HideImmediately()
@@ -128,13 +147,20 @@ namespace JoseonHunter.Presentation.UI
             activeCatalog = null;
             completed = false;
             skipActive = false;
+            confirmRequested = false;
             Phase = RevealPhase.Hidden;
             VisiblePotentialCount = 0;
             if (root != null)
                 root.SetActive(false);
         }
 
-        public void OnPointerClick(PointerEventData eventData) => Skip();
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            if (Phase == RevealPhase.Reading)
+                Confirm();
+            else
+                Skip();
+        }
         private void OnDisable() => HideImmediately();
 
         public static float DurationFor(WeaponAffixRollResult result) =>
@@ -150,6 +176,18 @@ namespace JoseonHunter.Presentation.UI
             }
 
             UpdateVisualState(timeline.Duration);
+            while (!confirmRequested)
+                yield return null;
+
+            Phase = RevealPhase.Closing;
+            var closeElapsed = 0f;
+            const float closeDuration = .14f;
+            while (closeElapsed < closeDuration)
+            {
+                closeElapsed += Time.unscaledDeltaTime;
+                group.alpha = 1f - Mathf.Clamp01(closeElapsed / closeDuration);
+                yield return null;
+            }
             Complete();
         }
 
@@ -166,9 +204,7 @@ namespace JoseonHunter.Presentation.UI
         {
             Phase = PhaseAt(time);
             var opening = Mathf.Clamp01(time / .10f);
-            var closing = Mathf.InverseLerp(timeline.Duration, timeline.CloseStartsAt, time);
-            group.alpha = Phase == RevealPhase.Opening ? EaseOutCubic(opening) :
-                Phase == RevealPhase.Closing ? Mathf.Clamp01(closing) : 1f;
+            group.alpha = Phase == RevealPhase.Opening ? EaseOutCubic(opening) : 1f;
 
             var openingScale = Mathf.Lerp(.94f, 1f, EaseOutBack(opening));
             TensionScale = TensionScaleAt(time);
@@ -201,6 +237,10 @@ namespace JoseonHunter.Presentation.UI
                     Mathf.Clamp01((timeline.ReadStartsAt + .24f - time) / .24f) * .08f;
                 burst.rectTransform.localScale = Vector3.one * pulse;
             }
+
+            var canConfirm = Phase == RevealPhase.Reading;
+            confirmButton.gameObject.SetActive(canConfirm);
+            confirmButton.interactable = canConfirm && !confirmRequested;
         }
 
         private RevealPhase PhaseAt(float time)
@@ -226,7 +266,9 @@ namespace JoseonHunter.Presentation.UI
                     if (!spinning)
                         continue;
                     var height = reel == 0 ? 72f : 54f;
-                    var offset = Mathf.Repeat(time * (reel == 0 ? 520f : 610f) + symbolIndex * height,
+                    var offset = Mathf.Repeat(
+                        WeaponAffixReelMotion.TravelAt(time, timeline.SpinEndsAt, stopAt, reel) +
+                        symbolIndex * height,
                         height * 2f) - height;
                     symbol.rectTransform.anchoredPosition = new Vector2(0f, offset);
                     var edgeFade = 1f - Mathf.Clamp01(Mathf.Abs(offset) / height);
@@ -287,6 +329,7 @@ namespace JoseonHunter.Presentation.UI
         private void BindSprites()
         {
             shell.sprite = activeCatalog.SlotMachineShell;
+            confirmButton.image.sprite = activeCatalog.ReelWindow;
             rarityFrame.sprite = activeCatalog.SpriteForAffix(activeResult.General.Tier);
             finalSymbols[0].sprite = activeResult.General.Tier == WeaponAffixTier.Standard
                 ? activeCatalog.ReelSymbolStat
@@ -333,6 +376,8 @@ namespace JoseonHunter.Presentation.UI
             burst.enabled = false;
             title.gameObject.SetActive(false);
             detail.gameObject.SetActive(false);
+            confirmButton.gameObject.SetActive(false);
+            confirmButton.interactable = false;
             for (var reel = 0; reel < ReelCount; reel++)
             {
                 finalSymbols[reel].enabled = false;
@@ -416,6 +461,19 @@ namespace JoseonHunter.Presentation.UI
                 potentialLabels[index].fontStyle = FontStyles.Bold;
                 potentialLabels[index].color = new Color(.88f, .95f, 1f);
             }
+
+            confirmButton = RuntimeUiFactory.Button("Confirm Result", shell.transform, Color.white);
+            var confirmRect = confirmButton.GetComponent<RectTransform>();
+            confirmRect.anchorMin = confirmRect.anchorMax = new Vector2(.5f, .5f);
+            confirmRect.anchoredPosition = new Vector2(0f, -210f);
+            confirmRect.sizeDelta = new Vector2(248f, 58f);
+            confirmButton.image.preserveAspect = false;
+            confirmButton.onClick.AddListener(Confirm);
+            confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "확인  ·  계속", 21f,
+                TextAlignmentOptions.Center);
+            RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 12f, 5f, 12f, 5f);
+            confirmLabel.fontStyle = FontStyles.Bold;
+            confirmLabel.color = new Color(1f, .91f, .58f);
 
             root.SetActive(false);
         }

@@ -27,7 +27,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var ground = CreateRenderer("Quiet Battlefield Ground", primaryTile, -20);
-            if (primaryTile.rect.width > 128f || primaryTile.rect.height > 128f)
+            if (primaryTile.rect.width >= 128f || primaryTile.rect.height >= 128f)
             {
                 ground.drawMode = SpriteDrawMode.Simple;
                 var spriteSize = primaryTile.bounds.size;
@@ -41,7 +41,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 ground.drawMode = SpriteDrawMode.Tiled;
                 ground.size = FieldSize;
             }
-            ground.color = new Color(0.42f, 0.46f, 0.40f);
+            ground.color = new Color(0.72f, 0.74f, 0.70f);
 
             if (decals == null || decals.Count == 0)
             {
@@ -49,7 +49,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var random = new System.Random(0x4A4F5345);
-            for (var index = 0; index < 8; index++)
+            for (var index = 0; index < 4; index++)
             {
                 var sprite = decals[index % decals.Count];
                 if (sprite == null) continue;
@@ -60,7 +60,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     0f);
                 renderer.transform.localRotation = Quaternion.Euler(0f, 0f, random.Next(0, 4) * 90f);
                 renderer.flipX = random.Next(0, 2) == 0;
-                renderer.color = new Color(0.52f, 0.55f, 0.49f, 0.18f);
+                renderer.color = new Color(0.52f, 0.55f, 0.49f, 0.12f);
             }
         }
 

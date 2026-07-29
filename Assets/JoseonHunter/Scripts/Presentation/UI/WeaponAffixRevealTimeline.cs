@@ -45,23 +45,24 @@ namespace JoseonHunter.Presentation.UI
 
             var count = Mathf.Clamp(result.NewPotentials.Count, 0, 3);
             if (count == 1)
-                return new WeaponAffixRevealTimeline(1, 1.38f, .52f, .60f, .76f, float.PositiveInfinity,
-                    float.PositiveInfinity, .84f, 1.24f);
+                return new WeaponAffixRevealTimeline(1, 2.82f, 1.28f, 1.62f, 1.92f, float.PositiveInfinity,
+                    float.PositiveInfinity, 2.08f, float.PositiveInfinity);
             if (count == 2)
-                return new WeaponAffixRevealTimeline(2, 1.66f, .52f, .60f, .76f, .94f,
-                    float.PositiveInfinity, 1.02f, 1.52f);
+                return new WeaponAffixRevealTimeline(2, 3.06f, 1.28f, 1.62f, 1.92f, 2.18f,
+                    float.PositiveInfinity, 2.34f, float.PositiveInfinity);
             if (count == 3)
-                return new WeaponAffixRevealTimeline(3, 1.96f, .52f, .60f, .76f, .94f, 1.12f, 1.20f, 1.82f);
+                return new WeaponAffixRevealTimeline(3, 3.32f, 1.28f, 1.62f, 1.92f, 2.18f, 2.44f, 2.60f,
+                    float.PositiveInfinity);
 
             if (result.General.Tier == WeaponAffixTier.Perfect)
-                return new WeaponAffixRevealTimeline(0, 1.28f, .52f, .60f, float.PositiveInfinity,
-                    float.PositiveInfinity, float.PositiveInfinity, .74f, 1.14f);
+                return new WeaponAffixRevealTimeline(0, 2.72f, 1.32f, 1.78f, float.PositiveInfinity,
+                    float.PositiveInfinity, float.PositiveInfinity, 1.96f, float.PositiveInfinity);
             if (result.General.Tier == WeaponAffixTier.High)
-                return new WeaponAffixRevealTimeline(0, 1.08f, .48f, .56f, float.PositiveInfinity,
-                    float.PositiveInfinity, float.PositiveInfinity, .66f, .94f);
+                return new WeaponAffixRevealTimeline(0, 2.54f, 1.28f, 1.68f, float.PositiveInfinity,
+                    float.PositiveInfinity, float.PositiveInfinity, 1.84f, float.PositiveInfinity);
 
-            return new WeaponAffixRevealTimeline(0, .86f, .40f, .48f, float.PositiveInfinity,
-                float.PositiveInfinity, float.PositiveInfinity, .56f, .74f);
+            return new WeaponAffixRevealTimeline(0, 2.36f, 1.18f, 1.54f, float.PositiveInfinity,
+                float.PositiveInfinity, float.PositiveInfinity, 1.70f, float.PositiveInfinity);
         }
 
         public float PotentialStopsAt(int index)
@@ -73,11 +74,28 @@ namespace JoseonHunter.Presentation.UI
 
         public float SkipFinishAt(float elapsed)
         {
-            var minimumReadableFinish = AffixStopsAt + .14f;
-            if (potentialCount > 0)
-                minimumReadableFinish = PotentialStopsAt(potentialCount - 1) + .18f;
-            var skipCap = potentialCount == 3 ? .84f : potentialCount == 2 ? .76f : potentialCount == 1 ? .70f : .62f;
-            return Mathf.Min(Duration, Mathf.Max(elapsed + .12f, minimumReadableFinish, skipCap));
+            var skipCap = potentialCount == 3 ? 1.10f : potentialCount == 2 ? 1.02f :
+                potentialCount == 1 ? .94f : .82f;
+            return Mathf.Min(Duration, Mathf.Max(elapsed + .12f, skipCap));
+        }
+    }
+
+    public static class WeaponAffixReelMotion
+    {
+        public static float TravelAt(float time, float spinEndsAt, float stopAt, int reel)
+        {
+            var startSpeed = 520f + Mathf.Clamp(reel, 0, 3) * 30f;
+            var clampedTime = Mathf.Max(0f, time);
+            if (clampedTime <= spinEndsAt)
+                return clampedTime * startSpeed;
+
+            var decelerationDuration = Mathf.Max(.001f, stopAt - spinEndsAt);
+            var decelerationTime = Mathf.Clamp(clampedTime - spinEndsAt, 0f, decelerationDuration);
+            const float finalSpeed = 64f;
+            var travelDuringDeceleration = startSpeed * decelerationTime +
+                .5f * (finalSpeed - startSpeed) * decelerationTime * decelerationTime /
+                decelerationDuration;
+            return spinEndsAt * startSpeed + travelDuringDeceleration;
         }
     }
 }

@@ -66,6 +66,23 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Cards_use_three_compact_landscape_columns()
+        {
+            var go = new GameObject("Landscape Upgrade Presenter");
+            var presenter = go.AddComponent<UpgradeChoicePresenter>();
+            presenter.BuildForTests();
+            var cards = go.GetComponentsInChildren<Button>(true);
+
+            Assert.That(cards, Has.Length.EqualTo(3));
+            Assert.That(cards[0].GetComponent<RectTransform>().sizeDelta, Is.EqualTo(new Vector2(510f, 472f)));
+            Assert.That(cards[0].GetComponent<RectTransform>().anchoredPosition.x, Is.LessThan(0f));
+            Assert.That(cards[1].GetComponent<RectTransform>().anchoredPosition.x, Is.EqualTo(0f));
+            Assert.That(cards[2].GetComponent<RectTransform>().anchoredPosition.x, Is.GreaterThan(0f));
+            Object.Destroy(go);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator Rejected_card_click_releases_the_choice_lock()
         {
             var go = new GameObject("Upgrade Presenter");
