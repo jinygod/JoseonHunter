@@ -2,8 +2,16 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
   m_Name: GakgungShot
+  m_EditorClassIdentifier:
   id: gakgung_shot
   targeting: 1
   geometry: 1
@@ -11,12 +19,84 @@ MonoBehaviour:
   element: 0
   repeatHitPolicy: 0
   levels:
-  - {weaponId: gakgung_shot, level: 1, baseDamage: 10, cooldownSeconds: .55, range: 7, projectileCount: 1, speed: 15, durationSeconds: .2, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: gakgung_shot, level: 2, baseDamage: 12, cooldownSeconds: .52, range: 7.5, projectileCount: 1, speed: 16, durationSeconds: .2, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: gakgung_shot, level: 3, baseDamage: 14, cooldownSeconds: .49, range: 8, projectileCount: 1, speed: 17, durationSeconds: .2, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: gakgung_shot, level: 4, baseDamage: 16, cooldownSeconds: .46, range: 8.5, projectileCount: 1, speed: 18, durationSeconds: .2, pierce: 2, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: gakgung_shot, level: 5, baseDamage: 18, cooldownSeconds: .43, range: 9, projectileCount: 3, speed: 19, durationSeconds: .2, pierce: 3, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: 647c9f9935209154dbedec9770b5be63, type: 3}, {fileID: 21300000, guid: e78ec5bb79d392647be66e47f75dbd0e, type: 3}, {fileID: 21300000, guid: a74e9e0497baa434b95c4dbcacc43c1c, type: 3}]
-  binaryMaskSourceReferences: [{fileID: 2800000, guid: 647c9f9935209154dbedec9770b5be63, type: 3}]
+  - weaponId: gakgung_shot
+    level: 1
+    baseDamage: 10
+    cooldownSeconds: 0.55
+    range: 7
+    projectileCount: 1
+    speed: 15
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: gakgung_shot
+    level: 2
+    baseDamage: 12
+    cooldownSeconds: 0.52
+    range: 7.5
+    projectileCount: 1
+    speed: 16
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: gakgung_shot
+    level: 3
+    baseDamage: 14
+    cooldownSeconds: 0.49
+    range: 8
+    projectileCount: 1
+    speed: 17
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: gakgung_shot
+    level: 4
+    baseDamage: 16
+    cooldownSeconds: 0.46
+    range: 8.5
+    projectileCount: 1
+    speed: 18
+    durationSeconds: 0.2
+    pierce: 2
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: gakgung_shot
+    level: 5
+    baseDamage: 18
+    cooldownSeconds: 0.43
+    range: 9
+    projectileCount: 3
+    speed: 19
+    durationSeconds: 0.2
+    pierce: 3
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  presentationSprites:
+  - {fileID: 21300000, guid: e78ec5bb79d392647be66e47f75dbd0e, type: 3}
+  - {fileID: 21300000, guid: 71cc763300862a64a9e7834a161bdcf8, type: 3}
+  - {fileID: 21300000, guid: 40c6dcf3b3f2cfe49aaa0d53517471e8, type: 3}
+  - {fileID: 21300000, guid: 647c9f9935209154dbedec9770b5be63, type: 3}
+  - {fileID: 21300000, guid: 7c10a76b5ab0cea4f86aca34e2bd0508, type: 3}
+  - {fileID: 21300000, guid: e9a1c16726db37443a1863ca8f05fea2, type: 3}
+  - {fileID: 21300000, guid: a74e9e0497baa434b95c4dbcacc43c1c, type: 3}
+  - {fileID: 21300000, guid: 5cf91b27aa65a2543aa6f9f31a617fe4, type: 3}
+  - {fileID: 21300000, guid: 8ae6ce9136ae4a843aa404a8dce257c5, type: 3}
+  - {fileID: 21300000, guid: 994f028831f013748a07b8ca126494df, type: 3}
+  - {fileID: 21300000, guid: 5e94ec7814060fc44820dbea7ee0c60a, type: 3}
+  binaryMaskSourceReferences:
+  - {fileID: 2800000, guid: 647c9f9935209154dbedec9770b5be63, type: 3}
   activeFrameWindows: []
   poolCapacity: 3

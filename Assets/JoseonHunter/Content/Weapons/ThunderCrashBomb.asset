@@ -1,8 +1,17 @@
 %YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
   m_Name: ThunderCrashBomb
+  m_EditorClassIdentifier:
   id: thunder_crash_bomb
   targeting: 3
   geometry: 3
@@ -10,12 +19,94 @@ MonoBehaviour:
   element: 4
   repeatHitPolicy: 0
   levels:
-  - {weaponId: thunder_crash_bomb, level: 1, baseDamage: 18, cooldownSeconds: 1.1, range: 6, projectileCount: 1, speed: 0, durationSeconds: .35, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: thunder_crash_bomb, level: 2, baseDamage: 22, cooldownSeconds: 1.02, range: 6.4, projectileCount: 1, speed: 0, durationSeconds: .36, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: thunder_crash_bomb, level: 3, baseDamage: 26, cooldownSeconds: .94, range: 6.8, projectileCount: 1, speed: 0, durationSeconds: .38, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: thunder_crash_bomb, level: 4, baseDamage: 30, cooldownSeconds: .86, range: 7.2, projectileCount: 1, speed: 0, durationSeconds: .4, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: thunder_crash_bomb, level: 5, baseDamage: 34, cooldownSeconds: .78, range: 7.6, projectileCount: 2, speed: 0, durationSeconds: .42, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000004, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000004, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000004, type: 3}]
-  binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000004, type: 3}]
+  - weaponId: thunder_crash_bomb
+    level: 1
+    baseDamage: 18
+    cooldownSeconds: 1.1
+    range: 6
+    projectileCount: 1
+    speed: 0
+    durationSeconds: 0.35
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: thunder_crash_bomb
+    level: 2
+    baseDamage: 22
+    cooldownSeconds: 1.02
+    range: 6.4
+    projectileCount: 1
+    speed: 0
+    durationSeconds: 0.36
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: thunder_crash_bomb
+    level: 3
+    baseDamage: 26
+    cooldownSeconds: 0.94
+    range: 6.8
+    projectileCount: 1
+    speed: 0
+    durationSeconds: 0.38
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: thunder_crash_bomb
+    level: 4
+    baseDamage: 30
+    cooldownSeconds: 0.86
+    range: 7.2
+    projectileCount: 1
+    speed: 0
+    durationSeconds: 0.4
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: thunder_crash_bomb
+    level: 5
+    baseDamage: 34
+    cooldownSeconds: 0.78
+    range: 7.6
+    projectileCount: 2
+    speed: 0
+    durationSeconds: 0.42
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  presentationSprites:
+  - {fileID: 21300000, guid: 5b436b78731e7094ea2ff28a92b5361a, type: 3}
+  - {fileID: 21300000, guid: d49a2dbebeff694458b90181f220ad7f, type: 3}
+  - {fileID: 21300000, guid: e53f7be82cf221e42be54ef6c545753d, type: 3}
+  - {fileID: 21300000, guid: 723fd7aca40bbd84a9347d94f45723c9, type: 3}
+  - {fileID: 21300000, guid: e18cf02d804b4924e99fda0c61bfade2, type: 3}
+  - {fileID: 21300000, guid: 0e107fec5e19fe042944f134b9eddf9f, type: 3}
+  - {fileID: 21300000, guid: a754c36b85cd2c3488afa50e57eb8801, type: 3}
+  - {fileID: 21300000, guid: 5b3603473181aca4bbbce2f6ff6bec4a, type: 3}
+  - {fileID: 21300000, guid: 477701f39a5858e4ab89f433d814d030, type: 3}
+  - {fileID: 21300000, guid: 51ad90cf6f57c4148877f9b1dbd615e9, type: 3}
+  - {fileID: 21300000, guid: 7a2e34976ee8e7f4a951b21eca8f6424, type: 3}
+  - {fileID: 21300000, guid: 361522aecbb353a4087a8b6d7c1a1835, type: 3}
+  - {fileID: 21300000, guid: d239a173deb636842a4fa06d3850b47b, type: 3}
+  - {fileID: 21300000, guid: 141aec5cdbea04d4886410ce8615f2f7, type: 3}
+  - {fileID: 21300000, guid: 53466bb98b59fa8498b9c04515e6c7cf, type: 3}
+  - {fileID: 21300000, guid: bf64ec86713d7fb42b707328cd4ff768, type: 3}
+  - {fileID: 21300000, guid: 02a409ab3cf28c541b9cb4fffcb3f9b7, type: 3}
+  - {fileID: 21300000, guid: 6417aa76d5e8f5e419aed49a52e84eb0, type: 3}
+  - {fileID: 21300000, guid: be346b7f715fb7348b3fec36a8b91e4e, type: 3}
+  - {fileID: 21300000, guid: cb5b901bf2ab0644a80915b13e5cec91, type: 3}
+  - {fileID: 21300000, guid: b308dcf25d408a04faf3566299e4210c, type: 3}
+  binaryMaskSourceReferences:
+  - {fileID: 2800000, guid: 34000000000000000000000000000004, type: 3}
   activeFrameWindows: []
   poolCapacity: 2

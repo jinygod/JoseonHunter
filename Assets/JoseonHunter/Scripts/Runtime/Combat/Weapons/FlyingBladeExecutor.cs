@@ -23,9 +23,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float cooldown;
 
         public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
+            : this(runtime, baseDamage, cooldownSeconds, range, speed, bladeCount, bladeCount, evolved, modifiers)
+        {
+        }
+
+        public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             Reconfigure(modifiers.ScaleDamage(baseDamage), modifiers.ScaleCooldown(cooldownSeconds), modifiers.ScaleArea(range), modifiers.ScaleSpeed(speed), bladeCount);
+            Level = Mathf.Max(1, level);
             Potentials = modifiers;
             IsEvolved = evolved;
         }
@@ -44,6 +50,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Range { get; private set; }
         public float Speed { get; private set; }
         public int BladeCount { get; private set; }
+        public int Level { get; }
         public bool IsEvolved { get; }
         public WeaponRuntimeModifiers Potentials { get; }
         public int ActiveBladeCount => active.Count;
@@ -373,7 +380,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var cue = new WeaponVisualCue(
                 WeaponId.HwandoFlyingBlade,
                 WeaponVisualStage.Impact,
-                BladeCount,
+                Level,
                 IsEvolved,
                 1f,
                 .12f);

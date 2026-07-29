@@ -859,7 +859,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 IWeaponExecutor executor;
                 var evolved = evolutionState.IsEvolved(id);
                 var modifiers = WeaponRuntimeModifiers.From(weaponAffixes.TryProfileFor(id, out var profile) ? profile : null);
-                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, evolved, modifiers);
+                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved, modifiers);
@@ -888,8 +888,16 @@ namespace JoseonHunter.Runtime.Gameplay
                 return solidSprite;
             }
 
-            return definition.PresentationSprites[
-                Mathf.Clamp(partIndex, 0, definition.PresentationSprites.Count - 1)];
+            if (partIndex < 0 || partIndex >= definition.PresentationSprites.Count)
+            {
+#if DEVELOPMENT_BUILD || UNITY_EDITOR
+                Debug.LogWarning(
+                    $"Weapon presentation sprite request is out of range for '{id}': requested part index {partIndex}.");
+#endif
+                return definition.PresentationSprites[0];
+            }
+
+            return definition.PresentationSprites[partIndex];
         }
 
         private PixelHitMask ResolveWeaponMask(WeaponId id)

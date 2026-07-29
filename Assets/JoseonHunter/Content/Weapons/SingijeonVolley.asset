@@ -1,8 +1,17 @@
 %YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
   m_Name: SingijeonVolley
+  m_EditorClassIdentifier:
   id: singijeon_volley
   targeting: 5
   geometry: 5
@@ -10,12 +19,88 @@ MonoBehaviour:
   element: 3
   repeatHitPolicy: 0
   levels:
-  - {weaponId: singijeon_volley, level: 1, baseDamage: 9, cooldownSeconds: .9, range: 7, projectileCount: 2, speed: 11, durationSeconds: 0, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: singijeon_volley, level: 2, baseDamage: 11, cooldownSeconds: .84, range: 7.4, projectileCount: 3, speed: 12, durationSeconds: 0, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: singijeon_volley, level: 3, baseDamage: 13, cooldownSeconds: .78, range: 7.8, projectileCount: 3, speed: 13, durationSeconds: 0, pierce: 2, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: singijeon_volley, level: 4, baseDamage: 15, cooldownSeconds: .72, range: 8.2, projectileCount: 4, speed: 14, durationSeconds: 0, pierce: 2, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: singijeon_volley, level: 5, baseDamage: 17, cooldownSeconds: .66, range: 8.6, projectileCount: 5, speed: 15, durationSeconds: 0, pierce: 3, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000006, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000006, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000006, type: 3}]
-  binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000006, type: 3}]
+  - weaponId: singijeon_volley
+    level: 1
+    baseDamage: 9
+    cooldownSeconds: 0.9
+    range: 7
+    projectileCount: 2
+    speed: 11
+    durationSeconds: 0
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: singijeon_volley
+    level: 2
+    baseDamage: 11
+    cooldownSeconds: 0.84
+    range: 7.4
+    projectileCount: 3
+    speed: 12
+    durationSeconds: 0
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: singijeon_volley
+    level: 3
+    baseDamage: 13
+    cooldownSeconds: 0.78
+    range: 7.8
+    projectileCount: 3
+    speed: 13
+    durationSeconds: 0
+    pierce: 2
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: singijeon_volley
+    level: 4
+    baseDamage: 15
+    cooldownSeconds: 0.72
+    range: 8.2
+    projectileCount: 4
+    speed: 14
+    durationSeconds: 0
+    pierce: 2
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: singijeon_volley
+    level: 5
+    baseDamage: 17
+    cooldownSeconds: 0.66
+    range: 8.6
+    projectileCount: 5
+    speed: 15
+    durationSeconds: 0
+    pierce: 3
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  presentationSprites:
+  - {fileID: 21300000, guid: 041ee0cf2796a414e824a1bef5e65b27, type: 3}
+  - {fileID: 21300000, guid: 2942e99dd856ce54d962eb0977dc39a6, type: 3}
+  - {fileID: 21300000, guid: 4097ab6bd952d69488998c7e530988d5, type: 3}
+  - {fileID: 21300000, guid: b8bb8d96f82e53b4597566c6294a32d5, type: 3}
+  - {fileID: 21300000, guid: 01d9fcee936580541919f99957ca6b81, type: 3}
+  - {fileID: 21300000, guid: 9795673360e5e8340b06d3044e236af9, type: 3}
+  - {fileID: 21300000, guid: 7ea504cd31c69824fa3cbb1016bb4542, type: 3}
+  - {fileID: 21300000, guid: b9b3cddf6f5fe08448eb7ace4cf25eee, type: 3}
+  - {fileID: 21300000, guid: 98e2cf8518cf1984aba6483ee7223c28, type: 3}
+  - {fileID: 21300000, guid: 0e235e5c5d388e94d91b6f265bfcd79a, type: 3}
+  - {fileID: 21300000, guid: 313d0a856e8256741b1e3503babfad34, type: 3}
+  - {fileID: 21300000, guid: a73aeb5ac7d60b844be68e14719882b4, type: 3}
+  - {fileID: 21300000, guid: a18188c90a954ee4ba66f9d2778b72fe, type: 3}
+  - {fileID: 21300000, guid: 8fff967e59020724eaa97ffa140b48c0, type: 3}
+  - {fileID: 21300000, guid: 120701b0aded52b4180e46e432daf9e8, type: 3}
+  binaryMaskSourceReferences:
+  - {fileID: 2800000, guid: 34000000000000000000000000000006, type: 3}
   activeFrameWindows: []
   poolCapacity: 8

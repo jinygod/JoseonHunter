@@ -1,8 +1,17 @@
 %YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
 --- !u!114 &11400000
 MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
   m_Name: TalismanThrow
+  m_EditorClassIdentifier:
   id: talisman_throw
   targeting: 2
   geometry: 2
@@ -10,12 +19,87 @@ MonoBehaviour:
   element: 1
   repeatHitPolicy: 1
   levels:
-  - {weaponId: talisman_throw, level: 1, baseDamage: 8, cooldownSeconds: .7, range: 6, projectileCount: 1, speed: 12, durationSeconds: .2, pierce: 1, chainCount: 1, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: talisman_throw, level: 2, baseDamage: 10, cooldownSeconds: .66, range: 6, projectileCount: 1, speed: 12, durationSeconds: .2, pierce: 1, chainCount: 2, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: talisman_throw, level: 3, baseDamage: 12, cooldownSeconds: .62, range: 6.5, projectileCount: 1, speed: 13, durationSeconds: .2, pierce: 1, chainCount: 3, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: talisman_throw, level: 4, baseDamage: 14, cooldownSeconds: .58, range: 7, projectileCount: 1, speed: 14, durationSeconds: .2, pierce: 1, chainCount: 4, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: talisman_throw, level: 5, baseDamage: 16, cooldownSeconds: .54, range: 7, projectileCount: 1, speed: 14, durationSeconds: .2, pierce: 1, chainCount: 5, knockback: 0, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: 24000000000000000000000000000003, type: 3}, {fileID: 21300000, guid: 26000000000000000000000000000003, type: 3}, {fileID: 21300000, guid: 25000000000000000000000000000003, type: 3}]
-  binaryMaskSourceReferences: [{fileID: 2800000, guid: 34000000000000000000000000000003, type: 3}]
+  - weaponId: talisman_throw
+    level: 1
+    baseDamage: 8
+    cooldownSeconds: 0.7
+    range: 6
+    projectileCount: 1
+    speed: 12
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 1
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: talisman_throw
+    level: 2
+    baseDamage: 10
+    cooldownSeconds: 0.66
+    range: 6
+    projectileCount: 1
+    speed: 12
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 2
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: talisman_throw
+    level: 3
+    baseDamage: 12
+    cooldownSeconds: 0.62
+    range: 6.5
+    projectileCount: 1
+    speed: 13
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 3
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: talisman_throw
+    level: 4
+    baseDamage: 14
+    cooldownSeconds: 0.58
+    range: 7
+    projectileCount: 1
+    speed: 14
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 4
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: talisman_throw
+    level: 5
+    baseDamage: 16
+    cooldownSeconds: 0.54
+    range: 7
+    projectileCount: 1
+    speed: 14
+    durationSeconds: 0.2
+    pierce: 1
+    chainCount: 5
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  presentationSprites:
+  - {fileID: 21300000, guid: 94f0eac9e11c2ca4ea5ed0f0d57e609d, type: 3}
+  - {fileID: 21300000, guid: 5319c5578091d6e4d8b9ecba417adce5, type: 3}
+  - {fileID: 21300000, guid: 4985f94da552a3a46b6b29b279c36fe8, type: 3}
+  - {fileID: 21300000, guid: b5266b6ac36a1e142a103ab64615f3a6, type: 3}
+  - {fileID: 21300000, guid: 4dc08dcd7bc67274e946cd5ebd8c32fa, type: 3}
+  - {fileID: 21300000, guid: fe2f71653e6fe0940958df2674517a9c, type: 3}
+  - {fileID: 21300000, guid: 5abaed55f0a69d74388d8f521f63d848, type: 3}
+  - {fileID: 21300000, guid: e7c4d716ad532d944814b1a4a7c14836, type: 3}
+  - {fileID: 21300000, guid: d6701b6e8ba1a0349b022887d2146979, type: 3}
+  - {fileID: 21300000, guid: 8492b2ede4e8bd54f982e24511d192d7, type: 3}
+  - {fileID: 21300000, guid: 6e86eca7cf209214991ef5511bc731b5, type: 3}
+  - {fileID: 21300000, guid: e7143aeac6dac584e955965971984c4c, type: 3}
+  - {fileID: 21300000, guid: d50f2f68b3d4ba74a80a74308820982b, type: 3}
+  - {fileID: 21300000, guid: d9095b9afe0c08c47a32c9d5244c379a, type: 3}
+  binaryMaskSourceReferences:
+  - {fileID: 2800000, guid: 34000000000000000000000000000003, type: 3}
   activeFrameWindows: []
   poolCapacity: 4

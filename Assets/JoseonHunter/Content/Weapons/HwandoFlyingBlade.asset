@@ -3,8 +3,15 @@
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b55ba7433b0d4d459d6116bc686478a0, type: 3}
   m_Name: HwandoFlyingBlade
+  m_EditorClassIdentifier:
   id: hwando_flying_blade
   targeting: 0
   geometry: 0
@@ -12,12 +19,85 @@ MonoBehaviour:
   element: 0
   repeatHitPolicy: 1
   levels:
-  - {weaponId: hwando_flying_blade, level: 1, baseDamage: 12, cooldownSeconds: .42, range: 4.5, projectileCount: 1, speed: 10, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: hwando_flying_blade, level: 2, baseDamage: 14, cooldownSeconds: .39, range: 4.8, projectileCount: 1, speed: 11, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: hwando_flying_blade, level: 3, baseDamage: 16, cooldownSeconds: .36, range: 5.1, projectileCount: 1, speed: 12, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: hwando_flying_blade, level: 4, baseDamage: 18, cooldownSeconds: .33, range: 5.4, projectileCount: 1, speed: 13, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  - {weaponId: hwando_flying_blade, level: 5, baseDamage: 20, cooldownSeconds: .30, range: 5.8, projectileCount: 3, speed: 14, durationSeconds: .3, pierce: 1, chainCount: 0, knockback: 0, slowFraction: 0, criticalChance: 0}
-  presentationSprites: [{fileID: 21300000, guid: b62d9a881bf411e47b2bec006f62b2c2, type: 3}, {fileID: 21300000, guid: 8847186c319886b4ebbcabfebafb7471, type: 3}, {fileID: 21300000, guid: d0bb2c13e91654e409af00f2709b2943, type: 3}]
-  binaryMaskSourceReferences: [{fileID: 2800000, guid: b62d9a881bf411e47b2bec006f62b2c2, type: 3}]
+  - weaponId: hwando_flying_blade
+    level: 1
+    baseDamage: 12
+    cooldownSeconds: 0.42
+    range: 4.5
+    projectileCount: 1
+    speed: 10
+    durationSeconds: 0.3
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: hwando_flying_blade
+    level: 2
+    baseDamage: 14
+    cooldownSeconds: 0.39
+    range: 4.8
+    projectileCount: 1
+    speed: 11
+    durationSeconds: 0.3
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: hwando_flying_blade
+    level: 3
+    baseDamage: 16
+    cooldownSeconds: 0.36
+    range: 5.1
+    projectileCount: 1
+    speed: 12
+    durationSeconds: 0.3
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: hwando_flying_blade
+    level: 4
+    baseDamage: 18
+    cooldownSeconds: 0.33
+    range: 5.4
+    projectileCount: 1
+    speed: 13
+    durationSeconds: 0.3
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  - weaponId: hwando_flying_blade
+    level: 5
+    baseDamage: 20
+    cooldownSeconds: 0.3
+    range: 5.8
+    projectileCount: 3
+    speed: 14
+    durationSeconds: 0.3
+    pierce: 1
+    chainCount: 0
+    knockback: 0
+    slowFraction: 0
+    criticalChance: 0
+  presentationSprites:
+  - {fileID: 21300000, guid: b62d9a881bf411e47b2bec006f62b2c2, type: 3}
+  - {fileID: 21300000, guid: 33a07f500227a2a4a8b792581434c9bd, type: 3}
+  - {fileID: 21300000, guid: 1ca7977b180eefc438584971b641953d, type: 3}
+  - {fileID: 21300000, guid: 819ba9e80dbdd0f49b9db291b210accd, type: 3}
+  - {fileID: 21300000, guid: 8847186c319886b4ebbcabfebafb7471, type: 3}
+  - {fileID: 21300000, guid: 2c099ae67b5a4914e9350fbac29362fa, type: 3}
+  - {fileID: 21300000, guid: 3c8ed5022c8a17c4eb078a611ce0b2fc, type: 3}
+  - {fileID: 21300000, guid: d61bdcca90a40984a9597980a0a4f233, type: 3}
+  - {fileID: 21300000, guid: d0bb2c13e91654e409af00f2709b2943, type: 3}
+  - {fileID: 21300000, guid: 8a9de55ef4cdbf84faab73d064d1bcc4, type: 3}
+  - {fileID: 21300000, guid: 81b970263fdf99043bb64047841cf7bc, type: 3}
+  - {fileID: 21300000, guid: ceade3fb22babee44a6ecde319c81122, type: 3}
+  binaryMaskSourceReferences:
+  - {fileID: 2800000, guid: b62d9a881bf411e47b2bec006f62b2c2, type: 3}
   activeFrameWindows: []
   poolCapacity: 3
