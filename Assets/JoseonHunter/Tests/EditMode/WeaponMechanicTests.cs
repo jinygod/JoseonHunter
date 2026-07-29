@@ -678,6 +678,28 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void WindThunderFanLightningPresentationMatchesDamageCadence()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 4f, 1f, 3, 5, true);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+            registry.Register(new TestTarget(2, new Float2(2f, 0f), mask));
+            registry.Register(new TestTarget(3, new Float2(3f, 0f), mask));
+            var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
+
+            for (var index = 0; index < 4; index++) fan.Tick(.01f, context);
+            fan.Tick(.12f, context);
+            fan.Tick(.24f, context);
+
+            CollectionAssert.AreEqual(
+                fan.LastOutboundStrikeTimes,
+                fan.LightningPresentationTimesForTests);
+        }
+
+        [Test]
         public void ThunderBombDealsDamageOnlyWhenItsExpandingPixelRingReachesTheTarget()
         {
             var mask = PixelHitMask.FromRows("1");
@@ -986,6 +1008,19 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(ward.ActiveWardSetCount, Is.EqualTo(1));
                 Assert.That(ward.ActivePostCount, Is.EqualTo(4));
             });
+        }
+
+        [Test]
+        public void JangseungWardRisesBeforeBoundaryBecomesFullyVisible()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 3, 1, 0f, 3);
+
+            ward.Tick(.04f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.That(ward.FirstWardVisualRiseForTests, Is.InRange(0f, 1f));
         }
 
         [Test]

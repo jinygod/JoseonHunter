@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -19,6 +20,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<int> successfulOutboundTargetIds = new List<int>();
         private readonly HashSet<int> successfulOutboundTargetIdSet = new HashSet<int>();
         private readonly List<float> outboundStrikeTimes = new List<float>();
+        private readonly List<float> lightningPresentationTimes = new List<float>();
+        private readonly List<PendingVisual> pendingVisuals = new List<PendingVisual>();
+        private WeaponTransientVisualPool transientVisuals;
+        private Transform transientVisualRoot;
         private float cooldown;
         private AttackInstance attack;
         private int gustIndex;
@@ -57,6 +62,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public IReadOnlyList<int> LastSuccessfulOutboundTargetIds => successfulOutboundTargetIds;
         public IReadOnlyList<float> LastOutboundStrikeTimes => outboundStrikeTimes;
 #if UNITY_INCLUDE_TESTS
+        public IReadOnlyList<float> LightningPresentationTimesForTests => lightningPresentationTimes;
         public int ActiveBleedCountForTests => bleeds.Count;
         public bool PendingChainForTests => pendingChain.Scheduled;
         public bool SuppressNewCastsForTests { get; set; }
@@ -65,6 +71,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
             var step = Mathf.Max(0f, deltaTime);
+            EnsureTransientVisuals(context.PresentationRoot);
+            transientVisuals?.Tick(step);
+            AdvancePendingVisuals(step, context);
             AdvanceBleeds(step, context);
             AdvancePotentialChain(step, context);
             cooldown -= step;
@@ -96,8 +105,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (attack != null) runtime.DamageService.RetireAttack(attack.InstanceId);
             foreach (var bleed in bleeds) runtime.DamageService.RetireAttack(bleed.Attack.InstanceId);
             if (pendingChain.Attack != null) runtime.DamageService.RetireAttack(pendingChain.Attack.InstanceId);
-            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); bleeds.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
+            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); lightningPresentationTimes.Clear(); pendingVisuals.Clear(); bleeds.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
+            transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
         }
 
         public void Dispose() => Reset();
@@ -105,7 +115,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void StartCast(Float2 origin)
         {
             castOrigin = origin;
-            cooldown = CooldownSeconds; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear();
+            cooldown = CooldownSeconds; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); lightningPresentationTimes.Clear();
             gustIndex = 0; lightningIndex = 0; strikeDueIn = LightningStrikeInterval; outboundElapsed = 0f; inboundPauseRemaining = 0f;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0;
             attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f);
@@ -117,6 +127,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var ownerPosition = context.OwnerPosition;
             var direction = Level == 5 ? CardinalDirections[gustIndex] : DangerousDirection(ownerPosition);
             if (gustIndex == 0) lightningDirection = direction;
+            PlayGustLayers(context, direction);
             runtime.Targets.CopyTo(targets);
             targets.Sort((left, right) => CompareDanger(ownerPosition, left, right));
             foreach (var target in targets)
@@ -128,6 +139,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Wind, context.SimulationTick), out _))
                 {
                     marked.Add(target); LastWindContactCount++;
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount, false, .62f);
                     if (Potentials.HasPotential(WeaponPotentialId.FanVacuumEdge) && TryPotentialContact(WeaponPotentialId.FanVacuumEdge, target, contact)) RefreshBleed(target, contact);
                 }
             }
@@ -146,7 +158,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
                 var multiplier = LightningMultiplier(target, contact, false);
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * multiplier), false, contact, ContactPhase.Lightning, context.SimulationTick), out _)) LastLightningContactCount++;
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * multiplier), false, contact, ContactPhase.Lightning, context.SimulationTick), out _))
+                {
+                    LastLightningContactCount++;
+                    lightningPresentationTimes.Add(0f);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f);
+                }
             }
             LastLightningSimulationTick = context.SimulationTick;
             runtime.DamageService.RetireAttack(attack.InstanceId);
@@ -185,6 +202,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * LightningMultiplier(target, contact, false)), false, contact, ContactPhase.Lightning, context.SimulationTick), out _))
                 {
                     LastLightningContactCount++;
+                    lightningPresentationTimes.Add(outboundElapsed);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f);
                     if (successfulOutboundTargetIdSet.Add(target.RuntimeId)) successfulOutboundTargetIds.Add(target.RuntimeId);
                 }
                 outboundStrikeTimes.Add(outboundElapsed);
@@ -226,10 +245,110 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (!runtime.Targets.TryGet(successfulOutboundTargetIds[index], out var target) || target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
                 var hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * .6f * LightningMultiplier(target, contact, true)), false, contact, ContactPhase.Inbound, context.SimulationTick), out _);
-                if (hit) { LastInboundContactCount++; if (Potentials.HasPotential(WeaponPotentialId.FanReturningChain) && !target.IsAlive && TryPotentialContact(WeaponPotentialId.FanReturningChain, target, contact) && !pendingChain.Scheduled) ScheduleChain(target); }
+                if (hit)
+                {
+                    LastInboundContactCount++;
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, true, .72f);
+                    if (Potentials.HasPotential(WeaponPotentialId.FanReturningChain) && !target.IsAlive && TryPotentialContact(WeaponPotentialId.FanReturningChain, target, contact) && !pendingChain.Scheduled) ScheduleChain(target);
+                }
             }
             runtime.DamageService.RetireAttack(attack.InstanceId);
             attack = null; marked.Clear(); State = WindThunderFanState.Complete;
+        }
+
+        private void PlayGustLayers(in WeaponExecutionContext context, Float2 direction)
+        {
+            var degrees = Mathf.Atan2(direction.Y, direction.X) * Mathf.Rad2Deg;
+            for (var frame = 0; frame < WeaponVisualPartIndex.WindThunderFan.ProjectileFrameCount; frame++)
+            {
+                var progress = (frame + 1f) / WeaponVisualPartIndex.WindThunderFan.ProjectileFrameCount;
+                QueueVisual(
+                    context,
+                    new PendingVisual(
+                        frame * .025f,
+                        WeaponVisualPartIndex.WindThunderFan.Projectile + frame,
+                        new Vector3(
+                            castOrigin.X + direction.X * Range * progress,
+                            castOrigin.Y + direction.Y * Range * progress,
+                            0f),
+                        Quaternion.Euler(0f, 0f, degrees),
+                        new Vector3(Mathf.Lerp(.58f, 1.05f, progress), Mathf.Lerp(.42f, .72f, progress), 1f),
+                        new Color(.72f, .94f, 1f, Mathf.Lerp(.48f, .18f, progress)),
+                        .09f,
+                        context.SortingOrder));
+            }
+        }
+
+        private void PlayContactSequence(
+            in WeaponExecutionContext context,
+            Float2 contact,
+            int partStart,
+            int frameCount,
+            bool reverse,
+            float scale)
+        {
+            for (var sequenceIndex = 0; sequenceIndex < frameCount; sequenceIndex++)
+            {
+                var frame = reverse ? frameCount - 1 - sequenceIndex : sequenceIndex;
+                QueueVisual(
+                    context,
+                    new PendingVisual(
+                        sequenceIndex * .025f,
+                        partStart + frame,
+                        new Vector3(contact.X, contact.Y, 0f),
+                        Quaternion.identity,
+                        Vector3.one * scale,
+                        reverse ? new Color(.64f, .82f, 1f, .78f) : Color.white,
+                        .08f,
+                        context.SortingOrder + 2));
+            }
+        }
+
+        private void QueueVisual(in WeaponExecutionContext context, PendingVisual visual)
+        {
+            if (visual.DueIn <= 0f)
+            {
+                PlayVisual(context, visual);
+                return;
+            }
+            pendingVisuals.Add(visual);
+        }
+
+        private void AdvancePendingVisuals(float step, in WeaponExecutionContext context)
+        {
+            for (var index = 0; index < pendingVisuals.Count;)
+            {
+                var visual = pendingVisuals[index];
+                visual.DueIn -= step;
+                if (visual.DueIn > 0f)
+                {
+                    pendingVisuals[index] = visual;
+                    index++;
+                    continue;
+                }
+                pendingVisuals.RemoveAt(index);
+                PlayVisual(context, visual);
+            }
+        }
+
+        private void PlayVisual(in WeaponExecutionContext context, PendingVisual visual)
+        {
+            transientVisuals?.Play(
+                context.PresentationSpriteFor(WeaponId.WindThunderFan, visual.PartIndex),
+                visual.Position,
+                visual.Rotation,
+                visual.Scale,
+                visual.Color,
+                visual.Lifetime,
+                visual.SortingOrder);
+        }
+
+        private void EnsureTransientVisuals(Transform root)
+        {
+            if (root == null || root == transientVisualRoot) return;
+            transientVisuals?.Dispose();
+            transientVisualRoot = root;
+            transientVisuals = new WeaponTransientVisualPool(root);
         }
 
         private bool HasLegalTarget()
@@ -318,6 +437,29 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         }
         private struct Bleed { public int TargetId; public Float2 Contact; public int Remaining; public float Elapsed; public AttackInstance Attack; }
         private struct PendingChain { public bool Scheduled; public float Remaining; public int TargetId; public AttackInstance Attack; }
+        private struct PendingVisual
+        {
+            public PendingVisual(float dueIn, int partIndex, Vector3 position, Quaternion rotation, Vector3 scale, Color color, float lifetime, int sortingOrder)
+            {
+                DueIn = dueIn;
+                PartIndex = partIndex;
+                Position = position;
+                Rotation = rotation;
+                Scale = scale;
+                Color = color;
+                Lifetime = lifetime;
+                SortingOrder = sortingOrder;
+            }
+
+            public float DueIn;
+            public int PartIndex;
+            public Vector3 Position;
+            public Quaternion Rotation;
+            public Vector3 Scale;
+            public Color Color;
+            public float Lifetime;
+            public int SortingOrder;
+        }
         private static readonly Float2[] CardinalDirections = { new Float2(1f, 0f), new Float2(0f, 1f), new Float2(-1f, 0f), new Float2(0f, -1f) };
     }
 }

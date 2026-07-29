@@ -504,6 +504,8 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(splitFan.LastOutboundStrikeTimes[1], Is.EqualTo(0.16f).Within(0.0001f));
                 Assert.That(splitFan.LastOutboundStrikeTimes[2], Is.EqualTo(0.24f).Within(0.0001f));
                 CollectionAssert.AreEqual(splitFan.LastOutboundStrikeTimes, largeFan.LastOutboundStrikeTimes);
+                CollectionAssert.AreEqual(splitFan.LastOutboundStrikeTimes, splitFan.LightningPresentationTimesForTests);
+                CollectionAssert.AreEqual(largeFan.LastOutboundStrikeTimes, largeFan.LightningPresentationTimesForTests);
                 Assert.That(split.Count(ContactPhase.Lightning), Is.EqualTo(large.Count(ContactPhase.Lightning)));
             }
         }

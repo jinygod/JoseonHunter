@@ -120,6 +120,93 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator JangseungRiseAndBoundaryPresentationUsesOnlyCanonicalFrames()
+        {
+            var root = new GameObject("Jangseung presentation root");
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            var requestedParts = new List<int>();
+            Sprite Resolve(WeaponId _, int partIndex)
+            {
+                requestedParts.Add(partIndex);
+                return sprite;
+            }
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var damageEvents = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += damageEvents.Add;
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 3, 1, 0f, 3);
+            var context = new WeaponExecutionContext(default, root.transform, sprite, null, Resolve, null, 0, 1);
+
+            ward.Tick(.04f, context);
+            ward.Tick(.10f, context);
+            yield return null;
+
+            Assert.That(ward.FirstWardVisualRiseForTests, Is.InRange(0f, 1f));
+            Assert.That(requestedParts, Has.Some.InRange(
+                WeaponVisualPartIndex.Jangseung.Windup,
+                WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1));
+            Assert.That(requestedParts, Has.Some.InRange(
+                WeaponVisualPartIndex.Jangseung.Field,
+                WeaponVisualPartIndex.Jangseung.Field + WeaponVisualPartIndex.Jangseung.FieldFrameCount - 1));
+            Assert.That(damageEvents, Is.Empty);
+
+            ward.Dispose();
+            runtime.Dispose();
+            Object.Destroy(root);
+            Object.Destroy(sprite);
+            Object.Destroy(texture);
+        }
+
+        [UnityTest]
+        public IEnumerator FanGustMarksAndLightningUseCanonicalFramesWithoutExtraContacts()
+        {
+            var root = new GameObject("Fan presentation root");
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            var requestedParts = new List<int>();
+            Sprite Resolve(WeaponId _, int partIndex)
+            {
+                requestedParts.Add(partIndex);
+                return sprite;
+            }
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            registry.Register(new TestTarget(1, new Float2(.5f, 0f), mask));
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 2f, 1f, 1, 1);
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+            var context = new WeaponExecutionContext(default, root.transform, sprite, null, Resolve, null, 0, 1);
+
+            fan.Tick(.01f, context);
+            fan.Tick(.12f, context);
+            fan.Tick(.01f, context);
+            yield return null;
+
+            Assert.That(events.Count(value => value.Phase == ContactPhase.Wind), Is.EqualTo(1));
+            Assert.That(events.Count(value => value.Phase == ContactPhase.Lightning), Is.EqualTo(1));
+            Assert.That(requestedParts, Has.Some.InRange(
+                WeaponVisualPartIndex.WindThunderFan.Projectile,
+                WeaponVisualPartIndex.WindThunderFan.Projectile + WeaponVisualPartIndex.WindThunderFan.ProjectileFrameCount - 1));
+            Assert.That(requestedParts, Has.Some.InRange(
+                WeaponVisualPartIndex.WindThunderFan.Field,
+                WeaponVisualPartIndex.WindThunderFan.Field + WeaponVisualPartIndex.WindThunderFan.FieldFrameCount - 1));
+            Assert.That(requestedParts, Has.Some.InRange(
+                WeaponVisualPartIndex.WindThunderFan.Impact,
+                WeaponVisualPartIndex.WindThunderFan.Impact + WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount - 1));
+
+            fan.Dispose();
+            runtime.Dispose();
+            Object.Destroy(root);
+            Object.Destroy(sprite);
+            Object.Destroy(texture);
+        }
+
+        [UnityTest]
         public IEnumerator EvolvedFrostStoredShatterRendersAtAcceptedTargetsCurrentPosition()
         {
             var root = new GameObject("Stored Frost Shatter Root");
