@@ -248,19 +248,24 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 var progress = Mathf.Clamp01(blade.ReturnProgress);
                 if (progress >= 1f)
                 {
+                    blade.ReturnSegmentStart = blade.Position;
+                    blade.Position = blade.Start;
+                    blade.HasReturnSegment = true;
                     blade.Returned = true;
-                    return;
                 }
-                blade.ReturnSegmentStart = blade.Position;
-                var inboundSign = ResolveInboundArcSign(blade);
-                blade.Position = CurvedPosition(
-                    blade.ReturnStart,
-                    blade.Start,
-                    progress,
-                    Mathf.SmoothStep(0f, 1f, progress),
-                    inboundSign,
-                    blade.Range);
-                blade.HasReturnSegment = true;
+                else
+                {
+                    blade.ReturnSegmentStart = blade.Position;
+                    var inboundSign = ResolveInboundArcSign(blade);
+                    blade.Position = CurvedPosition(
+                        blade.ReturnStart,
+                        blade.Start,
+                        progress,
+                        Mathf.SmoothStep(0f, 1f, progress),
+                        inboundSign,
+                        blade.Range);
+                    blade.HasReturnSegment = true;
+                }
             }
 
             blade.Visual.transform.position = new Vector3(blade.Position.X, blade.Position.Y, 0f);
@@ -469,7 +474,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var acX = c.X - a.X; var acY = c.Y - a.Y;
             var first = (acX * cdY - acY * cdX) / denominator;
             var second = (acX * abY - acY * abX) / denominator;
-            if (first < 0f || first > 1f || second < 0f || second > 1f) return false;
+            const float segmentTolerance = 0.0001f;
+            if (first < -segmentTolerance || first > 1f + segmentTolerance ||
+                second < -segmentTolerance || second > 1f + segmentTolerance) return false;
+            first = Mathf.Clamp01(first);
             crossing = new Float2(a.X + abX * first, a.Y + abY * first);
             return true;
         }
