@@ -34,3 +34,14 @@ timestamp,asset_id,job_id,tool,prompt_revision,cost,status,remaining_generations
 2026-07-28T23:12:00+09:00,shrine_roof_fragment,31be8fc1-f3f1-4b4c-bee6-3b728c504783,create_image_pixen,battlefield-decal-v2,1,approved,,Assets/JoseonHunter/Art/World/Runtime/Battlefield/shrine_roof_fragment.png
 2026-07-28T23:12:00+09:00,gakgung_arrow,f476b7c6-cfb2-43bf-b555-da2737c1291f,create_image_pixen,gakgung-v3,1,approved_20px_length,,Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Gakgung/gakgung_arrow.png
 2026-07-28T23:15:00+09:00,balance,,get_balance,mobile-polish-end,0,active_tier1,1934,
+2026-07-29T09:20:00+09:00,han_yeonhwa_walk,7d4bdae9-6555-4a03-b76e-3b47ae6dcc8f,animate_image,combat-motion-walk-v1,2,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Characters/HanYeonhwa/Walk
+2026-07-29T09:21:00+09:00,han_yeonhwa_idle,3258e8c7-4931-4d2d-9f22-08a5b8a52bc8,animate_image,combat-motion-idle-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Characters/HanYeonhwa/Idle
+2026-07-29T09:22:00+09:00,bandit_walk,b92ac62b-ec2a-44ac-b7cb-71cd33288d36,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Enemies/Bandit/Walk
+2026-07-29T09:23:00+09:00,dokkaebi_walk,24dd033a-d427-4ab8-a784-bbc7b9eaf5ce,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Enemies/Dokkaebi/Walk
+2026-07-29T09:24:00+09:00,plague_rat_walk,75b1dd42-afe7-4f32-8e56-330565d5ba48,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Enemies/PlagueRat/Walk
+2026-07-29T09:25:00+09:00,sakkat_specter_walk,f1cbca70-5cfe-4fe5-9ef9-d724d1b5d8a4,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Enemies/SakkatSpecter/Walk
+2026-07-29T09:26:00+09:00,vengeful_spirit_walk,5de63fb7-7368-486f-b38c-d78bc3be49fe,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Enemies/VengefulSpirit/Walk
+2026-07-29T09:27:00+09:00,dokkaebi_captain_walk,07f3bb48-6339-448d-950e-22111301f819,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Elites/DokkaebiCaptain/Walk
+2026-07-29T09:28:00+09:00,dokkaebi_captain_idle,19b577d8-e7b9-48ff-8edc-f68e91451a8c,animate_image,combat-motion-idle-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Elites/DokkaebiCaptain/Idle
+2026-07-29T09:29:00+09:00,fallen_general_walk,418b7f24-000e-40ae-b322-4f8f286f09e3,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Bosses/FallenGeneral/Walk
+2026-07-29T09:30:00+09:00,fallen_general_idle,f364ef4a-0d53-4fe5-9f87-e600d16535a8,animate_image,combat-motion-idle-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Bosses/FallenGeneral/Idle

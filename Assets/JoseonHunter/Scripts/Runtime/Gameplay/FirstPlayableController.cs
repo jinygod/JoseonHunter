@@ -28,6 +28,7 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite battlefieldTileAlternate;
         [SerializeField] private Sprite[] battlefieldDecals;
         [SerializeField] private WeaponCatalogAsset weaponCatalog;
+        [SerializeField] private CombatMotionLibrary motionLibrary;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<PickupState> pickups = new List<PickupState>();
@@ -52,6 +53,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private Transform runtimeObjects;
         private GameObject player;
         private SpriteRenderer playerRenderer;
+        private CombatantVisualRig playerVisualRig;
         private Transform playerHealthFill;
         private LineRenderer geumjulRenderer;
         private CombatTargetRegistry combatTargets;
@@ -63,6 +65,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private Sprite solidSprite;
         private Vector2 touchStart;
         private Vector2 movement;
+        private Vector3 cameraFollowVelocity;
         private float elapsed;
         private float playerHealth;
         private float playerMaxHealth;
@@ -178,6 +181,8 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             public GameObject Object;
             public SpriteRenderer Renderer;
+            public CombatantVisualRig VisualRig;
+            public MotionWeight MotionWeight;
             public float Health;
             public float MaximumHealth;
             public float Speed;
@@ -286,7 +291,9 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
             }
             public PixelHitMask HurtMask => owner.MaskFor(state.Renderer);
-            public PixelMaskTransform HurtMaskTransform => owner.TransformFor(state.Renderer, WorldPosition);
+            public PixelMaskTransform HurtMaskTransform => state.VisualRig != null
+                ? state.VisualRig.CollisionTransform(WorldPosition)
+                : owner.TransformFor(state.Renderer, WorldPosition);
             public void ApplyResolvedDamage(int damage) => owner.ApplyEnemyDamage(state, damage);
             public void ApplyKnockback(Float2 direction, float force)
             {
@@ -385,7 +392,6 @@ namespace JoseonHunter.Runtime.Gameplay
             UpdateAttack(delta);
             UpdatePickups(delta);
             UpdateGeumjul(delta);
-            UpdateCamera();
             UpdateField();
 
             if (!bossSpawned && elapsed >= BossSpawnTime)
@@ -396,6 +402,14 @@ namespace JoseonHunter.Runtime.Gameplay
             if (elapsed >= TestDuration && bossAlive)
             {
                 EndRun(false);
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (gameplayCamera != null && player != null)
+            {
+                UpdateCamera();
             }
         }
 
@@ -507,15 +521,20 @@ namespace JoseonHunter.Runtime.Gameplay
             runEnded = false;
             victory = false;
 
-            player = CreateSpriteObject(
+            player = CreateCombatantObject(
                 "Han Yeonhwa",
                 playerSprite != null ? playerSprite : solidSprite,
                 Vector2.zero,
                 10,
-                runtimeObjects);
+                runtimeObjects,
+                MotionWeight.Light,
+                0f,
+                out playerVisualRig);
             player.transform.localScale = Vector3.one;
-            playerRenderer = player.GetComponent<SpriteRenderer>();
+            playerRenderer = playerVisualRig.Renderer;
             playerHealthFill = CreateHealthBar(player.transform);
+            playerHealthFill.parent.localPosition = new Vector3(0f, -0.30f, 0f);
+            playerHealthFill.parent.localScale = Vector3.one * 0.58f;
             if (playerSprite == null)
             {
                 playerRenderer.color = new Color(0.18f, 0.38f, 0.72f);
@@ -533,6 +552,7 @@ namespace JoseonHunter.Runtime.Gameplay
             geumjulRenderer.positionCount = 0;
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
+            cameraFollowVelocity = Vector3.zero;
 #if UNITY_INCLUDE_TESTS
             AppliedUpgradeCount = 0;
 #endif
@@ -572,17 +592,10 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdatePlayer(float delta)
         {
-            var position = (Vector2)player.transform.position + movement * (moveSpeed * delta);
+            var velocity = movement * moveSpeed;
+            var position = (Vector2)player.transform.position + velocity * delta;
             player.transform.position = position;
-
-            if (movement.x > 0.01f)
-            {
-                playerRenderer.flipX = false;
-            }
-            else if (movement.x < -0.01f)
-            {
-                playerRenderer.flipX = true;
-            }
+            playerVisualRig?.Tick(velocity, delta, MotionWeight.Light);
 
             UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
         }
@@ -590,9 +603,15 @@ namespace JoseonHunter.Runtime.Gameplay
         private void UpdateCamera()
         {
             var target = player.transform.position;
-            var current = gameplayCamera.transform.position;
-            var next = Vector3.Lerp(current, new Vector3(target.x, target.y, -10f), 7f * Time.deltaTime);
-            gameplayCamera.transform.position = next;
+            var lookAhead = Vector2.ClampMagnitude(movement, 1f) * 0.35f;
+            var desired = new Vector3(target.x + lookAhead.x, target.y + lookAhead.y, -10f);
+            gameplayCamera.transform.position = Vector3.SmoothDamp(
+                gameplayCamera.transform.position,
+                desired,
+                ref cameraFollowVelocity,
+                0.12f,
+                100f,
+                Time.unscaledDeltaTime);
         }
 
         private void UpdateField()
@@ -643,14 +662,17 @@ namespace JoseonHunter.Runtime.Gameplay
                 : (isElite && eliteSprite != null
                     ? eliteSprite
                     : ChooseNormalEnemySprite());
-            var enemyObject = CreateSpriteObject(
+            var enemyObject = CreateCombatantObject(
                 isBoss ? "Fallen General" : (isElite ? "Dokkaebi Captain" : "Pursuing Enemy"),
                 chosenSprite != null ? chosenSprite : solidSprite,
                 position,
                 isBoss ? 9 : 8,
-                runtimeObjects);
+                runtimeObjects,
+                isBoss || isElite ? MotionWeight.Heavy : MotionWeight.Medium,
+                nextCombatTargetRuntimeId * 0.173f,
+                out var visualRig);
 
-            var renderer = enemyObject.GetComponent<SpriteRenderer>();
+            var renderer = visualRig.Renderer;
             var baseHealth = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
             var health = baseHealth * rank.HealthMultiplier;
             enemyObject.transform.localScale = Vector3.one * rank.DisplayScale;
@@ -663,6 +685,8 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 Object = enemyObject,
                 Renderer = renderer,
+                VisualRig = visualRig,
+                MotionWeight = isBoss || isElite ? MotionWeight.Heavy : MotionWeight.Medium,
                 Health = health,
                 MaximumHealth = health,
                 Speed = (isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration)) *
@@ -780,8 +804,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
                 var enemyPosition = (Vector2)enemy.Object.transform.position;
                 var direction = (playerPosition - enemyPosition).normalized;
-                enemy.Object.transform.position = enemyPosition + direction * (enemy.Speed * enemy.MovementMultiplier * delta);
-                enemy.Renderer.flipX = direction.x < 0f;
+                var velocity = direction * (enemy.Speed * enemy.MovementMultiplier);
+                enemy.Object.transform.position = enemyPosition + velocity * delta;
+                enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
 
                 var hitDistance = enemy.IsBoss ? 1.1f : (enemy.IsElite ? 0.72f : 0.55f);
                 if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
@@ -883,6 +908,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
             enemy.Health -= damage;
             enemy.Renderer.color = Color.white;
+            var enemyPosition = (Vector2)enemy.Object.transform.position;
+            var incomingDirection = enemyPosition - (Vector2)player.transform.position;
+            enemy.VisualRig?.ShowHit(incomingDirection, enemy.IsBoss ? 0.05f : enemy.IsElite ? 0.075f : 0.095f);
             UpdateHealthBar(enemy.HealthFill, enemy.Health / enemy.MaximumHealth);
             if (enemy.Health > 0f)
             {
@@ -894,7 +922,15 @@ namespace JoseonHunter.Runtime.Gameplay
             var deathPosition = enemy.Object.transform.position;
             combatTargets.Unregister(enemy.CombatTarget);
             enemies.Remove(enemy);
-            Destroy(enemy.Object);
+            if (enemy.VisualRig != null && !enemy.IsTreasure)
+            {
+                enemy.VisualRig.PlayDeath();
+                StartCoroutine(AnimateDeathAndDestroy(enemy));
+            }
+            else
+            {
+                Destroy(enemy.Object);
+            }
             if (wasTreasure)
             {
                 ScatterTreasure(deathPosition);
@@ -917,6 +953,21 @@ namespace JoseonHunter.Runtime.Gameplay
                     PickupKind.Magnet,
                     0);
             }
+        }
+
+        private System.Collections.IEnumerator AnimateDeathAndDestroy(EnemyState enemy)
+        {
+            var elapsedDeath = 0f;
+            const float duration = 0.30f;
+            while (enemy.Object != null && elapsedDeath < duration)
+            {
+                var delta = Time.unscaledDeltaTime;
+                elapsedDeath += delta;
+                enemy.VisualRig.Tick(Vector2.zero, delta, enemy.MotionWeight);
+                yield return null;
+            }
+
+            if (enemy.Object != null) Destroy(enemy.Object);
         }
 
         private void ScatterTreasure(Vector2 position)
@@ -1471,6 +1522,29 @@ namespace JoseonHunter.Runtime.Gameplay
             var renderer = result.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
             renderer.sortingOrder = sortingOrder;
+            return result;
+        }
+
+        private GameObject CreateCombatantObject(
+            string objectName,
+            Sprite sprite,
+            Vector2 position,
+            int sortingOrder,
+            Transform parent,
+            MotionWeight weight,
+            float phaseOffset,
+            out CombatantVisualRig visualRig)
+        {
+            var result = new GameObject(objectName);
+            result.transform.SetParent(parent, false);
+            result.transform.position = position;
+            visualRig = CombatantVisualRig.Create(
+                result,
+                sprite,
+                sortingOrder,
+                motionLibrary == null ? null : motionLibrary.Find(sprite),
+                weight,
+                phaseOffset);
             return result;
         }
 
