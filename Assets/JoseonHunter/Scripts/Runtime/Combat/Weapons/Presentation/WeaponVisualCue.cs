@@ -33,7 +33,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
                 baseScale,
                 Level,
                 Evolved);
-            ResolvedLifetime = Mathf.Min(.32f, Mathf.Max(.04f, lifetime) * (Evolved ? 1.25f : 1f));
+            var evolutionLifetime = !Evolved ? 1f :
+                Stage == WeaponVisualStage.Detonation || Stage == WeaponVisualStage.Field ? 1.5f :
+                Stage == WeaponVisualStage.Impact ? 1.3f : 1.12f;
+            var maximumLifetime =
+                Stage == WeaponVisualStage.Detonation || Stage == WeaponVisualStage.Field ? .40f : .32f;
+            ResolvedLifetime = Mathf.Min(
+                maximumLifetime,
+                Mathf.Max(.04f, lifetime) * evolutionLifetime);
         }
 
         public WeaponId WeaponId { get; }

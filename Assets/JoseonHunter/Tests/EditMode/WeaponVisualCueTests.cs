@@ -1,6 +1,7 @@
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace JoseonHunter.Tests.EditMode
 {
@@ -23,7 +24,7 @@ namespace JoseonHunter.Tests.EditMode
             var evolved = new WeaponVisualCue(WeaponId.ThunderCrashBomb, WeaponVisualStage.Detonation, 5, true, 1f, .2f);
 
             Assert.That(evolved.ResolvedLifetime, Is.GreaterThan(normal.ResolvedLifetime));
-            Assert.That(evolved.ResolvedLifetime, Is.LessThanOrEqualTo(.32f));
+            Assert.That(evolved.ResolvedLifetime, Is.LessThanOrEqualTo(.40f));
         }
 
         [Test]
@@ -38,8 +39,37 @@ namespace JoseonHunter.Tests.EditMode
                     level: 5,
                     evolved: true);
 
-                Assert.That(scale, Is.InRange(0.36f, 0.58f), weaponId.Value);
+                Assert.That(scale, Is.InRange(0.48f, 0.72f), weaponId.Value);
             }
+        }
+
+        [Test]
+        public void EveryWeaponKeepsTrailsSubordinateToItsProjectileSilhouette()
+        {
+            foreach (var weaponId in WeaponRoster.All)
+            {
+                var projectile = WeaponPresentationScale.For(
+                    weaponId, WeaponVisualStage.Projectile, 1f, 3, false);
+                var trail = WeaponPresentationScale.For(
+                    weaponId, WeaponVisualStage.Trail, 1f, 3, false);
+
+                Assert.That(trail, Is.LessThan(projectile), weaponId.Value);
+                Assert.That(trail, Is.GreaterThanOrEqualTo(.25f), weaponId.Value);
+            }
+        }
+
+        [Test]
+        public void WeaponRosterDoesNotCollapseToOneProjectileScale()
+        {
+            var roundedScales = new HashSet<int>();
+            foreach (var weaponId in WeaponRoster.All)
+            {
+                var scale = WeaponPresentationScale.For(
+                    weaponId, WeaponVisualStage.Projectile, 1f, 1, false);
+                roundedScales.Add(UnityEngine.Mathf.RoundToInt(scale * 1000f));
+            }
+
+            Assert.That(roundedScales.Count, Is.GreaterThanOrEqualTo(5));
         }
 
         [Test]
@@ -59,7 +89,26 @@ namespace JoseonHunter.Tests.EditMode
                 evolved: true);
 
             Assert.That(evolved, Is.GreaterThan(normal));
-            Assert.That(evolved, Is.LessThanOrEqualTo(0.85f));
+            Assert.That(evolved, Is.LessThanOrEqualTo(0.95f));
+        }
+
+        [Test]
+        public void EvolutionChangesDetonationRhythmMoreThanProjectileSize()
+        {
+            var normalProjectile = new WeaponVisualCue(
+                WeaponId.ThunderCrashBomb, WeaponVisualStage.Projectile, 5, false, 1f, .2f);
+            var evolvedProjectile = new WeaponVisualCue(
+                WeaponId.ThunderCrashBomb, WeaponVisualStage.Projectile, 5, true, 1f, .2f);
+            var normalDetonation = new WeaponVisualCue(
+                WeaponId.ThunderCrashBomb, WeaponVisualStage.Detonation, 5, false, 1f, .2f);
+            var evolvedDetonation = new WeaponVisualCue(
+                WeaponId.ThunderCrashBomb, WeaponVisualStage.Detonation, 5, true, 1f, .2f);
+
+            var projectileGrowth = evolvedProjectile.ResolvedScale / normalProjectile.ResolvedScale;
+            var detonationGrowth = evolvedDetonation.ResolvedScale / normalDetonation.ResolvedScale;
+            Assert.That(detonationGrowth, Is.GreaterThan(projectileGrowth));
+            Assert.That(evolvedDetonation.ResolvedLifetime - normalDetonation.ResolvedLifetime,
+                Is.GreaterThan(evolvedProjectile.ResolvedLifetime - normalProjectile.ResolvedLifetime));
         }
 
         [Test]

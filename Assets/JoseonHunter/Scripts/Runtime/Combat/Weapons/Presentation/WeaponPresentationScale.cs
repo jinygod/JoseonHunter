@@ -16,21 +16,31 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             int level,
             bool evolved)
         {
-            var stageScale = stage == WeaponVisualStage.Projectile ? 0.40f :
-                stage == WeaponVisualStage.Trail ? 0.30f :
-                stage == WeaponVisualStage.Windup ? 0.42f :
-                stage == WeaponVisualStage.Impact ? 0.50f : 0.58f;
-            var weaponScale = weaponId.Equals(WeaponId.GakgungShot) ? 0.86f :
-                weaponId.Equals(WeaponId.SingijeonVolley) ? 0.84f :
-                weaponId.Equals(WeaponId.HwandoFlyingBlade) ? 0.90f :
-                weaponId.Equals(WeaponId.TalismanThrow) ? 0.90f :
-                weaponId.Equals(WeaponId.ThunderCrashBomb) ? 0.84f :
-                weaponId.Equals(WeaponId.JangseungWard) ? 0.82f :
-                weaponId.Equals(WeaponId.FrostFlask) ? 0.90f : 0.82f;
+            var stageScale = stage == WeaponVisualStage.Projectile ? .52f :
+                stage == WeaponVisualStage.Trail ? .32f :
+                stage == WeaponVisualStage.Windup ? .46f :
+                stage == WeaponVisualStage.Impact ? .58f :
+                stage == WeaponVisualStage.Field ? .62f : .68f;
+            // Each weapon keeps a distinct screen-space silhouette instead of sharing one
+            // correction factor. Trails stay subordinate; impact stages carry the spectacle.
+            var weaponScale = weaponId.Equals(WeaponId.HwandoFlyingBlade) ? 1.05f :
+                weaponId.Equals(WeaponId.GakgungShot) ? .98f :
+                weaponId.Equals(WeaponId.TalismanThrow) ? 1f :
+                weaponId.Equals(WeaponId.ThunderCrashBomb) ? .92f :
+                weaponId.Equals(WeaponId.JangseungWard) ? .94f :
+                weaponId.Equals(WeaponId.SingijeonVolley) ? .89f :
+                weaponId.Equals(WeaponId.FrostFlask) ? .96f : 1.02f;
+            var evolutionGrowth = evolved
+                ? stage == WeaponVisualStage.Detonation ? .20f :
+                    stage == WeaponVisualStage.Field ? .18f :
+                    stage == WeaponVisualStage.Impact ? .14f :
+                    stage == WeaponVisualStage.Trail ? .10f :
+                    stage == WeaponVisualStage.Windup ? .08f : .05f
+                : 0f;
             var powerScale = 1f +
                 (level >= 3 ? 0.12f : 0f) +
-                (level >= 5 ? 0.12f : 0f) +
-                (evolved ? 0.16f : 0f);
+                (level >= 5 ? 0.04f : 0f) +
+                evolutionGrowth;
 
             return Mathf.Max(0.05f, authoredScale) * stageScale * weaponScale * powerScale;
         }
