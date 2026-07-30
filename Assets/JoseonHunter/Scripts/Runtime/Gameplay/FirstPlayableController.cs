@@ -519,6 +519,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
+            weaponRuntime.SetJangseungGeumjulVisualLibrary(jangseungGeumjulVisuals);
             elapsed = 0f;
             stageTimeline = StagePacingTimeline.ForDuration(TestDuration);
             processedStageMilestones = 0;
@@ -1262,6 +1263,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
+            weaponRuntime.SetJangseungGeumjulVisualLibrary(jangseungGeumjulVisuals);
             registeredWeaponIds.Clear();
             weaponMasks.Load(weaponCatalog);
             RegisterCatalogWeapons();

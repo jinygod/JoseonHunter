@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Runtime.Gameplay;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat
@@ -26,6 +27,9 @@ namespace JoseonHunter.Runtime.Combat
             : this(ownerPosition, presentationRoot, bladeSprite, spriteResolver, null, maskResolver, sortingOrder, simulationTick) { }
 
         public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, Func<WeaponId, Sprite> spriteResolver, Func<WeaponId, int, Sprite> presentationSpriteResolver, Func<WeaponId, PixelHitMask> maskResolver, int sortingOrder, int simulationTick)
+            : this(ownerPosition, presentationRoot, bladeSprite, spriteResolver, presentationSpriteResolver, maskResolver, null, sortingOrder, simulationTick) { }
+
+        public WeaponExecutionContext(Float2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, Func<WeaponId, Sprite> spriteResolver, Func<WeaponId, int, Sprite> presentationSpriteResolver, Func<WeaponId, PixelHitMask> maskResolver, JangseungGeumjulVisualLibrary jangseungGeumjulVisualLibrary, int sortingOrder, int simulationTick)
         {
             OwnerPosition = ownerPosition;
             PresentationRoot = presentationRoot;
@@ -33,6 +37,7 @@ namespace JoseonHunter.Runtime.Combat
             this.spriteResolver = spriteResolver;
             this.presentationSpriteResolver = presentationSpriteResolver;
             this.maskResolver = maskResolver;
+            JangseungGeumjulVisualLibrary = jangseungGeumjulVisualLibrary;
             SortingOrder = sortingOrder;
             SimulationTick = simulationTick;
         }
@@ -47,6 +52,7 @@ namespace JoseonHunter.Runtime.Combat
         public Sprite PresentationSpriteFor(WeaponId weaponId, int partIndex) =>
             presentationSpriteResolver?.Invoke(weaponId, partIndex) ?? SpriteFor(weaponId);
         public PixelHitMask MaskFor(WeaponId weaponId) => maskResolver?.Invoke(weaponId);
+        public JangseungGeumjulVisualLibrary JangseungGeumjulVisualLibrary { get; }
         public int SortingOrder { get; }
         public int SimulationTick { get; }
     }
@@ -60,6 +66,7 @@ namespace JoseonHunter.Runtime.Combat
         private Func<WeaponId, Sprite> spriteResolver;
         private Func<WeaponId, int, Sprite> presentationSpriteResolver;
         private Func<WeaponId, PixelHitMask> maskResolver;
+        private JangseungGeumjulVisualLibrary jangseungGeumjulVisualLibrary;
         private bool disposed;
 
         public WeaponRuntimeController(CombatTargetRegistry targets, CombatDamageService damageService, PixelHitMask bladeMask)
@@ -112,6 +119,7 @@ namespace JoseonHunter.Runtime.Combat
         public void SetPresentationSpriteResolver(Func<WeaponId, int, Sprite> resolver) =>
             presentationSpriteResolver = resolver;
         public void SetMaskResolver(Func<WeaponId, PixelHitMask> resolver) => maskResolver = resolver;
+        public void SetJangseungGeumjulVisualLibrary(JangseungGeumjulVisualLibrary library) => jangseungGeumjulVisualLibrary = library;
 
         public void Tick(float deltaTime, Vector2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder)
         {
@@ -119,7 +127,7 @@ namespace JoseonHunter.Runtime.Combat
             simulationTick++;
             AffixStatuses.Tick(deltaTime, simulationTick);
             var context = new WeaponExecutionContext(
-                new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, presentationSpriteResolver, maskResolver, sortingOrder, simulationTick);
+                new Float2(ownerPosition.x, ownerPosition.y), presentationRoot, bladeSprite, spriteResolver, presentationSpriteResolver, maskResolver, jangseungGeumjulVisualLibrary, sortingOrder, simulationTick);
             foreach (var executor in executors) executor.Tick(deltaTime, context);
         }
 
@@ -146,6 +154,7 @@ namespace JoseonHunter.Runtime.Combat
             DamageService.ClearAttacks();
             spriteResolver = null;
             maskResolver = null;
+            jangseungGeumjulVisualLibrary = null;
         }
 
         private void OnTargetUnregistered(ICombatTarget target)

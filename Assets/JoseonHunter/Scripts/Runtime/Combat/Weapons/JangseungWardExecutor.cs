@@ -4,6 +4,7 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Combat.Weapons.Presentation;
+using JoseonHunter.Runtime.Gameplay;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Combat.Weapons
@@ -32,6 +33,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Dictionary<int, Float2> previousPositions = new Dictionary<int, Float2>();
         private WeaponTransientVisualPool transientVisuals;
         private Transform transientVisualRoot;
+        private JangseungWardPresenter wardPresenter;
+        private Transform wardPresenterRoot;
         private float cooldown;
         private float elapsedSeconds;
 #if UNITY_INCLUDE_TESTS
@@ -78,6 +81,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveGuardianCountForTests { get { var count = 0; foreach (var set in sets) if (set.GuardianMask != null) count++; return count; } }
         public int GhostFaceApplicationsForTests { get; private set; }
         public int GuardianSpawnsForTests { get; private set; }
+        public JangseungWardPresenter WardPresenterForTests => wardPresenter;
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -90,17 +94,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #endif
             EnsureTransientVisuals(context.PresentationRoot);
             transientVisuals?.Tick(step);
+            EnsureWardPresenter(context);
+            wardPresenter?.Tick(step);
             var frameStartElapsed = elapsedSeconds;
             elapsedSeconds += step;
             cooldown -= step;
-            if (Level == 5 && sets.Count > 0) MoveMobilePosts(step, context.OwnerPosition);
+            if (Level == 5 && sets.Count > 0) MoveMobilePosts(step, context.OwnerPosition, context);
             if (cooldown <= 0f)
             {
                 cooldown = CooldownSeconds;
                 if (Level == 5 && sets.Count > 0) RequestMobileReposition(context.OwnerPosition);
-                else PlaceSet(context.OwnerPosition, frameStartElapsed);
+                else PlaceSet(context.OwnerPosition, frameStartElapsed, context);
             }
-            if (IsEvolved) AdvanceEvolvedPostActivation(step);
+            if (IsEvolved) AdvanceEvolvedPostActivation(step, context);
             AdvanceWardPresentation(context);
             ResolveCrossings(context, frameStartElapsed, step);
 #if UNITY_INCLUDE_TESTS
@@ -116,6 +122,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var set in sets) Retire(set);
             sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
+            wardPresenter?.Dispose(); wardPresenter = null; wardPresenterRoot = null;
 #if UNITY_INCLUDE_TESTS
             firstPostRiseFrameSequenceForTests.Clear(); visibleBoundaryDirectionsForTests.Clear();
             FirstPostRiseFramesPlayedThisTickForTests = 0;
@@ -127,7 +134,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Dispose() => Reset();
 
-        private void PlaceSet(Float2 center, float createdAt)
+        private void PlaceSet(Float2 center, float createdAt, in WeaponExecutionContext context)
         {
             if (sets.Count >= SetCapacity)
             {
@@ -136,9 +143,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var count = Level == 5 ? 4 : PostCount;
             var set = new WardSet(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.BoundaryReentry, ReentryInterval), center, Radius, count, IsEvolved, createdAt, Level == 5);
             sets.Add(set);
+            wardPresenter?.ShowSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
         }
 
-        private void AdvanceEvolvedPostActivation(float step)
+        private void AdvanceEvolvedPostActivation(float step, in WeaponExecutionContext context)
         {
             foreach (var set in sets)
             {
@@ -148,6 +156,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     set.ActivationElapsed -= EvolvedPostActivationInterval;
                     set.ActivateNextPost();
+                    wardPresenter?.UpdateSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
                 }
                 if (set.IsCompleted && !set.MarkResolved) { set.CompletionResidual = set.ActivationElapsed; MarkEnclosedTargets(set); }
             }
@@ -254,7 +263,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             set.HasRequestedMove = true;
         }
 
-        private void MoveMobilePosts(float step, Float2 ownerPosition)
+        private void MoveMobilePosts(float step, Float2 ownerPosition, in WeaponExecutionContext context)
         {
             foreach (var set in sets)
             {
@@ -268,6 +277,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var desired = CardinalPost(center, Radius, index);
                     set.Posts[index] = MoveTowards(set.Posts[index], desired, MaximumMobileStep);
                 }
+                wardPresenter?.UpdateSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
             }
         }
 
@@ -287,8 +297,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (set.IsEvolved && !set.IsCompleted) return;
             if (set.IsEvolved && !set.MarkedTargetIds.Contains(target.RuntimeId)) return;
-            foreach (var segment in Segments(set))
+            var segments = new List<Segment>(Segments(set));
+            for (var segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
             {
+                var segment = segments[segmentIndex];
                 if (!TrySegmentIntersection(previous, current, segment.Start, segment.End, out var movementT)) continue;
                 if (set.TouchingTargetIds.Contains(target.RuntimeId)) continue;
                 var atCrossing = Lerp(previous, current, movementT);
@@ -299,6 +311,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.Attack, WeaponId.JangseungWard, target,
                     Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, crossingTime), out _))
                 {
+                    wardPresenter?.PlayCrossing(set.Attack.InstanceId, segmentIndex,
+                        new Vector2(segment.Start.X, segment.Start.Y), new Vector2(segment.End.X, segment.End.Y),
+                        new Vector2(contact.X, contact.Y));
                     set.MarkedTargetIds.Add(target.RuntimeId);
                     target.ApplyKnockback(OutwardDirection(segment, previous, current), Mathf.Max(0.1f, Level * 0.2f));
                     if (Potentials.HasPotential(WeaponPotentialId.JangseungGhostFace) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGhostFace, out _, out var ghostMask) &&
@@ -544,6 +559,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             transientVisuals = new WeaponTransientVisualPool(root);
         }
 
+        private void EnsureWardPresenter(in WeaponExecutionContext context)
+        {
+            if (context.PresentationRoot == wardPresenterRoot && wardPresenter != null) return;
+            wardPresenter?.Dispose(); wardPresenter = null; wardPresenterRoot = null;
+            if (context.PresentationRoot == null || context.JangseungGeumjulVisualLibrary == null) return;
+            wardPresenterRoot = context.PresentationRoot;
+            wardPresenter = new JangseungWardPresenter(context.JangseungGeumjulVisualLibrary, wardPresenterRoot, context.SortingOrder);
+            foreach (var set in sets) wardPresenter.ShowSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
+        }
+
+        private static Sprite PostSprite(in WeaponExecutionContext context) => context.PresentationSpriteFor(
+            WeaponId.JangseungWard,
+            WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1);
+
         private void RememberCurrentTargetPositions()
         {
             previousPositions.Clear();
@@ -560,6 +589,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (set.GuardianAttack != null) runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId);
             if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual);
             if (set.EvolvedCompletionVisual != null) UnityEngine.Object.Destroy(set.EvolvedCompletionVisual);
+            wardPresenter?.RetireSet(set.Attack.InstanceId);
             set.Retired = true;
         }
 

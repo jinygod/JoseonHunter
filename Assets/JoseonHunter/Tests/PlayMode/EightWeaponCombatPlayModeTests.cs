@@ -186,6 +186,29 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator JangseungPresenterClearsPersistentVisualsWhenTheWardResets()
+        {
+            var root = new GameObject("Jangseung persistent presentation root");
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0f, 1);
+            var context = new WeaponExecutionContext(default, root.transform, null, null, null, null, library, 0, 1);
+
+            ward.Tick(.02f, context);
+            var presenter = ward.WardPresenterForTests;
+            Assert.That(presenter.ActiveSetCountForTests, Is.EqualTo(1));
+            ward.Reset();
+            yield return null;
+
+            Assert.That(presenter.ActiveSetCountForTests, Is.Zero);
+            runtime.Dispose();
+            Object.Destroy(root);
+            Object.Destroy(library);
+        }
+
+        [UnityTest]
         public IEnumerator EvolvedJangseungCompletionBurstRunsAfterBoundaryChecks()
         {
             var root = new GameObject("Evolved Jangseung completion presentation root");

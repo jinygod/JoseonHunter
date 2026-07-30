@@ -5,6 +5,7 @@ using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using JoseonHunter.Runtime.Combat.Weapons.Presentation;
+using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -1018,6 +1019,62 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(events.All(confirmed => confirmed.Phase == ContactPhase.BoundaryCrossing), Is.True);
                 Assert.That(target.KnockbackCount, Is.EqualTo(2));
             });
+        }
+
+        [Test]
+        public void JangseungCrossingPresentsOnlyTheConfirmedSegmentAndContact()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 4, 1, 0f, 5);
+            var target = new TestTarget(1, new Float2(0f, -1.2f), mask); registry.Register(target);
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var context = new WeaponExecutionContext(default, root.transform, null, null, null, null, library, 0, 1);
+
+            ward.Tick(.02f, context);
+            var presenter = ward.WardPresenterForTests;
+            target.MoveTo(new Float2(1.2f, .6f));
+            ward.Tick(.02f, context);
+
+            Assert.That(presenter.CrossingCountForTests, Is.EqualTo(1));
+            Assert.That(presenter.LastCrossingContactForTests.x, Is.GreaterThan(0f));
+            ward.Dispose(); runtime.Dispose(); Object.DestroyImmediate(library);
+        }
+
+        [Test]
+        public void JangseungSetRetirementClearsPersistentPostsAndRopes()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0f, 1);
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var context = new WeaponExecutionContext(default, root.transform, null, null, null, null, library, 0, 1);
+
+            ward.Tick(.02f, context);
+            var presenter = ward.WardPresenterForTests;
+            ward.Reset();
+
+            Assert.That(presenter.ActiveSetCountForTests, Is.Zero);
+            runtime.Dispose(); Object.DestroyImmediate(library);
+        }
+
+        [Test]
+        public void WeaponRuntimePassesTheJangseungVisualLibraryToRegisteredWards()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0f, 1);
+            runtime.SetJangseungGeumjulVisualLibrary(library);
+            runtime.Register(ward);
+
+            runtime.Tick(.02f, Vector2.zero, root.transform, null, 0);
+
+            Assert.That(ward.WardPresenterForTests, Is.Not.Null);
+            runtime.Dispose(); Object.DestroyImmediate(library);
         }
 
         [Test]
