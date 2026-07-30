@@ -1041,6 +1041,7 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(presenter.LastCrossingContactForTests.x, Is.GreaterThan(0f));
             Assert.That(presenter.IsSegmentFlashingForTests(1, 0), Is.True);
             Assert.That(Enumerable.Range(1, 3).All(index => !presenter.IsSegmentFlashingForTests(1, index)), Is.True);
+            Assert.That(ward.HasExactlyOneFlashingBoundaryForCapture, Is.True);
             for (var index = 0; index < 4; index++) presenter.Tick(.04f);
             CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, presenter.CrossingFrameIndicesForTests.Distinct());
             CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, presenter.DustFrameIndicesForTests.Distinct());

@@ -69,6 +69,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActivePostCount { get { var count = 0; foreach (var set in sets) count += set.Posts.Count; return count; } }
         public int EvictedWardSetCount { get; private set; }
         public int CompletedWardSetCount { get { var count = 0; foreach (var set in sets) if (set.IsCompleted) count++; return count; } }
+        public bool HasExactlyOneFlashingBoundaryForCapture => wardPresenter != null && wardPresenter.HasExactlyOneFlashingSegmentForCapture;
 #if UNITY_INCLUDE_TESTS
         public float FirstWardVisualRiseForTests => sets.Count > 0 ? sets[0].FirstPostRise : -1f;
         public IReadOnlyList<int> FirstPostRiseFrameSequenceForTests => firstPostRiseFrameSequenceForTests;

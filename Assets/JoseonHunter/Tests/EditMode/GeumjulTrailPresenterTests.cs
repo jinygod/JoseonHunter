@@ -17,7 +17,7 @@ namespace JoseonHunter.Tests.EditMode
                 presenter.Configure(CreateVisualLibrary(), presenter.transform, 4);
                 presenter.SetTrail(BuildTrail(90, .14f), .48f);
 
-                Assert.That(presenter.ActiveKnotCountForTests, Is.LessThanOrEqualTo(18));
+                Assert.That(presenter.ActiveKnotCountForTests, Is.LessThanOrEqualTo(10));
                 Assert.That(presenter.HasAnchorForTests, Is.True);
                 Assert.That(presenter.IsClosureReadyForTests, Is.True);
                 Assert.That(presenter.AnchorWorldSizeForTests, Is.LessThanOrEqualTo(.42f));

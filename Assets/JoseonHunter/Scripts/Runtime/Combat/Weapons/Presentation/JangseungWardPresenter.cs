@@ -49,6 +49,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         }
         public bool IsSegmentFlashingForTests(int setId, int segmentIndex) =>
             activeSets.TryGetValue(setId, out var set) && set.IsSegmentFlashing(segmentIndex);
+        public bool HasExactlyOneFlashingSegmentForCapture
+        {
+            get
+            {
+                var flashingSegments = 0;
+                foreach (var set in activeSets.Values)
+                {
+                    flashingSegments += set.FlashingSegmentCount;
+                    if (flashingSegments > 1) return false;
+                }
+
+                return flashingSegments == 1;
+            }
+        }
         private readonly List<int> crossingFrameIndicesForTests = new List<int>();
         private readonly List<int> dustFrameIndicesForTests = new List<int>();
 
@@ -258,6 +272,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             }
 
             public bool IsSegmentFlashing(int index) => index >= 0 && index < ropeFlashRemaining.Count && ropeFlashRemaining[index] > 0f;
+            public int FlashingSegmentCount
+            {
+                get
+                {
+                    var count = 0;
+                    foreach (var remaining in ropeFlashRemaining) if (remaining > 0f) count++;
+                    return count;
+                }
+            }
 
             public void Clear()
             {

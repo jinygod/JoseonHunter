@@ -370,7 +370,17 @@ namespace JoseonHunter.Editor.Scenes
                     stageStartedAt = EditorApplication.timeSinceStartup;
                     break;
                 case CaptureStage.MeaningfulPhase:
-                    if (TryCaptureReadabilityScenario()) break;
+                    if (currentCase.Scenario != ReadabilityScenario.None)
+                    {
+                        if (TryCaptureReadabilityScenario()) break;
+                        if (elapsed >= MeaningfulPhaseTimeoutSeconds)
+                        {
+                            throw new TimeoutException(
+                                $"Readability scenario '{currentCase.Scenario}' did not satisfy its exact capture predicate; no PNG was written.");
+                        }
+
+                        break;
+                    }
                     var predicateKind = CapturePhasePolicy.PredicateFor(currentCase);
                     var predicateSatisfied = IsRequiredPhaseActive(predicateKind);
                     var earliestCapture = predicateKind == CapturePredicateKind.NearPlayerPresentation
@@ -562,6 +572,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void AdvanceJangseungCrossingScenario()
         {
+            if (stage != CaptureStage.MeaningfulPhase) return;
             var boundary = Object.FindObjectsByType<LineRenderer>(FindObjectsSortMode.None)
                 .FirstOrDefault(line => line.gameObject.name == "Jangseung Ward Boundary" && line.gameObject.activeInHierarchy);
             if (boundary == null || boundary.positionCount < 2 || readabilityStep >= 2) return;
@@ -582,8 +593,8 @@ namespace JoseonHunter.Editor.Scenes
             switch (currentCase.Scenario)
             {
                 case ReadabilityScenario.JangseungCrossing:
-                    if (!Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None).Any(renderer =>
-                            renderer.gameObject.name == "Weapon Transient Visual" && renderer.enabled && renderer.gameObject.activeInHierarchy)) return false;
+                    if (ExecutorForCapture<JoseonHunter.Runtime.Combat.Weapons.JangseungWardExecutor>(WeaponId.JangseungWard)
+                        ?.HasExactlyOneFlashingBoundaryForCapture != true) return false;
                     CaptureAndAdvance();
                     return true;
                 case ReadabilityScenario.GeumjulClosureReady:
