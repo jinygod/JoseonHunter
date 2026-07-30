@@ -10,10 +10,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
     public sealed class JangseungWardPresenter : IDisposable
     {
         private const int MaximumPooledSets = 4;
+        private const int MaximumFrameSequences = 16;
+        private const float AccentFrameDuration = .04f;
         private readonly Dictionary<int, SetVisual> activeSets = new Dictionary<int, SetVisual>();
         private readonly Stack<SetVisual> pooledSets = new Stack<SetVisual>();
         private readonly WeaponTransientVisualPool crossingPool;
         private readonly WeaponTransientVisualPool dustPool;
+        private readonly List<FrameSequence> crossingSequences = new List<FrameSequence>();
+        private readonly List<FrameSequence> dustSequences = new List<FrameSequence>();
         private readonly Transform root;
         private readonly JangseungGeumjulVisualLibrary library;
         private readonly int sortingOrder;
@@ -31,6 +35,22 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         public int ActiveSetCountForTests => activeSets.Count;
         public int CrossingCountForTests { get; private set; }
         public Vector2 LastCrossingContactForTests { get; private set; }
+        public IReadOnlyList<int> CrossingFrameIndicesForTests => crossingFrameIndicesForTests;
+        public IReadOnlyList<int> DustFrameIndicesForTests => dustFrameIndicesForTests;
+        public int ActiveCrossingVisualCountForTests => crossingPool.ActiveCount;
+        public int ActiveDustVisualCountForTests => dustPool.ActiveCount;
+        public int ActiveKnotVariantCountForTests
+        {
+            get { var count = 0; foreach (var set in activeSets.Values) count += set.ActiveKnotVariantCount; return count; }
+        }
+        public bool PooledPersistentVisualsAreInactiveForTests
+        {
+            get { foreach (var set in pooledSets) if (!set.AllVisualsInactive) return false; return true; }
+        }
+        public bool IsSegmentFlashingForTests(int setId, int segmentIndex) =>
+            activeSets.TryGetValue(setId, out var set) && set.IsSegmentFlashing(segmentIndex);
+        private readonly List<int> crossingFrameIndicesForTests = new List<int>();
+        private readonly List<int> dustFrameIndicesForTests = new List<int>();
 
         public void ShowSet(int setId, IReadOnlyList<Float2> posts, Sprite postSprite)
         {
@@ -50,8 +70,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         {
             if (disposed || !activeSets.TryGetValue(setId, out var set)) return;
             set.FlashOnly(segmentIndex, .12f);
-            crossingPool.Play(FirstFrame(library != null ? library.JangseungCrossingFrames : null), contact, Quaternion.identity,
-                Vector3.one * .85f, Color.white, .04f, sortingOrder + 3);
+            StartSequence(crossingSequences, crossingPool, library != null ? library.JangseungCrossingFrames : null,
+                contact, Vector3.one * .85f, Color.white, sortingOrder + 3, crossingFrameIndicesForTests);
             CrossingCountForTests++;
             LastCrossingContactForTests = contact;
         }
@@ -61,6 +81,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             if (disposed) return;
             crossingPool.Tick(deltaTime);
             dustPool.Tick(deltaTime);
+            AdvanceSequences(crossingSequences, crossingPool, deltaTime, crossingFrameIndicesForTests);
+            AdvanceSequences(dustSequences, dustPool, deltaTime, dustFrameIndicesForTests);
             foreach (var set in activeSets.Values) set.TickFlash(deltaTime);
         }
 
@@ -91,33 +113,84 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         private void Update(SetVisual set, IReadOnlyList<Float2> posts, Sprite postSprite)
         {
             set.Update(posts, postSprite, library != null ? library.GeumjulRopeTexture : null,
-                library != null ? library.GeumjulAnchor : null);
+                library != null ? library.GeumjulAnchor : null, library != null ? library.GeumjulKnotVariants : null);
         }
 
         private void PlayDust(IReadOnlyList<Float2> posts)
         {
-            var dust = FirstFrame(library != null ? library.JangseungDustFrames : null);
-            if (dust == null || posts == null) return;
+            if (posts == null) return;
             foreach (var post in posts)
-                dustPool.Play(dust, new Vector3(post.X, post.Y, 0f), Quaternion.identity, Vector3.one * .7f,
-                    new Color(1f, .86f, .52f, .75f), .1f, sortingOrder + 2);
+                StartSequence(dustSequences, dustPool, library != null ? library.JangseungDustFrames : null,
+                    new Vector2(post.X, post.Y), Vector3.one * .7f, new Color(1f, .86f, .52f, .75f), sortingOrder + 2,
+                    dustFrameIndicesForTests);
         }
 
-        private static Sprite FirstFrame(Sprite[] frames) => frames != null && frames.Length > 0 ? frames[0] : null;
+        private static void StartSequence(List<FrameSequence> sequences, WeaponTransientVisualPool pool, Sprite[] frames,
+            Vector2 position, Vector3 scale, Color color, int order, List<int> indices)
+        {
+            if (frames == null || frames.Length == 0 || sequences.Count >= MaximumFrameSequences) return;
+            pool.Play(frames[0], position, Quaternion.identity, scale, color, AccentFrameDuration, order);
+            indices.Add(0);
+            sequences.Add(new FrameSequence(frames, position, scale, color, order));
+        }
+
+        private static void AdvanceSequences(List<FrameSequence> sequences, WeaponTransientVisualPool pool, float deltaTime, List<int> indices)
+        {
+            for (var index = sequences.Count - 1; index >= 0; index--)
+            {
+                var sequence = sequences[index];
+                sequence.Remaining -= Mathf.Max(0f, deltaTime);
+                while (sequence.Remaining <= 0f && sequence.NextFrame < sequence.Frames.Length)
+                {
+                    pool.Play(sequence.Frames[sequence.NextFrame], sequence.Position, Quaternion.identity, sequence.Scale, sequence.Color, AccentFrameDuration, sequence.Order);
+                    indices.Add(sequence.NextFrame++);
+                    sequence.Remaining += AccentFrameDuration;
+                }
+                if (sequence.NextFrame >= sequence.Frames.Length && sequence.Remaining <= 0f) sequences.RemoveAt(index);
+                else sequences[index] = sequence;
+            }
+        }
+
+        private struct FrameSequence
+        {
+            public FrameSequence(Sprite[] frames, Vector2 position, Vector3 scale, Color color, int order)
+            { Frames = frames; Position = position; Scale = scale; Color = color; Order = order; NextFrame = 1; Remaining = AccentFrameDuration; }
+            public Sprite[] Frames; public Vector2 Position; public Vector3 Scale; public Color Color; public int Order; public int NextFrame; public float Remaining;
+        }
 
         private sealed class SetVisual : IDisposable
         {
             private readonly Transform root;
             private readonly int sortingOrder;
             private readonly List<SpriteRenderer> posts = new List<SpriteRenderer>();
+            private readonly List<SpriteRenderer> knots = new List<SpriteRenderer>();
             private readonly List<LineRenderer> ropes = new List<LineRenderer>();
             private SpriteRenderer seal;
             private Material ropeMaterial;
-            private float flashRemaining;
+            private readonly List<float> ropeFlashRemaining = new List<float>();
+            public bool AllVisualsInactive
+            {
+                get
+                {
+                    foreach (var post in posts) if (post.gameObject.activeSelf) return false;
+                    foreach (var knot in knots) if (knot.gameObject.activeSelf) return false;
+                    foreach (var rope in ropes) if (rope.gameObject.activeSelf) return false;
+                    return seal == null || !seal.gameObject.activeSelf;
+                }
+            }
+            public int ActiveKnotVariantCount
+            {
+                get
+                {
+                    var variants = new HashSet<Sprite>();
+                    foreach (var knot in knots) if (knot.gameObject.activeSelf && knot.sprite != null) variants.Add(knot.sprite);
+                    return variants.Count;
+                }
+            }
 
             public SetVisual(Transform root, int sortingOrder) { this.root = root; this.sortingOrder = sortingOrder; }
 
-            public void Update(IReadOnlyList<Float2> positions, Sprite postSprite, Texture2D ropeTexture, Sprite sealSprite)
+            public void Update(IReadOnlyList<Float2> positions, Sprite postSprite, Texture2D ropeTexture, Sprite sealSprite, Sprite[] knotVariants)
             {
                 var count = positions != null ? positions.Count : 0;
                 Ensure(count, ropeTexture);
@@ -128,9 +201,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
                     posts[index].sprite = postSprite;
                     posts[index].transform.position = position;
                     posts[index].gameObject.SetActive(postSprite != null);
+                    knots[index].sprite = knotVariants != null && knotVariants.Length > 0 ? knotVariants[index % knotVariants.Length] : null;
+                    knots[index].transform.position = position;
+                    knots[index].gameObject.SetActive(knots[index].sprite != null);
                     center += (Vector2)position;
                 }
                 for (var index = count; index < posts.Count; index++) posts[index].gameObject.SetActive(false);
+                for (var index = count; index < knots.Count; index++) knots[index].gameObject.SetActive(false);
                 var segmentCount = count == 2 ? 1 : count;
                 for (var index = 0; index < ropes.Count; index++)
                 {
@@ -148,27 +225,35 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
 
             public void FlashOnly(int segmentIndex, float duration)
             {
-                if (segmentIndex >= 0 && segmentIndex < ropes.Count) flashRemaining = Mathf.Max(flashRemaining, duration);
+                if (segmentIndex >= 0 && segmentIndex < ropeFlashRemaining.Count)
+                    ropeFlashRemaining[segmentIndex] = Mathf.Max(ropeFlashRemaining[segmentIndex], duration);
             }
 
             public void TickFlash(float deltaTime)
             {
-                flashRemaining = Mathf.Max(0f, flashRemaining - Mathf.Max(0f, deltaTime));
-                var color = flashRemaining > 0f ? new Color(1f, .93f, .55f, .95f) : new Color(.92f, .55f, .16f, .7f);
-                foreach (var rope in ropes) rope.startColor = rope.endColor = color;
+                for (var index = 0; index < ropes.Count; index++)
+                {
+                    ropeFlashRemaining[index] = Mathf.Max(0f, ropeFlashRemaining[index] - Mathf.Max(0f, deltaTime));
+                    var color = ropeFlashRemaining[index] > 0f ? new Color(1f, .93f, .55f, .95f) : new Color(.92f, .55f, .16f, .7f);
+                    ropes[index].startColor = ropes[index].endColor = color;
+                }
             }
+
+            public bool IsSegmentFlashing(int index) => index >= 0 && index < ropeFlashRemaining.Count && ropeFlashRemaining[index] > 0f;
 
             public void Clear()
             {
                 foreach (var post in posts) post.gameObject.SetActive(false);
+                foreach (var knot in knots) knot.gameObject.SetActive(false);
                 foreach (var rope in ropes) rope.gameObject.SetActive(false);
                 if (seal != null) seal.gameObject.SetActive(false);
-                flashRemaining = 0f;
+                for (var index = 0; index < ropeFlashRemaining.Count; index++) ropeFlashRemaining[index] = 0f;
             }
 
             public void Dispose()
             {
                 foreach (var post in posts) if (post != null) DestroyObject(post.gameObject);
+                foreach (var knot in knots) if (knot != null) DestroyObject(knot.gameObject);
                 foreach (var rope in ropes) if (rope != null) DestroyObject(rope.gameObject);
                 if (seal != null) DestroyObject(seal.gameObject);
                 if (ropeMaterial != null)
@@ -192,8 +277,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
                     ropeMaterial.mainTexture = ropeTexture;
                 }
                 while (posts.Count < count) posts.Add(CreateSprite("Jangseung Ward Post", sortingOrder + 2));
+                while (knots.Count < count) knots.Add(CreateSprite("Jangseung Ward Knot", sortingOrder + 1));
                 var segmentCount = count == 2 ? 1 : count;
-                while (ropes.Count < segmentCount) ropes.Add(CreateRope());
+                while (ropes.Count < segmentCount) { ropes.Add(CreateRope()); ropeFlashRemaining.Add(0f); }
                 if (seal == null) { seal = CreateSprite("Jangseung Ward Seal", sortingOrder - 1); seal.color = new Color(1f, .76f, .3f, .16f); }
             }
 

@@ -1029,7 +1029,7 @@ namespace JoseonHunter.Tests.EditMode
             var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
             var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 4, 1, 0f, 5);
             var target = new TestTarget(1, new Float2(0f, -1.2f), mask); registry.Register(target);
-            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var library = CreateJangseungVisualLibrary(out var visualAssets);
             var context = new WeaponExecutionContext(default, root.transform, null, null, null, null, library, 0, 1);
 
             ward.Tick(.02f, context);
@@ -1039,7 +1039,15 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(presenter.CrossingCountForTests, Is.EqualTo(1));
             Assert.That(presenter.LastCrossingContactForTests.x, Is.GreaterThan(0f));
-            ward.Dispose(); runtime.Dispose(); Object.DestroyImmediate(library);
+            Assert.That(presenter.IsSegmentFlashingForTests(1, 0), Is.True);
+            Assert.That(Enumerable.Range(1, 3).All(index => !presenter.IsSegmentFlashingForTests(1, index)), Is.True);
+            for (var index = 0; index < 4; index++) presenter.Tick(.04f);
+            CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, presenter.CrossingFrameIndicesForTests.Distinct());
+            CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, presenter.DustFrameIndicesForTests.Distinct());
+            Assert.That(presenter.ActiveCrossingVisualCountForTests, Is.Zero);
+            Assert.That(presenter.ActiveDustVisualCountForTests, Is.Zero);
+            Assert.That(presenter.ActiveKnotVariantCountForTests, Is.EqualTo(2));
+            ward.Dispose(); runtime.Dispose(); DestroyVisualAssets(library, visualAssets);
         }
 
         [Test]
@@ -1049,7 +1057,7 @@ namespace JoseonHunter.Tests.EditMode
             var registry = new CombatTargetRegistry();
             var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
             var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 2, 1, 0f, 1);
-            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var library = CreateJangseungVisualLibrary(out var visualAssets);
             var context = new WeaponExecutionContext(default, root.transform, null, null, null, null, library, 0, 1);
 
             ward.Tick(.02f, context);
@@ -1057,7 +1065,8 @@ namespace JoseonHunter.Tests.EditMode
             ward.Reset();
 
             Assert.That(presenter.ActiveSetCountForTests, Is.Zero);
-            runtime.Dispose(); Object.DestroyImmediate(library);
+            Assert.That(presenter.PooledPersistentVisualsAreInactiveForTests, Is.True);
+            runtime.Dispose(); DestroyVisualAssets(library, visualAssets);
         }
 
         [Test]
@@ -1272,6 +1281,30 @@ namespace JoseonHunter.Tests.EditMode
             var result = 0;
             foreach (var confirmed in events) if (confirmed.Phase == phase) result++;
             return result;
+        }
+
+        private static JangseungGeumjulVisualLibrary CreateJangseungVisualLibrary(out List<UnityEngine.Object> assets)
+        {
+            var createdAssets = new List<UnityEngine.Object>();
+            assets = createdAssets;
+            var texture = new Texture2D(10, 1); createdAssets.Add(texture);
+            Sprite SpriteAt(int index)
+            {
+                var sprite = Sprite.Create(texture, new Rect(index, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+                createdAssets.Add(sprite);
+                return sprite;
+            }
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            library.ConfigureForImport(null, SpriteAt(0), new[] { SpriteAt(1), SpriteAt(2) },
+                new Sprite[0], new[] { SpriteAt(3), SpriteAt(4), SpriteAt(5), SpriteAt(6) },
+                new[] { SpriteAt(7), SpriteAt(8), SpriteAt(9), SpriteAt(0) });
+            return library;
+        }
+
+        private static void DestroyVisualAssets(JangseungGeumjulVisualLibrary library, IEnumerable<UnityEngine.Object> assets)
+        {
+            Object.DestroyImmediate(library);
+            foreach (var asset in assets) Object.DestroyImmediate(asset);
         }
 
         private readonly struct Fixture

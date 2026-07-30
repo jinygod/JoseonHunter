@@ -87,7 +87,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
 
         private static void Destroy(SpriteRenderer renderer)
         {
-            if (renderer != null) UnityEngine.Object.Destroy(renderer.gameObject);
+            if (renderer == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(renderer.gameObject);
+            else UnityEngine.Object.DestroyImmediate(renderer.gameObject);
         }
 
         private struct Entry
