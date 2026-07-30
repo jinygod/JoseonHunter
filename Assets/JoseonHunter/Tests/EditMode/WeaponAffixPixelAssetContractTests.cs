@@ -104,6 +104,30 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(catalog.HasRequiredUiSprites, Is.True);
         }
 
+        [Test]
+        public void Appraisal_scroll_kit_uses_one_crisp_sprite_per_png_and_is_wired()
+        {
+            var paths = new[]
+            {
+                WeaponAffixPixelAssetImporter.AppraisalScrollPath,
+                WeaponAffixPixelAssetImporter.AppraisalRollerPath,
+                WeaponAffixPixelAssetImporter.PotentialRitualSealPath,
+                WeaponAffixPixelAssetImporter.RareAppraisalStampPath
+            };
+            foreach (var path in paths)
+            {
+                AssertPixelImport(path);
+                Assert.That(AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToArray(),
+                    Has.Length.EqualTo(1), path);
+            }
+
+            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+            Assert.That(catalog.AppraisalScroll, Is.Not.Null);
+            Assert.That(catalog.AppraisalRoller, Is.Not.Null);
+            Assert.That(catalog.PotentialRitualSeal, Is.Not.Null);
+            Assert.That(catalog.RareAppraisalStamp, Is.Not.Null);
+        }
+
         private static void AssertPixelImport(string path)
         {
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;

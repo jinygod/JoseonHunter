@@ -66,6 +66,11 @@ namespace JoseonHunter.Content.Weapons
         [SerializeField] private Sprite jackpotBurst1;
         [SerializeField] private Sprite jackpotBurst2;
         [SerializeField] private Sprite jackpotBurst3;
+        [Header("PixelLab weapon appraisal scroll")]
+        [SerializeField] private Sprite appraisalScroll;
+        [SerializeField] private Sprite appraisalRoller;
+        [SerializeField] private Sprite potentialRitualSeal;
+        [SerializeField] private Sprite rareAppraisalStamp;
 
         public Sprite SpriteForAffix(WeaponAffixTier tier) =>
             (rarityFrames ?? Array.Empty<RarityFrame>()).FirstOrDefault(frame => frame.Matches(tier)).Sprite;
@@ -86,6 +91,16 @@ namespace JoseonHunter.Content.Weapons
         public Sprite ReelSymbolPotential => reelSymbolPotential;
         public Sprite ReelStopFlash => reelStopFlash;
         public Sprite JackpotBurstFor(int lines) => lines == 1 ? jackpotBurst1 : lines == 2 ? jackpotBurst2 : jackpotBurst3;
+        public Sprite AppraisalScroll => appraisalScroll != null ? appraisalScroll : slotMachineShell;
+        public Sprite AppraisalRoller => appraisalRoller;
+        public Sprite PotentialRitualSeal => potentialRitualSeal != null
+            ? potentialRitualSeal
+            : JackpotBurstFor(1);
+        public Sprite RareAppraisalStamp => rareAppraisalStamp != null
+            ? rareAppraisalStamp
+            : reelSymbolRarity;
+        public bool HasAppraisalPolishSprites => appraisalScroll != null && appraisalRoller != null &&
+            potentialRitualSeal != null && rareAppraisalStamp != null;
 
         public bool HasRequiredUiSprites => SlotMachineShell != null && ReelWindow != null &&
             LockedPotentialSlot != null && ReelSymbolStat != null && ReelSymbolRarity != null &&
@@ -154,6 +169,18 @@ namespace JoseonHunter.Content.Weapons
             jackpotBurst1 = importedBurst1;
             jackpotBurst2 = importedBurst2;
             jackpotBurst3 = importedBurst3;
+        }
+
+        public void SetAppraisalKitForImport(
+            Sprite importedScroll,
+            Sprite importedRoller,
+            Sprite importedPotentialRitualSeal,
+            Sprite importedRareAppraisalStamp)
+        {
+            appraisalScroll = importedScroll;
+            appraisalRoller = importedRoller;
+            potentialRitualSeal = importedPotentialRitualSeal;
+            rareAppraisalStamp = importedRareAppraisalStamp;
         }
 
 #if UNITY_INCLUDE_TESTS

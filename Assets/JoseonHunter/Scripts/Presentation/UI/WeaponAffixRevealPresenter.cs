@@ -24,10 +24,16 @@ namespace JoseonHunter.Presentation.UI
         }
 
         private const int ReelCount = 4;
+        private const float AppraisalWidth = 1040f;
+        private const float AppraisalHeight = 776f;
         private GameObject root;
         private CanvasGroup group;
         private RectTransform panelRect;
+        private RectTransform scrollViewport;
         private Image shell;
+        private Image topRoller;
+        private Image bottomRoller;
+        private Image rareStamp;
         private Image rarityFrame;
         private Image burst;
         private TextMeshProUGUI title;
@@ -35,6 +41,7 @@ namespace JoseonHunter.Presentation.UI
         private TextMeshProUGUI weaponName;
         private TextMeshProUGUI weaponLevel;
         private TextMeshProUGUI weaponBehavior;
+        private TextMeshProUGUI accumulatedAffixSummary;
         private Image weaponIcon;
         private Button confirmButton;
         private TextMeshProUGUI confirmLabel;
@@ -49,6 +56,7 @@ namespace JoseonHunter.Presentation.UI
         private WeaponAppraisalViewModel activeModel;
         private WeaponAffixPresentationCatalogAsset activeCatalog;
         private WeaponAffixRevealTimeline timeline;
+        private WeaponAppraisalRevealProfile revealProfile;
         private float elapsed;
         private float finishAt;
         private float skipSourceElapsed;
@@ -87,6 +95,10 @@ namespace JoseonHunter.Presentation.UI
         public float DetailFontSize => detail == null ? 0f : detail.fontSize;
         public Vector2 PanelSize => panelRect == null ? Vector2.zero : panelRect.sizeDelta;
         public string DisplayedAffixText => detail == null ? string.Empty : detail.text;
+        public string AccumulatedSummary => accumulatedAffixSummary == null
+            ? string.Empty
+            : accumulatedAffixSummary.text;
+        public float ScrollOpenFraction { get; private set; } = 1f;
         public float PotentialRowY(int index) =>
             index < 0 || index >= 3 || reelWindows[index + 1] == null
                 ? float.NegativeInfinity
@@ -124,7 +136,8 @@ namespace JoseonHunter.Presentation.UI
             elapsed = 0f;
             skipActive = false;
             confirmRequested = false;
-            timeline = WeaponAffixRevealTimeline.For(activeResult);
+            revealProfile = WeaponAppraisalPresentation.ProfileFor(activeModel);
+            timeline = WeaponAffixRevealTimeline.For(activeModel);
             finishAt = timeline.Duration;
             TensionScale = 1f;
             VisiblePotentialCount = 0;
@@ -174,7 +187,13 @@ namespace JoseonHunter.Presentation.UI
             readOnlyDetail = true;
             detailPreviousTimeScale = Time.timeScale;
             Time.timeScale = 0f;
-            shell.sprite = activeCatalog.SlotMachineShell;
+            shell.sprite = activeCatalog.AppraisalScroll;
+            topRoller.sprite = activeCatalog.AppraisalRoller;
+            bottomRoller.sprite = activeCatalog.AppraisalRoller;
+            topRoller.enabled = topRoller.sprite != null;
+            bottomRoller.enabled = bottomRoller.sprite != null;
+            rareStamp.enabled = false;
+            SetScrollOpen(1f);
             weaponIcon.sprite = weapon.Icon != null ? weapon.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
             weaponName.text = weapon.DisplayName;
@@ -184,6 +203,7 @@ namespace JoseonHunter.Presentation.UI
             detail.text = string.IsNullOrEmpty(weapon.GeneralAffixSummary)
                 ? "추가옵션 없음"
                 : weapon.GeneralAffixSummary;
+            accumulatedAffixSummary.text = string.Empty;
             rarityFrame.enabled = false;
             finalSymbols[0].enabled = false;
             burst.enabled = false;
@@ -252,6 +272,9 @@ namespace JoseonHunter.Presentation.UI
 
         private IEnumerator RevealRoutine()
         {
+            // Keep the fully composed starting pose for one frame so the scroll
+            // visibly begins closed instead of skipping ahead on a slow frame.
+            yield return null;
             while (elapsed < finishAt)
             {
                 elapsed += Time.unscaledDeltaTime;
@@ -287,6 +310,7 @@ namespace JoseonHunter.Presentation.UI
         private void UpdateVisualState(float time)
         {
             Phase = PhaseAt(time);
+            SetScrollOpen(WeaponAppraisalPresentation.ScrollOpenAt(revealProfile, time));
             var opening = Mathf.Clamp01(time / .10f);
             group.alpha = Phase == RevealPhase.Opening ? EaseOutCubic(opening) : 1f;
 
@@ -331,6 +355,8 @@ namespace JoseonHunter.Presentation.UI
             var jackpotReady = activeResult.NewPotentials.Count > 0 &&
                 VisiblePotentialCount == activeResult.NewPotentials.Count;
             burst.enabled = jackpotReady;
+            rareStamp.enabled = activeResult.General.Tier != WeaponAffixTier.Standard &&
+                time >= timeline.AffixStopsAt;
             if (jackpotReady)
             {
                 var pulse = 1f + Mathf.Sin((time - timeline.ReadStartsAt) * 18f) *
@@ -398,6 +424,20 @@ namespace JoseonHunter.Presentation.UI
             return 1f + Mathf.Sin(progress * Mathf.PI) * .045f;
         }
 
+        private void SetScrollOpen(float fraction)
+        {
+            ScrollOpenFraction = Mathf.Clamp01(fraction);
+            if (scrollViewport == null)
+                return;
+            var visibleHeight = Mathf.Max(8f, AppraisalHeight * ScrollOpenFraction);
+            scrollViewport.sizeDelta = new Vector2(AppraisalWidth, visibleHeight);
+            var rollerY = Mathf.Max(0f, visibleHeight * .5f - 16f);
+            if (topRoller != null)
+                topRoller.rectTransform.anchoredPosition = new Vector2(0f, rollerY);
+            if (bottomRoller != null)
+                bottomRoller.rectTransform.anchoredPosition = new Vector2(0f, -rollerY);
+        }
+
         private Vector2 JackpotShakeAt(float time)
         {
             if (activeResult.NewPotentials.Count == 0 || time < timeline.ReadStartsAt ||
@@ -410,7 +450,12 @@ namespace JoseonHunter.Presentation.UI
 
         private void BindSprites()
         {
-            shell.sprite = activeCatalog.SlotMachineShell;
+            shell.sprite = activeCatalog.AppraisalScroll;
+            topRoller.sprite = activeCatalog.AppraisalRoller;
+            bottomRoller.sprite = activeCatalog.AppraisalRoller;
+            topRoller.enabled = topRoller.sprite != null;
+            bottomRoller.enabled = bottomRoller.sprite != null;
+            rareStamp.sprite = activeCatalog.RareAppraisalStamp;
             confirmButton.image.sprite = activeCatalog.ReelWindow;
             rarityFrame.sprite = activeCatalog.SpriteForAffix(activeResult.General.Tier);
             finalSymbols[0].sprite = activeResult.General.Tier == WeaponAffixTier.Standard
@@ -448,13 +493,18 @@ namespace JoseonHunter.Presentation.UI
             }
 
             burst.sprite = activeResult.NewPotentials.Count > 0
-                ? activeCatalog.JackpotBurstFor(activeResult.NewPotentials.Count)
+                ? activeCatalog.PotentialRitualSeal
                 : null;
             title.text = TierName(activeResult.General.Tier);
             detail.text = WeaponAffixValueFormatter.Describe(activeResult.General, 0);
             weaponName.text = activeModel.DisplayName;
-            weaponLevel.text = $"LEVEL {activeModel.Level} · 운명 감정";
+            weaponLevel.text = activeModel.IsNewAcquisition
+                ? $"LEVEL {activeModel.Level} · 신규 무기"
+                : $"LEVEL {activeModel.Level} · 강화 감정";
             weaponBehavior.text = activeModel.Behavior;
+            accumulatedAffixSummary.text = string.IsNullOrEmpty(activeModel.AccumulatedAffixSummary)
+                ? string.Empty
+                : "누적  " + activeModel.AccumulatedAffixSummary;
             weaponIcon.sprite = activeModel.Icon != null ? activeModel.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
         }
@@ -466,6 +516,8 @@ namespace JoseonHunter.Presentation.UI
             panelRect.localScale = Vector3.one * .94f;
             rarityFrame.enabled = false;
             burst.enabled = false;
+            rareStamp.enabled = false;
+            SetScrollOpen(WeaponAppraisalPresentation.ScrollOpenAt(revealProfile, 0f));
             title.gameObject.SetActive(true);
             detail.gameObject.SetActive(true);
             confirmButton.gameObject.SetActive(false);
@@ -513,11 +565,28 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             group = root.AddComponent<CanvasGroup>();
 
-            shell = RuntimeUiFactory.Image("PixelLab Appraisal Sheet", root.transform, Color.white);
-            panelRect = shell.rectTransform;
+            panelRect = RuntimeUiFactory.Rect("Weapon Appraisal Panel", root.transform);
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(.5f, .5f);
-            panelRect.sizeDelta = new Vector2(1040f, 820f);
+            panelRect.sizeDelta = new Vector2(AppraisalWidth, AppraisalHeight);
+
+            scrollViewport = RuntimeUiFactory.Rect("Scroll Reveal Viewport", panelRect);
+            scrollViewport.anchorMin = scrollViewport.anchorMax = new Vector2(.5f, .5f);
+            scrollViewport.sizeDelta = panelRect.sizeDelta;
+            scrollViewport.gameObject.AddComponent<RectMask2D>();
+
+            shell = RuntimeUiFactory.Image("PixelLab Appraisal Sheet", scrollViewport, Color.white);
+            shell.rectTransform.anchorMin = shell.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            shell.rectTransform.sizeDelta = panelRect.sizeDelta;
             shell.preserveAspect = false;
+
+            topRoller = RuntimeUiFactory.Image("Top Scroll Roller", panelRect, Color.white);
+            topRoller.rectTransform.anchorMin = topRoller.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            topRoller.rectTransform.sizeDelta = new Vector2(960f, 82f);
+            topRoller.preserveAspect = false;
+            bottomRoller = RuntimeUiFactory.Image("Bottom Scroll Roller", panelRect, Color.white);
+            bottomRoller.rectTransform.anchorMin = bottomRoller.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            bottomRoller.rectTransform.sizeDelta = new Vector2(960f, 82f);
+            bottomRoller.preserveAspect = false;
 
             weaponIcon = RuntimeUiFactory.Image("Weapon Icon", shell.transform, Color.white);
             weaponIcon.rectTransform.anchorMin = weaponIcon.rectTransform.anchorMax = new Vector2(.5f, .5f);
@@ -527,13 +596,13 @@ namespace JoseonHunter.Presentation.UI
             weaponName = Label("Weapon Name", shell.transform, new Vector2(35f, 318f),
                 new Vector2(720f, 48f), 34f, TextAlignmentOptions.Left);
             weaponName.fontStyle = FontStyles.Bold;
-            weaponName.color = new Color(.48f, .94f, .89f);
+            weaponName.color = new Color(.08f, .15f, .18f);
             weaponLevel = Label("Weapon Level", shell.transform, new Vector2(35f, 276f),
                 new Vector2(720f, 30f), 21f, TextAlignmentOptions.Left);
-            weaponLevel.color = new Color(.96f, .84f, .52f);
+            weaponLevel.color = new Color(.42f, .23f, .08f);
             weaponBehavior = Label("Weapon Behavior", shell.transform, new Vector2(35f, 236f),
                 new Vector2(720f, 42f), 20f, TextAlignmentOptions.Left);
-            weaponBehavior.color = new Color(.78f, .82f, .78f);
+            weaponBehavior.color = new Color(.24f, .27f, .24f);
 
             burst = RuntimeUiFactory.Image("Jackpot Burst", shell.transform, Color.white);
             burst.rectTransform.anchorMin = burst.rectTransform.anchorMax = new Vector2(.5f, .5f);
@@ -542,14 +611,25 @@ namespace JoseonHunter.Presentation.UI
             burst.preserveAspect = true;
             burst.transform.SetAsFirstSibling();
 
+            rareStamp = RuntimeUiFactory.Image("Rare Appraisal Stamp", shell.transform, Color.white);
+            rareStamp.rectTransform.anchorMin = rareStamp.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            rareStamp.rectTransform.anchoredPosition = new Vector2(402f, 266f);
+            rareStamp.rectTransform.sizeDelta = new Vector2(108f, 108f);
+            rareStamp.preserveAspect = true;
+
             title = Label("Affix Title", shell.transform, new Vector2(-170f, 158f),
                 new Vector2(560f, 36f), 24f, TextAlignmentOptions.Left);
             title.fontStyle = FontStyles.Bold;
-            title.color = new Color(1f, .84f, .38f);
+            title.color = new Color(.38f, .20f, .07f);
             detail = Label("Affix Detail", shell.transform, new Vector2(-170f, 105f),
                 new Vector2(560f, 62f), 42f, TextAlignmentOptions.Left);
             detail.fontStyle = FontStyles.Bold;
-            detail.color = new Color(1f, .88f, .42f);
+            detail.color = new Color(.50f, .10f, .08f);
+            accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
+                new Vector2(-80f, 60f), new Vector2(740f, 28f), 18f,
+                TextAlignmentOptions.Left);
+            accumulatedAffixSummary.fontStyle = FontStyles.Bold;
+            accumulatedAffixSummary.color = new Color(.12f, .28f, .28f);
 
             BuildReel(0, new Vector2(360f, 126f), new Vector2(170f, 112f), new Vector2(92f, 82f));
             rarityFrame = RuntimeUiFactory.Image("Affix Rarity Frame", finalSymbols[0].transform, Color.white);
@@ -569,13 +649,13 @@ namespace JoseonHunter.Presentation.UI
                     position + new Vector2(80f, 0f), new Vector2(600f, 48f), 23f,
                     TextAlignmentOptions.Left);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
-                potentialLabels[index].color = new Color(.88f, .95f, 1f);
+                potentialLabels[index].color = new Color(.10f, .16f, .22f);
             }
 
             confirmButton = RuntimeUiFactory.Button("Confirm Result", shell.transform, Color.white);
             var confirmRect = confirmButton.GetComponent<RectTransform>();
             confirmRect.anchorMin = confirmRect.anchorMax = new Vector2(.5f, .5f);
-            confirmRect.anchoredPosition = new Vector2(0f, -368f);
+            confirmRect.anchoredPosition = new Vector2(0f, -345f);
             confirmRect.sizeDelta = new Vector2(310f, 62f);
             confirmButton.image.preserveAspect = false;
             confirmButton.onClick.AddListener(OnConfirmButton);

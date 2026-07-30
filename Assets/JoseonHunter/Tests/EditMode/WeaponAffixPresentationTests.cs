@@ -44,6 +44,8 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(model.Behavior, Is.EqualTo("적을 관통하는 화살"));
             Assert.That(model.ExistingPotentialCount, Is.EqualTo(1));
             Assert.That(model.CurrentPotentials, Has.Count.EqualTo(2));
+            Assert.That(model.IsNewAcquisition, Is.False);
+            Assert.That(model.AccumulatedAffixSummary, Is.EqualTo("Damage +24%"));
         }
     }
 }

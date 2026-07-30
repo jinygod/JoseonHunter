@@ -6,12 +6,12 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WeaponAffixRevealTimelineTests
     {
-        [TestCase(WeaponAffixTier.Standard, 0, 2.36f)]
-        [TestCase(WeaponAffixTier.High, 0, 2.54f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 2.72f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.82f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 3.06f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 3.32f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 1.25f)]
+        [TestCase(WeaponAffixTier.High, 0, 1.45f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 1.55f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.10f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 2.28f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 2.40f)]
         public void Duration_matches_the_pacing_contract(WeaponAffixTier tier, int potentialCount, float expected)
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(tier, potentialCount));
@@ -30,12 +30,12 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void Reel_has_a_visible_fast_spin_and_deceleration_window()
+        public void Appraisal_has_a_readable_count_up_and_lock_window()
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(WeaponAffixTier.Standard, 0));
-            Assert.That(timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(1.18f));
+            Assert.That(timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(.4f));
             Assert.That(timeline.AffixStopsAt - timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(.3f));
-            Assert.That(timeline.Duration, Is.GreaterThanOrEqualTo(2.3f));
+            Assert.That(timeline.Duration, Is.GreaterThanOrEqualTo(1.2f));
         }
 
         [Test]

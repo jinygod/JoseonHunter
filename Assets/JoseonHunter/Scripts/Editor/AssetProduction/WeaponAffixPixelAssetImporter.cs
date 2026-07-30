@@ -18,6 +18,11 @@ namespace JoseonHunter.Editor.AssetProduction
         public const string PotentialPartsBMaskPath = "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/potential-parts-b-hit-mask.png";
         public const string CatalogPath = "Assets/JoseonHunter/Resources/WeaponAffixPresentationCatalog.asset";
         public const string MicroSlotRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot";
+        public const string AppraisalRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/Appraisal";
+        public const string AppraisalScrollPath = AppraisalRoot + "/appraisal_scroll.png";
+        public const string AppraisalRollerPath = AppraisalRoot + "/appraisal_roller.png";
+        public const string PotentialRitualSealPath = AppraisalRoot + "/potential_ritual_seal.png";
+        public const string RareAppraisalStampPath = AppraisalRoot + "/rare_appraisal_stamp.png";
 
         private const float PixelsPerUnit = 32f;
         private static readonly string[] SlotSpriteNames = { "reel_frame", "standard_frame", "high_frame", "perfect_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3", "rarity_flash" };
@@ -45,6 +50,12 @@ namespace JoseonHunter.Editor.AssetProduction
                          "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3"
                      })
                 ConfigureSprite(MicroSlotPath(slotPart));
+            foreach (var path in new[]
+                     {
+                         AppraisalScrollPath, AppraisalRollerPath,
+                         PotentialRitualSealPath, RareAppraisalStampPath
+                     })
+                ConfigureSprite(path);
             ConfigureAtlas(StatusSymbolsPath);
             ConfigureAtlas(PotentialPartsAPath);
             ConfigureAtlas(PotentialPartsBPath);
@@ -153,6 +164,11 @@ namespace JoseonHunter.Editor.AssetProduction
                 AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("jackpot_burst_1")),
                 AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("jackpot_burst_2")),
                 AssetDatabase.LoadAssetAtPath<Sprite>(MicroSlotPath("jackpot_burst_3")));
+            catalog.SetAppraisalKitForImport(
+                AssetDatabase.LoadAssetAtPath<Sprite>(AppraisalScrollPath),
+                AssetDatabase.LoadAssetAtPath<Sprite>(AppraisalRollerPath),
+                AssetDatabase.LoadAssetAtPath<Sprite>(PotentialRitualSealPath),
+                AssetDatabase.LoadAssetAtPath<Sprite>(RareAppraisalStampPath));
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }

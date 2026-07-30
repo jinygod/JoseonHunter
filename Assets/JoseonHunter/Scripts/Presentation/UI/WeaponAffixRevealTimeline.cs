@@ -65,6 +65,22 @@ namespace JoseonHunter.Presentation.UI
                 float.PositiveInfinity, float.PositiveInfinity, 1.06f, float.PositiveInfinity);
         }
 
+        public static WeaponAffixRevealTimeline For(WeaponAppraisalViewModel model)
+        {
+            if (model?.Result == null)
+                return default;
+            if (!model.HasWeaponContext)
+                return For(model.Result);
+            var profile = WeaponAppraisalPresentation.ProfileFor(model);
+            if (profile == WeaponAppraisalRevealProfile.FirstAcquisition)
+                return new WeaponAffixRevealTimeline(0, 1.30f, .42f, .78f, float.PositiveInfinity,
+                    float.PositiveInfinity, float.PositiveInfinity, 1.08f, float.PositiveInfinity);
+            if (profile != WeaponAppraisalRevealProfile.RepeatStandard)
+                return For(model.Result);
+            return new WeaponAffixRevealTimeline(0, .90f, .24f, .52f, float.PositiveInfinity,
+                float.PositiveInfinity, float.PositiveInfinity, .72f, float.PositiveInfinity);
+        }
+
         public float PotentialStopsAt(int index)
         {
             if (index < 0 || index >= potentialCount)

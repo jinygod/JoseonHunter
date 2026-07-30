@@ -17,7 +17,10 @@ namespace JoseonHunter.Presentation.UI
             Sprite icon,
             WeaponAffixRollResult result,
             IReadOnlyList<WeaponPotentialId> currentPotentials,
-            int existingPotentialCount)
+            int existingPotentialCount,
+            bool isNewAcquisition = false,
+            string accumulatedAffixSummary = null,
+            bool hasWeaponContext = false)
         {
             WeaponId = weaponId ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
@@ -27,6 +30,9 @@ namespace JoseonHunter.Presentation.UI
             Result = result;
             CurrentPotentials = currentPotentials ?? Array.Empty<WeaponPotentialId>();
             ExistingPotentialCount = Mathf.Clamp(existingPotentialCount, 0, CurrentPotentials.Count);
+            IsNewAcquisition = isNewAcquisition;
+            AccumulatedAffixSummary = accumulatedAffixSummary ?? string.Empty;
+            HasWeaponContext = hasWeaponContext;
         }
 
         public string WeaponId { get; }
@@ -37,6 +43,9 @@ namespace JoseonHunter.Presentation.UI
         public WeaponAffixRollResult Result { get; }
         public IReadOnlyList<WeaponPotentialId> CurrentPotentials { get; }
         public int ExistingPotentialCount { get; }
+        public bool IsNewAcquisition { get; }
+        public string AccumulatedAffixSummary { get; }
+        public bool HasWeaponContext { get; }
 
         public static WeaponAppraisalViewModel From(ProgressionRewardEvent reward, WeaponSlotView slot)
         {
@@ -51,7 +60,10 @@ namespace JoseonHunter.Presentation.UI
                 slot.Icon != null ? slot.Icon : reward.Icon,
                 result,
                 current,
-                Mathf.Max(0, current.Count - awardedCount));
+                Mathf.Max(0, current.Count - awardedCount),
+                reward.Kind == ProgressionRewardKind.NewWeapon,
+                slot.GeneralAffixSummary,
+                true);
         }
 
         public static WeaponAppraisalViewModel ForResult(WeaponAffixRollResult result) =>

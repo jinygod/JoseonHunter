@@ -54,6 +54,33 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator RepeatUpgradeOpensQuicklyAndShowsAccumulatedTotal()
+        {
+            var presenter = new GameObject("Repeat Appraisal Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.Play(Model(2, ProgressionRewardKind.WeaponLevel, WeaponAffixTier.Standard));
+
+            Assert.That(presenter.ScrollOpenFraction, Is.GreaterThan(.5f));
+            Assert.That(presenter.AccumulatedSummary, Does.Contain("Damage +24%"));
+            yield return new WaitForSecondsRealtime(.14f);
+            Assert.That(presenter.ScrollOpenFraction, Is.EqualTo(1f).Within(.01f));
+            Object.Destroy(presenter.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator NewWeaponUnfurlsFromTheCenter()
+        {
+            var presenter = new GameObject("New Weapon Appraisal Test").AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.Play(Model(1, ProgressionRewardKind.NewWeapon, WeaponAffixTier.Standard));
+
+            Assert.That(presenter.ScrollOpenFraction, Is.LessThan(.15f));
+            yield return new WaitForSecondsRealtime(.38f);
+            Assert.That(presenter.ScrollOpenFraction, Is.EqualTo(1f).Within(.01f));
+            Object.Destroy(presenter.gameObject);
+        }
+
+        [UnityTest]
         public IEnumerator Skip_is_idempotent_and_does_not_change_the_roll_result()
         {
             var presenter = new GameObject("Affix Reveal Test").AddComponent<WeaponAffixRevealPresenter>();
@@ -256,7 +283,35 @@ namespace JoseonHunter.Tests.PlayMode
             var sprite = Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f));
             var catalog = ScriptableObject.CreateInstance<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>();
             catalog.SetSlotKitForTests(sprite, sprite, sprite, sprite, sprite);
+            catalog.SetAppraisalKitForImport(sprite, sprite, sprite, sprite);
             return catalog;
+        }
+
+        private static WeaponAppraisalViewModel Model(
+            int level,
+            ProgressionRewardKind kind,
+            WeaponAffixTier tier)
+        {
+            var result = new WeaponAffixRollResult(
+                new WeaponAffixRoll(WeaponAffixStat.Damage, tier, 23.88d),
+                System.Array.Empty<WeaponPotentialId>());
+            var reward = new ProgressionRewardEvent(
+                WeaponId.HwandoFlyingBlade.Value,
+                WeaponId.HwandoFlyingBlade.Value,
+                level,
+                kind,
+                "Hwando Flying Blade",
+                "Level " + level,
+                null,
+                result);
+            var slot = new WeaponSlotView(
+                WeaponId.HwandoFlyingBlade.Value,
+                "Hwando Flying Blade",
+                level,
+                null,
+                "Damage +24%",
+                behavior: "Returning blade");
+            return WeaponAppraisalViewModel.From(reward, slot);
         }
 
         private static IEnumerator ChooseThroughVisibleCard(FirstPlayableController controller, UpgradeChoicePresenter choice, UpgradeOffer offer)

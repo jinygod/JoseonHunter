@@ -1,6 +1,7 @@
 using System;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
+using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 
 namespace JoseonHunter.Tests.EditMode
@@ -73,8 +74,61 @@ namespace JoseonHunter.Tests.EditMode
                 WeaponPotentialId.HwandoFlyingBladeDance)).Duration, Is.LessThanOrEqualTo(2.4f));
         }
 
+        [Test]
+        public void FirstAcquisitionUsesFullScrollReveal()
+        {
+            var model = Model(1, ProgressionRewardKind.NewWeapon, WeaponAffixTier.Standard);
+
+            Assert.That(WeaponAppraisalPresentation.ProfileFor(model),
+                Is.EqualTo(WeaponAppraisalRevealProfile.FirstAcquisition));
+            Assert.That(WeaponAppraisalPresentation.ScrollOpenAt(
+                WeaponAppraisalRevealProfile.FirstAcquisition, 0f), Is.LessThan(.15f));
+            Assert.That(WeaponAppraisalPresentation.ScrollOpenAt(
+                WeaponAppraisalRevealProfile.FirstAcquisition, .4f), Is.EqualTo(1f));
+            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(1.3f));
+        }
+
+        [Test]
+        public void RepeatStandardUsesFastPartiallyOpenReveal()
+        {
+            var model = Model(2, ProgressionRewardKind.WeaponLevel, WeaponAffixTier.Standard);
+
+            Assert.That(WeaponAppraisalPresentation.ProfileFor(model),
+                Is.EqualTo(WeaponAppraisalRevealProfile.RepeatStandard));
+            Assert.That(WeaponAppraisalPresentation.ScrollOpenAt(
+                WeaponAppraisalRevealProfile.RepeatStandard, 0f), Is.GreaterThan(.5f));
+            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(.9f));
+        }
+
+        [Test]
+        public void RareRepeatUpgradeUsesCeremonialReveal()
+        {
+            var model = Model(3, ProgressionRewardKind.WeaponLevel, WeaponAffixTier.High);
+
+            Assert.That(WeaponAppraisalPresentation.ProfileFor(model),
+                Is.EqualTo(WeaponAppraisalRevealProfile.Ceremonial));
+            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(1.45f));
+        }
+
         private static WeaponAffixRollResult Result(params WeaponPotentialId[] potentials) =>
             new(new WeaponAffixRoll(WeaponAffixStat.Damage, WeaponAffixTier.Standard, 23.88d),
                 Array.AsReadOnly(potentials));
+
+        private static WeaponAppraisalViewModel Model(
+            int level,
+            ProgressionRewardKind kind,
+            WeaponAffixTier tier)
+        {
+            var result = new WeaponAffixRollResult(
+                new WeaponAffixRoll(WeaponAffixStat.Damage, tier, 23.88d),
+                Array.Empty<WeaponPotentialId>());
+            var reward = new ProgressionRewardEvent(
+                "hwando_flying_blade", "hwando_flying_blade", level, kind,
+                "Hwando Flying Blade", "Level " + level, null, result);
+            var slot = new WeaponSlotView(
+                "hwando_flying_blade", "Hwando Flying Blade", level, null,
+                "Damage +24%", behavior: "Returning blade");
+            return WeaponAppraisalViewModel.From(reward, slot);
+        }
     }
 }
