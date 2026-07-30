@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 namespace JoseonHunter.Tests.PlayMode
@@ -23,6 +24,28 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 Object.Destroy(presenter.gameObject);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator ResetRunDestroysThePreviousPresenterAndCachedMaterial()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var previousPresenter = Object.FindFirstObjectByType<GeumjulTrailPresenter>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(previousPresenter, Is.Not.Null);
+            var previousMaterial = previousPresenter.CachedMaterialForTests;
+            Assert.That(previousMaterial, Is.Not.Null);
+
+            controller.ResetRunForTests();
+            controller.ResetRunForTests();
+            yield return null;
+
+            Assert.That(previousPresenter == null, Is.True);
+            Assert.That(previousMaterial == null, Is.True);
+            Assert.That(Object.FindObjectsByType<GeumjulTrailPresenter>(FindObjectsSortMode.None), Has.Length.EqualTo(1));
         }
 
         private static GeumjulTrailPresenter CreatePresenter()

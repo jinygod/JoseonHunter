@@ -28,6 +28,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public int ActiveClosureVisualCountForTests { get; private set; }
         public bool HasAnchorForTests => anchor != null && anchor.gameObject.activeSelf;
         public bool IsClosureReadyForTests => closureReady;
+        public Material CachedMaterialForTests => ropeMaterial;
 
         public void Configure(JangseungGeumjulVisualLibrary library, Transform root, int order)
         {

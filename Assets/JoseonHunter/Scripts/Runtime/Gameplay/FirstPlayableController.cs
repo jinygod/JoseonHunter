@@ -575,6 +575,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
             geumjulPresenter = new GameObject("Geumjul Presentation")
                 .AddComponent<GeumjulTrailPresenter>();
+            geumjulPresenter.transform.SetParent(runtimeObjects, false);
             geumjulPresenter.Configure(jangseungGeumjulVisuals, runtimeObjects, 4);
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
