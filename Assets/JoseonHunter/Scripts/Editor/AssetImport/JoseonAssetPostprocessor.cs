@@ -31,6 +31,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Elites/";
         private const string BossRuntimeRoot =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Bosses/";
+        private const string PickupRuntimeRoot =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/";
         private const string HanYeonhwaRuntimePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
 
@@ -99,6 +101,7 @@ namespace JoseonHunter.Editor.AssetImport
                 || path.StartsWith(EnemyRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(EliteRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(BossRuntimeRoot, System.StringComparison.Ordinal)
+                || path.StartsWith(PickupRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WeaponPolishRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(WorldRuntimeRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(CombatAnimationRoot, System.StringComparison.Ordinal)

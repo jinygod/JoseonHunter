@@ -9,17 +9,17 @@ namespace JoseonHunter.Editor.AssetProduction
     {
         private static readonly string[] Roots =
         {
-            "Assets/JoseonHunter/Art/Animation/Characters/HanYeonhwa",
-            "Assets/JoseonHunter/Art/Animation/Enemies/Bandit",
-            "Assets/JoseonHunter/Art/Animation/Enemies/PlagueRat",
-            "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Hwando"
+            "Assets/JoseonHunter/Art/Animation",
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies",
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Elites",
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Bosses",
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups",
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Polish"
         };
 
         private static readonly string[] References =
         {
-            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png",
-            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/bandit.png",
-            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/plague_rat.png"
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png"
         };
 
         [MenuItem("JoseonHunter/Assets/Reimport Simplified Combat Pack")]

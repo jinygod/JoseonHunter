@@ -55,6 +55,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 288ebca22657663459e096701e24a0f9, type: 3}
     - {fileID: 21300000, guid: 35a78db7dd74f5444b98d5259b8e10e4, type: 3}
     - {fileID: 21300000, guid: 896ce1c4bf2ded54b84322daf7d7266e, type: 3}
+    - {fileID: 21300000, guid: 0fff43f3644f3ae488b0e2f36acc68a3, type: 3}
+    - {fileID: 21300000, guid: 4bd1bf8f7f909b34fb10cc49b93600cd, type: 3}
     idleFramesPerSecond: 2.2
     moveFramesPerSecond: 6.5
     weight: 1
@@ -81,6 +83,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: f6c2c715397e34845aceaa5d803d5b4d, type: 3}
     - {fileID: 21300000, guid: 4a53f899834201845a3bd996f9ccb477, type: 3}
     - {fileID: 21300000, guid: a6370885cdc10544a8d1ee9a2108e327, type: 3}
+    - {fileID: 21300000, guid: 95517e3c6604448449e3a839066c8de3, type: 3}
+    - {fileID: 21300000, guid: 887caa6f18292a7429339c01f024ce1e, type: 3}
     idleFramesPerSecond: 2
     moveFramesPerSecond: 5.5
     weight: 1
@@ -93,6 +97,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: aa4e34a51918b234fbf7a9d986d454d6, type: 3}
     - {fileID: 21300000, guid: 8aa50d73d48281f40acd50fe3bc1816c, type: 3}
     - {fileID: 21300000, guid: 436d2da02ddaa6140920360b53f46336, type: 3}
+    - {fileID: 21300000, guid: 63d4b86930f2f554587972134a38d7c6, type: 3}
+    - {fileID: 21300000, guid: 65b4ac974a13c5844ba91e52c6166e51, type: 3}
     idleFramesPerSecond: 2
     moveFramesPerSecond: 5.8
     weight: 1
@@ -108,6 +114,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: bc7e3634b021ae349b4ba274ebe2b2b7, type: 3}
     - {fileID: 21300000, guid: b4d08d49ff6de274ab9d6b0e3b99ae89, type: 3}
     - {fileID: 21300000, guid: 17c9d19609887174bb4f665fddb30e00, type: 3}
+    - {fileID: 21300000, guid: 066c410e6e7bb0e4f8c44307bc82c6b5, type: 3}
+    - {fileID: 21300000, guid: accf9ff051ab52f4da6fd840b3e49293, type: 3}
     idleFramesPerSecond: 2.2
     moveFramesPerSecond: 5.5
     weight: 2
@@ -123,6 +131,10 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 21633ce2672d11b4486f47dd50248226, type: 3}
     - {fileID: 21300000, guid: 0ee844889adf17346b962c4ea3c7d230, type: 3}
     - {fileID: 21300000, guid: 7c781defc7f774a46b6a7c0e542d8064, type: 3}
+    - {fileID: 21300000, guid: 88dc277f3f4a9464aacf31041a04bea1, type: 3}
+    - {fileID: 21300000, guid: bb0da6f79f2fd5148a53bae2fd1eb1cd, type: 3}
+    - {fileID: 21300000, guid: 31f4a521ac75e104e80150015a6ef244, type: 3}
+    - {fileID: 21300000, guid: 3475f7382ca8b8641bbda2ed33d8a447, type: 3}
     idleFramesPerSecond: 1.8
     moveFramesPerSecond: 4.5
     weight: 2
