@@ -74,6 +74,9 @@ namespace JoseonHunter.Editor.Scenes
             serialized.FindProperty("weaponCatalog").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<JoseonHunter.Content.Weapons.WeaponCatalogAsset>("Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset");
             serialized.FindProperty("motionLibrary").objectReferenceValue = CombatMotionLibraryBuilder.Build();
+            serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue =
+                AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(
+                    "Assets/JoseonHunter/Content/Presentation/JangseungGeumjulVisualLibrary.asset");
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, GameplayScenePath);

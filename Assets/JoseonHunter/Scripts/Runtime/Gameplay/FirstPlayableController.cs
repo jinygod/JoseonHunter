@@ -33,6 +33,7 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite[] battlefieldDecals;
         [SerializeField] private WeaponCatalogAsset weaponCatalog;
         [SerializeField] private CombatMotionLibrary motionLibrary;
+        [SerializeField] private JangseungGeumjulVisualLibrary jangseungGeumjulVisuals;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<PickupState> pickups = new List<PickupState>();
@@ -59,7 +60,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private SpriteRenderer playerRenderer;
         private CombatantVisualRig playerVisualRig;
         private Transform playerHealthFill;
-        private LineRenderer geumjulRenderer;
+        private GeumjulTrailPresenter geumjulPresenter;
         private CombatTargetRegistry combatTargets;
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
@@ -372,6 +373,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void OnDestroy()
         {
             Time.timeScale = 1f;
+            geumjulPresenter?.Clear();
             weaponRuntime?.Dispose();
             weaponRuntime = null;
             if (solidSprite != null)
@@ -487,6 +489,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void ResetRun()
         {
             Time.timeScale = 1f;
+            geumjulPresenter?.Clear();
             weaponRuntime?.Dispose();
             weaponRuntime = null;
             if (runtimeObjects != null)
@@ -570,16 +573,9 @@ namespace JoseonHunter.Runtime.Gameplay
                 playerRenderer.color = new Color(0.18f, 0.38f, 0.72f);
             }
 
-            geumjulRenderer = new GameObject("Geumjul Trail").AddComponent<LineRenderer>();
-            geumjulRenderer.transform.SetParent(runtimeObjects, false);
-            geumjulRenderer.useWorldSpace = true;
-            geumjulRenderer.material = new Material(Shader.Find("Sprites/Default"));
-            geumjulRenderer.startColor = new Color(1f, 0.78f, 0.18f, 0.9f);
-            geumjulRenderer.endColor = new Color(1f, 0.95f, 0.45f, 0.45f);
-            geumjulRenderer.startWidth = 0.045f;
-            geumjulRenderer.endWidth = 0.022f;
-            geumjulRenderer.sortingOrder = 4;
-            geumjulRenderer.positionCount = 0;
+            geumjulPresenter = new GameObject("Geumjul Presentation")
+                .AddComponent<GeumjulTrailPresenter>();
+            geumjulPresenter.Configure(jangseungGeumjulVisuals, runtimeObjects, 4);
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
             cameraFollowVelocity = Vector3.zero;
@@ -1546,11 +1542,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 trail.RemoveAt(0);
             }
 
-            geumjulRenderer.positionCount = trail.Count;
-            for (var index = 0; index < trail.Count; index++)
-            {
-                geumjulRenderer.SetPosition(index, trail[index]);
-            }
+            geumjulPresenter.SetTrail(trail, .48f);
 
             TryCloseSeal(current);
         }
@@ -1593,8 +1585,8 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             sealCooldown = 1.5f;
+            geumjulPresenter.PlayClosure(polygon);
             trail.Clear();
-            geumjulRenderer.positionCount = 0;
         }
 
         private static float SignedArea(IReadOnlyList<Vector2> polygon)
