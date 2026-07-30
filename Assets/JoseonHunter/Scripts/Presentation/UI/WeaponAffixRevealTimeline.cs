@@ -45,24 +45,24 @@ namespace JoseonHunter.Presentation.UI
 
             var count = Mathf.Clamp(result.NewPotentials.Count, 0, 3);
             if (count == 1)
-                return new WeaponAffixRevealTimeline(1, 2.82f, 1.28f, 1.62f, 1.92f, float.PositiveInfinity,
-                    float.PositiveInfinity, 2.08f, float.PositiveInfinity);
+                return new WeaponAffixRevealTimeline(1, 2.10f, .52f, .78f, 1.22f, float.PositiveInfinity,
+                    float.PositiveInfinity, 1.40f, float.PositiveInfinity);
             if (count == 2)
-                return new WeaponAffixRevealTimeline(2, 3.06f, 1.28f, 1.62f, 1.92f, 2.18f,
-                    float.PositiveInfinity, 2.34f, float.PositiveInfinity);
+                return new WeaponAffixRevealTimeline(2, 2.28f, .52f, .78f, 1.22f, 1.40f,
+                    float.PositiveInfinity, 1.58f, float.PositiveInfinity);
             if (count == 3)
-                return new WeaponAffixRevealTimeline(3, 3.32f, 1.28f, 1.62f, 1.92f, 2.18f, 2.44f, 2.60f,
+                return new WeaponAffixRevealTimeline(3, 2.40f, .52f, .78f, 1.22f, 1.40f, 1.58f, 1.76f,
                     float.PositiveInfinity);
 
             if (result.General.Tier == WeaponAffixTier.Perfect)
-                return new WeaponAffixRevealTimeline(0, 2.72f, 1.32f, 1.78f, float.PositiveInfinity,
-                    float.PositiveInfinity, float.PositiveInfinity, 1.96f, float.PositiveInfinity);
+                return new WeaponAffixRevealTimeline(0, 1.55f, .48f, .86f, float.PositiveInfinity,
+                    float.PositiveInfinity, float.PositiveInfinity, 1.30f, float.PositiveInfinity);
             if (result.General.Tier == WeaponAffixTier.High)
-                return new WeaponAffixRevealTimeline(0, 2.54f, 1.28f, 1.68f, float.PositiveInfinity,
-                    float.PositiveInfinity, float.PositiveInfinity, 1.84f, float.PositiveInfinity);
+                return new WeaponAffixRevealTimeline(0, 1.45f, .46f, .82f, float.PositiveInfinity,
+                    float.PositiveInfinity, float.PositiveInfinity, 1.22f, float.PositiveInfinity);
 
-            return new WeaponAffixRevealTimeline(0, 2.36f, 1.18f, 1.54f, float.PositiveInfinity,
-                float.PositiveInfinity, float.PositiveInfinity, 1.70f, float.PositiveInfinity);
+            return new WeaponAffixRevealTimeline(0, 1.25f, .42f, .76f, float.PositiveInfinity,
+                float.PositiveInfinity, float.PositiveInfinity, 1.06f, float.PositiveInfinity);
         }
 
         public float PotentialStopsAt(int index)

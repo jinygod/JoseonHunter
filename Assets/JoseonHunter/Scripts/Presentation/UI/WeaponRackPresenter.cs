@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections;
 using JoseonHunter.Content.Weapons;
@@ -23,10 +24,13 @@ namespace JoseonHunter.Presentation.UI
             public Image[] PotentialCells;
             public string WeaponId;
             public Coroutine PulseRoutine;
+            public Button Button;
+            public WeaponSlotView View;
         }
 
         private readonly List<Slot> slots = new();
         private readonly Dictionary<string, Slot> slotsByWeaponId = new();
+        public event Action<WeaponSlotView> WeaponSelected;
 
         public void Render(IReadOnlyList<WeaponSlotView> weapons)
         {
@@ -64,6 +68,10 @@ namespace JoseonHunter.Presentation.UI
         {
             var slot = new Slot();
             slot.Root = RuntimeUiFactory.Image("Weapon Slot " + index, transform, JoseonUiPalette.Ink).gameObject;
+            slot.Button = slot.Root.AddComponent<Button>();
+            slot.Button.targetGraphic = slot.Root.GetComponent<Image>();
+            slot.Button.transition = Selectable.Transition.ColorTint;
+            slot.Button.onClick.AddListener(() => WeaponSelected?.Invoke(slot.View));
             var rect = slot.Root.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = Vector2.zero;
             rect.pivot = Vector2.zero;
@@ -116,6 +124,7 @@ namespace JoseonHunter.Presentation.UI
         {
             if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId.Remove(slot.WeaponId);
             slot.WeaponId = weapon.Id;
+            slot.View = weapon;
             if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId[slot.WeaponId] = slot;
             slot.Accent.color = JoseonUiPalette.WeaponAccent(new WeaponId(weapon.Id));
             slot.Icon.sprite = weapon.Icon;

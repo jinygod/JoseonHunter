@@ -130,11 +130,67 @@ namespace JoseonHunter.Tests.PlayMode
             Object.Destroy(root);
         }
 
+        [UnityTest]
+        public IEnumerator Weapon_rack_emits_the_current_weapon_when_tapped()
+        {
+            var root = new GameObject("Rack Tap Test");
+            var rack = root.AddComponent<WeaponRackPresenter>();
+            var expected = new WeaponSlotView("gakgung_shot", "각궁", 3, null,
+                behavior: "적을 관통하는 화살");
+            WeaponSlotView selected = default;
+            var selectedCount = 0;
+            rack.WeaponSelected += weapon =>
+            {
+                selected = weapon;
+                selectedCount++;
+            };
+
+            rack.Render(new[] { expected });
+            yield return null;
+            root.GetComponentInChildren<Button>(true).onClick.Invoke();
+
+            Assert.That(selectedCount, Is.EqualTo(1));
+            Assert.That(selected.Id, Is.EqualTo(expected.Id));
+            Assert.That(selected.Behavior, Is.EqualTo(expected.Behavior));
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
+        public IEnumerator ReadOnlyWeaponDetailsPauseAndRestoreCombat()
+        {
+            var root = new GameObject("Read Only Detail Test");
+            var presenter = root.AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            var weapon = new WeaponSlotView("gakgung_shot", "각궁", 3, null,
+                "Damage +24%", new[] { JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungFullDraw },
+                behavior: "적을 관통하는 화살");
+            Time.timeScale = 1f;
+
+            presenter.ShowDetails(weapon);
+            yield return null;
+
+            Assert.That(presenter.IsDetailOpen, Is.True);
+            Assert.That(Time.timeScale, Is.Zero);
+            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("Damage +24%"));
+            presenter.HideImmediately();
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Object.Destroy(root);
+        }
+
         private static IEnumerator DestroyBootstraps()
         {
             foreach (var bootstrap in Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 Object.Destroy(bootstrap.gameObject);
             yield return null;
+        }
+
+        private static JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset TestCatalog()
+        {
+            var texture = new Texture2D(2, 2);
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f));
+            var catalog = ScriptableObject.CreateInstance<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>();
+            catalog.SetSlotKitForTests(sprite, sprite, sprite, sprite, sprite);
+            return catalog;
         }
     }
 }

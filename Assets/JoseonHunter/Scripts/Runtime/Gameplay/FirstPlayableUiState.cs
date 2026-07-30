@@ -57,10 +57,11 @@ namespace JoseonHunter.Runtime.Gameplay
     {
         public WeaponSlotView(string id, string displayName, int level, Sprite icon,
             string generalAffixSummary = null, IEnumerable<WeaponPotentialId> potentialIds = null,
-            IEnumerable<WeaponAffixTier> generalAffixTiers = null)
+            IEnumerable<WeaponAffixTier> generalAffixTiers = null, string behavior = null)
         {
             Id = id; DisplayName = displayName; Level = level; Icon = icon;
             GeneralAffixSummary = generalAffixSummary ?? string.Empty;
+            Behavior = behavior ?? string.Empty;
             PotentialIds = Array.AsReadOnly((potentialIds ?? Array.Empty<WeaponPotentialId>()).ToArray());
             GeneralAffixTiers = Array.AsReadOnly((generalAffixTiers ?? Array.Empty<WeaponAffixTier>()).ToArray());
         }
@@ -70,6 +71,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public int Level { get; }
         public Sprite Icon { get; }
         public string GeneralAffixSummary { get; }
+        public string Behavior { get; }
         public IReadOnlyList<WeaponPotentialId> PotentialIds { get; }
         public IReadOnlyList<WeaponAffixTier> GeneralAffixTiers { get; }
     }

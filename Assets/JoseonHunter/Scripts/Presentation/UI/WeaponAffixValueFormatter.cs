@@ -7,9 +7,13 @@ namespace JoseonHunter.Presentation.UI
     {
         public static string Describe(WeaponAffixRoll roll)
         {
-            var value = Mathf.RoundToInt((float)roll.Value);
-            var sign = value > 0 ? "+" : string.Empty;
-            return $"{roll.Stat} {sign}{value}%";
+            return Describe(roll, Mathf.RoundToInt((float)roll.Value));
+        }
+
+        public static string Describe(WeaponAffixRoll roll, int displayedValue)
+        {
+            var sign = displayedValue >= 0 ? "+" : string.Empty;
+            return $"{roll.Stat} {sign}{displayedValue}%";
         }
     }
 }

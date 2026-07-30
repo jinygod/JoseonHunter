@@ -61,6 +61,7 @@ namespace JoseonHunter.Presentation.UI
             var rackRoot = RuntimeUiFactory.Rect("Weapon Rack", safeAreaContainer);
             RuntimeUiFactory.Stretch(rackRoot, 0f, 0f, 0f, 0f);
             weaponRack = rackRoot.gameObject.AddComponent<WeaponRackPresenter>();
+            weaponRack.WeaponSelected += OpenWeaponDetails;
             var rewardRoot = RuntimeUiFactory.Rect("Reward Reveal", safeAreaContainer);
             RuntimeUiFactory.Stretch(rewardRoot, 0f, 0f, 0f, 0f);
             rewardReveal = rewardRoot.gameObject.AddComponent<RewardRevealPresenter>();
@@ -80,6 +81,7 @@ namespace JoseonHunter.Presentation.UI
             if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (affixReveal != null) affixReveal.RevealCompleted -= OnRewardRevealCompleted;
+            if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
             if (instance == this) instance = null;
         }
 
@@ -139,6 +141,13 @@ namespace JoseonHunter.Presentation.UI
             upgradeChoice?.CloseImmediately();
         }
 
+        private void OpenWeaponDetails(WeaponSlotView weapon)
+        {
+            if (affixReveal == null || affixReveal.IsRevealing || upgradeChoice == null || upgradeChoice.IsOpen)
+                return;
+            affixReveal.ShowDetails(weapon);
+        }
+
         private void OnUpgradeChosen(ProgressionRewardEvent reward)
         {
             waitingForRewardReveal = true;
@@ -177,9 +186,24 @@ namespace JoseonHunter.Presentation.UI
             if (!hasPendingReward) return;
             var reward = pendingReward;
             hasPendingReward = false;
-            // Weapon selections use only the affix reel. Support/evolution keep their existing reveal.
+            // Weapon selections use the appraisal sheet. Support/evolution keep their existing reveal.
             if (reward.Kind != ProgressionRewardKind.Support && reward.Kind != ProgressionRewardKind.Evolution && reward.AffixResult != null)
-                affixReveal.Play(reward.AffixResult);
+            {
+                var state = boundController.UiState;
+                var found = false;
+                var slot = default(WeaponSlotView);
+                for (var index = 0; index < state.Weapons.Count; index++)
+                {
+                    if (state.Weapons[index].Id != reward.WeaponId) continue;
+                    slot = state.Weapons[index];
+                    found = true;
+                    break;
+                }
+                if (found)
+                    affixReveal.Play(WeaponAppraisalViewModel.From(reward, slot));
+                else
+                    affixReveal.Play(reward.AffixResult);
+            }
             else
                 rewardReveal.Play(reward);
         }

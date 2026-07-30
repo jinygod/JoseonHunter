@@ -1294,7 +1294,8 @@ namespace JoseonHunter.Runtime.Gameplay
                     ResolveWeaponSprite(new WeaponId(weapon.Key)),
                     GeneralAffixSummary(new WeaponId(weapon.Key)),
                     weaponAffixes.TryProfileFor(new WeaponId(weapon.Key), out var profile) ? profile.PotentialIds : null,
-                    profile == null ? null : profile.GeneralRolls.Select(roll => roll.Tier)));
+                    profile == null ? null : profile.GeneralRolls.Select(roll => roll.Tier),
+                    WeaponBehavior(weapon.Key)));
             }
 
             var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null);
