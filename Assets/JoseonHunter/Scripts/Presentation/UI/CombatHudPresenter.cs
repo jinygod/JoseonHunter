@@ -13,6 +13,7 @@ namespace JoseonHunter.Presentation.UI
         private TextMeshProUGUI timerText;
         private TextMeshProUGUI killsText;
         private TextMeshProUGUI bossWarningText;
+        private TextMeshProUGUI waveAnnouncementText;
         private TextMeshProUGUI bossText;
         private Image healthFill;
         private Image experienceFill;
@@ -48,6 +49,16 @@ namespace JoseonHunter.Presentation.UI
             warningRect.pivot = new Vector2(.5f, 1f);
             warningRect.gameObject.AddComponent<Outline>().effectColor = JoseonUiPalette.Ink;
 
+            waveAnnouncementText = Label("Wave Announcement", transform, new Vector2(0f, -184f),
+                new Vector2(760f, 76f), 32f, TextAlignmentOptions.Center);
+            var waveRect = waveAnnouncementText.rectTransform;
+            waveRect.anchorMin = waveRect.anchorMax = new Vector2(.5f, 1f);
+            waveRect.pivot = new Vector2(.5f, 1f);
+            waveAnnouncementText.fontStyle = FontStyles.Bold;
+            waveAnnouncementText.gameObject.AddComponent<Outline>().effectColor =
+                new Color(.025f, .02f, .03f, .96f);
+            waveAnnouncementText.gameObject.SetActive(false);
+
             bossRoot = RuntimeUiFactory.Image("Boss Health", transform, JoseonUiPalette.Ink).gameObject;
             var bossRect = bossRoot.GetComponent<RectTransform>();
             bossRect.anchorMin = bossRect.anchorMax = new Vector2(.5f, 1f);
@@ -71,6 +82,21 @@ namespace JoseonHunter.Presentation.UI
             SetFill(experienceFill, state.Experience, state.ExperienceToNext);
             bossWarningText.gameObject.SetActive(state.BossWarning);
             bossWarningText.text = "A DREADFUL PRESENCE APPROACHES";
+            var showWave = state.WaveAnnouncementRemaining > 0f &&
+                           !string.IsNullOrWhiteSpace(state.WaveAnnouncement);
+            waveAnnouncementText.gameObject.SetActive(showWave);
+            if (showWave)
+            {
+                waveAnnouncementText.text = state.WaveAnnouncement;
+                waveAnnouncementText.color = state.WaveAnnouncementIntensity >= 3
+                    ? new Color(1f, .35f, .18f)
+                    : state.WaveAnnouncementIntensity >= 2
+                        ? new Color(1f, .78f, .28f)
+                        : new Color(.62f, 1f, .94f);
+                var pulse = 1f + Mathf.Sin(Time.unscaledTime * 18f) *
+                    (state.WaveAnnouncementIntensity >= 3 ? .055f : .035f);
+                waveAnnouncementText.rectTransform.localScale = Vector3.one * pulse;
+            }
             bossRoot.SetActive(state.BossAlive);
             if (state.BossAlive)
             {

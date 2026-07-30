@@ -1,10 +1,17 @@
+using JoseonHunter.Domain.Runs;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
 {
     public static class EnemyDensityProfile
     {
-        public const int MaximumActiveEnemies = 140;
+        public const int MaximumActiveEnemies = StagePacingTimeline.MobileActiveCap;
+
+        public static float SpawnInterval(in StagePacingSnapshot snapshot) =>
+            Mathf.Max(.07f, snapshot.SpawnIntervalSeconds);
+
+        public static int BatchSize(in StagePacingSnapshot snapshot) =>
+            Mathf.Clamp(snapshot.BatchSize, 1, 6);
 
         public static float SpawnInterval(float normalizedRunTime) =>
             Mathf.Lerp(.22f, .09f, Mathf.Clamp01(normalizedRunTime));

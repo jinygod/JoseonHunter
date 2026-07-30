@@ -4,6 +4,7 @@ using System.Linq;
 using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
@@ -94,10 +95,14 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool awaitingUpgradePresentationClose;
         private bool runEnded;
         private bool victory;
+        private StagePacingTimeline stageTimeline;
+        private int processedStageMilestones;
+        private bool finalBossWarning;
+        private string waveAnnouncement = string.Empty;
+        private float waveAnnouncementTimer;
+        private int waveAnnouncementIntensity;
 
         private const float TestDuration = 60f;
-        private const float BossWarningTime = 45f;
-        private const float BossSpawnTime = 50f;
 
         /// <summary>Read-only combat event source for presentation components.</summary>
         public CombatDamageService CombatDamageService => combatDamageService;
@@ -114,6 +119,25 @@ namespace JoseonHunter.Runtime.Gameplay
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
         public int AppliedUpgradeCount { get; private set; }
         public int WeaponRebuildCountForTests { get; private set; }
+        public int MidBossSpawnCountForTests { get; private set; }
+        public int FinalBossSpawnCountForTests { get; private set; }
+        public bool RunEndedForTests => runEnded;
+        public bool VictoryForTests => victory;
+        public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
+        {
+            elapsed = Mathf.Clamp(currentElapsed, 0f, TestDuration);
+            ProcessStageMilestones(previousElapsed, elapsed);
+        }
+        public void DefeatMidBossesForTests()
+        {
+            var targets = enemies.FindAll(candidate => candidate.IsMidBoss);
+            foreach (var target in targets) ApplyEnemyDamage(target, target.MaximumHealth + 1f);
+        }
+        public void DefeatFinalBossForTests()
+        {
+            var target = enemies.Find(candidate => candidate.IsBoss);
+            if (target != null) ApplyEnemyDamage(target, target.MaximumHealth + 1f);
+        }
         public void OpenUpgradeForTests() => OpenUpgrade();
         public void SetUpgradeOffersForTests(params UpgradeOffer[] offers)
         {
@@ -171,7 +195,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public bool IsBossCombatTarget(int runtimeId)
         {
             var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
-            return enemy != null && enemy.IsBoss;
+            return enemy != null && (enemy.IsBoss || enemy.IsMidBoss);
         }
 
         public bool HasJangseungWardMark(int runtimeId)
@@ -194,6 +218,8 @@ namespace JoseonHunter.Runtime.Gameplay
             public float NextContactTime;
             public bool IsBoss;
             public bool IsElite;
+            public bool IsMidBoss;
+            public int MidBossTier;
             public bool IsTreasure;
             public int ExperienceValue = 1;
             public ICombatTarget CombatTarget;
@@ -282,9 +308,9 @@ namespace JoseonHunter.Runtime.Gameplay
             public int RuntimeId => runtimeId;
             public bool IsAlive => state.Object != null && state.Health > 0f;
             public int Health => Mathf.CeilToInt(Mathf.Max(0f, state.Health));
-            public bool IsBoss => state.IsBoss;
+            public bool IsBoss => state.IsBoss || state.IsMidBoss;
             public bool IsElite => state.IsElite;
-            public float ThreatScore => state.IsBoss ? 100f : (state.IsElite ? 25f : 0f);
+            public float ThreatScore => state.IsBoss ? 100f : state.IsMidBoss ? 70f : (state.IsElite ? 25f : 0f);
             public Float2 WorldPosition
             {
                 get
@@ -382,10 +408,13 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var delta = Time.deltaTime;
+            var previousElapsed = elapsed;
             elapsed = Mathf.Min(TestDuration, elapsed + delta);
             contactInvulnerability = Mathf.Max(0f, contactInvulnerability - delta);
             sealCooldown = Mathf.Max(0f, sealCooldown - delta);
             magnetMessageTimer = Mathf.Max(0f, magnetMessageTimer - delta);
+            waveAnnouncementTimer = Mathf.Max(0f, waveAnnouncementTimer - delta);
+            ProcessStageMilestones(previousElapsed, elapsed);
 
             ReadMovement();
             UpdatePlayer(delta);
@@ -397,15 +426,6 @@ namespace JoseonHunter.Runtime.Gameplay
             UpdateGeumjul(delta);
             UpdateField();
 
-            if (!bossSpawned && elapsed >= BossSpawnTime)
-            {
-                SpawnBoss();
-            }
-
-            if (elapsed >= TestDuration && bossAlive)
-            {
-                EndRun(false);
-            }
         }
 
         private void LateUpdate()
@@ -497,6 +517,12 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             elapsed = 0f;
+            stageTimeline = StagePacingTimeline.ForDuration(TestDuration);
+            processedStageMilestones = 0;
+            finalBossWarning = false;
+            waveAnnouncement = string.Empty;
+            waveAnnouncementTimer = 0f;
+            waveAnnouncementIntensity = 0;
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
             moveSpeed = 2.4f;
@@ -559,6 +585,8 @@ namespace JoseonHunter.Runtime.Gameplay
             cameraFollowVelocity = Vector3.zero;
 #if UNITY_INCLUDE_TESTS
             AppliedUpgradeCount = 0;
+            MidBossSpawnCountForTests = 0;
+            FinalBossSpawnCountForTests = 0;
 #endif
             RunReset?.Invoke();
         }
@@ -626,7 +654,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateSpawning(float delta)
         {
-            if (enemies.Count >= EnemyDensityProfile.MaximumActiveEnemies)
+            var pacing = stageTimeline.Sample(elapsed);
+            if (enemies.Count >= pacing.ActiveCap)
             {
                 return;
             }
@@ -637,51 +666,67 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
-            var normalized = elapsed / TestDuration;
-            spawnTimer = EnemyDensityProfile.SpawnInterval(normalized);
-            var batchSize = EnemyDensityProfile.BatchSize(normalized);
+            spawnTimer = EnemyDensityProfile.SpawnInterval(pacing);
+            var batchSize = EnemyDensityProfile.BatchSize(pacing);
             for (var index = 0;
-                 index < batchSize && enemies.Count < EnemyDensityProfile.MaximumActiveEnemies;
+                 index < batchSize && enemies.Count < pacing.ActiveCap;
                  index++)
             {
                 SpawnEnemy(false);
             }
         }
 
-        private void SpawnEnemy(bool isBoss)
+        private void SpawnEnemy(bool isBoss, int midBossTier = 0)
         {
+            var isMidBoss = !isBoss && midBossTier > 0;
             var angle = UnityEngine.Random.value * Mathf.PI * 2f;
-            var radius = isBoss
+            var radius = isBoss || isMidBoss
                 ? VisualScale.SpawnRadiusMinimum
                 : UnityEngine.Random.Range(VisualScale.SpawnRadiusMinimum, VisualScale.SpawnRadiusMaximum);
             var position = (Vector2)player.transform.position +
                            new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
 
-            var isElite = !isBoss && elapsed >= 8f && UnityEngine.Random.value < 0.08f;
+            var pacing = stageTimeline.Sample(elapsed);
+            var isElite = !isBoss && !isMidBoss && elapsed >= 3f &&
+                          UnityEngine.Random.value < pacing.EliteChance;
             var rank = isBoss
                 ? EnemyRankProfile.Boss
-                : (isElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal);
+                : (isElite || isMidBoss ? EnemyRankProfile.Elite : EnemyRankProfile.Normal);
             var chosenSprite = isBoss
                 ? bossSprite
-                : (isElite && eliteSprite != null
+                : (isMidBoss
+                    ? (midBossTier >= 2 && bossSprite != null ? bossSprite :
+                        eliteSprite != null ? eliteSprite : ChooseNormalEnemySprite())
+                    : isElite && eliteSprite != null
                     ? eliteSprite
                     : ChooseNormalEnemySprite());
             var enemyObject = CreateCombatantObject(
-                isBoss ? "Fallen General" : (isElite ? "Dokkaebi Captain" : "Pursuing Enemy"),
+                isBoss ? "Fallen General" :
+                isMidBoss ? (midBossTier >= 2 ? "Vengeful Field Commander" : "Dokkaebi Captain") :
+                isElite ? "Elite Pursuer" : "Pursuing Enemy",
                 chosenSprite != null ? chosenSprite : solidSprite,
                 position,
-                isBoss ? 9 : 8,
+                isBoss || isMidBoss ? 9 : 8,
                 runtimeObjects,
-                isBoss || isElite ? MotionWeight.Heavy : MotionWeight.Medium,
+                isBoss || isElite || isMidBoss ? MotionWeight.Heavy : MotionWeight.Medium,
                 nextCombatTargetRuntimeId * 0.173f,
                 out var visualRig,
                 isBoss ? CombatantVisualRole.Boss :
+                isMidBoss ? CombatantVisualRole.Boss :
                 isElite ? CombatantVisualRole.Elite : CombatantVisualRole.Enemy);
 
             var renderer = visualRig.Renderer;
-            var baseHealth = isBoss ? 220f : Mathf.Lerp(18f, 42f, elapsed / TestDuration);
-            var health = baseHealth * rank.HealthMultiplier;
-            enemyObject.transform.localScale = Vector3.one * VisualScale.ScaleFor(rank);
+            var baseHealth = isBoss ? 680f :
+                isMidBoss ? (midBossTier >= 2 ? 320f : 180f) :
+                Mathf.Lerp(18f, 42f, elapsed / TestDuration);
+            var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier;
+            var displayScale = isBoss
+                ? VisualScale.BossEnemyScale
+                : isMidBoss
+                    ? Mathf.Lerp(VisualScale.EliteEnemyScale, VisualScale.BossEnemyScale,
+                        midBossTier >= 2 ? .68f : .42f)
+                    : VisualScale.ScaleFor(rank);
+            enemyObject.transform.localScale = Vector3.one * displayScale;
             if (chosenSprite == null)
             {
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
@@ -695,22 +740,28 @@ namespace JoseonHunter.Runtime.Gameplay
                 MotionWeight = isBoss || isElite ? MotionWeight.Heavy : MotionWeight.Medium,
                 Health = health,
                 MaximumHealth = health,
-                Speed = (isBoss ? 1.125f : Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration)) *
-                        rank.SpeedMultiplier,
-                ContactDamage = (isBoss ? 24f : 10f) * rank.ContactDamageMultiplier,
+                Speed = isBoss ? .98f :
+                    isMidBoss ? (midBossTier >= 2 ? 1.08f : 1f) :
+                    Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration) * rank.SpeedMultiplier,
+                ContactDamage = isBoss ? 24f :
+                    isMidBoss ? (midBossTier >= 2 ? 20f : 16f) :
+                    10f * rank.ContactDamageMultiplier,
                 IsBoss = rank.IsBoss,
                 IsElite = rank.IsElite,
-                ExperienceValue = rank.ExperienceValue
+                IsMidBoss = isMidBoss,
+                MidBossTier = midBossTier,
+                ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue
             };
-            if (rank.IsElite)
+            if (rank.IsElite || isMidBoss)
             {
                 state.HealthFill = CreateHealthBar(enemyObject.transform);
-                state.HealthFill.parent.localPosition = new Vector3(0f, -0.78f, 0f);
-                state.HealthFill.parent.localScale = Vector3.one * 0.52f;
+                state.HealthFill.parent.localPosition = new Vector3(0f, isMidBoss ? -1.02f : -0.78f, 0f);
+                state.HealthFill.parent.localScale = Vector3.one * (isMidBoss ? .66f : .52f);
             }
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
+            if (isBoss || isMidBoss) bossAlive = true;
         }
 
         private Sprite ChooseNormalEnemySprite()
@@ -785,7 +836,91 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             bossSpawned = true;
             bossAlive = true;
+            finalBossWarning = false;
             SpawnEnemy(true);
+#if UNITY_INCLUDE_TESTS
+            FinalBossSpawnCountForTests++;
+#endif
+        }
+
+        private void SpawnMidBoss(int tier)
+        {
+            SpawnEnemy(false, Mathf.Clamp(tier, 1, 2));
+#if UNITY_INCLUDE_TESTS
+            MidBossSpawnCountForTests++;
+#endif
+        }
+
+        private void ProcessStageMilestones(float previousElapsed, float currentElapsed)
+        {
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FirstSurge, () =>
+            {
+                SpawnBurst(18);
+                ShowWaveAnnouncement("요기 떼가 몰려옵니다!", 1, .9f);
+            });
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FirstMidBoss, () =>
+            {
+                SpawnMidBoss(1);
+                ShowWaveAnnouncement("중간보스 · 도깨비 대장", 2, 1.4f);
+            });
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.SecondSurge, () =>
+            {
+                SpawnBurst(26);
+                ShowWaveAnnouncement("사방에서 포위해 옵니다!", 2, 1.05f);
+            });
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.SecondMidBoss, () =>
+            {
+                SpawnMidBoss(2);
+                ShowWaveAnnouncement("중간보스 · 원혼 장수", 2, 1.4f);
+            });
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FinalSurge, () =>
+            {
+                SpawnBurst(34);
+                ShowWaveAnnouncement("마지막 대공세!", 3, 1.2f);
+            });
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FinalBossWarning, () =>
+            {
+                finalBossWarning = true;
+                ShowWaveAnnouncement("강대한 요기가 다가옵니다", 3, 1.8f);
+            });
+            ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FinalBoss, () =>
+            {
+                SpawnBoss();
+                ShowWaveAnnouncement("최종보스 · 타락한 장군", 3, 1.8f);
+            });
+        }
+
+        private void ProcessMilestone(
+            float previousElapsed,
+            float currentElapsed,
+            StageMilestone milestone,
+            Action action)
+        {
+            var bit = 1 << (int)milestone;
+            if ((processedStageMilestones & bit) != 0 ||
+                !stageTimeline.Crossed(previousElapsed, currentElapsed, milestone))
+            {
+                return;
+            }
+
+            processedStageMilestones |= bit;
+            action();
+        }
+
+        private void SpawnBurst(int count)
+        {
+            var activeCap = stageTimeline.Sample(elapsed).ActiveCap;
+            for (var index = 0; index < count && enemies.Count < activeCap; index++)
+            {
+                SpawnEnemy(false);
+            }
+        }
+
+        private void ShowWaveAnnouncement(string message, int intensity, float duration)
+        {
+            waveAnnouncement = message ?? string.Empty;
+            waveAnnouncementIntensity = Mathf.Clamp(intensity, 1, 3);
+            waveAnnouncementTimer = Mathf.Max(0f, duration);
         }
 
         private void UpdateEnemies(float delta)
@@ -935,10 +1070,16 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var wasBoss = enemy.IsBoss;
+            var wasMidBoss = enemy.IsMidBoss;
             var wasTreasure = enemy.IsTreasure;
             var deathPosition = enemy.Object.transform.position;
             combatTargets.Unregister(enemy.CombatTarget);
             enemies.Remove(enemy);
+            if (wasBoss || wasMidBoss)
+            {
+                bossAlive = enemies.Exists(candidate =>
+                    candidate.Object != null && (candidate.IsBoss || candidate.IsMidBoss));
+            }
             if (enemy.VisualRig != null && !enemy.IsTreasure)
             {
                 enemy.VisualRig.PlayDeath();
@@ -957,12 +1098,15 @@ namespace JoseonHunter.Runtime.Gameplay
             kills++;
             if (wasBoss)
             {
-                bossAlive = false;
                 EndRun(true);
                 return;
             }
 
             SpawnPickup(deathPosition, PickupKind.Experience, enemy.ExperienceValue);
+            if (wasMidBoss)
+            {
+                ScatterTreasure(deathPosition);
+            }
             if (UnityEngine.Random.value < 0.01f)
             {
                 SpawnPickup(
@@ -1298,11 +1442,13 @@ namespace JoseonHunter.Runtime.Gameplay
                     WeaponBehavior(weapon.Key)));
             }
 
-            var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null);
+            var boss = enemies.Find(candidate =>
+                (candidate.IsBoss || candidate.IsMidBoss) && candidate.Object != null);
             return new FirstPlayableUiState(
                 level, experience, experienceToNext, coins, kills, elapsed, TestDuration,
-                playerHealth, playerMaxHealth, !bossSpawned && elapsed >= BossWarningTime, bossAlive,
-                boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons);
+                playerHealth, playerMaxHealth, finalBossWarning && !bossSpawned, bossAlive,
+                boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons,
+                waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity);
         }
 
         private UpgradeChoiceView BuildUpgradeChoiceView(UpgradeOffer offer)

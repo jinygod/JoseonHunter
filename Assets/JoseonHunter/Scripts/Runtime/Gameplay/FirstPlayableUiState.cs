@@ -10,12 +10,17 @@ namespace JoseonHunter.Runtime.Gameplay
     {
         public FirstPlayableUiState(int level, int experience, int experienceToNext, int coins, int kills,
             float elapsed, float duration, float health, float maximumHealth, bool bossWarning, bool bossAlive,
-            float bossHealth, float bossMaximumHealth, IReadOnlyList<WeaponSlotView> weapons)
+            float bossHealth, float bossMaximumHealth, IReadOnlyList<WeaponSlotView> weapons,
+            string waveAnnouncement = null, float waveAnnouncementRemaining = 0f,
+            int waveAnnouncementIntensity = 0)
         {
             Level = level; Experience = experience; ExperienceToNext = experienceToNext; Coins = coins; Kills = kills;
             Elapsed = elapsed; Duration = duration; Health = health; MaximumHealth = maximumHealth;
             BossWarning = bossWarning; BossAlive = bossAlive; BossHealth = bossHealth; BossMaximumHealth = bossMaximumHealth;
             Weapons = Array.AsReadOnly(weapons.ToArray());
+            WaveAnnouncement = waveAnnouncement ?? string.Empty;
+            WaveAnnouncementRemaining = waveAnnouncementRemaining;
+            WaveAnnouncementIntensity = waveAnnouncementIntensity;
         }
 
         public int Level { get; }
@@ -32,6 +37,9 @@ namespace JoseonHunter.Runtime.Gameplay
         public float BossHealth { get; }
         public float BossMaximumHealth { get; }
         public IReadOnlyList<WeaponSlotView> Weapons { get; }
+        public string WaveAnnouncement { get; }
+        public float WaveAnnouncementRemaining { get; }
+        public int WaveAnnouncementIntensity { get; }
     }
 
     public readonly struct UpgradeChoiceView
