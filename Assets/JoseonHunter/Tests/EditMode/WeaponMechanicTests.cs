@@ -1070,6 +1070,31 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void JangseungRetirementCancelsPendingDustAndCrossingFrames()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 4, 1, 0f, 5);
+            var target = new TestTarget(1, new Float2(0f, -1.2f), mask); registry.Register(target);
+            var library = CreateJangseungVisualLibrary(out var visualAssets);
+            var context = new WeaponExecutionContext(default, root.transform, null, null, null, null, library, 0, 1);
+
+            ward.Tick(.02f, context);
+            var presenter = ward.WardPresenterForTests;
+            target.MoveTo(new Float2(1.2f, .6f));
+            ward.Tick(.02f, context);
+            ward.Reset();
+            presenter.Tick(.2f);
+
+            Assert.That(presenter.ActiveDustVisualCountForTests, Is.Zero);
+            Assert.That(presenter.ActiveCrossingVisualCountForTests, Is.Zero);
+            Assert.That(presenter.DustFrameIndicesForTests, Is.Empty);
+            Assert.That(presenter.CrossingFrameIndicesForTests, Is.Empty);
+            runtime.Dispose(); DestroyVisualAssets(library, visualAssets);
+        }
+
+        [Test]
         public void WeaponRuntimePassesTheJangseungVisualLibraryToRegisteredWards()
         {
             var mask = PixelHitMask.FromRows("1");

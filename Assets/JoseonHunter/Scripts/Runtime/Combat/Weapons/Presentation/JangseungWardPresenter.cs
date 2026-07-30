@@ -58,7 +58,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             var set = pooledSets.Count > 0 ? pooledSets.Pop() : new SetVisual(root, sortingOrder);
             activeSets.Add(setId, set);
             Update(set, posts, postSprite);
-            PlayDust(posts);
+            PlayDust(setId, posts);
         }
 
         public void UpdateSet(int setId, IReadOnlyList<Float2> posts, Sprite postSprite)
@@ -70,7 +70,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         {
             if (disposed || !activeSets.TryGetValue(setId, out var set)) return;
             set.FlashOnly(segmentIndex, .12f);
-            StartSequence(crossingSequences, crossingPool, library != null ? library.JangseungCrossingFrames : null,
+            StartSequence(crossingSequences, crossingPool, setId, library != null ? library.JangseungCrossingFrames : null,
                 contact, Vector3.one * .85f, Color.white, sortingOrder + 3, crossingFrameIndicesForTests);
             CrossingCountForTests++;
             LastCrossingContactForTests = contact;
@@ -90,6 +90,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         {
             if (disposed || !activeSets.TryGetValue(setId, out var set)) return;
             activeSets.Remove(setId);
+            CancelSequences(crossingSequences, crossingPool, setId);
+            CancelSequences(dustSequences, dustPool, setId);
             set.Clear();
             if (pooledSets.Count < MaximumPooledSets) pooledSets.Push(set);
             else set.Dispose();
@@ -98,6 +100,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         public void Clear()
         {
             foreach (var id in new List<int>(activeSets.Keys)) RetireSet(id);
+            crossingSequences.Clear(); dustSequences.Clear();
+            crossingPool.Clear(); dustPool.Clear();
+#if UNITY_INCLUDE_TESTS
+            crossingFrameIndicesForTests.Clear(); dustFrameIndicesForTests.Clear();
+#endif
         }
 
         public void Dispose()
@@ -116,22 +123,24 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
                 library != null ? library.GeumjulAnchor : null, library != null ? library.GeumjulKnotVariants : null);
         }
 
-        private void PlayDust(IReadOnlyList<Float2> posts)
+        private void PlayDust(int setId, IReadOnlyList<Float2> posts)
         {
             if (posts == null) return;
             foreach (var post in posts)
-                StartSequence(dustSequences, dustPool, library != null ? library.JangseungDustFrames : null,
+                StartSequence(dustSequences, dustPool, setId, library != null ? library.JangseungDustFrames : null,
                     new Vector2(post.X, post.Y), Vector3.one * .7f, new Color(1f, .86f, .52f, .75f), sortingOrder + 2,
                     dustFrameIndicesForTests);
         }
 
-        private static void StartSequence(List<FrameSequence> sequences, WeaponTransientVisualPool pool, Sprite[] frames,
+        private static void StartSequence(List<FrameSequence> sequences, WeaponTransientVisualPool pool, int setId, Sprite[] frames,
             Vector2 position, Vector3 scale, Color color, int order, List<int> indices)
         {
             if (frames == null || frames.Length == 0 || sequences.Count >= MaximumFrameSequences) return;
-            pool.Play(frames[0], position, Quaternion.identity, scale, color, AccentFrameDuration, order);
+            pool.Play(frames[0], position, Quaternion.identity, scale, color, AccentFrameDuration, order, setId);
+#if UNITY_INCLUDE_TESTS
             indices.Add(0);
-            sequences.Add(new FrameSequence(frames, position, scale, color, order));
+#endif
+            sequences.Add(new FrameSequence(setId, frames, position, scale, color, order));
         }
 
         private static void AdvanceSequences(List<FrameSequence> sequences, WeaponTransientVisualPool pool, float deltaTime, List<int> indices)
@@ -142,8 +151,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
                 sequence.Remaining -= Mathf.Max(0f, deltaTime);
                 while (sequence.Remaining <= 0f && sequence.NextFrame < sequence.Frames.Length)
                 {
-                    pool.Play(sequence.Frames[sequence.NextFrame], sequence.Position, Quaternion.identity, sequence.Scale, sequence.Color, AccentFrameDuration, sequence.Order);
-                    indices.Add(sequence.NextFrame++);
+                    pool.Play(sequence.Frames[sequence.NextFrame], sequence.Position, Quaternion.identity, sequence.Scale, sequence.Color, AccentFrameDuration, sequence.Order, sequence.SetId);
+                    var frame = sequence.NextFrame++;
+#if UNITY_INCLUDE_TESTS
+                    indices.Add(frame);
+#endif
                     sequence.Remaining += AccentFrameDuration;
                 }
                 if (sequence.NextFrame >= sequence.Frames.Length && sequence.Remaining <= 0f) sequences.RemoveAt(index);
@@ -153,9 +165,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
 
         private struct FrameSequence
         {
-            public FrameSequence(Sprite[] frames, Vector2 position, Vector3 scale, Color color, int order)
-            { Frames = frames; Position = position; Scale = scale; Color = color; Order = order; NextFrame = 1; Remaining = AccentFrameDuration; }
-            public Sprite[] Frames; public Vector2 Position; public Vector3 Scale; public Color Color; public int Order; public int NextFrame; public float Remaining;
+            public FrameSequence(int setId, Sprite[] frames, Vector2 position, Vector3 scale, Color color, int order)
+            { SetId = setId; Frames = frames; Position = position; Scale = scale; Color = color; Order = order; NextFrame = 1; Remaining = AccentFrameDuration; }
+            public int SetId; public Sprite[] Frames; public Vector2 Position; public Vector3 Scale; public Color Color; public int Order; public int NextFrame; public float Remaining;
+        }
+
+        private static void CancelSequences(List<FrameSequence> sequences, WeaponTransientVisualPool pool, int setId)
+        {
+            sequences.RemoveAll(sequence => sequence.SetId == setId);
+            pool.CancelOwner(setId);
         }
 
         private sealed class SetVisual : IDisposable

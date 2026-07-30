@@ -20,7 +20,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         public int CreatedCount { get; private set; }
         public int ActiveCount => active.Count;
 
-        public void Play(Sprite sprite, Vector3 position, Quaternion rotation, Vector3 scale, Color color, float lifetime, int sortingOrder)
+        public void Play(Sprite sprite, Vector3 position, Quaternion rotation, Vector3 scale, Color color, float lifetime, int sortingOrder, int ownerId = 0)
         {
             if (disposed || sprite == null) return;
 
@@ -34,7 +34,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             renderer.color = color;
             renderer.sortingOrder = sortingOrder;
             renderer.gameObject.SetActive(true);
-            active.Add(new Entry(renderer, Mathf.Max(0f, lifetime)));
+            active.Add(new Entry(renderer, Mathf.Max(0f, lifetime), ownerId));
         }
 
         public void Tick(float deltaTime)
@@ -67,6 +67,25 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             while (pooled.Count > 0) Destroy(pooled.Pop());
         }
 
+        public void CancelOwner(int ownerId)
+        {
+            if (disposed) return;
+            for (var index = active.Count - 1; index >= 0; index--)
+            {
+                if (active[index].OwnerId != ownerId) continue;
+                var entry = active[index]; active.RemoveAt(index); Return(entry.Renderer);
+            }
+        }
+
+        public void Clear()
+        {
+            if (disposed) return;
+            for (var index = active.Count - 1; index >= 0; index--)
+            {
+                var entry = active[index]; active.RemoveAt(index); Return(entry.Renderer);
+            }
+        }
+
         private SpriteRenderer CreateRenderer()
         {
             var visual = new GameObject("Weapon Transient Visual");
@@ -94,14 +113,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
 
         private struct Entry
         {
-            public Entry(SpriteRenderer renderer, float remainingLifetime)
+            public Entry(SpriteRenderer renderer, float remainingLifetime, int ownerId)
             {
                 Renderer = renderer;
                 RemainingLifetime = remainingLifetime;
+                OwnerId = ownerId;
             }
 
             public SpriteRenderer Renderer;
             public float RemainingLifetime;
+            public int OwnerId;
         }
     }
 }
