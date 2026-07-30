@@ -8,8 +8,12 @@ namespace JoseonHunter.Runtime.Gameplay
     /// <summary>Owns the visual-only representation of the player's geumjul trail.</summary>
     public sealed class GeumjulTrailPresenter : MonoBehaviour
     {
-        private const int MaximumKnots = 18;
+        private const int MaximumKnots = 10;
         private const float ClosureFrameDuration = .1f;
+        private const float KnotMinimumWorldSpacing = 1.1f;
+        private const float AnchorMaximumWorldSize = .42f;
+        private const float KnotMaximumWorldSize = .28f;
+        private const float ClosurePolygonCoverage = .72f;
         private readonly List<Vector2> displayedPoints = new List<Vector2>();
         private readonly List<SpriteRenderer> knotPool = new List<SpriteRenderer>();
         private readonly List<SpriteRenderer> closurePool = new List<SpriteRenderer>();
@@ -29,6 +33,17 @@ namespace JoseonHunter.Runtime.Gameplay
         public bool HasAnchorForTests => anchor != null && anchor.gameObject.activeSelf;
         public bool IsClosureReadyForTests => closureReady;
         public Material CachedMaterialForTests => ropeMaterial;
+        public float AnchorWorldSizeForTests => WorldSize(anchor);
+        public float LargestActiveKnotWorldSizeForTests
+        {
+            get
+            {
+                var largest = 0f;
+                foreach (var knot in knotPool) if (knot.gameObject.activeSelf) largest = Mathf.Max(largest, WorldSize(knot));
+                return largest;
+            }
+        }
+        public float ClosureBaseScaleForTests { get; private set; }
 
         public void Configure(JangseungGeumjulVisualLibrary library, Transform root, int order)
         {
@@ -47,7 +62,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 UpdateLines(points);
                 UpdateAnchor(points);
-                UpdatePooledKnots(points, .75f);
+                UpdatePooledKnots(points);
                 FadeOldSegments(points);
                 displayedPoints.Clear();
                 for (var index = 0; index < points.Count; index++) displayedPoints.Add(points[index]);
@@ -62,7 +77,9 @@ namespace JoseonHunter.Runtime.Gameplay
             if (polygon == null || polygon.Count == 0 || visuals == null || visuals.GeumjulClosureFrames.Length == 0) return;
             ClearTrailVisuals();
             if (closureAnimation != null) StopCoroutine(closureAnimation);
-            closureAnimation = StartCoroutine(PlayClosureFrames(Centroid(polygon)));
+            var scale = ClosureScaleFor(polygon);
+            ClosureBaseScaleForTests = scale;
+            closureAnimation = StartCoroutine(PlayClosureFrames(Centroid(polygon), scale));
         }
 
         public void Clear()
@@ -88,7 +105,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (anchor != null && anchor.gameObject.activeSelf && closureReady)
             {
                 var pulse = 1f + Mathf.Sin(Time.time * 9f) * .12f;
-                anchor.transform.localScale = Vector3.one * pulse;
+                anchor.transform.localScale = Vector3.one * AnchorScale() * pulse;
             }
         }
 
@@ -162,20 +179,21 @@ namespace JoseonHunter.Runtime.Gameplay
             anchor.gameObject.SetActive(active);
             if (!active) return;
             anchor.transform.position = points[0];
-            anchor.transform.localScale = Vector3.one;
+            anchor.transform.localScale = Vector3.one * AnchorScale();
         }
 
-        private void UpdatePooledKnots(IReadOnlyList<Vector2> points, float minimumWorldSpacing)
+        private void UpdatePooledKnots(IReadOnlyList<Vector2> points)
         {
             var activeCount = 0;
             var lastKnot = Vector2.positiveInfinity;
             for (var index = 1; index < points.Count && activeCount < MaximumKnots; index++)
             {
-                if (activeCount > 0 && Vector2.Distance(lastKnot, points[index]) < minimumWorldSpacing) continue;
+                if (activeCount > 0 && Vector2.Distance(lastKnot, points[index]) < KnotMinimumWorldSpacing) continue;
                 var knot = KnotAt(activeCount++);
                 knot.transform.position = points[index];
                 var variants = visuals != null ? visuals.GeumjulKnotVariants : Array.Empty<Sprite>();
                 knot.sprite = variants.Length == 0 ? null : variants[(activeCount - 1) % variants.Length];
+                knot.transform.localScale = Vector3.one * ScaleForMaximumWorldSize(knot.sprite, KnotMaximumWorldSize);
                 knot.gameObject.SetActive(knot.sprite != null);
                 lastKnot = points[index];
             }
@@ -193,7 +211,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void SetClosureReady(bool ready)
         {
             closureReady = ready;
-            if (anchor != null && !ready) anchor.transform.localScale = Vector3.one;
+            if (anchor != null && !ready) anchor.transform.localScale = Vector3.one * AnchorScale();
         }
 
         private void FadeOldSegments(IReadOnlyList<Vector2> points)
@@ -205,7 +223,7 @@ namespace JoseonHunter.Runtime.Gameplay
             ropeLine.endColor = new Color(1f, .78f, .23f, .95f);
         }
 
-        private IEnumerator PlayClosureFrames(Vector2 centroid)
+        private IEnumerator PlayClosureFrames(Vector2 centroid, float scale)
         {
             var frames = visuals.GeumjulClosureFrames;
             for (var index = 0; index < frames.Length; index++)
@@ -213,7 +231,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 var visual = ClosureAt(index);
                 visual.sprite = frames[index];
                 visual.transform.position = centroid;
-                visual.transform.localScale = Vector3.one * (1f + index * .08f);
+                visual.transform.localScale = Vector3.one * (scale * (1f + index * .08f));
                 visual.gameObject.SetActive(visual.sprite != null);
                 ActiveClosureVisualCountForTests = visual.sprite != null ? 1 : 0;
                 yield return new WaitForSeconds(ClosureFrameDuration);
@@ -221,6 +239,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             ActiveClosureVisualCountForTests = 0;
+            ClosureBaseScaleForTests = 0f;
             closureAnimation = null;
         }
 
@@ -248,7 +267,37 @@ namespace JoseonHunter.Runtime.Gameplay
         private void ReleaseClosureVisuals()
         {
             ActiveClosureVisualCountForTests = 0;
+            ClosureBaseScaleForTests = 0f;
             foreach (var closure in closurePool) closure.gameObject.SetActive(false);
+        }
+
+        private float AnchorScale() => ScaleForMaximumWorldSize(anchor != null ? anchor.sprite : null, AnchorMaximumWorldSize);
+
+        private static float ScaleForMaximumWorldSize(Sprite sprite, float maximumWorldSize)
+        {
+            if (sprite == null) return 1f;
+            var sourceSize = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+            return sourceSize <= .0001f ? 1f : maximumWorldSize / sourceSize;
+        }
+
+        private static float WorldSize(SpriteRenderer renderer)
+        {
+            if (renderer == null || renderer.sprite == null) return 0f;
+            var size = renderer.sprite.bounds.size;
+            return Mathf.Max(size.x * Mathf.Abs(renderer.transform.lossyScale.x), size.y * Mathf.Abs(renderer.transform.lossyScale.y));
+        }
+
+        private static float ClosureScaleFor(IReadOnlyList<Vector2> polygon)
+        {
+            var minimum = polygon[0];
+            var maximum = polygon[0];
+            for (var index = 1; index < polygon.Count; index++)
+            {
+                minimum = Vector2.Min(minimum, polygon[index]);
+                maximum = Vector2.Max(maximum, polygon[index]);
+            }
+
+            return Mathf.Max(.01f, Mathf.Max(maximum.x - minimum.x, maximum.y - minimum.y) * ClosurePolygonCoverage);
         }
 
         private static Vector2 Centroid(IReadOnlyList<Vector2> polygon)

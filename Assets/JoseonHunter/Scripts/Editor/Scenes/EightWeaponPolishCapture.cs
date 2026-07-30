@@ -70,20 +70,24 @@ namespace JoseonHunter.Editor.Scenes
     {
         private const string PendingKey = "JoseonHunter.EightWeaponPolishCapture.Pending";
         private const string WeaponKey = PendingKey + ".Weapon";
+        private const string ReadabilityKey = PendingKey + ".Readability";
 
         public static bool IsPending => SessionState.GetBool(PendingKey, false);
         public static string WeaponFilter => SessionState.GetString(WeaponKey, string.Empty);
+        public static bool IsReadabilityCapture => SessionState.GetBool(ReadabilityKey, false);
 
-        public static void Begin(string selectedWeapon)
+        public static void Begin(string selectedWeapon, bool isReadabilityCapture = false)
         {
             SessionState.SetBool(PendingKey, true);
             SessionState.SetString(WeaponKey, selectedWeapon ?? string.Empty);
+            SessionState.SetBool(ReadabilityKey, isReadabilityCapture);
         }
 
         public static void Clear()
         {
             SessionState.EraseBool(PendingKey);
             SessionState.EraseString(WeaponKey);
+            SessionState.EraseBool(ReadabilityKey);
         }
     }
 
@@ -91,6 +95,8 @@ namespace JoseonHunter.Editor.Scenes
     {
         private const string GameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
         private const string MenuPath = "Tools/Joseon Hunter/Capture/Eight Weapon Polish";
+        private const string ReadabilityMenuPath = "Tools/Joseon Hunter/Capture/Jangseung Geumjul Readability";
+        private const string VerificationCapturePath = "Logs/jangseung-geumjul-gameplay.png";
         private const int CaptureWidth = 360;
         private const int CaptureHeight = 800;
         private const double SettleSeconds = 0.35d;
@@ -125,21 +131,40 @@ namespace JoseonHunter.Editor.Scenes
         private static Transform playerTransform;
         private static CaptureCase currentCase;
         private static string weaponFilter;
+        private static bool readabilityCapture;
+        private static int readabilityStep;
 
         public readonly struct CaptureCase
         {
-            public CaptureCase(WeaponId weaponId, int level, bool evolved, string label)
+            public CaptureCase(WeaponId weaponId, int level, bool evolved, string label, ReadabilityScenario scenario = ReadabilityScenario.None)
             {
                 WeaponId = weaponId;
                 Level = level;
                 Evolved = evolved;
                 Label = label;
+                Scenario = scenario;
             }
 
             public WeaponId WeaponId { get; }
             public int Level { get; }
             public bool Evolved { get; }
             public string Label { get; }
+            public ReadabilityScenario Scenario { get; }
+
+            public static CaptureCase JangseungCrossing =>
+                new(WeaponId.JangseungWard, 5, false, "jangseung-crossing", ReadabilityScenario.JangseungCrossing);
+            public static CaptureCase GeumjulClosureReady =>
+                new(WeaponId.HwandoFlyingBlade, 1, false, "geumjul-closure-ready", ReadabilityScenario.GeumjulClosureReady);
+            public static CaptureCase GeumjulClosureImpact =>
+                new(WeaponId.HwandoFlyingBlade, 1, false, "geumjul-closure-impact", ReadabilityScenario.GeumjulClosureImpact);
+        }
+
+        public enum ReadabilityScenario
+        {
+            None,
+            JangseungCrossing,
+            GeumjulClosureReady,
+            GeumjulClosureImpact
         }
 
         private enum CaptureStage
@@ -165,10 +190,29 @@ namespace JoseonHunter.Editor.Scenes
             return cases;
         }
 
+        public static IReadOnlyList<CaptureCase> BuildReadabilityCases() => new[]
+        {
+            CaptureCase.JangseungCrossing,
+            CaptureCase.GeumjulClosureReady,
+            CaptureCase.GeumjulClosureImpact
+        };
+
         [MenuItem(MenuPath)]
         public static void CaptureAll()
         {
             BeginCapture(null);
+        }
+
+        [MenuItem(ReadabilityMenuPath)]
+        public static void CaptureJangseungGeumjulReadability()
+        {
+            BeginReadabilityCapture();
+        }
+
+        /// <summary>Batch entry point; exits only after all deterministic frames are written.</summary>
+        public static void CaptureJangseungGeumjulReadabilityInBatchMode()
+        {
+            BeginReadabilityCapture();
         }
 
         public static void CaptureWeapon(WeaponId weaponId)
@@ -176,7 +220,12 @@ namespace JoseonHunter.Editor.Scenes
             BeginCapture(weaponId.Value);
         }
 
-        private static void BeginCapture(string selectedWeapon)
+        private static void BeginReadabilityCapture()
+        {
+            BeginCapture(null, true);
+        }
+
+        private static void BeginCapture(string selectedWeapon, bool isReadabilityCapture = false)
         {
             if (CaptureSessionState.IsPending)
             {
@@ -187,7 +236,7 @@ namespace JoseonHunter.Editor.Scenes
             try
             {
                 ValidateReflectionHooks();
-                CaptureSessionState.Begin(selectedWeapon);
+                CaptureSessionState.Begin(selectedWeapon, isReadabilityCapture);
                 caseIndex = 0;
                 currentCase = default;
                 EditorSceneManager.OpenScene(GameplayScenePath);
@@ -230,6 +279,7 @@ namespace JoseonHunter.Editor.Scenes
                 Screen.SetResolution(CaptureWidth, CaptureHeight, false);
                 caseIndex = 0;
                 weaponFilter = CaptureSessionState.WeaponFilter;
+                readabilityCapture = CaptureSessionState.IsReadabilityCapture;
                 controller = Object.FindFirstObjectByType<FirstPlayableController>();
                 if (controller == null)
                     throw new InvalidOperationException("Gameplay scene did not create FirstPlayableController.");
@@ -265,6 +315,12 @@ namespace JoseonHunter.Editor.Scenes
             foreach (var position in TargetPositions) controller.SpawnEnemyForTests(position);
             MakeEnemiesStationaryAndDurable();
             playerTransform = GameObject.Find("Han Yeonhwa")?.transform;
+            readabilityStep = 0;
+            if (captureCase.Scenario == ReadabilityScenario.GeumjulClosureReady ||
+                captureCase.Scenario == ReadabilityScenario.GeumjulClosureImpact)
+            {
+                PrepareGeumjulScenario(captureCase.Scenario);
+            }
             DeletePreviousCaseResult(captureCase);
             stage = CaptureStage.Settle;
             stageStartedAt = EditorApplication.timeSinceStartup;
@@ -287,6 +343,8 @@ namespace JoseonHunter.Editor.Scenes
         {
             if (!EditorApplication.isPlaying || controller == null) return;
             PinEnemiesToCapturePositions();
+            if (currentCase.Scenario == ReadabilityScenario.JangseungCrossing)
+                AdvanceJangseungCrossingScenario();
             var elapsed = EditorApplication.timeSinceStartup - stageStartedAt;
             switch (stage)
             {
@@ -302,10 +360,17 @@ namespace JoseonHunter.Editor.Scenes
                     {
                         controller.SetWeaponLevelForTests(currentCase.WeaponId, currentCase.Level);
                     }
+                    if (currentCase.Scenario == ReadabilityScenario.GeumjulClosureImpact)
+                    {
+                        var presenter = Object.FindFirstObjectByType<GeumjulTrailPresenter>();
+                        if (presenter == null) throw new InvalidOperationException("Gameplay scene did not create GeumjulTrailPresenter.");
+                        presenter.PlayClosure(NearlyClosedGeumjulPolygon());
+                    }
                     stage = CaptureStage.MeaningfulPhase;
                     stageStartedAt = EditorApplication.timeSinceStartup;
                     break;
                 case CaptureStage.MeaningfulPhase:
+                    if (TryCaptureReadabilityScenario()) break;
                     var predicateKind = CapturePhasePolicy.PredicateFor(currentCase);
                     var predicateSatisfied = IsRequiredPhaseActive(predicateKind);
                     var earliestCapture = predicateKind == CapturePredicateKind.NearPlayerPresentation
@@ -440,6 +505,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static IReadOnlyList<CaptureCase> ActiveCases()
         {
+            if (readabilityCapture) return BuildReadabilityCases();
             var cases = BuildCases();
             return string.IsNullOrEmpty(weaponFilter)
                 ? cases
@@ -461,6 +527,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void PinEnemiesToCapturePositions()
         {
+            if (currentCase.Scenario == ReadabilityScenario.JangseungCrossing && readabilityStep > 0) return;
             var enemies = (IEnumerable)EnemiesField.GetValue(controller);
             var index = 0;
             foreach (var enemy in enemies)
@@ -471,6 +538,64 @@ namespace JoseonHunter.Editor.Scenes
                     ?.GetValue(enemy) as GameObject;
                 if (gameObject != null) gameObject.transform.position = TargetPositions[index];
                 index++;
+            }
+        }
+
+        private static void PrepareGeumjulScenario(ReadabilityScenario scenario)
+        {
+            var presenter = Object.FindFirstObjectByType<GeumjulTrailPresenter>();
+            if (presenter == null) throw new InvalidOperationException("Gameplay scene did not create GeumjulTrailPresenter.");
+            var polygon = NearlyClosedGeumjulPolygon();
+            presenter.SetTrail(polygon, .48f);
+        }
+
+        private static IReadOnlyList<Vector2> NearlyClosedGeumjulPolygon()
+        {
+            var points = new List<Vector2>(16);
+            for (var index = 0; index < 5; index++) points.Add(new Vector2(-2f + index, -1.5f));
+            for (var index = 1; index < 4; index++) points.Add(new Vector2(2f, -1.5f + index));
+            for (var index = 3; index >= 0; index--) points.Add(new Vector2(index - 2f, 1.5f));
+            for (var index = 2; index >= 0; index--) points.Add(new Vector2(-2f, index - 1.5f));
+            points.Add(new Vector2(-1.7f, -1.5f));
+            return points;
+        }
+
+        private static void AdvanceJangseungCrossingScenario()
+        {
+            var boundary = Object.FindObjectsByType<LineRenderer>(FindObjectsSortMode.None)
+                .FirstOrDefault(line => line.gameObject.name == "Jangseung Ward Boundary" && line.gameObject.activeInHierarchy);
+            if (boundary == null || boundary.positionCount < 2 || readabilityStep >= 2) return;
+            var enemy = ((IEnumerable)EnemiesField.GetValue(controller)).Cast<object>().FirstOrDefault();
+            var enemyObject = enemy?.GetType().GetField("Object", BindingFlags.Instance | BindingFlags.Public)?.GetValue(enemy) as GameObject;
+            if (enemyObject == null) return;
+            var start = boundary.GetPosition(0);
+            var end = boundary.GetPosition(1);
+            var tangent = ((Vector2)(end - start)).normalized;
+            var normal = new Vector2(-tangent.y, tangent.x);
+            var midpoint = ((Vector2)start + (Vector2)end) * .5f;
+            enemyObject.transform.position = midpoint + normal * (readabilityStep == 0 ? .55f : -.55f);
+            readabilityStep++;
+        }
+
+        private static bool TryCaptureReadabilityScenario()
+        {
+            switch (currentCase.Scenario)
+            {
+                case ReadabilityScenario.JangseungCrossing:
+                    if (!Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None).Any(renderer =>
+                            renderer.gameObject.name == "Weapon Transient Visual" && renderer.enabled && renderer.gameObject.activeInHierarchy)) return false;
+                    CaptureAndAdvance();
+                    return true;
+                case ReadabilityScenario.GeumjulClosureReady:
+                    if (Object.FindFirstObjectByType<GeumjulTrailPresenter>()?.IsClosureReadyForTests != true) return false;
+                    CaptureAndAdvance();
+                    return true;
+                case ReadabilityScenario.GeumjulClosureImpact:
+                    if (Object.FindFirstObjectByType<GeumjulTrailPresenter>()?.ActiveClosureVisualCountForTests <= 0) return false;
+                    CaptureAndAdvance();
+                    return true;
+                default:
+                    return false;
             }
         }
 
@@ -496,6 +621,11 @@ namespace JoseonHunter.Editor.Scenes
                 var fileName = $"{captureCase.WeaponId.Value}-{captureCase.Label}.png";
                 var outputPath = Path.Combine(OutputDirectory(), fileName);
                 File.WriteAllBytes(outputPath, texture.EncodeToPNG());
+                if (captureCase.Scenario == ReadabilityScenario.GeumjulClosureImpact)
+                {
+                    var verificationPath = Path.Combine(Directory.GetParent(Application.dataPath)?.FullName ?? string.Empty, VerificationCapturePath);
+                    File.Copy(outputPath, verificationPath, true);
+                }
                 Debug.Log(
                     $"Eight-weapon capture written: {outputPath}; phase={stage}; " +
                     $"editorTime={EditorApplication.timeSinceStartup:F3}");
@@ -605,8 +735,13 @@ namespace JoseonHunter.Editor.Scenes
             controller = null;
             playerTransform = null;
             weaponFilter = null;
+            var completedReadabilityCapture = readabilityCapture;
+            readabilityCapture = false;
+            readabilityStep = 0;
             if (exitPlayMode && EditorApplication.isPlaying)
                 EditorApplication.isPlaying = false;
+            if (completedReadabilityCapture && Application.isBatchMode && !EditorApplication.isPlaying)
+                EditorApplication.Exit(0);
         }
 
     }

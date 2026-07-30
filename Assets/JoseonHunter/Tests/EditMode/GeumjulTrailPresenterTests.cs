@@ -20,6 +20,30 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(presenter.ActiveKnotCountForTests, Is.LessThanOrEqualTo(18));
                 Assert.That(presenter.HasAnchorForTests, Is.True);
                 Assert.That(presenter.IsClosureReadyForTests, Is.True);
+                Assert.That(presenter.AnchorWorldSizeForTests, Is.LessThanOrEqualTo(.42f));
+                Assert.That(presenter.LargestActiveKnotWorldSizeForTests, Is.LessThanOrEqualTo(.28f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(owner);
+            }
+        }
+
+        [Test]
+        public void ClosureScaleIsDerivedFromThePolygonBounds()
+        {
+            var owner = new GameObject("Geumjul closure");
+            var presenter = owner.AddComponent<GeumjulTrailPresenter>();
+            try
+            {
+                presenter.Configure(CreateVisualLibrary(), presenter.transform, 4);
+                presenter.PlayClosure(new[]
+                {
+                    new Vector2(-2f, -1.5f), new Vector2(2f, -1.5f),
+                    new Vector2(2f, 1.5f), new Vector2(-2f, 1.5f)
+                });
+
+                Assert.That(presenter.ClosureBaseScaleForTests, Is.EqualTo(2.88f).Within(.001f));
             }
             finally
             {
