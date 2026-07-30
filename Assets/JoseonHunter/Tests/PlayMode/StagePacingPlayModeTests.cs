@@ -45,5 +45,19 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.RunEndedForTests, Is.True);
             Assert.That(controller.VictoryForTests, Is.True);
         }
+
+        [UnityTest]
+        public IEnumerator FinalBossHealthTakesHudPriorityOverSurvivingMidBosses()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            Assert.That(controller, Is.Not.Null);
+
+            controller.AdvanceStageForTests(0f, 34f);
+            controller.AdvanceStageForTests(49f, 50.1f);
+
+            Assert.That(controller.UiState.BossMaximumHealth, Is.EqualTo(680f));
+        }
     }
 }

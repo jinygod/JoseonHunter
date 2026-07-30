@@ -1441,8 +1441,10 @@ namespace JoseonHunter.Runtime.Gameplay
                     WeaponBehavior(weapon.Key)));
             }
 
-            var boss = enemies.Find(candidate =>
-                (candidate.IsBoss || candidate.IsMidBoss) && candidate.Object != null);
+            // The final boss owns the featured health bar even if a midboss survived into
+            // the last encounter. Midbosses are the fallback featured target.
+            var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null) ??
+                       enemies.Find(candidate => candidate.IsMidBoss && candidate.Object != null);
             return new FirstPlayableUiState(
                 level, experience, experienceToNext, coins, kills, elapsed, TestDuration,
                 playerHealth, playerMaxHealth, finalBossWarning && !bossSpawned, bossAlive,
