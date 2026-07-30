@@ -21,6 +21,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/";
         private const string WeaponPolishRuntimeRoot =
             "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/";
+        private const string JangseungGeumjulArtRoot =
+            "Assets/JoseonHunter/Art/VFX/JangseungGeumjul/";
         private const string WorldRuntimeRoot =
             "Assets/JoseonHunter/Art/World/Runtime/";
         private const string CombatAnimationRoot =
@@ -87,12 +89,15 @@ namespace JoseonHunter.Editor.AssetImport
             {
                 texture.spriteImportMode = SpriteImportMode.Single;
             }
-            texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
+            if (!assetPath.StartsWith(JangseungGeumjulArtRoot, System.StringComparison.Ordinal))
             {
-                name = "Android",
-                overridden = true,
-                format = TextureImporterFormat.ASTC_6x6,
-            });
+                texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
+                {
+                    name = "Android",
+                    overridden = true,
+                    format = TextureImporterFormat.ASTC_6x6,
+                });
+            }
         }
 
         private static bool IsMobilePixelRuntime(string path)

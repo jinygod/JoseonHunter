@@ -7,7 +7,7 @@ namespace JoseonHunter.Editor.AssetProduction
 {
     public static class JangseungGeumjulAssetImporter
     {
-        public const string ArtRoot = "Assets/JoseonHunter/Art/Vfx/JangseungGeumjul";
+        public const string ArtRoot = "Assets/JoseonHunter/Art/VFX/JangseungGeumjul";
         public const string LibraryPath =
             "Assets/JoseonHunter/Content/Presentation/JangseungGeumjulVisualLibrary.asset";
 
@@ -70,6 +70,16 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.alphaIsTransparency = true;
             importer.wrapMode = wrapMode;
             importer.SaveAndReimport();
+
+            importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            var androidSettings = importer.GetPlatformTextureSettings("Android");
+            androidSettings.name = "Android";
+            androidSettings.overridden = true;
+            androidSettings.textureCompression = TextureImporterCompression.Uncompressed;
+            androidSettings.format = TextureImporterFormat.RGBA32;
+            androidSettings.crunchedCompression = false;
+            importer.SetPlatformTextureSettings(androidSettings);
+            AssetDatabase.WriteImportSettingsIfDirty(path);
         }
 
         private static Sprite SpriteAt(string path) => AssetDatabase.LoadAssetAtPath<Sprite>(path);
