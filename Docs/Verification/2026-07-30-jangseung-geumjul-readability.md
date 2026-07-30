@@ -73,3 +73,35 @@ No gameplay rule or balance value was changed; the correction is limited to visu
 ## Working-tree baseline
 
 Known unrelated dirty files include numerous Unity-generated texture `.meta` files, `Artifacts/`, `ProjectSettings/SceneTemplateSettings.json`, `ProjectSettings/ProjectSettings.asset`, and the generator-written `Assets/JoseonHunter/Scenes/Gameplay.unity`. They are deliberately not staged or reverted by this task.
+
+## Resources integration fallback (option 2 merge decision)
+
+The primary visual library now lives at `Assets/JoseonHunter/Resources/Presentation/JangseungGeumjulVisualLibrary.asset`. Its existing meta GUID (`8f260d29299e8cd4e9b4e07244e15ff6`) was moved intact. The importer, asset test, and scene generator use this canonical asset path. If `FirstPlayableController` has no serialized Jangseung/Geumjul visual-library assignment, it loads `Resources.Load<JangseungGeumjulVisualLibrary>("Presentation/JangseungGeumjulVisualLibrary")`; both the initial runtime setup and weapon-executor rebuild resolve through that fallback.
+
+Focused validation was sequential and intentionally did not rerun the full suite:
+
+```powershell
+& $unityExe -batchmode -nographics -projectPath $project -runTests -testPlatform EditMode -testFilter 'JoseonHunter.Tests.EditMode.JangseungGeumjulAssetTests|JoseonHunter.Tests.EditMode.GeumjulTrailPresenterTests|JoseonHunter.Tests.EditMode.WeaponMechanicTests' -testResults 'Artifacts\task4-resources-editmode.xml' -logFile 'Artifacts\task4-resources-editmode.log'
+& $unityExe -batchmode -nographics -projectPath $project -runTests -testPlatform PlayMode -testFilter 'JoseonHunter.Tests.PlayMode.FirstPlayablePresentationPlayModeTests.ResetRunLoadsResourcesVisualLibraryWhenSerializedAssignmentIsMissing' -testResults 'Artifacts\task4-resources-controller-playmode.xml' -logFile 'Artifacts\task4-resources-controller-playmode.log'
+& $unityExe -batchmode -nographics -projectPath $project -runTests -testPlatform PlayMode -testFilter 'JoseonHunter.Tests.PlayMode.EightWeaponCombatPlayModeTests' -testResults 'Artifacts\task4-resources-eightweapon-playmode.xml' -logFile 'Artifacts\task4-resources-eightweapon-playmode.log'
+```
+
+- EditMode asset/presenter/weapon-mechanic filter: 59 total, 59 passed, 0 failed, 0 skipped.
+- Serialized-null controller fallback: 1 total, 1 passed, 0 failed, 0 skipped.
+- EightWeapon PlayMode: 9 total, 9 passed, 0 failed, 0 skipped.
+
+The final recorded full EditMode baseline is **484 total, 471 passed, 13 failed** (`Artifacts/final-full-editmode.xml`). The user selected option 2: merge this load-bearing integration fix while explicitly accepting the following unrelated project-health failures, which were not changed by this task:
+
+- `JoseonHunter.Tests.EditMode.AssetImportProfileTests.AffixSlotPartsUseReadableUncompressedPixelImportProfile`
+- `JoseonHunter.Tests.EditMode.CombatRuleTests.Weapon_affix_catalog_has_exact_launch_balance_and_imported_contact_assets`
+- `JoseonHunter.Tests.EditMode.MobilePixelArtImportTests.ApprovedPolishBatchContainsOneRenderedAssetPerPng`
+- `JoseonHunter.Tests.EditMode.MobilePixelArtImportTests.CombatAnimationBatchContainsExpectedIndividualFrames`
+- `JoseonHunter.Tests.EditMode.MobilePixelArtImportTests.WeaponPolishTextureRemainsReadableForPixelContactMasks`
+- `JoseonHunter.Tests.EditMode.ProductionAssetContractTests.AndroidReleaseContractIsPortraitApi36Arm64`
+- `JoseonHunter.Tests.EditMode.SceneScaffoldTests.EachFoundationSceneHasOnlyTheSceneRoot("Assets/JoseonHunter/Scenes/Gameplay.unity")`
+- `JoseonHunter.Tests.EditMode.SceneScaffoldTests.GameplaySceneRootContainsWorldAndUi`
+- `JoseonHunter.Tests.EditMode.StaticSpriteContentTests.GameplaySceneContainsInactiveStaticSpriteLaunchProofLineup`
+- `JoseonHunter.Tests.EditMode.WeaponAffixPixelAssetContractTests.ApprovedAtlasesAreBinaryAndExactDimensions`
+- `JoseonHunter.Tests.EditMode.WeaponAffixPixelAssetContractTests.Every_potential_sprite_and_mask_uses_the_mobile_safe_pixel_import_profile`
+- `JoseonHunter.Tests.EditMode.WeaponAffixPixelAssetContractTests.PotentialMasksAreBinarySubsetsAndEveryPotentialResolves`
+- `JoseonHunter.Tests.EditMode.WeaponAffixRollerTests.General_roll_values_stay_in_approved_range(Cooldown,-12.0d,-5.0d)`

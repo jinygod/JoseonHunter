@@ -9,7 +9,7 @@ namespace JoseonHunter.Editor.AssetProduction
     {
         public const string ArtRoot = "Assets/JoseonHunter/Art/VFX/JangseungGeumjul";
         public const string LibraryPath =
-            "Assets/JoseonHunter/Content/Presentation/JangseungGeumjulVisualLibrary.asset";
+            "Assets/JoseonHunter/Resources/Presentation/JangseungGeumjulVisualLibrary.asset";
 
         private const string RopePath = ArtRoot + "/geumjul_rope_tile.png";
         private const string AnchorPath = ArtRoot + "/geumjul_anchor.png";
@@ -32,8 +32,8 @@ namespace JoseonHunter.Editor.AssetProduction
             ConfigureAll(DustPaths);
             ConfigureAll(CrossingPaths);
 
-            EnsureFolder("Assets/JoseonHunter/Content");
-            EnsureFolder("Assets/JoseonHunter/Content/Presentation");
+            EnsureFolder("Assets/JoseonHunter/Resources");
+            EnsureFolder("Assets/JoseonHunter/Resources/Presentation");
             var library = AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(LibraryPath);
             if (library == null)
             {

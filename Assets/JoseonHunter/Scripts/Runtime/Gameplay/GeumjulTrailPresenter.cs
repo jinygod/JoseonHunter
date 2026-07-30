@@ -33,6 +33,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public bool HasAnchorForTests => anchor != null && anchor.gameObject.activeSelf;
         public bool IsClosureReadyForTests => closureReady;
         public Material CachedMaterialForTests => ropeMaterial;
+        public JangseungGeumjulVisualLibrary ConfiguredVisualLibraryForTests => visuals;
         public float AnchorWorldSizeForTests => WorldSize(anchor);
         public float LargestActiveKnotWorldSizeForTests
         {

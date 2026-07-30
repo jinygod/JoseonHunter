@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -46,6 +47,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(previousPresenter == null, Is.True);
             Assert.That(previousMaterial == null, Is.True);
             Assert.That(Object.FindObjectsByType<GeumjulTrailPresenter>(FindObjectsSortMode.None), Has.Length.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ResetRunLoadsResourcesVisualLibraryWhenSerializedAssignmentIsMissing()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var libraryField = typeof(FirstPlayableController)
+                .GetField("jangseungGeumjulVisuals", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(libraryField, Is.Not.Null);
+
+            libraryField.SetValue(controller, null);
+            controller.ResetRunForTests();
+            yield return null;
+
+            var library = Resources.Load<JangseungGeumjulVisualLibrary>("Presentation/JangseungGeumjulVisualLibrary");
+            Assert.That(controller.ResolvedJangseungGeumjulVisualLibraryForTests, Is.SameAs(library));
+            Assert.That(controller.WeaponRuntime.JangseungGeumjulVisualLibraryForTests, Is.SameAs(library));
+            Assert.That(controller.GeumjulPresenterForTests.ConfiguredVisualLibraryForTests, Is.SameAs(library));
         }
 
         private static GeumjulTrailPresenter CreatePresenter()

@@ -12,7 +12,7 @@ namespace JoseonHunter.Tests.EditMode
         public void VisualLibraryContainsReadablePointFilteredAssets()
         {
             var library = AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(
-                "Assets/JoseonHunter/Content/Presentation/JangseungGeumjulVisualLibrary.asset");
+                JangseungGeumjulAssetImporter.LibraryPath);
             Assert.That(library, Is.Not.Null);
             Assert.That(library.GeumjulRopeTexture, Is.Not.Null);
             Assert.That(library.GeumjulAnchor, Is.Not.Null);
@@ -33,6 +33,14 @@ namespace JoseonHunter.Tests.EditMode
             AssertSpriteCollectionUsesCanonicalPaths(library.GeumjulClosureFrames);
             AssertSpriteCollectionUsesCanonicalPaths(library.JangseungDustFrames);
             AssertSpriteCollectionUsesCanonicalPaths(library.JangseungCrossingFrames);
+        }
+
+        [Test]
+        public void VisualLibraryIsLoadableFromTheCanonicalResourcesPath()
+        {
+            var library = Resources.Load<JangseungGeumjulVisualLibrary>("Presentation/JangseungGeumjulVisualLibrary");
+            Assert.That(library, Is.Not.Null);
+            Assert.That(AssetDatabase.GetAssetPath(library), Is.EqualTo(JangseungGeumjulAssetImporter.LibraryPath));
         }
 
         private static void AssertSpriteCollectionUsesCanonicalPaths(Sprite[] sprites)

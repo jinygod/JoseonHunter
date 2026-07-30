@@ -76,7 +76,7 @@ namespace JoseonHunter.Editor.Scenes
             serialized.FindProperty("motionLibrary").objectReferenceValue = CombatMotionLibraryBuilder.Build();
             serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(
-                    "Assets/JoseonHunter/Content/Presentation/JangseungGeumjulVisualLibrary.asset");
+                    "Assets/JoseonHunter/Resources/Presentation/JangseungGeumjulVisualLibrary.asset");
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, GameplayScenePath);

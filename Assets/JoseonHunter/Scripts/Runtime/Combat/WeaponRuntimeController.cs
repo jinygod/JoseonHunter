@@ -120,6 +120,7 @@ namespace JoseonHunter.Runtime.Combat
             presentationSpriteResolver = resolver;
         public void SetMaskResolver(Func<WeaponId, PixelHitMask> resolver) => maskResolver = resolver;
         public void SetJangseungGeumjulVisualLibrary(JangseungGeumjulVisualLibrary library) => jangseungGeumjulVisualLibrary = library;
+        public JangseungGeumjulVisualLibrary JangseungGeumjulVisualLibraryForTests => jangseungGeumjulVisualLibrary;
 
         public void Tick(float deltaTime, Vector2 ownerPosition, Transform presentationRoot, Sprite bladeSprite, int sortingOrder)
         {

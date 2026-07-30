@@ -104,6 +104,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private int waveAnnouncementIntensity;
 
         private const float TestDuration = 60f;
+        private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
 
         /// <summary>Read-only combat event source for presentation components.</summary>
         public CombatDamageService CombatDamageService => combatDamageService;
@@ -118,6 +119,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
+        public JangseungGeumjulVisualLibrary ResolvedJangseungGeumjulVisualLibraryForTests => ResolveJangseungGeumjulVisualLibrary();
+        public GeumjulTrailPresenter GeumjulPresenterForTests => geumjulPresenter;
         public int AppliedUpgradeCount { get; private set; }
         public int WeaponRebuildCountForTests { get; private set; }
         public int MidBossSpawnCountForTests { get; private set; }
@@ -489,6 +492,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void ResetRun()
         {
             Time.timeScale = 1f;
+            var visualLibrary = ResolveJangseungGeumjulVisualLibrary();
             geumjulPresenter?.Clear();
             weaponRuntime?.Dispose();
             weaponRuntime = null;
@@ -519,7 +523,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
-            weaponRuntime.SetJangseungGeumjulVisualLibrary(jangseungGeumjulVisuals);
+            weaponRuntime.SetJangseungGeumjulVisualLibrary(visualLibrary);
             elapsed = 0f;
             stageTimeline = StagePacingTimeline.ForDuration(TestDuration);
             processedStageMilestones = 0;
@@ -577,7 +581,7 @@ namespace JoseonHunter.Runtime.Gameplay
             geumjulPresenter = new GameObject("Geumjul Presentation")
                 .AddComponent<GeumjulTrailPresenter>();
             geumjulPresenter.transform.SetParent(runtimeObjects, false);
-            geumjulPresenter.Configure(jangseungGeumjulVisuals, runtimeObjects, 4);
+            geumjulPresenter.Configure(visualLibrary, runtimeObjects, 4);
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
             cameraFollowVelocity = Vector3.zero;
@@ -1263,10 +1267,17 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
-            weaponRuntime.SetJangseungGeumjulVisualLibrary(jangseungGeumjulVisuals);
+            weaponRuntime.SetJangseungGeumjulVisualLibrary(ResolveJangseungGeumjulVisualLibrary());
             registeredWeaponIds.Clear();
             weaponMasks.Load(weaponCatalog);
             RegisterCatalogWeapons();
+        }
+
+        private JangseungGeumjulVisualLibrary ResolveJangseungGeumjulVisualLibrary()
+        {
+            if (jangseungGeumjulVisuals == null)
+                jangseungGeumjulVisuals = Resources.Load<JangseungGeumjulVisualLibrary>(JangseungGeumjulResourcesPath);
+            return jangseungGeumjulVisuals;
         }
 
         private void OpenUpgrade()
