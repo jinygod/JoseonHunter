@@ -43,7 +43,15 @@ namespace JoseonHunter.Runtime.Gameplay
                 return largest;
             }
         }
-        public float ClosureBaseScaleForTests { get; private set; }
+        public float ClosureTargetWorldSizeForTests { get; private set; }
+        public float ActiveClosureWorldSizeForTests
+        {
+            get
+            {
+                foreach (var closure in closurePool) if (closure.gameObject.activeSelf) return WorldSize(closure);
+                return 0f;
+            }
+        }
 
         public void Configure(JangseungGeumjulVisualLibrary library, Transform root, int order)
         {
@@ -77,9 +85,9 @@ namespace JoseonHunter.Runtime.Gameplay
             if (polygon == null || polygon.Count == 0 || visuals == null || visuals.GeumjulClosureFrames.Length == 0) return;
             ClearTrailVisuals();
             if (closureAnimation != null) StopCoroutine(closureAnimation);
-            var scale = ClosureScaleFor(polygon);
-            ClosureBaseScaleForTests = scale;
-            closureAnimation = StartCoroutine(PlayClosureFrames(Centroid(polygon), scale));
+            var targetWorldSize = ClosureTargetWorldSize(polygon);
+            ClosureTargetWorldSizeForTests = targetWorldSize;
+            closureAnimation = StartCoroutine(PlayClosureFrames(Centroid(polygon), targetWorldSize));
         }
 
         public void Clear()
@@ -223,7 +231,7 @@ namespace JoseonHunter.Runtime.Gameplay
             ropeLine.endColor = new Color(1f, .78f, .23f, .95f);
         }
 
-        private IEnumerator PlayClosureFrames(Vector2 centroid, float scale)
+        private IEnumerator PlayClosureFrames(Vector2 centroid, float targetWorldSize)
         {
             var frames = visuals.GeumjulClosureFrames;
             for (var index = 0; index < frames.Length; index++)
@@ -231,7 +239,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 var visual = ClosureAt(index);
                 visual.sprite = frames[index];
                 visual.transform.position = centroid;
-                visual.transform.localScale = Vector3.one * (scale * (1f + index * .08f));
+                var frameScale = ScaleForMaximumWorldSize(visual.sprite, targetWorldSize);
+                visual.transform.localScale = Vector3.one * (frameScale * (1f + index * .08f));
                 visual.gameObject.SetActive(visual.sprite != null);
                 ActiveClosureVisualCountForTests = visual.sprite != null ? 1 : 0;
                 yield return new WaitForSeconds(ClosureFrameDuration);
@@ -239,7 +248,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             ActiveClosureVisualCountForTests = 0;
-            ClosureBaseScaleForTests = 0f;
+            ClosureTargetWorldSizeForTests = 0f;
             closureAnimation = null;
         }
 
@@ -267,7 +276,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void ReleaseClosureVisuals()
         {
             ActiveClosureVisualCountForTests = 0;
-            ClosureBaseScaleForTests = 0f;
+            ClosureTargetWorldSizeForTests = 0f;
             foreach (var closure in closurePool) closure.gameObject.SetActive(false);
         }
 
@@ -287,7 +296,7 @@ namespace JoseonHunter.Runtime.Gameplay
             return Mathf.Max(size.x * Mathf.Abs(renderer.transform.lossyScale.x), size.y * Mathf.Abs(renderer.transform.lossyScale.y));
         }
 
-        private static float ClosureScaleFor(IReadOnlyList<Vector2> polygon)
+        private static float ClosureTargetWorldSize(IReadOnlyList<Vector2> polygon)
         {
             var minimum = polygon[0];
             var maximum = polygon[0];

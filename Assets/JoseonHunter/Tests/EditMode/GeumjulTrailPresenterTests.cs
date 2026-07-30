@@ -43,7 +43,8 @@ namespace JoseonHunter.Tests.EditMode
                     new Vector2(2f, 1.5f), new Vector2(-2f, 1.5f)
                 });
 
-                Assert.That(presenter.ClosureBaseScaleForTests, Is.EqualTo(2.88f).Within(.001f));
+                Assert.That(presenter.ClosureTargetWorldSizeForTests, Is.EqualTo(2.88f).Within(.001f));
+                Assert.That(presenter.ActiveClosureWorldSizeForTests, Is.EqualTo(2.88f).Within(.001f));
             }
             finally
             {
@@ -64,7 +65,7 @@ namespace JoseonHunter.Tests.EditMode
             var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
             texture.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
             texture.Apply();
-            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), new Vector2(.5f, .5f), 2f);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), new Vector2(.5f, .5f), 1f);
             var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
             library.ConfigureForImport(texture, sprite, new[] { sprite },
                 new[] { sprite, sprite, sprite, sprite, sprite, sprite }, null, null);
