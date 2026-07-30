@@ -35,5 +35,16 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(profile.Intensity, Is.EqualTo(100));
         }
+
+        [Test]
+        public void CriticalFeedbackIsShortAndDoesNotReachBossKillIntensity()
+        {
+            var profile = CombatFeedbackBudget.Resolve(new FeedbackRequest(
+                critical: true, killed: false, boss: false, reducedEffects: false));
+
+            Assert.That(profile.Intensity, Is.EqualTo(80));
+            Assert.That(profile.HitStopSeconds, Is.InRange(.02f, .035f));
+            Assert.That(profile.CameraImpulse, Is.InRange(.05f, .08f));
+        }
     }
 }

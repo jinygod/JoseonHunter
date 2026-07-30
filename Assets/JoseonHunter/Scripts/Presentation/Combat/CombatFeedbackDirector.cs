@@ -213,10 +213,32 @@ namespace JoseonHunter.Presentation.Combat
 
         private void CreateFlashPool()
         {
-            flashTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
-            flashTexture.SetPixel(0, 0, Color.white);
+            const int size = 9;
+            flashTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "ContactSparkTexture",
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var pixels = new Color[size * size];
+            var center = size / 2;
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var dx = Mathf.Abs(x - center);
+                var dy = Mathf.Abs(y - center);
+                var core = dx <= 1 && dy <= 1;
+                var ray = (dx == 0 && dy <= 4) || (dy == 0 && dx <= 4);
+                var diagonal = dx == dy && dx <= 2;
+                pixels[y * size + x] = core || ray || diagonal ? Color.white : Color.clear;
+            }
+            flashTexture.SetPixels(pixels);
             flashTexture.Apply();
-            flashSprite = Sprite.Create(flashTexture, new Rect(0f, 0f, 1f, 1f), new Vector2(.5f, .5f), 1f);
+            flashSprite = Sprite.Create(
+                flashTexture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(.5f, .5f),
+                size);
             for (var index = 0; index < FlashPoolSize; index++)
             {
                 var flashObject = new GameObject("Contact Flash", typeof(SpriteRenderer));
@@ -233,6 +255,8 @@ namespace JoseonHunter.Presentation.Combat
         {
             var flash = flashes.Find(candidate => !candidate.Renderer.gameObject.activeSelf) ?? flashes[0];
             flash.Renderer.transform.position = new Vector3(contactPoint.X, contactPoint.Y, 0f);
+            flash.Renderer.transform.rotation = Quaternion.Euler(
+                0f, 0f, UnityEngine.Random.Range(0, 4) * 45f);
             flash.Renderer.transform.localScale = Vector3.one * (intensity >= 100 ? .56f : intensity == 80 ? .42f : .30f);
             flash.Renderer.color = intensity >= 100 ? new Color(1f, .42f, .12f, .95f) : intensity == 80 ? new Color(1f, .79f, .24f, .9f) : new Color(1f, 1f, 1f, .7f);
             flash.Remaining = flash.Lifetime = FlashLifetime;

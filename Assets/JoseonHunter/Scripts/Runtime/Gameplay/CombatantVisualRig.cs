@@ -25,10 +25,18 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly SpriteRenderer shadowRenderer;
         private readonly SpriteRenderer outlineRenderer;
         private readonly SpriteRenderer auraRenderer;
+        private readonly float shadowBaseAlpha;
+        private readonly float auraBaseAlpha;
+        private const float HitFlashDuration = .095f;
+        private static readonly Color HitFlashColor = new Color(1f, .64f, .32f, 1f);
 
         private float animationTime;
         private int frameIndex = -1;
         private bool wasMoving;
+        private float hitFlashRemaining;
+        private bool hitFlashActive;
+        private Color hitBaseColor;
+        private Color hitOutlineBaseColor;
 
         private CombatantVisualRig(
             Transform logicalRoot,
@@ -52,6 +60,8 @@ namespace JoseonHunter.Runtime.Gameplay
             this.shadowRenderer = shadowRenderer;
             this.outlineRenderer = outlineRenderer;
             this.auraRenderer = auraRenderer;
+            shadowBaseAlpha = shadowRenderer == null ? 0f : shadowRenderer.color.a;
+            auraBaseAlpha = auraRenderer == null ? 0f : auraRenderer.color.a;
         }
 
         public SpriteRenderer Renderer => renderer;
@@ -149,13 +159,21 @@ namespace JoseonHunter.Runtime.Gameplay
             SyncFollower(outlineRenderer, pose, 1.045f);
             if (auraRenderer != null) SyncFollower(auraRenderer, pose, 1.13f);
             shadowRenderer.flipX = pose.FacingLeft;
-            var color = renderer.color;
-            color.a = 1f - pose.DeathProgress;
-            renderer.color = color;
+            UpdateHitFlash(deltaTime, pose.DeathProgress);
         }
 
-        public void ShowHit(Vector2 incomingDirection, float strength) =>
+        public void ShowHit(Vector2 incomingDirection, float strength)
+        {
             motionState.Hit(incomingDirection, strength);
+            if (!hitFlashActive)
+            {
+                hitBaseColor = renderer.color;
+                hitOutlineBaseColor = outlineRenderer.color;
+            }
+
+            hitFlashActive = true;
+            hitFlashRemaining = HitFlashDuration;
+        }
 
         public void PlayDeath() => motionState.Kill();
 
@@ -191,6 +209,41 @@ namespace JoseonHunter.Runtime.Gameplay
             follower.transform.localRotation = Quaternion.Euler(0f, 0f, pose.TiltDegrees);
             follower.transform.localScale = new Vector3(pose.Scale.x * scale, pose.Scale.y * scale, 1f);
             follower.flipX = pose.FacingLeft;
+        }
+
+        private void UpdateHitFlash(float deltaTime, float deathProgress)
+        {
+            var aliveAlpha = 1f - deathProgress;
+            if (hitFlashActive)
+            {
+                hitFlashRemaining = Mathf.Max(0f, hitFlashRemaining - Mathf.Max(0f, deltaTime));
+                var flash = Mathf.Clamp01(hitFlashRemaining / HitFlashDuration);
+                var body = Color.Lerp(hitBaseColor, HitFlashColor, flash);
+                body.a = hitBaseColor.a * aliveAlpha;
+                renderer.color = body;
+
+                var outline = Color.Lerp(hitOutlineBaseColor, new Color(1f, .88f, .52f, 1f), flash * .7f);
+                outline.a = hitOutlineBaseColor.a * aliveAlpha;
+                outlineRenderer.color = outline;
+                if (hitFlashRemaining <= 0f) hitFlashActive = false;
+            }
+            else
+            {
+                var body = renderer.color;
+                body.a = aliveAlpha;
+                renderer.color = body;
+                var outline = outlineRenderer.color;
+                outline.a = aliveAlpha * .92f;
+                outlineRenderer.color = outline;
+            }
+
+            var shadow = shadowRenderer.color;
+            shadow.a = shadowBaseAlpha * aliveAlpha;
+            shadowRenderer.color = shadow;
+            if (auraRenderer == null) return;
+            var aura = auraRenderer.color;
+            aura.a = auraBaseAlpha * aliveAlpha;
+            auraRenderer.color = aura;
         }
     }
 }

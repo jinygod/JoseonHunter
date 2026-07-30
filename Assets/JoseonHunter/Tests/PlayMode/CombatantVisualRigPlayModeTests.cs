@@ -108,5 +108,33 @@ namespace JoseonHunter.Tests.PlayMode
 
             Object.Destroy(root);
         }
+
+        [UnityTest]
+        public IEnumerator HitFlashIsLocalAndRestoresTheCombatantColor()
+        {
+            var root = new GameObject("Hit Flash Enemy");
+            var rig = CombatantVisualRig.Create(
+                root,
+                null,
+                8,
+                null,
+                MotionWeight.Medium);
+            rig.Renderer.color = new Color(.72f, .84f, .92f, 1f);
+            var baseline = rig.Renderer.color;
+
+            rig.ShowHit(Vector2.left, .1f);
+            rig.Tick(Vector2.zero, 1f / 60f, MotionWeight.Medium);
+            Assert.That(rig.Renderer.color, Is.Not.EqualTo(baseline));
+            Assert.That(root.transform.position, Is.EqualTo(Vector3.zero));
+
+            for (var index = 0; index < 8; index++)
+                rig.Tick(Vector2.zero, 1f / 60f, MotionWeight.Medium);
+
+            Assert.That(rig.Renderer.color.r, Is.EqualTo(baseline.r).Within(.01f));
+            Assert.That(rig.Renderer.color.g, Is.EqualTo(baseline.g).Within(.01f));
+            Assert.That(rig.Renderer.color.b, Is.EqualTo(baseline.b).Within(.01f));
+            Object.Destroy(root);
+            yield return null;
+        }
     }
 }

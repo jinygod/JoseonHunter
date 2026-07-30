@@ -8,15 +8,15 @@ namespace JoseonHunter.Presentation.Combat
     [RequireComponent(typeof(TextMeshPro))]
     public sealed class DamageNumberPresenter : MonoBehaviour
     {
-        private const float NormalLifetime = 0.55f;
-        private const float BossLifetimeBonus = 0.15f;
-        private const float VerticalAnchorOffset = 0.24f;
-        private const float RiseDistance = 0.28f;
-        private const float NormalRiseDuration = 0.35f;
+        private const float NormalLifetime = 0.48f;
+        private const float BossLifetimeBonus = 0.12f;
+        private const float VerticalAnchorOffset = 0.20f;
+        private const float RiseDistance = 0.22f;
+        private const float NormalRiseDuration = 0.30f;
         private const float CriticalPunchDuration = 0.12f;
-        private const float CriticalPunchScale = 1.12f;
-        private const float NormalFontSize = 3f;
-        private const float BossFontSize = 3.5f;
+        private const float CriticalPunchScale = 1.16f;
+        private const float NormalFontSize = 2.7f;
+        private const float BossFontSize = 3.15f;
 
         private TextMeshPro textMesh;
         private Action<DamageNumberPresenter> completed;

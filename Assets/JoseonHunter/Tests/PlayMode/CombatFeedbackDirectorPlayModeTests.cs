@@ -109,6 +109,25 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [Test]
+        public void ContactFlashUsesACrispSparkSilhouette()
+        {
+            var root = new GameObject("Feedback Director");
+            try
+            {
+                root.AddComponent<CombatFeedbackDirector>();
+                var flash = root.transform.Find("Contact Flash");
+                Assert.That(flash, Is.Not.Null);
+                var renderer = flash.GetComponent<SpriteRenderer>();
+                Assert.That(renderer.sprite.texture.width, Is.GreaterThanOrEqualTo(7));
+                Assert.That(renderer.sprite.texture.filterMode, Is.EqualTo(FilterMode.Point));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
         private static void TriggerCriticalImpulse(CombatFeedbackDirector director)
         {
             var registry = new CombatTargetRegistry();

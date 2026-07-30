@@ -1059,7 +1059,6 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             enemy.Health -= damage;
-            enemy.Renderer.color = Color.white;
             var enemyPosition = (Vector2)enemy.Object.transform.position;
             var incomingDirection = enemyPosition - (Vector2)player.transform.position;
             enemy.VisualRig?.ShowHit(incomingDirection, enemy.IsBoss ? 0.05f : enemy.IsElite ? 0.075f : 0.095f);
