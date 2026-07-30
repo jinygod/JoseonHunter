@@ -9,6 +9,7 @@ namespace JoseonHunter.Editor.AssetProduction
     public static class WeaponPixelAssetContract
     {
         public const float RequiredPixelsPerUnit = 32f;
+        public const float PolishPixelsPerUnit = 64f;
 
         public static IReadOnlyList<string> Validate(
             Texture2D spriteSource,
@@ -45,7 +46,7 @@ namespace JoseonHunter.Editor.AssetProduction
             if (importer == null) errors.Add("missing polish frame importer");
             if (errors.Count != 0) return errors;
 
-            ValidateImporter(importer, "polish frame", RequiredPixelsPerUnit, errors);
+            ValidateImporter(importer, "polish frame", PolishPixelsPerUnit, errors);
             if (importer.spriteImportMode != SpriteImportMode.Single)
                 errors.Add("polish frame must be a single sprite");
             var settings = new TextureImporterSettings();

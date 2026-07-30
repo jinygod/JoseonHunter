@@ -48,7 +48,7 @@ namespace JoseonHunter.Editor.AssetImport
             texture.spritePixelsPerUnit = assetPath.StartsWith(
                     WeaponPolishRuntimeRoot,
                     System.StringComparison.Ordinal)
-                ? WeaponPixelAssetContract.RequiredPixelsPerUnit
+                ? WeaponPixelAssetContract.PolishPixelsPerUnit
                 : IsMobilePixelRuntime(assetPath) ? 64f : 32f;
             texture.alphaIsTransparency = true;
             if (IsSingleRuntimeSprite(assetPath))

@@ -41,6 +41,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 6a759cea2d4d0614b9dbb8bf21cf6a62, type: 3}
     - {fileID: 21300000, guid: 31897c59f43a0f44f9a81c4f50ef3029, type: 3}
     - {fileID: 21300000, guid: d39e178ba06c005488e445df3a6d9eff, type: 3}
+    - {fileID: 21300000, guid: 01781adb90337fd4bb6c80a1da44ba80, type: 3}
+    - {fileID: 21300000, guid: 247d795e948a16840b60efec7614d21f, type: 3}
     idleFramesPerSecond: 2.4
     moveFramesPerSecond: 7.5
     weight: 1
@@ -65,6 +67,8 @@ MonoBehaviour:
     - {fileID: 21300000, guid: 8f889af8eb11e35459a11af1f0733564, type: 3}
     - {fileID: 21300000, guid: db20d1c3e57ea5648962953ae88bcc73, type: 3}
     - {fileID: 21300000, guid: 40b41ca6e93e0b1469e890544d4fd093, type: 3}
+    - {fileID: 21300000, guid: 23e2985ea1a00184b962e9dbd6f835e1, type: 3}
+    - {fileID: 21300000, guid: e3aadcf7d8a04f74894bc939fa0e8639, type: 3}
     idleFramesPerSecond: 3
     moveFramesPerSecond: 10
     weight: 0

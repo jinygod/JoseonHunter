@@ -1,0 +1,65 @@
+{
+  "provider": "PixelLab",
+  "created": "2026-07-30",
+  "canvas": "96x96",
+  "transparent": true,
+  "style": {
+    "outline": "single color black outline",
+    "detail": "low detail",
+    "view": "low top-down",
+    "principles": [
+      "large clean color blocks",
+      "five or fewer dominant colors",
+      "minimal internal texture",
+      "camera-readable silhouette"
+    ]
+  },
+  "bases": {
+    "han_yeonhwa": {
+      "job": "5aa9296b-7092-4b41-af8b-de28196290a4",
+      "seed": 730101
+    },
+    "bandit": {
+      "job": "33468a87-01db-4b20-ae54-b3c97a458f46",
+      "seed": 730102
+    },
+    "plague_rat": {
+      "job": "ff810614-fabc-45d3-8610-2c3fcfd45b11",
+      "seed": 730103
+    },
+    "hwando": {
+      "job": "47a67c9c-396e-47a9-b45a-82e8a4052822",
+      "seed": 730104
+    },
+    "hwando_trail": {
+      "job": "1ff0caf4-5eed-4203-946d-318b4c8d3ddd",
+      "seed": 730108
+    },
+    "hwando_impact": {
+      "job": "e6e61d90-3926-48ef-a05c-e02d7003cf6d",
+      "seed": 730106
+    }
+  },
+  "animations": {
+    "han_idle": {
+      "job": "d63cc8f8-56ff-45b5-9b72-d63c114f5a56",
+      "seed": 731001,
+      "runtimeFrames": 4
+    },
+    "han_walk": {
+      "job": "a60c6366-c52e-411c-9125-50505a7e964d",
+      "seed": 731002,
+      "runtimeFrames": 8
+    },
+    "bandit_walk": {
+      "job": "d4a04504-2332-4bb3-bf80-cbd21ce4d28a",
+      "seed": 731003,
+      "runtimeFrames": 6
+    },
+    "plague_rat_walk": {
+      "job": "bcf609f3-999a-4108-85f9-eb4d6593be1c",
+      "seed": 731004,
+      "runtimeFrames": 6
+    }
+  }
+}
