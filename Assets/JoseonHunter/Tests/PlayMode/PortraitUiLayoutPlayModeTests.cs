@@ -31,6 +31,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(Application.isBatchMode || new Vector2Int(Screen.width, Screen.height) == originalResolution, Is.True);
             var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
             if (bootstrap != null) bootstrap.ApplySafeArea(originalSafeArea, originalResolution);
+            foreach (var reward in Object.FindObjectsByType<RewardRevealPresenter>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None)) reward.HideImmediately();
+            foreach (var affix in Object.FindObjectsByType<WeaponAffixRevealPresenter>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None)) affix.HideImmediately();
+            bootstrap?.BoundController?.CancelUiModalPresentation();
             Canvas.ForceUpdateCanvases();
             yield return null;
         }
@@ -200,11 +205,14 @@ namespace JoseonHunter.Tests.PlayMode
                 reward.Play(new ProgressionRewardEvent("boots", null, 1, ProgressionRewardKind.Support,
                     "능력 강화", "+12%", null));
                 var affix = Child("Affix", modal).gameObject.AddComponent<WeaponAffixRevealPresenter>();
-                affix.SetCatalogForTests(TestCatalog());
+                var catalog = Resources.Load<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+                Assert.That(catalog, Is.Not.Null); Assert.That(catalog.HasRequiredUiSprites, Is.True);
+                affix.SetCatalogForTests(catalog);
                 affix.Play(TestModel());
                 Canvas.ForceUpdateCanvases();
                 hud.ApplyPortraitLayout(); rack.ApplyPortraitLayout(); upgrade.ApplyPortraitLayout();
                 AssertBounds(root, "Vitals", safe);
+                AssertBounds(root, "HUD", safe);
                 AssertBounds(root, "Boss Health", safe);
                 AssertBounds(root, "Rack", safe);
                 for (var index = 0; index < 8; index++) AssertBounds(root, "Weapon Slot " + index, safe);
