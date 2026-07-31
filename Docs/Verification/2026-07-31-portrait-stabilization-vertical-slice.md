@@ -122,7 +122,7 @@ Every listed PNG IHDR exactly matches its resolution-directory name. The capture
 
 | Criterion | Status | Evidence/limitation |
 | --- | --- | --- |
-| Reproducible portrait Android development build contract | Passed | New editor method and wrapper compile in 527/527 EditMode run; static contract is documented above. |
+| Reproducible portrait Android development build contract | Passed | New editor method and wrapper compile in the fresh 529/529 EditMode run (`2026-07-31 19:53:56Z`–`19:54:21Z`); static contract is documented above. |
 | Full automated validation is green | Failed | EditMode green; PlayMode 79 failures retained. |
 | Non-empty Android APK | Passed | Development APK built successfully; size/hash recorded above. |
 | Five resolutions x four genuine states, exact PNG dimensions and hashes | Passed | 20 real controller/presenter-driven PNGs, exact dimensions and SHA-256 rows above. |
