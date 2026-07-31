@@ -39,6 +39,16 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ThreeMinutePrototypeKeepsFinalBossAtRunEnd()
+        {
+            var timeline = StagePacingTimeline.ForDuration(180f);
+
+            Assert.That(timeline.RunDurationSeconds, Is.EqualTo(180f));
+            Assert.That(timeline.EventWindowSeconds, Is.EqualTo(180f));
+            Assert.That(timeline.Crossed(179.9f, 180f, StageMilestone.FinalBoss), Is.True);
+        }
+
+        [Test]
         public void SurgeRaisesPressureWithoutExceedingMobileCap()
         {
             var timeline = StagePacingTimeline.ForDuration(900f);

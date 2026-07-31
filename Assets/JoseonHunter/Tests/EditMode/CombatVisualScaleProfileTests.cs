@@ -41,5 +41,18 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(profile.EliteContactRadius, Is.GreaterThan(profile.NormalContactRadius));
             Assert.That(profile.BossContactRadius, Is.GreaterThan(profile.EliteContactRadius));
         }
+
+        [Test]
+        public void MobilePortraitUsesReviewedCombatScaleAndSpawnMargins()
+        {
+            var profile = CombatVisualScaleProfile.MobilePortrait;
+
+            Assert.That(profile.CameraOrthographicSize, Is.EqualTo(7.25f));
+            Assert.That(profile.PlayerScale, Is.EqualTo(.82f));
+            Assert.That(profile.NormalEnemyScale, Is.LessThan(profile.EliteEnemyScale));
+            Assert.That(profile.EliteEnemyScale, Is.LessThan(profile.BossEnemyScale));
+            Assert.That(profile.SpawnMarginMinimum, Is.EqualTo(.75f));
+            Assert.That(profile.SpawnMarginMaximum, Is.EqualTo(1.5f));
+        }
     }
 }

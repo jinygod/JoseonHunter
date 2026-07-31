@@ -18,8 +18,8 @@ namespace JoseonHunter.Runtime.Gameplay
             float normalContactRadius,
             float eliteContactRadius,
             float bossContactRadius,
-            float spawnRadiusMinimum,
-            float spawnRadiusMaximum)
+            float spawnMarginMinimum,
+            float spawnMarginMaximum)
         {
             BaselineCameraOrthographicSize = baselineCameraOrthographicSize;
             CameraOrthographicSize = cameraOrthographicSize;
@@ -30,8 +30,8 @@ namespace JoseonHunter.Runtime.Gameplay
             NormalContactRadius = normalContactRadius;
             EliteContactRadius = eliteContactRadius;
             BossContactRadius = bossContactRadius;
-            SpawnRadiusMinimum = spawnRadiusMinimum;
-            SpawnRadiusMaximum = spawnRadiusMaximum;
+            SpawnMarginMinimum = spawnMarginMinimum;
+            SpawnMarginMaximum = spawnMarginMaximum;
         }
 
         public static CombatVisualScaleProfile MobileLandscape { get; } =
@@ -48,6 +48,20 @@ namespace JoseonHunter.Runtime.Gameplay
                 9.5f,
                 12.25f);
 
+        public static CombatVisualScaleProfile MobilePortrait { get; } =
+            new CombatVisualScaleProfile(
+                baselineCameraOrthographicSize: 6.25f,
+                cameraOrthographicSize: 7.25f,
+                playerScale: .82f,
+                normalEnemyScale: .78f,
+                eliteEnemyScale: 1f,
+                bossEnemyScale: 1.42f,
+                normalContactRadius: .42f,
+                eliteContactRadius: .55f,
+                bossContactRadius: .78f,
+                spawnMarginMinimum: .75f,
+                spawnMarginMaximum: 1.5f);
+
         public float BaselineCameraOrthographicSize { get; }
         public float CameraOrthographicSize { get; }
         public float PlayerScale { get; }
@@ -57,8 +71,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public float NormalContactRadius { get; }
         public float EliteContactRadius { get; }
         public float BossContactRadius { get; }
-        public float SpawnRadiusMinimum { get; }
-        public float SpawnRadiusMaximum { get; }
+        public float SpawnMarginMinimum { get; }
+        public float SpawnMarginMaximum { get; }
 
         public float CameraAreaRatio =>
             Mathf.Pow(CameraOrthographicSize / BaselineCameraOrthographicSize, 2f);

@@ -16,7 +16,7 @@ namespace JoseonHunter.Runtime.Gameplay
     public sealed class FirstPlayableController : MonoBehaviour
     {
         private static readonly CombatVisualScaleProfile VisualScale =
-            CombatVisualScaleProfile.MobileLandscape;
+            CombatVisualScaleProfile.MobilePortrait;
 
         [Header("Static sprite assets")]
         [SerializeField] private Sprite playerSprite;
@@ -104,7 +104,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private float waveAnnouncementTimer;
         private int waveAnnouncementIntensity;
 
-        private const float TestDuration = 60f;
+        private const float PrototypeDurationSeconds = 180f;
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
 
         /// <summary>Read-only combat event source for presentation components.</summary>
@@ -131,7 +131,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public bool VictoryForTests => victory;
         public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
         {
-            elapsed = Mathf.Clamp(currentElapsed, 0f, TestDuration);
+            elapsed = Mathf.Clamp(currentElapsed, 0f, PrototypeDurationSeconds);
             ProcessStageMilestones(previousElapsed, elapsed);
         }
         public void DefeatMidBossesForTests()
@@ -203,6 +203,8 @@ namespace JoseonHunter.Runtime.Gameplay
             enemies[enemies.Count - 1].Object.transform.position = position;
             return target;
         }
+        public Vector2 LastSpawnPositionForTests { get; private set; }
+        public void SpawnEnemyAtCurrentViewportForTests() => SpawnEnemy(false);
 #endif
 
         public bool IsCombatTargetAlive(int runtimeId) =>
@@ -426,7 +428,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var previousElapsed = elapsed;
-            elapsed = Mathf.Min(TestDuration, elapsed + delta);
+            elapsed = Mathf.Min(PrototypeDurationSeconds, elapsed + delta);
             contactInvulnerability = Mathf.Max(0f, contactInvulnerability - delta);
             sealCooldown = Mathf.Max(0f, sealCooldown - delta);
             magnetMessageTimer = Mathf.Max(0f, magnetMessageTimer - delta);
@@ -537,7 +539,7 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
             weaponRuntime.SetJangseungGeumjulVisualLibrary(visualLibrary);
             elapsed = 0f;
-            stageTimeline = StagePacingTimeline.ForDuration(TestDuration);
+            stageTimeline = StagePacingTimeline.ForDuration(PrototypeDurationSeconds);
             processedStageMilestones = 0;
             finalBossWarning = false;
             waveAnnouncement = string.Empty;
@@ -690,15 +692,33 @@ namespace JoseonHunter.Runtime.Gameplay
             }
         }
 
+        private Rect CurrentViewportBounds()
+        {
+            if (gameplayCamera == null)
+            {
+                var center = player != null ? (Vector2)player.transform.position : Vector2.zero;
+                return new Rect(center - Vector2.one, Vector2.one * 2f);
+            }
+
+            var gameplayDepth = player != null
+                ? Mathf.Abs(player.transform.position.z - gameplayCamera.transform.position.z)
+                : Mathf.Abs(gameplayCamera.transform.position.z);
+            var bottomLeft = gameplayCamera.ViewportToWorldPoint(new Vector3(0f, 0f, gameplayDepth));
+            var topRight = gameplayCamera.ViewportToWorldPoint(new Vector3(1f, 1f, gameplayDepth));
+            return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+        }
+
         private void SpawnEnemy(bool isBoss, int midBossTier = 0)
         {
             var isMidBoss = !isBoss && midBossTier > 0;
-            var angle = UnityEngine.Random.value * Mathf.PI * 2f;
-            var radius = isBoss || isMidBoss
-                ? VisualScale.SpawnRadiusMinimum
-                : UnityEngine.Random.Range(VisualScale.SpawnRadiusMinimum, VisualScale.SpawnRadiusMaximum);
-            var position = (Vector2)player.transform.position +
-                           new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(
+                CurrentViewportBounds(),
+                UnityEngine.Random.Range(0, 4),
+                UnityEngine.Random.value,
+                UnityEngine.Random.Range(VisualScale.SpawnMarginMinimum, VisualScale.SpawnMarginMaximum));
+#if UNITY_INCLUDE_TESTS
+            LastSpawnPositionForTests = position;
+#endif
 
             var pacing = stageTimeline.Sample(elapsed);
             var isElite = !isBoss && !isMidBoss && elapsed >= 3f &&
@@ -732,7 +752,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var renderer = visualRig.Renderer;
             var baseHealth = isBoss ? 680f :
                 isMidBoss ? (midBossTier >= 2 ? 320f : 180f) :
-                Mathf.Lerp(18f, 42f, elapsed / TestDuration);
+                Mathf.Lerp(18f, 42f, elapsed / PrototypeDurationSeconds);
             var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier;
             var displayScale = isBoss
                 ? VisualScale.BossEnemyScale
@@ -756,7 +776,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 MaximumHealth = health,
                 Speed = isBoss ? .98f :
                     isMidBoss ? (midBossTier >= 2 ? 1.08f : 1f) :
-                    Mathf.Lerp(0.775f, 1.325f, elapsed / TestDuration) * rank.SpeedMultiplier,
+                    Mathf.Lerp(0.775f, 1.325f, elapsed / PrototypeDurationSeconds) * rank.SpeedMultiplier,
                 ContactDamage = isBoss ? 24f :
                     isMidBoss ? (midBossTier >= 2 ? 20f : 16f) :
                     10f * rank.ContactDamageMultiplier,
@@ -1492,7 +1512,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var boss = enemies.Find(candidate => candidate.IsBoss && candidate.Object != null) ??
                        enemies.Find(candidate => candidate.IsMidBoss && candidate.Object != null);
             return new FirstPlayableUiState(
-                level, experience, experienceToNext, coins, kills, elapsed, TestDuration,
+                level, experience, experienceToNext, coins, kills, elapsed, PrototypeDurationSeconds,
                 playerHealth, playerMaxHealth, finalBossWarning && !bossSpawned, bossAlive,
                 boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons,
                 waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity);
