@@ -45,6 +45,54 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Transition_notifies_state_changed_once_with_previous_and_next_states()
+        {
+            var coordinator = new GameObject("Flow").AddComponent<GameFlowCoordinator>();
+            var stateChanges = 0;
+            var previous = GameFlowState.GameOver;
+            var next = GameFlowState.GameOver;
+            coordinator.StateChanged += (from, to) =>
+            {
+                stateChanges++;
+                previous = from;
+                next = to;
+            };
+
+            Assert.That(coordinator.TryTransition(GameFlowState.LevelUpSelection), Is.True);
+            Assert.That(stateChanges, Is.EqualTo(1));
+            Assert.That(previous, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(next, Is.EqualTo(GameFlowState.LevelUpSelection));
+
+            Object.Destroy(coordinator.gameObject);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Reset_to_playing_notifies_state_changed_once_with_previous_and_next_states()
+        {
+            var coordinator = new GameObject("Flow").AddComponent<GameFlowCoordinator>();
+            Assert.That(coordinator.TryTransition(GameFlowState.Paused), Is.True);
+            var stateChanges = 0;
+            var previous = GameFlowState.GameOver;
+            var next = GameFlowState.GameOver;
+            coordinator.StateChanged += (from, to) =>
+            {
+                stateChanges++;
+                previous = from;
+                next = to;
+            };
+
+            coordinator.ResetToPlaying();
+
+            Assert.That(stateChanges, Is.EqualTo(1));
+            Assert.That(previous, Is.EqualTo(GameFlowState.Paused));
+            Assert.That(next, Is.EqualTo(GameFlowState.Playing));
+
+            Object.Destroy(coordinator.gameObject);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator Hit_stop_expires_using_unscaled_time()
         {
             var coordinator = new GameObject("Flow").AddComponent<GameFlowCoordinator>();
@@ -57,6 +105,38 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(Time.timeScale, Is.EqualTo(1f));
 
             Object.Destroy(coordinator.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Longer_repeated_hit_stop_request_extends_the_active_stop()
+        {
+            var coordinator = new GameObject("Flow").AddComponent<GameFlowCoordinator>();
+
+            Assert.That(coordinator.RequestHitStop(.1f), Is.True);
+            yield return new WaitForSecondsRealtime(.05f);
+            Assert.That(coordinator.RequestHitStop(.2f), Is.True);
+            yield return new WaitForSecondsRealtime(.12f);
+            Assert.That(Time.timeScale, Is.Zero);
+            yield return new WaitForSecondsRealtime(.12f);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+
+            Object.Destroy(coordinator.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Modal_transition_clears_hit_stop_before_returning_to_playing()
+        {
+            var coordinator = new GameObject("Flow").AddComponent<GameFlowCoordinator>();
+            Assert.That(coordinator.RequestHitStop(1f), Is.True);
+            Assert.That(coordinator.TryTransition(GameFlowState.LevelUpSelection), Is.True);
+            Assert.That(coordinator.TryTransition(GameFlowState.AugmentResult), Is.True);
+            Assert.That(coordinator.TryTransition(GameFlowState.Playing), Is.True);
+
+            Assert.That(coordinator.State, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+
+            Object.Destroy(coordinator.gameObject);
+            yield return null;
         }
 
         [UnityTest]
