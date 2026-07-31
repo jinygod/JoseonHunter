@@ -22,6 +22,11 @@ namespace JoseonHunter.Tests.PlayMode
             var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
             var scaler = bootstrap.GetComponent<CanvasScaler>();
             Assert.That(scaler.referenceResolution, Is.EqualTo(new Vector2(1080f, 1920f)));
+            Assert.That(scaler.matchWidthOrHeight, Is.EqualTo(.5f));
+            var canvasRect = bootstrap.transform as RectTransform;
+            var actualCanvas = PortraitUiMetrics.CanvasSizeFor(new Vector2(Screen.width, Screen.height));
+            Assert.That(canvasRect.rect.size.x, Is.EqualTo(actualCanvas.x).Within(.1f));
+            Assert.That(canvasRect.rect.size.y, Is.EqualTo(actualCanvas.y).Within(.1f));
             Assert.That(bootstrap.transform.Find("Modal Layer"), Is.Not.Null);
             Assert.That(bootstrap.ModalSafeAreaContainer, Is.Not.Null);
             var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
@@ -48,17 +53,10 @@ namespace JoseonHunter.Tests.PlayMode
                     if (!applied)
                     {
                         var simulatedCanvas = PortraitUiMetrics.CanvasSizeFor(requested);
-                        var simulatedSafeWidth = simulatedCanvas.x * .925f;
-                        Assert.That(PortraitUiMetrics.ContainedWidth(simulatedSafeWidth, 984f),
-                            Is.LessThanOrEqualTo(simulatedSafeWidth));
-                        Assert.That(PortraitUiMetrics.ContainedWidth(simulatedSafeWidth, 936f),
-                            Is.LessThanOrEqualTo(simulatedSafeWidth));
-                        Assert.That(Mathf.Min(PortraitUiMetrics.RackSlotWidth,
-                            (simulatedSafeWidth - 24f) * .5f) * 2f + 24f,
-                            Is.LessThanOrEqualTo(simulatedSafeWidth));
+                        Assert.That(simulatedCanvas.x, Is.GreaterThan(0f));
                     }
 
-                    var actual = new Vector2(Screen.width, Screen.height);
+                    var actual = applied ? new Vector2(Screen.width, Screen.height) : PortraitUiMetrics.CanvasSizeFor(requested);
                     bootstrap.ApplySafeArea(new Rect(0f, actual.y * .04f, actual.x, actual.y * .925f), actual);
                     Canvas.ForceUpdateCanvases();
                     AssertBounds(bootstrap, "Vitals", bootstrap.SafeAreaContainer);
@@ -120,12 +118,70 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(heading.GetType().GetProperty("text").GetValue(heading), Is.EqualTo("강화를 선택하세요"));
         }
 
+        [Test]
+        public void Controlled_rect_transform_harness_keeps_production_hud_rack_and_cards_inside_every_target_safe_area()
+        {
+            foreach (var target in PortraitUiMetrics.ValidationResolutions)
+            {
+                var root = new GameObject("Virtual Canvas " + target, typeof(RectTransform), typeof(Canvas),
+                    typeof(CanvasScaler)).GetComponent<RectTransform>();
+                var canvas = root.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.WorldSpace;
+                var harnessScaler = root.GetComponent<CanvasScaler>();
+                harnessScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                harnessScaler.referenceResolution = PortraitUiMetrics.ReferenceResolution;
+                harnessScaler.matchWidthOrHeight = .5f;
+                harnessScaler.enabled = false;
+                root.pivot = new Vector2(.5f, .5f);
+                root.localScale = Vector3.one;
+                root.sizeDelta = PortraitUiMetrics.CanvasSizeFor(target);
+                var safe = Child("Safe", root);
+                safe.anchorMin = new Vector2(0f, .04f);
+                safe.anchorMax = new Vector2(1f, .965f);
+                safe.offsetMin = safe.offsetMax = Vector2.zero;
+                Assert.That(root.rect.width, Is.EqualTo(PortraitUiMetrics.CanvasSizeFor(target).x).Within(.1f));
+                Assert.That(root.rect.height, Is.EqualTo(PortraitUiMetrics.CanvasSizeFor(target).y).Within(.1f));
+                Assert.That(safe.rect.width, Is.EqualTo(root.rect.width).Within(.1f));
+                var modal = Child("Modal Safe", root);
+                modal.anchorMin = safe.anchorMin;
+                modal.anchorMax = safe.anchorMax;
+                modal.offsetMin = modal.offsetMax = Vector2.zero;
+                var hud = Child("HUD", safe).gameObject.AddComponent<CombatHudPresenter>();
+                Canvas.ForceUpdateCanvases();
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(root);
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(safe);
+                UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate(modal);
+                hud.Build(); hud.ApplyPortraitLayout();
+                var rack = Child("Rack", safe).gameObject.AddComponent<WeaponRackPresenter>();
+                var weapons = new WeaponSlotView[8];
+                for (var index = 0; index < weapons.Length; index++) weapons[index] =
+                    new WeaponSlotView("weapon" + index, "Weapon", 1, null);
+                rack.Render(weapons); rack.ApplyPortraitLayout();
+                var upgrade = Child("Upgrade", modal).gameObject.AddComponent<UpgradeChoicePresenter>();
+                upgrade.BuildForTests(); upgrade.ApplyPortraitLayout();
+                Canvas.ForceUpdateCanvases();
+                hud.ApplyPortraitLayout(); rack.ApplyPortraitLayout(); upgrade.ApplyPortraitLayout();
+                AssertBounds(root, "Vitals", safe);
+                AssertBounds(root, "Weapon Slot 0", safe);
+                AssertBounds(root, "Weapon Slot 7", safe);
+                AssertBounds(root, "Upgrade Card 0", modal);
+                AssertBounds(root, "Upgrade Card 1", modal);
+                AssertBounds(root, "Upgrade Card 2", modal);
+                Object.DestroyImmediate(root.gameObject);
+            }
+        }
+
         private static bool IsContained(RectTransform parent, RectTransform child)
         {
             var corners = new Vector3[4];
             child.GetWorldCorners(corners);
             for (var index = 0; index < corners.Length; index++)
-                if (!parent.rect.Contains(parent.InverseTransformPoint(corners[index]))) return false;
+            {
+                var point = parent.InverseTransformPoint(corners[index]);
+                var rect = parent.rect;
+                if (point.x < rect.xMin - .1f || point.x > rect.xMax + .1f ||
+                    point.y < rect.yMin - .1f || point.y > rect.yMax + .1f) return false;
+            }
             return true;
         }
 
@@ -133,6 +189,23 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var child = bootstrap.GetComponentsInChildren<RectTransform>(true);
             var match = System.Array.Find(child, rect => rect.name == name);
+            Assert.That(match, Is.Not.Null, name);
+            Assert.That(IsContained(owner, match), Is.True, name);
+        }
+
+        private static RectTransform Child(string name, Transform parent)
+        {
+            var child = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
+            child.SetParent(parent, false);
+            child.anchorMin = Vector2.zero;
+            child.anchorMax = Vector2.one;
+            child.offsetMin = child.offsetMax = Vector2.zero;
+            return child;
+        }
+
+        private static void AssertBounds(RectTransform root, string name, RectTransform owner)
+        {
+            var match = System.Array.Find(root.GetComponentsInChildren<RectTransform>(true), rect => rect.name == name);
             Assert.That(match, Is.Not.Null, name);
             Assert.That(IsContained(owner, match), Is.True, name);
         }
