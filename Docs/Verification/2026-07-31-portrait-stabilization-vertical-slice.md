@@ -39,3 +39,15 @@ All eight marker recorders were valid in every AFTER tier: `JoseonHunter.Run.Upd
 The lifecycle measurement test is `FirstPlayableLoadPlayModeTests.LifecycleEvidenceMeasuresExistingSpawnCleanupAndBurstAtOneHundredEnemyTier`, run at 2026-07-31 17:09:08Z. It disables automatic spawn/chest timers, captures and restores the controller elapsed/run state in addition to Random, flow, time scale, and recorders, sets `elapsed` through the authored final-surge pacing conversion (without crossing a milestone), seeds 100 enemies through the established load seam, then calls the existing private production `SpawnBurst(34)` via its test seam. The test mechanically asserts the measured real 100→134 synchronous SpawnBurst(34) duration is `< 16.67 ms`. Stopwatch attribution is deliberately narrow to existing synchronous production calls; delayed visual death destruction and Editor/headless rendering are not device evidence.
 
 All three mechanical Task 10 gates are **No** in this captured Editor/headless scenario. No pooling was implemented or selected in Task 9; a future Task 10 decision can consume these rows directly.
+
+## Task 10 outcome
+
+| Outcome | Decision | Evidence provenance |
+| --- | --- | --- |
+| Pooling rejected: thresholds not crossed | Keep the current vertical-slice build unpooled; do not create `FirstPlayableObjectPool`, alter `FirstPlayableController`, or add pool tests. | Final Task 9 evidence HEAD `30e299d993370220ad7c8f3c44d70c6a7ef66a61`; `FirstPlayableLoadPlayModeTests.LifecycleEvidenceMeasuresExistingSpawnCleanupAndBurstAtOneHundredEnemyTier` at 2026-07-31 17:09:08Z. |
+
+- `SpawnEnemy` p95 is **0.1522 ms** and `ApplyEnemyDamage` synchronous cleanup-entry/Destroy-scheduling p95 is **0.0746 ms**; both are at or below the **1.0 ms** threshold.
+- Steady lifecycle/movement current-thread GC is **0 B/frame**, at or below the **512 B/frame** threshold.
+- The production final-surge `SpawnBurst(34)` takes **5.8618 ms**, with active enemies asserted **100 → 134**; this is below the **16.67 ms** frame budget.
+
+This decision is limited to the captured Windows Editor batchmode/headless scenario. Deferred rendered `Destroy` work and Android/device performance remain unvalidated; future equivalent device evidence that crosses a gate can reopen the pooling decision. Until then, this vertical-slice build remains unpooled.
