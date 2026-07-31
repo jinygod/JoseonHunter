@@ -38,3 +38,13 @@ See `Docs/Verification/2026-07-31-portrait-stabilization-vertical-slice.md`. Thi
 
 - Final-surge pacing creates a real 34-enemy production burst at 100 → 134 active enemies; fresh timing was **5.8618 ms** and the Spawn recorder buffer was nonzero.
 - UI Modal ownership uses sequential leaf scopes for RunReset close handlers and disable/destroy cancellation rather than outer nested scopes.
+
+## Review fix round 3
+
+- The measured 100→134 production `SpawnBurst(34)` lifecycle sample now asserts the exact Editor/headless gate of `< 16.67 ms`; final-surge elapsed state is captured and restored without crossing milestones.
+- The focused recorder restarts after open, then separately proves nonzero `UI.Modal` samples for the RunReset close leaves and for destroy cleanup leaves, so those samples cannot originate from `OpenUpgradeChoice`.
+- Final evidence: load fixture **9/9**, marker **1/1**, grid **8/8**, representative PlayMode **23/23**, full EditMode **522/522**. Unity-generated metas were restored after the final run; no Unity rerun followed. The worktree is clean and upstream equals `30e299d`.
+
+## Review fix round 4
+
+- Tracked verification provenance now identifies final evidence HEAD `30e299d993370220ad7c8f3c44d70c6a7ef66a61`, and its lifecycle methodology explicitly records elapsed/run-state restoration plus the mechanically asserted `< 16.67 ms` real 100→134 burst gate with Editor/headless limits.
