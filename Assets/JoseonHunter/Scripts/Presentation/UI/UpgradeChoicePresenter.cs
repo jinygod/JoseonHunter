@@ -52,8 +52,9 @@ namespace JoseonHunter.Presentation.UI
             overlay.alpha = 0f;
             overlay.blocksRaycasts = true;
             cardsRoot = RuntimeUiFactory.Rect("Upgrade Cards", root.transform).gameObject;
-            RuntimeUiFactory.Stretch(cardsRoot.GetComponent<RectTransform>(), 64f, 84f, 64f, 84f);
-            heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "CHOOSE A BLESSING", 34f, TextAlignmentOptions.Center);
+            RuntimeUiFactory.Stretch(cardsRoot.GetComponent<RectTransform>(), PortraitUiMetrics.SideMargin,
+                PortraitUiMetrics.BottomMargin, PortraitUiMetrics.SideMargin, PortraitUiMetrics.TopMargin);
+            heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "강화를 선택하세요", 34f, TextAlignmentOptions.Center);
             Position(heading.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -8f), new Vector2(920f, 58f), new Vector2(.5f, 1f));
 
             for (var index = 0; index < cards.Length; index++) cards[index] = CreateCard(index);
@@ -70,7 +71,7 @@ namespace JoseonHunter.Presentation.UI
             selectedChoice = false;
             IsChoiceLocked = false;
             IsOpen = true;
-            heading.text = $"LEVEL {state.Level}  ·  CHOOSE A BLESSING";
+            heading.text = $"레벨 {state.Level} · 강화를 선택하세요";
             for (var index = 0; index < cards.Length; index++)
             {
                 var hasChoice = index < state.Choices.Count;
@@ -175,8 +176,9 @@ namespace JoseonHunter.Presentation.UI
                 card.Button.image.type = Image.Type.Sliced;
             }
             var rect = card.Button.GetComponent<RectTransform>();
-            Position(rect, new Vector2(.5f, .5f), new Vector2(0f, 220f - index * 220f),
-                new Vector2(920f, 200f), new Vector2(.5f, .5f));
+            Position(rect, new Vector2(.5f, .5f), new Vector2(0f, 264f - index *
+                (PortraitUiMetrics.UpgradeCardHeight + 28f)), new Vector2(PortraitUiMetrics.ModalWidth,
+                PortraitUiMetrics.UpgradeCardHeight), new Vector2(.5f, .5f));
             card.Accent = RuntimeUiFactory.Image("Accent", card.Button.transform, JoseonUiPalette.Hanji);
             card.Accent.rectTransform.anchorMin = new Vector2(0f, 0f);
             card.Accent.rectTransform.anchorMax = new Vector2(0f, 1f);
@@ -188,14 +190,14 @@ namespace JoseonHunter.Presentation.UI
             card.Glyph = RuntimeUiFactory.Text("Glyph", card.Button.transform, string.Empty, 72f, TextAlignmentOptions.Center);
             Position(card.Glyph.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
                 new Vector2(104f, 104f), new Vector2(0f, .5f));
-            card.Category = Label("Category", card.Button.transform, new Vector2(170f, -22f),
+            card.Category = Label("Category", card.Button.transform, new Vector2(170f, -30f),
                 new Vector2(680f, 26f), 17f, TextAlignmentOptions.Left);
-            card.Name = Label("Name", card.Button.transform, new Vector2(170f, -54f),
+            card.Name = Label("Name", card.Button.transform, new Vector2(170f, -66f),
                 new Vector2(680f, 38f), 27f, TextAlignmentOptions.Left);
-            card.Behavior = Label("Behavior", card.Button.transform, new Vector2(170f, -98f),
+            card.Behavior = Label("Behavior", card.Button.transform, new Vector2(170f, -114f),
                 new Vector2(680f, 48f), 18f, TextAlignmentOptions.Left);
             card.Behavior.enableWordWrapping = true;
-            card.Delta = Label("Delta", card.Button.transform, new Vector2(170f, -158f),
+            card.Delta = Label("Delta", card.Button.transform, new Vector2(170f, -190f),
                 new Vector2(680f, 28f), 20f, TextAlignmentOptions.Left);
             card.Button.onClick.AddListener(() => Choose(choiceIndex));
             return card;

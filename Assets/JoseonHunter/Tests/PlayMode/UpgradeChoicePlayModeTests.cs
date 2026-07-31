@@ -66,15 +66,15 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Cards_use_three_centered_vertical_rows()
+        public IEnumerator Cards_use_three_portrait_rows_within_the_modal_width()
         {
-            var go = new GameObject("Landscape Upgrade Presenter");
+            var go = new GameObject("Portrait Upgrade Presenter");
             var presenter = go.AddComponent<UpgradeChoicePresenter>();
             presenter.BuildForTests();
             var cards = go.GetComponentsInChildren<Button>(true);
 
             Assert.That(cards, Has.Length.EqualTo(3));
-            Assert.That(cards[0].GetComponent<RectTransform>().sizeDelta, Is.EqualTo(new Vector2(920f, 200f)));
+            Assert.That(cards[0].GetComponent<RectTransform>().sizeDelta, Is.EqualTo(new Vector2(936f, 236f)));
             Assert.That(cards[0].GetComponent<RectTransform>().anchoredPosition.y, Is.GreaterThan(0f));
             Assert.That(cards[1].GetComponent<RectTransform>().anchoredPosition.y, Is.EqualTo(0f));
             Assert.That(cards[2].GetComponent<RectTransform>().anchoredPosition.y, Is.LessThan(0f));

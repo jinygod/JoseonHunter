@@ -6,6 +6,18 @@ namespace JoseonHunter.Presentation.UI
 {
     public static class RuntimeUiFactory
     {
+        private const string KoreanFontPath = "Fonts/NotoSansKR-Dynamic SDF";
+        private static TMP_FontAsset koreanFont;
+
+        private static TMP_FontAsset KoreanFont
+        {
+            get
+            {
+                if (koreanFont == null) koreanFont = Resources.Load<TMP_FontAsset>(KoreanFontPath);
+                return koreanFont;
+            }
+        }
+
         public static RectTransform Rect(string name, Transform parent)
         {
             var result = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
@@ -24,6 +36,11 @@ namespace JoseonHunter.Presentation.UI
             TextAlignmentOptions alignment)
         {
             var result = Rect(name, parent).gameObject.AddComponent<TextMeshProUGUI>();
+            var font = KoreanFont;
+            if (font == null)
+                Debug.LogError($"Missing runtime UI font at Resources/{KoreanFontPath}.");
+            else
+                result.font = font;
             result.text = value;
             result.fontSize = size;
             result.alignment = alignment;

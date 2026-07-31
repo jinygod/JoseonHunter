@@ -24,8 +24,8 @@ namespace JoseonHunter.Presentation.UI
         }
 
         private const int ReelCount = 4;
-        private const float AppraisalWidth = 1040f;
-        private const float AppraisalHeight = 776f;
+        private const float AppraisalWidth = PortraitUiMetrics.ModalWidth;
+        private const float AppraisalHeight = 1320f;
         private GameObject root;
         private CanvasGroup group;
         private RectTransform panelRect;
@@ -578,11 +578,11 @@ namespace JoseonHunter.Presentation.UI
 
             topRoller = RuntimeUiFactory.Image("Top Scroll Roller", panelRect, Color.white);
             topRoller.rectTransform.anchorMin = topRoller.rectTransform.anchorMax = new Vector2(.5f, .5f);
-            topRoller.rectTransform.sizeDelta = new Vector2(960f, 82f);
+            topRoller.rectTransform.sizeDelta = new Vector2(896f, 82f);
             topRoller.preserveAspect = false;
             bottomRoller = RuntimeUiFactory.Image("Bottom Scroll Roller", panelRect, Color.white);
             bottomRoller.rectTransform.anchorMin = bottomRoller.rectTransform.anchorMax = new Vector2(.5f, .5f);
-            bottomRoller.rectTransform.sizeDelta = new Vector2(960f, 82f);
+            bottomRoller.rectTransform.sizeDelta = new Vector2(896f, 82f);
             bottomRoller.preserveAspect = false;
 
             weaponIcon = RuntimeUiFactory.Image("Weapon Icon", shell.transform, Color.white);

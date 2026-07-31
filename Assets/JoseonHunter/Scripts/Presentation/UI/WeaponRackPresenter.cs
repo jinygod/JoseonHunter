@@ -73,12 +73,14 @@ namespace JoseonHunter.Presentation.UI
             slot.Button.transition = Selectable.Transition.ColorTint;
             slot.Button.onClick.AddListener(() => WeaponSelected?.Invoke(slot.View));
             var rect = slot.Root.GetComponent<RectTransform>();
-            rect.anchorMin = rect.anchorMax = Vector2.zero;
-            rect.pivot = Vector2.zero;
-            var column = index % 4;
-            var row = index / 4;
-            rect.anchoredPosition = new Vector2(34f + column * 365f, 28f + row * 92f);
-            rect.sizeDelta = new Vector2(344f, 82f);
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
+            rect.pivot = new Vector2(.5f, 0f);
+            var column = index % 2;
+            var row = index / 2;
+            var x = column == 0 ? -249f : 249f;
+            rect.anchoredPosition = new Vector2(x, PortraitUiMetrics.BottomMargin + row *
+                (PortraitUiMetrics.RackSlotHeight + 24f));
+            rect.sizeDelta = new Vector2(PortraitUiMetrics.RackSlotWidth, PortraitUiMetrics.RackSlotHeight);
             slot.Accent = RuntimeUiFactory.Image("Accent", slot.Root.transform, JoseonUiPalette.Gold);
             var accentRect = slot.Accent.rectTransform;
             accentRect.anchorMin = new Vector2(0f, 0f);
@@ -95,17 +97,17 @@ namespace JoseonHunter.Presentation.UI
             slot.Name.rectTransform.anchorMin = slot.Name.rectTransform.anchorMax = new Vector2(0f, .5f);
             slot.Name.rectTransform.pivot = new Vector2(0f, .5f);
             slot.Name.rectTransform.anchoredPosition = new Vector2(78f, 15f);
-            slot.Name.rectTransform.sizeDelta = new Vector2(158f, 26f);
+            slot.Name.rectTransform.sizeDelta = new Vector2(224f, 26f);
             slot.Level = RuntimeUiFactory.Text("Level", slot.Root.transform, string.Empty, 14f, TextAlignmentOptions.Left);
             slot.Level.rectTransform.anchorMin = slot.Level.rectTransform.anchorMax = new Vector2(0f, .5f);
             slot.Level.rectTransform.pivot = new Vector2(0f, .5f);
             slot.Level.rectTransform.anchoredPosition = new Vector2(78f, -11f);
-            slot.Level.rectTransform.sizeDelta = new Vector2(158f, 20f);
+            slot.Level.rectTransform.sizeDelta = new Vector2(224f, 20f);
             slot.Totals = RuntimeUiFactory.Text("Affix Totals", slot.Root.transform, string.Empty, 11f, TextAlignmentOptions.Left);
             slot.Totals.rectTransform.anchorMin = slot.Totals.rectTransform.anchorMax = new Vector2(0f, .5f);
             slot.Totals.rectTransform.pivot = new Vector2(0f, .5f);
             slot.Totals.rectTransform.anchoredPosition = new Vector2(78f, -30f);
-            slot.Totals.rectTransform.sizeDelta = new Vector2(158f, 16f);
+            slot.Totals.rectTransform.sizeDelta = new Vector2(224f, 16f);
             slot.PotentialCells = new Image[3];
             for (var potentialIndex = 0; potentialIndex < slot.PotentialCells.Length; potentialIndex++)
             {

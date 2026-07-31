@@ -25,23 +25,23 @@ namespace JoseonHunter.Presentation.UI
             if (levelText != null) return;
 
             var topLeft = RuntimeUiFactory.Image("Vitals", transform, JoseonUiPalette.Ink).rectTransform;
-            topLeft.anchorMin = topLeft.anchorMax = new Vector2(0f, 1f);
-            topLeft.pivot = new Vector2(0f, 1f);
-            topLeft.anchoredPosition = new Vector2(42f, -42f);
-            topLeft.sizeDelta = new Vector2(420f, 174f);
-            levelText = Label("Level", topLeft, new Vector2(18f, -14f), new Vector2(150f, 42f), 30f, TextAlignmentOptions.Left);
-            healthText = Label("Health", topLeft, new Vector2(18f, -58f), new Vector2(384f, 34f), 23f, TextAlignmentOptions.Left);
-            healthFill = Bar("Health Fill", topLeft, new Vector2(18f, -96f), new Vector2(384f, 16f), JoseonUiPalette.Crimson);
-            experienceText = Label("Experience", topLeft, new Vector2(18f, -119f), new Vector2(384f, 28f), 19f, TextAlignmentOptions.Left);
-            experienceFill = Bar("Experience Fill", topLeft, new Vector2(18f, -150f), new Vector2(384f, 12f), JoseonUiPalette.Jade);
+            topLeft.anchorMin = topLeft.anchorMax = new Vector2(.5f, 1f);
+            topLeft.pivot = new Vector2(.5f, 1f);
+            topLeft.anchoredPosition = new Vector2(0f, -PortraitUiMetrics.TopMargin);
+            topLeft.sizeDelta = new Vector2(984f, 176f);
+            levelText = Label("Level", topLeft, new Vector2(18f, -14f), new Vector2(190f, 42f), 30f, TextAlignmentOptions.Left);
+            healthText = Label("Health", topLeft, new Vector2(18f, -58f), new Vector2(360f, 34f), 23f, TextAlignmentOptions.Left);
+            healthFill = Bar("Health Fill", topLeft, new Vector2(18f, -96f), new Vector2(360f, 16f), JoseonUiPalette.Crimson);
+            experienceText = Label("Experience", topLeft, new Vector2(18f, -119f), new Vector2(360f, 28f), 19f, TextAlignmentOptions.Left);
+            experienceFill = Bar("Experience Fill", topLeft, new Vector2(18f, -150f), new Vector2(360f, 12f), JoseonUiPalette.Jade);
 
-            var topRight = RuntimeUiFactory.Image("Run Stats", transform, JoseonUiPalette.Ink).rectTransform;
-            topRight.anchorMin = topRight.anchorMax = new Vector2(1f, 1f);
-            topRight.pivot = new Vector2(1f, 1f);
-            topRight.anchoredPosition = new Vector2(-42f, -42f);
+            var topRight = RuntimeUiFactory.Rect("Run Stats", topLeft);
+            topRight.anchorMin = topRight.anchorMax = new Vector2(.5f, .5f);
+            topRight.pivot = new Vector2(.5f, .5f);
+            topRight.anchoredPosition = Vector2.zero;
             topRight.sizeDelta = new Vector2(250f, 112f);
-            timerText = Label("Timer", topRight, new Vector2(-14f, -14f), new Vector2(222f, 45f), 34f, TextAlignmentOptions.Right);
-            killsText = Label("Kills", topRight, new Vector2(-14f, -62f), new Vector2(222f, 32f), 22f, TextAlignmentOptions.Right);
+            timerText = Label("Timer", topRight, new Vector2(0f, -14f), new Vector2(250f, 45f), 34f, TextAlignmentOptions.Center);
+            killsText = Label("Kills", topRight, new Vector2(0f, -62f), new Vector2(250f, 32f), 22f, TextAlignmentOptions.Center);
 
             bossWarningText = Label("Boss Warning", transform, new Vector2(0f, -260f), new Vector2(640f, 64f), 28f, TextAlignmentOptions.Center);
             var warningRect = bossWarningText.rectTransform;
@@ -63,8 +63,8 @@ namespace JoseonHunter.Presentation.UI
             var bossRect = bossRoot.GetComponent<RectTransform>();
             bossRect.anchorMin = bossRect.anchorMax = new Vector2(.5f, 1f);
             bossRect.pivot = new Vector2(.5f, 1f);
-            bossRect.anchoredPosition = new Vector2(0f, -340f);
-            bossRect.sizeDelta = new Vector2(620f, 82f);
+            bossRect.anchoredPosition = new Vector2(0f, -224f);
+            bossRect.sizeDelta = new Vector2(936f, 82f);
             bossText = Label("Boss Label", bossRect, new Vector2(0f, -8f), new Vector2(590f, 26f), 21f, TextAlignmentOptions.Center);
             bossFill = Bar("Boss Fill", bossRect, new Vector2(15f, -49f), new Vector2(590f, 18f), JoseonUiPalette.Crimson);
             bossRoot.SetActive(false);

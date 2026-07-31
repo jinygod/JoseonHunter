@@ -23,6 +23,8 @@ namespace JoseonHunter.Presentation.UI
         private CanvasGroup combatHudGroup;
         private CanvasGroup weaponRackGroup;
         private RectTransform safeAreaContainer;
+        private RectTransform modalSafeAreaContainer;
+        private GameObject modalScrim;
         private Rect lastSafeArea;
         private Vector2 lastScreenSize;
         private float nextRenderTime;
@@ -34,6 +36,7 @@ namespace JoseonHunter.Presentation.UI
 
         public FirstPlayableController BoundController => boundController;
         public RectTransform SafeAreaContainer => safeAreaContainer;
+        public RectTransform ModalSafeAreaContainer => modalSafeAreaContainer;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureBootstrap()
@@ -63,6 +66,13 @@ namespace JoseonHunter.Presentation.UI
             BuildCanvas();
             EnsureEventSystem();
             safeAreaContainer = RuntimeUiFactory.Rect("Safe Area", transform);
+            var modalLayer = RuntimeUiFactory.Rect("Modal Layer", transform);
+            RuntimeUiFactory.Stretch(modalLayer, 0f, 0f, 0f, 0f);
+            modalScrim = RuntimeUiFactory.Image("Modal Scrim", modalLayer, new Color(.008f, .012f, .022f, .78f)).gameObject;
+            RuntimeUiFactory.Stretch(modalScrim.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
+            modalScrim.GetComponent<Image>().raycastTarget = false;
+            modalScrim.SetActive(false);
+            modalSafeAreaContainer = RuntimeUiFactory.Rect("Modal Safe Area", modalLayer);
             ApplySafeArea(Screen.safeArea, new Vector2(Screen.width, Screen.height));
 
             var hudRoot = RuntimeUiFactory.Rect("Combat HUD", safeAreaContainer);
@@ -75,14 +85,14 @@ namespace JoseonHunter.Presentation.UI
             weaponRack = rackRoot.gameObject.AddComponent<WeaponRackPresenter>();
             weaponRackGroup = rackRoot.gameObject.AddComponent<CanvasGroup>();
             weaponRack.WeaponSelected += OpenWeaponDetails;
-            var rewardRoot = RuntimeUiFactory.Rect("Reward Reveal", safeAreaContainer);
+            var rewardRoot = RuntimeUiFactory.Rect("Reward Reveal", modalSafeAreaContainer);
             RuntimeUiFactory.Stretch(rewardRoot, 0f, 0f, 0f, 0f);
             rewardReveal = rewardRoot.gameObject.AddComponent<RewardRevealPresenter>();
             rewardReveal.RevealCompleted += OnRewardRevealCompleted;
             affixReveal = rewardRoot.gameObject.AddComponent<WeaponAffixRevealPresenter>();
             affixReveal.RevealCompleted += OnRewardRevealCompleted;
             affixReveal.DetailClosed += OnWeaponDetailsClosed;
-            var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", safeAreaContainer);
+            var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", modalSafeAreaContainer);
             RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
             upgradeChoice.Build();
@@ -158,6 +168,7 @@ namespace JoseonHunter.Presentation.UI
         private void OpenUpgradeChoice(UpgradeChoiceState state)
         {
             SetBackgroundRaycastsEnabled(false);
+            SetModalScrimVisible(true);
             upgradeChoice?.Open(state, boundController.TryChooseUpgrade);
         }
 
@@ -172,6 +183,7 @@ namespace JoseonHunter.Presentation.UI
                 return;
             if (boundController == null || !boundController.Flow.TryTransition(GameFlowState.Paused)) return;
             SetBackgroundRaycastsEnabled(false);
+            SetModalScrimVisible(true);
             affixReveal.ShowDetails(weapon);
         }
 
@@ -179,6 +191,7 @@ namespace JoseonHunter.Presentation.UI
         {
             boundController?.Flow.TryTransition(GameFlowState.Playing);
             SetBackgroundRaycastsEnabled(true);
+            SetModalScrimVisible(false);
         }
 
         private void OnUpgradeChosen(ProgressionRewardEvent reward)
@@ -207,6 +220,7 @@ namespace JoseonHunter.Presentation.UI
             hasPendingReward = false;
             weaponRack?.ResetPulses();
             SetBackgroundRaycastsEnabled(true);
+            SetModalScrimVisible(false);
         }
 
         private void NotifyUpgradePresentationClosed()
@@ -254,6 +268,7 @@ namespace JoseonHunter.Presentation.UI
             if (waitingForChoiceClose || waitingForRewardReveal) return;
             boundController?.NotifyUpgradePresentationClosed();
             SetBackgroundRaycastsEnabled(true);
+            SetModalScrimVisible(false);
         }
 
         private void SetBackgroundRaycastsEnabled(bool enabled)
@@ -262,16 +277,29 @@ namespace JoseonHunter.Presentation.UI
             if (weaponRackGroup != null) weaponRackGroup.blocksRaycasts = enabled;
         }
 
+        private void SetModalScrimVisible(bool visible)
+        {
+            if (modalScrim != null) modalScrim.SetActive(visible);
+        }
+
         public void ApplySafeArea(Rect safeArea, Vector2 screenSize)
         {
             lastSafeArea = safeArea;
             lastScreenSize = screenSize;
-            if (safeAreaContainer == null || screenSize.x <= 0f || screenSize.y <= 0f) return;
+            if (safeAreaContainer == null || modalSafeAreaContainer == null || screenSize.x <= 0f || screenSize.y <= 0f) return;
 
-            safeAreaContainer.anchorMin = new Vector2(safeArea.xMin / screenSize.x, safeArea.yMin / screenSize.y);
-            safeAreaContainer.anchorMax = new Vector2(safeArea.xMax / screenSize.x, safeArea.yMax / screenSize.y);
-            safeAreaContainer.offsetMin = Vector2.zero;
-            safeAreaContainer.offsetMax = Vector2.zero;
+            var min = new Vector2(safeArea.xMin / screenSize.x, safeArea.yMin / screenSize.y);
+            var max = new Vector2(safeArea.xMax / screenSize.x, safeArea.yMax / screenSize.y);
+            ApplyNormalizedSafeArea(safeAreaContainer, min, max);
+            ApplyNormalizedSafeArea(modalSafeAreaContainer, min, max);
+        }
+
+        private static void ApplyNormalizedSafeArea(RectTransform container, Vector2 min, Vector2 max)
+        {
+            container.anchorMin = min;
+            container.anchorMax = max;
+            container.offsetMin = Vector2.zero;
+            container.offsetMax = Vector2.zero;
         }
 
         private static int WeaponSignature(FirstPlayableUiState state)
@@ -321,7 +349,7 @@ namespace JoseonHunter.Presentation.UI
             var scaler = GetComponent<CanvasScaler>();
             if (scaler == null) scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = PortraitUiMetrics.ReferenceResolution;
             scaler.matchWidthOrHeight = .5f;
             if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
         }
