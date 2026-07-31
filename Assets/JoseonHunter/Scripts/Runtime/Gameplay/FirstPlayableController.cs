@@ -239,7 +239,14 @@ namespace JoseonHunter.Runtime.Gameplay
             SpawnTreasureChest();
             enemies[enemies.Count - 1].Object.transform.position = position;
         }
-        public void UpdateEnemiesForSeparationTests(float delta) => UpdateEnemies(delta);
+        public void ConfigureSeparationLoadScenarioForTests()
+        {
+            spawnTimer = float.PositiveInfinity;
+            chestSpawnTimer = float.PositiveInfinity;
+        }
+        public bool TickGameplayIfRunningForTests(float delta) => TickGameplayIfRunning(delta);
+        public void SetContactInvulnerabilityForTests(float seconds) => contactInvulnerability = Mathf.Max(0f, seconds);
+        public float ContactInvulnerabilityForTests => contactInvulnerability;
         public int LastSeparationAgentCountForTests { get; private set; }
         private readonly List<Vector2> livingEnemyPositionsForTests = new List<Vector2>();
         public IReadOnlyList<Vector2> LivingEnemyPositionsForTests
@@ -484,8 +491,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
-            if (flow == null || !flow.IsGameplayRunning) return;
-            TickGameplay(Time.deltaTime);
+            TickGameplayIfRunning(Time.deltaTime);
+        }
+
+        private bool TickGameplayIfRunning(float delta)
+        {
+            if (runEnded || flow == null || !flow.IsGameplayRunning) return false;
+            TickGameplay(delta);
+            return true;
         }
 
         private void TickGameplay(float delta)
