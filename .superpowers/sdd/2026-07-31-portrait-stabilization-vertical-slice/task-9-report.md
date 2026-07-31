@@ -16,3 +16,10 @@
 ## Evidence
 
 See `Docs/Verification/2026-07-31-portrait-stabilization-vertical-slice.md`. This is Editor/headless evidence only; the whole-frame GC recorder is explicitly not attributed to enemy movement.
+
+## Final regression evidence
+
+- Fresh final-HEAD `EnemySeparationGridTests`: **8/8** passed.
+- Fresh final-HEAD representative PlayMode filter (`StagePacing`, `PortraitUiLayout`, `CombatHud`, `FirstPlayableLoad`): **21/21** passed.
+- Fresh final-HEAD full EditMode: **522/522** passed.
+- Fresh XML/log inspection found no unexpected compilation, profiler, RenderTexture, or UI exceptions. Unity-generated changes to eight sprite `.meta` files were restored exactly to HEAD after validation; Unity was not run again after restoration.
