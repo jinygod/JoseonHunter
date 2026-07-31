@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using JoseonHunter.Editor.AssetProduction;
 using NUnit.Framework;
 using UnityEditor;
@@ -110,14 +111,14 @@ namespace JoseonHunter.Tests.EditMode
                     if (assetPath == fragmentedTelegraph)
                     {
                         var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
-                        Assert.That(components.Count, Is.InRange(2, 8), assetPath);
-                        Assert.That(components, Has.All.GreaterThanOrEqualTo(4), assetPath);
+                        Assert.That(components, Is.EquivalentTo(new[] { 2754, 739, 1 }), assetPath);
+                        Assert.That(components.Count(component => component >= 414), Is.EqualTo(2), assetPath);
                     }
                     else if (assetPath == secondFragmentedTelegraph)
                     {
                         var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
-                        Assert.That(components.Count, Is.InRange(2, 128), assetPath);
-                        Assert.That(components, Has.Some.GreaterThanOrEqualTo(4), assetPath);
+                        Assert.That(components.Count, Is.EqualTo(79), assetPath);
+                        Assert.That(components.Count(component => component >= 96), Is.EqualTo(2), assetPath);
                     }
                     else if (TryGetReviewedMultiPartVfx(assetPath, out var contract))
                     {

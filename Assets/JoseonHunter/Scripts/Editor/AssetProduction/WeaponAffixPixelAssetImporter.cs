@@ -24,8 +24,6 @@ namespace JoseonHunter.Editor.AssetProduction
         public const string AppraisalRollerPath = AppraisalRoot + "/appraisal_roller.png";
         public const string PotentialRitualSealPath = AppraisalRoot + "/potential_ritual_seal.png";
         public const string RareAppraisalStampPath = AppraisalRoot + "/rare_appraisal_stamp.png";
-        private const string FragmentedTelegraphPath =
-            "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Fan/fan_target_01.png";
 
         private const float PixelsPerUnit = 32f;
         private static readonly string[] SlotSpriteNames = { "reel_frame", "standard_frame", "high_frame", "perfect_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3", "rarity_flash" };
@@ -49,7 +47,6 @@ namespace JoseonHunter.Editor.AssetProduction
             NormalizeBinarySubset(PotentialPartsBPath, PotentialPartsBMaskPath);
             foreach (var potentialId in PotentialIds)
                 NormalizeBinarySubset(SpritePathFor(potentialId), MaskPathFor(potentialId));
-            NormalizeFragmentedTelegraph();
             ConfigureSlotKit();
             foreach (var slotPart in new[] { "reel_frame", "empty_line_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3" })
                 ConfigureSprite(SlotPartPath(slotPart));
@@ -232,55 +229,6 @@ namespace JoseonHunter.Editor.AssetProduction
                 UnityEngine.Object.DestroyImmediate(source);
                 UnityEngine.Object.DestroyImmediate(mask);
             }
-        }
-
-        private static void NormalizeFragmentedTelegraph()
-        {
-            var texture = LoadTexture(FragmentedTelegraphPath);
-            try
-            {
-                var pixels = BinaryAlpha(texture.GetPixels32());
-                var visited = new bool[pixels.Length];
-                var queue = new Queue<int>();
-                var components = new List<List<int>>();
-                for (var start = 0; start < pixels.Length; start++)
-                {
-                    if (visited[start] || pixels[start].a == 0) continue;
-                    var component = new List<int>();
-                    visited[start] = true;
-                    queue.Enqueue(start);
-                    while (queue.Count > 0)
-                    {
-                        var current = queue.Dequeue();
-                        component.Add(current);
-                        EnqueueOpaqueNeighbor(current % texture.width - 1, current / texture.width, texture.width, texture.height, pixels, visited, queue);
-                        EnqueueOpaqueNeighbor(current % texture.width + 1, current / texture.width, texture.width, texture.height, pixels, visited, queue);
-                        EnqueueOpaqueNeighbor(current % texture.width, current / texture.width - 1, texture.width, texture.height, pixels, visited, queue);
-                        EnqueueOpaqueNeighbor(current % texture.width, current / texture.width + 1, texture.width, texture.height, pixels, visited, queue);
-                    }
-                    components.Add(component);
-                }
-
-                foreach (var component in components.Where(component => component.Count < 4))
-                foreach (var index in component)
-                    pixels[index] = new Color32(0, 0, 0, 0);
-                WritePixels(FragmentedTelegraphPath, pixels, texture.width, texture.height);
-            }
-            finally
-            {
-                UnityEngine.Object.DestroyImmediate(texture);
-            }
-        }
-
-
-        private static void EnqueueOpaqueNeighbor(
-            int x, int y, int width, int height, Color32[] pixels, bool[] visited, Queue<int> queue)
-        {
-            if (x < 0 || x >= width || y < 0 || y >= height) return;
-            var index = y * width + x;
-            if (visited[index] || pixels[index].a == 0) return;
-            visited[index] = true;
-            queue.Enqueue(index);
         }
 
         private static Texture2D LoadTexture(string assetPath)
