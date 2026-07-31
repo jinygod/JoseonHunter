@@ -88,7 +88,7 @@ The existing deterministic Gameplay weapon capture was run through `EightWeaponP
 | Validation | Command/result | Status | Classification |
 | --- | --- | --- | --- |
 | Focused build-contract coverage | No narrow unit test added: this static Editor/BuildPipeline integration contract is exercised by the full Editor compilation and Android invocation below. | NA | BuildPipeline is not isolated without replacing the real build call. |
-| Full EditMode | `Test-Unity.ps1 -Platform editmode -Filter JoseonHunter.Tests.EditMode`; 527 total, 527 passed, 0 failed, 0 skipped; XML duration 25.7991046 s; command duration 52.9 s. | Passed | No first-party compile errors found in `Logs/editmode.log`. |
+| Full EditMode | `Test-Unity.ps1 -Platform editmode -Filter JoseonHunter.Tests.EditMode`; 529 total, 529 passed, 0 failed, 0 skipped; XML start `2026-07-31 19:53:56Z`, end `2026-07-31 19:54:21Z`, duration 24.8247754 s; runner wall time 69 s. | Passed | Fresh retained `Logs/editmode-results.xml`; no first-party compile errors found in `Logs/editmode.log`. |
 | Full PlayMode | `Test-Unity.ps1 -Platform playmode -Filter JoseonHunter.Tests.PlayMode`; 261 total, 182 passed, 79 failed, 0 skipped; XML duration 70.2205603 s; command duration 102.3 s. | Failed | 77 failures are `WeaponPotentialCombatAPlayModeTests` (38) and `WeaponPotentialCombatBPlayModeTests` (39); the other two are `EvolvedWeaponCombatPlayModeTests.Moon_eclipse_keeps_outbound_and_return_contact_then_blasts_at_crossing` and `WeaponAffixVerticalSlicePlayModeTests.Perfect_hwando_jackpot_flows_from_pointer_choice_to_evolution_and_run_reset`. They are unrelated to the new Editor build class/wrapper and were not suppressed or changed. |
 
 ### Android build
