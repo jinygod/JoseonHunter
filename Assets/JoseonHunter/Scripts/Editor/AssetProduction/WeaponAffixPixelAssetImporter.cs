@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Progression;
@@ -23,6 +24,8 @@ namespace JoseonHunter.Editor.AssetProduction
         public const string AppraisalRollerPath = AppraisalRoot + "/appraisal_roller.png";
         public const string PotentialRitualSealPath = AppraisalRoot + "/potential_ritual_seal.png";
         public const string RareAppraisalStampPath = AppraisalRoot + "/rare_appraisal_stamp.png";
+        private const string FragmentedTelegraphPath =
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Fan/fan_target_01.png";
 
         private const float PixelsPerUnit = 32f;
         private static readonly string[] SlotSpriteNames = { "reel_frame", "standard_frame", "high_frame", "perfect_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3", "rarity_flash" };
@@ -40,6 +43,13 @@ namespace JoseonHunter.Editor.AssetProduction
         [MenuItem("JoseonHunter/Assets/Import Affix Jackpot Pixel Atlases")]
         public static void EnsureImported()
         {
+            NormalizeBinaryAlpha(SlotKitPath);
+            NormalizeBinaryAlpha(StatusSymbolsPath);
+            NormalizeBinarySubset(PotentialPartsAPath, PotentialPartsAMaskPath);
+            NormalizeBinarySubset(PotentialPartsBPath, PotentialPartsBMaskPath);
+            foreach (var potentialId in PotentialIds)
+                NormalizeBinarySubset(SpritePathFor(potentialId), MaskPathFor(potentialId));
+            NormalizeFragmentedTelegraph();
             ConfigureSlotKit();
             foreach (var slotPart in new[] { "reel_frame", "empty_line_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3" })
                 ConfigureSprite(SlotPartPath(slotPart));
@@ -185,12 +195,145 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.mipmapEnabled = false;
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
+            ClearPlatformOverrides(importer);
             importer.spritesheet = new[]
             {
                 Slice("reel_frame", 0, 64), Slice("empty_line_frame", 64, 64), Slice("high_frame", 128, 64), Slice("perfect_frame", 192, 64),
                 Slice("jackpot_burst_1", 0, 0), Slice("jackpot_burst_2", 64, 0), Slice("jackpot_burst_3", 128, 0), Slice("rarity_flash", 192, 0)
             };
             importer.SaveAndReimport();
+        }
+
+        private static void NormalizeBinaryAlpha(string assetPath)
+        {
+            var texture = LoadTexture(assetPath);
+            try
+            {
+                WritePixels(assetPath, BinaryAlpha(texture.GetPixels32()), texture.width, texture.height);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
+        private static void NormalizeBinarySubset(string sourcePath, string maskPath)
+        {
+            var source = LoadTexture(sourcePath);
+            var mask = LoadTexture(maskPath);
+            try
+            {
+                if (source.width != mask.width || source.height != mask.height)
+                    throw new InvalidDataException($"Mask '{maskPath}' dimensions must match source '{sourcePath}'.");
+                WritePixels(maskPath, BinarySubset(source.GetPixels32(), mask.GetPixels32()), mask.width, mask.height);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(source);
+                UnityEngine.Object.DestroyImmediate(mask);
+            }
+        }
+
+        private static void NormalizeFragmentedTelegraph()
+        {
+            var texture = LoadTexture(FragmentedTelegraphPath);
+            try
+            {
+                var pixels = BinaryAlpha(texture.GetPixels32());
+                var visited = new bool[pixels.Length];
+                var queue = new Queue<int>();
+                var components = new List<List<int>>();
+                for (var start = 0; start < pixels.Length; start++)
+                {
+                    if (visited[start] || pixels[start].a == 0) continue;
+                    var component = new List<int>();
+                    visited[start] = true;
+                    queue.Enqueue(start);
+                    while (queue.Count > 0)
+                    {
+                        var current = queue.Dequeue();
+                        component.Add(current);
+                        EnqueueOpaqueNeighbor(current % texture.width - 1, current / texture.width, texture.width, texture.height, pixels, visited, queue);
+                        EnqueueOpaqueNeighbor(current % texture.width + 1, current / texture.width, texture.width, texture.height, pixels, visited, queue);
+                        EnqueueOpaqueNeighbor(current % texture.width, current / texture.width - 1, texture.width, texture.height, pixels, visited, queue);
+                        EnqueueOpaqueNeighbor(current % texture.width, current / texture.width + 1, texture.width, texture.height, pixels, visited, queue);
+                    }
+                    components.Add(component);
+                }
+
+                foreach (var component in components.Where(component => component.Count < 4))
+                foreach (var index in component)
+                    pixels[index] = new Color32(0, 0, 0, 0);
+                WritePixels(FragmentedTelegraphPath, pixels, texture.width, texture.height);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
+
+        private static void EnqueueOpaqueNeighbor(
+            int x, int y, int width, int height, Color32[] pixels, bool[] visited, Queue<int> queue)
+        {
+            if (x < 0 || x >= width || y < 0 || y >= height) return;
+            var index = y * width + x;
+            if (visited[index] || pixels[index].a == 0) return;
+            visited[index] = true;
+            queue.Enqueue(index);
+        }
+
+        private static Texture2D LoadTexture(string assetPath)
+        {
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            if (!ImageConversion.LoadImage(texture, File.ReadAllBytes(Path.GetFullPath(assetPath)), false))
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+                throw new InvalidDataException($"Asset '{assetPath}' is not a readable PNG.");
+            }
+            return texture;
+        }
+
+        private static Color32[] BinarySubset(Color32[] source, Color32[] mask)
+        {
+            var output = new Color32[mask.Length];
+            for (var index = 0; index < mask.Length; index++)
+            {
+                var active = source[index].a == byte.MaxValue && mask[index].a > 0;
+                output[index] = active
+                    ? new Color32(255, 255, 255, 255)
+                    : new Color32(0, 0, 0, 0);
+            }
+            return output;
+        }
+
+        private static Color32[] BinaryAlpha(Color32[] pixels)
+        {
+            var output = new Color32[pixels.Length];
+            for (var index = 0; index < pixels.Length; index++)
+            {
+                var pixel = pixels[index];
+                output[index] = pixel.a == 0
+                    ? new Color32(0, 0, 0, 0)
+                    : new Color32(pixel.r, pixel.g, pixel.b, 255);
+            }
+            return output;
+        }
+
+        private static void WritePixels(string assetPath, Color32[] pixels, int width, int height)
+        {
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            try
+            {
+                texture.SetPixels32(pixels);
+                texture.Apply(false, false);
+                File.WriteAllBytes(Path.GetFullPath(assetPath), texture.EncodeToPNG());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
         }
 
         private static SpriteMetaData Slice(string name, float x, float y) => new SpriteMetaData

@@ -30,14 +30,16 @@ namespace JoseonHunter.Tests.EditMode
         [TestCase("Assets/JoseonHunter/Scenes/Bootstrap.unity")]
         [TestCase("Assets/JoseonHunter/Scenes/Lobby.unity")]
         [TestCase("Assets/JoseonHunter/Scenes/Gameplay.unity")]
-        public void EachFoundationSceneHasOnlyTheSceneRoot(string scenePath)
+        public void EachFoundationSceneHasExpectedRootObjects(string scenePath)
         {
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
             try
             {
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(1));
-                Assert.That(roots[0].name, Is.EqualTo("SceneRoot"));
+                var expected = scenePath.EndsWith("Gameplay.unity", StringComparison.Ordinal)
+                    ? new[] { "Main Camera", "FirstPlayable", "EventSystem" }
+                    : new[] { "SceneRoot" };
+                CollectionAssert.AreEquivalent(expected, roots.Select(root => root.name));
             }
             finally
             {
@@ -46,19 +48,16 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void GameplaySceneRootContainsWorldAndUi()
+        public void GameplaySceneContainsExpectedPortraitRuntimeRoots()
         {
             var scene = EditorSceneManager.OpenScene(
                 "Assets/JoseonHunter/Scenes/Gameplay.unity",
                 OpenSceneMode.Additive);
             try
             {
-                var sceneRoot = scene.GetRootGameObjects().Single();
-                var childNames = sceneRoot.transform.Cast<UnityEngine.Transform>()
-                    .Select(child => child.name)
-                    .ToArray();
-
-                CollectionAssert.AreEquivalent(new[] { "World", "UI" }, childNames);
+                CollectionAssert.AreEquivalent(
+                    new[] { "Main Camera", "FirstPlayable", "EventSystem" },
+                    scene.GetRootGameObjects().Select(root => root.name));
             }
             finally
             {

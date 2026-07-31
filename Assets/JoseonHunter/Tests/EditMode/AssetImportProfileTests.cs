@@ -111,6 +111,11 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void AffixSlotPartsUseReadableUncompressedPixelImportProfile()
         {
+            var reelFrame = AssetImporter.GetAtPath(
+                "Assets/JoseonHunter/Art/UI/AffixJackpot/SlotParts/reel_frame.png") as TextureImporter;
+            Assert.That(reelFrame.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(reelFrame.GetPlatformTextureSettings("Android").overridden, Is.False);
+
             foreach (var name in new[] { "reel_frame", "empty_line_frame", "jackpot_burst_1", "jackpot_burst_2", "jackpot_burst_3" })
             {
                 var texture = AssetImporter.GetAtPath("Assets/JoseonHunter/Art/UI/AffixJackpot/SlotParts/" + name + ".png") as TextureImporter;

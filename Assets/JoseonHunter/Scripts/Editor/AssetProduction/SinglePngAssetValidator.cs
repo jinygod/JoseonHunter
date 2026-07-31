@@ -65,6 +65,27 @@ namespace JoseonHunter.Editor.AssetProduction
             return issues;
         }
 
+        public static IReadOnlyList<int> MeasureOpaqueComponents(string assetPath)
+        {
+            var absolutePath = Path.IsPathRooted(assetPath)
+                ? assetPath
+                : Path.GetFullPath(assetPath);
+            if (!File.Exists(absolutePath))
+                throw new FileNotFoundException("PNG asset does not exist.", absolutePath);
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                if (!ImageConversion.LoadImage(texture, File.ReadAllBytes(absolutePath), false))
+                    throw new InvalidDataException("Asset is not a readable PNG.");
+                return FindOpaqueComponents(
+                    texture.GetPixels32(), texture.width, texture.height).AsReadOnly();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(texture);
+            }
+        }
+
         private static List<int> FindOpaqueComponents(Color32[] pixels, int width, int height)
         {
             var visited = new bool[pixels.Length];

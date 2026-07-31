@@ -11,6 +11,7 @@ namespace JoseonHunter.Editor.AssetImport
         private const string SfxRoot = "Assets/JoseonHunter/Audio/SFX/";
         private const string UiAudioRoot = "Assets/JoseonHunter/Audio/UI/";
         private const string UiArtRoot = "Assets/JoseonHunter/Art/UI/";
+        private const string AffixJackpotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/";
         private const string MicroSlotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot/";
         private const string AppraisalUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/Appraisal/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
@@ -21,6 +22,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/";
         private const string WeaponPolishRuntimeRoot =
             "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/";
+        private const string WeaponPotentialRuntimeRoot =
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/";
         private const string JangseungGeumjulArtRoot =
             "Assets/JoseonHunter/Art/VFX/JangseungGeumjul/";
         private const string WorldRuntimeRoot =
@@ -89,7 +92,9 @@ namespace JoseonHunter.Editor.AssetImport
             {
                 texture.spriteImportMode = SpriteImportMode.Single;
             }
-            if (!assetPath.StartsWith(JangseungGeumjulArtRoot, System.StringComparison.Ordinal))
+            if (!assetPath.StartsWith(JangseungGeumjulArtRoot, System.StringComparison.Ordinal) &&
+                !assetPath.StartsWith(AffixJackpotUiRoot, System.StringComparison.Ordinal) &&
+                !assetPath.StartsWith(WeaponPotentialRuntimeRoot, System.StringComparison.Ordinal))
             {
                 texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
                 {
@@ -183,8 +188,7 @@ namespace JoseonHunter.Editor.AssetImport
         private static bool IsBilinearArt(string path)
         {
             return path.StartsWith(UiArtRoot, System.StringComparison.Ordinal)
-                && !path.StartsWith(MicroSlotUiRoot, System.StringComparison.Ordinal)
-                && !path.StartsWith(AppraisalUiRoot, System.StringComparison.Ordinal)
+                && !path.StartsWith(AffixJackpotUiRoot, System.StringComparison.Ordinal)
                 || path.StartsWith(LobbyArtRoot, System.StringComparison.Ordinal);
         }
     }

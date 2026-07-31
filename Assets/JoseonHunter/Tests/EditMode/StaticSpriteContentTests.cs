@@ -84,41 +84,12 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void GameplaySceneContainsInactiveStaticSpriteLaunchProofLineup()
+        public void RuntimeCatalogProvesStaticSpriteLaunchContent()
         {
-            var scene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Additive);
-            try
-            {
-                var world = scene.GetRootGameObjects().Single(root => root.name == "SceneRoot")
-                    .transform.Find("World");
-                var proof = world.Find("StaticSpriteLaunchProof");
-
-                Assert.That(proof, Is.Not.Null);
-                Assert.That(proof.gameObject.activeSelf, Is.False);
-                Assert.That(proof.childCount, Is.EqualTo(ExpectedIds.Length));
-                CollectionAssert.AreEquivalent(ExpectedIds, proof.Cast<Transform>().Select(child => child.name));
-                var expectedPositions = new[]
-                {
-                    new Vector3(-4.5f, 3f, 0f), new Vector3(-1.5f, 3f, 0f), new Vector3(1.5f, 3f, 0f), new Vector3(4.5f, 3f, 0f),
-                    new Vector3(-4.5f, 0f, 0f), new Vector3(-1.5f, 0f, 0f), new Vector3(1.5f, 0f, 0f), new Vector3(4.5f, 0f, 0f),
-                    new Vector3(-4.5f, -3f, 0f), new Vector3(-1.5f, -3f, 0f), new Vector3(1.5f, -3f, 0f), new Vector3(4.5f, -3f, 0f)
-                };
-                CollectionAssert.AreEqual(expectedPositions, proof.Cast<Transform>().Select(child => child.localPosition));
-                Assert.That(proof.Cast<Transform>().Select(child => child.localPosition).Distinct().Count(), Is.EqualTo(ExpectedIds.Length));
-                var catalog = AssetDatabase.LoadAssetAtPath<StaticSpriteCatalog>(CatalogPath);
-                foreach (var child in proof.Cast<Transform>())
-                {
-                    Assert.That(catalog.TryGet(child.name, out var entry), Is.True, child.name);
-                    Assert.That(
-                        PrefabUtility.GetCorrespondingObjectFromSource(child.gameObject),
-                        Is.SameAs(entry.prefab),
-                        child.name);
-                }
-            }
-            finally
-            {
-                EditorSceneManager.CloseScene(scene, true);
-            }
+            var catalog = AssetDatabase.LoadAssetAtPath<StaticSpriteCatalog>(CatalogPath);
+            Assert.That(catalog, Is.Not.Null);
+            CollectionAssert.AreEquivalent(ExpectedIds, catalog.Entries.Select(entry => entry.id));
+            Assert.That(catalog.Entries.All(entry => entry.sprite != null && entry.prefab != null), Is.True);
         }
 
         [Test]

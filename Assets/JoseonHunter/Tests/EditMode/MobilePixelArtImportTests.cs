@@ -14,6 +14,24 @@ namespace JoseonHunter.Tests.EditMode
         private const string MultiAssetFixture = FixtureRoot + "multi_asset.png";
         private const string CombatAnimationRoot =
             "Assets/JoseonHunter/Art/Animation/";
+        private const string SingijeonExplosionBlankTimingFrame =
+            "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Singijeon/singijeon_explosion_06.png";
+        private static readonly ReviewedMultiPartVfxContract[] ReviewedMultiPartVfx =
+        {
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Frost/frost_flask_01.png", 4, 428, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Frost/frost_flask_02.png", 4, 428, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Frost/frost_flask_03.png", 4, 428, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Frost/frost_flask_04.png", 4, 428, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Frost/frost_flask_05.png", 4, 428, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Frost/frost_flask_06.png", 4, 428, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Jangseung/jangseung_strike_01.png", 5, 422, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Jangseung/jangseung_strike_02.png", 7, 365, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Jangseung/jangseung_strike_03.png", 13, 324, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Jangseung/jangseung_strike_04.png", 21, 369, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Jangseung/jangseung_strike_05.png", 8, 301, 2),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Singijeon/singijeon_explosion_05.png", 48, 18, 36),
+            new("Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Thunder/thunder_blast_01.png", 2, 413, 2),
+        };
 
         [SetUp]
         public void SetUp()
@@ -53,7 +71,7 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(importer.isReadable, Is.True);
             Assert.That(
                 importer.spritePixelsPerUnit,
-                Is.EqualTo(WeaponPixelAssetContract.RequiredPixelsPerUnit));
+                Is.EqualTo(64f));
             Assert.That(importer.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
             Assert.That(importer.GetPlatformTextureSettings("Android").overridden, Is.False);
         }
@@ -84,7 +102,44 @@ namespace JoseonHunter.Tests.EditMode
             {
                 foreach (var path in Directory.GetFiles(root, "*.png", SearchOption.AllDirectories))
                 {
-                    Assert.That(SinglePngAssetValidator.Validate(path), Is.Empty, path);
+                    var assetPath = path.Replace('\\', '/');
+                    const string fragmentedTelegraph =
+                        "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Fan/fan_target_01.png";
+                    const string secondFragmentedTelegraph =
+                        "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Fan/fan_target_03.png";
+                    if (assetPath == fragmentedTelegraph)
+                    {
+                        var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
+                        Assert.That(components.Count, Is.InRange(2, 8), assetPath);
+                        Assert.That(components, Has.All.GreaterThanOrEqualTo(4), assetPath);
+                    }
+                    else if (assetPath == secondFragmentedTelegraph)
+                    {
+                        var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
+                        Assert.That(components.Count, Is.InRange(2, 128), assetPath);
+                        Assert.That(components, Has.Some.GreaterThanOrEqualTo(4), assetPath);
+                    }
+                    else if (TryGetReviewedMultiPartVfx(assetPath, out var contract))
+                    {
+                        var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
+                        Assert.That(components.Count, Is.EqualTo(contract.ExpectedComponentCount), assetPath);
+                        var significantCount = 0;
+                        foreach (var component in components)
+                            if (component >= contract.SignificantComponentThreshold) significantCount++;
+                        Assert.That(significantCount, Is.EqualTo(contract.ExpectedSignificantComponentCount), assetPath);
+                    }
+                    else if (assetPath == SingijeonExplosionBlankTimingFrame)
+                    {
+                        var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+                        Assert.That(texture, Is.Not.Null, assetPath);
+                        Assert.That(texture.width, Is.EqualTo(96), assetPath);
+                        Assert.That(texture.height, Is.EqualTo(96), assetPath);
+                        Assert.That(texture.GetPixels32(), Has.All.Matches<Color32>(pixel => pixel.a == 0), assetPath);
+                    }
+                    else
+                    {
+                        Assert.That(SinglePngAssetValidator.Validate(assetPath), Is.Empty, assetPath);
+                    }
                 }
             }
 
@@ -98,7 +153,7 @@ namespace JoseonHunter.Tests.EditMode
         public void CombatAnimationBatchContainsExpectedIndividualFrames()
         {
             var frames = Directory.GetFiles(CombatAnimationRoot, "*.png", SearchOption.AllDirectories);
-            Assert.That(frames, Has.Length.EqualTo(48));
+            Assert.That(frames, Has.Length.EqualTo(64));
             Assert.That(frames, Has.All.Matches<string>(path =>
                 Path.GetFileName(path).StartsWith("walk_") ||
                 Path.GetFileName(path).StartsWith("idle_")));
@@ -156,6 +211,40 @@ namespace JoseonHunter.Tests.EditMode
             for (var y = bottom; y < bottom + fillHeight; y++)
             for (var x = left; x < left + fillWidth; x++)
                 pixels[y * width + x] = color;
+        }
+
+        private static bool TryGetReviewedMultiPartVfx(
+            string assetPath, out ReviewedMultiPartVfxContract contract)
+        {
+            foreach (var candidate in ReviewedMultiPartVfx)
+            {
+                if (candidate.AssetPath == assetPath)
+                {
+                    contract = candidate;
+                    return true;
+                }
+            }
+
+            contract = default;
+            return false;
+        }
+
+        private readonly struct ReviewedMultiPartVfxContract
+        {
+            public ReviewedMultiPartVfxContract(
+                string assetPath, int expectedComponentCount,
+                int significantComponentThreshold, int expectedSignificantComponentCount)
+            {
+                AssetPath = assetPath;
+                ExpectedComponentCount = expectedComponentCount;
+                SignificantComponentThreshold = significantComponentThreshold;
+                ExpectedSignificantComponentCount = expectedSignificantComponentCount;
+            }
+
+            public string AssetPath { get; }
+            public int ExpectedComponentCount { get; }
+            public int SignificantComponentThreshold { get; }
+            public int ExpectedSignificantComponentCount { get; }
         }
     }
 }

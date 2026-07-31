@@ -29,6 +29,7 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(
                 WeaponPixelAssetContract.ValidatePolishFrame(texture, importer, path),
                 Is.Empty);
+            Assert.That(importer.spritePixelsPerUnit, Is.EqualTo(64f));
         }
 
         [Test]

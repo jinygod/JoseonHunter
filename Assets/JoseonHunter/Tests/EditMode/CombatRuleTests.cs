@@ -195,7 +195,7 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void Weapon_affix_catalog_has_exact_launch_balance_and_imported_contact_assets()
         {
-            Assert.That(WeaponRoster.All, Has.Count.EqualTo(8));
+            Assert.That(WeaponRoster.All.Count, Is.EqualTo(8));
             var potentials = WeaponRoster.All.SelectMany(WeaponAffixCatalog.CompatiblePotentials).ToArray();
             Assert.That(potentials, Has.Length.EqualTo(24));
             Assert.That(potentials, Is.Unique, "A potential ID must belong to exactly one launch weapon.");
@@ -208,7 +208,7 @@ namespace JoseonHunter.Tests.EditMode
             AssertExactStats(WeaponId.SingijeonVolley, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.ProjectileSpeed);
             AssertExactStats(WeaponId.FrostFlask, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.Duration);
             AssertExactStats(WeaponId.WindThunderFan, WeaponAffixStat.Damage, WeaponAffixStat.Cooldown, WeaponAffixStat.Area, WeaponAffixStat.Duration);
-            foreach (var weapon in WeaponRoster.All) Assert.That(WeaponAffixCatalog.CompatiblePotentials(weapon), Has.Count.EqualTo(3));
+            foreach (var weapon in WeaponRoster.All) Assert.That(WeaponAffixCatalog.CompatiblePotentials(weapon).Count, Is.EqualTo(3));
 
             AssertExactRange(WeaponId.HwandoFlyingBlade, WeaponAffixStat.Damage, 10d, 30d);
             AssertExactRange(WeaponId.HwandoFlyingBlade, WeaponAffixStat.Cooldown, -5d, -12d);
@@ -278,7 +278,7 @@ namespace JoseonHunter.Tests.EditMode
             {
                 var seedUnits = existing.Length == 1
                     ? new[] { .5d, 0d, .99d }
-                    : new[] { .5d, 0d, 0d, 0d, .99d };
+                    : new[] { .5d, 0d, 0d, .99d };
                 WeaponAffixRoller.RollAndApply(state, WeaponId.HwandoFlyingBlade, new FixedAffixRandom(0, seedUnits));
             }
             var result = WeaponAffixRoller.RollAndApply(state, WeaponId.HwandoFlyingBlade, new FixedAffixRandom(0, .5d, initialRoll));

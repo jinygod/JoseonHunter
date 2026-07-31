@@ -35,7 +35,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [TestCase(WeaponAffixStat.Damage, 10d, 30d)]
-        [TestCase(WeaponAffixStat.Cooldown, -12d, -5d)]
+        [TestCase(WeaponAffixStat.Cooldown, -5d, -12d)]
         [TestCase(WeaponAffixStat.Area, 8d, 20d)]
         [TestCase(WeaponAffixStat.ProjectileSpeed, 10d, 30d)]
         [TestCase(WeaponAffixStat.Duration, 10d, 25d)]
