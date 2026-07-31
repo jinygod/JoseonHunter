@@ -1,4 +1,5 @@
 using System.Collections;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
