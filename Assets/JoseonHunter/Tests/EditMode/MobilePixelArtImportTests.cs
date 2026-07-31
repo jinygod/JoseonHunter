@@ -117,8 +117,13 @@ namespace JoseonHunter.Tests.EditMode
                     else if (assetPath == secondFragmentedTelegraph)
                     {
                         var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
-                        Assert.That(components.Count, Is.EqualTo(79), assetPath);
-                        Assert.That(components.Count(component => component >= 96), Is.EqualTo(2), assetPath);
+                        var expectedComponents = new[]
+                        {
+                            636, 291, 32, 22, 18, 14, 11, 10, 7, 7, 6, 5, 5, 5, 5, 5, 5,
+                            4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2,
+                            2, 2, 2, 2, 2, 2, 2
+                        }.Concat(Enumerable.Repeat(1, 35));
+                        Assert.That(components.OrderByDescending(component => component), Is.EqualTo(expectedComponents), assetPath);
                     }
                     else if (TryGetReviewedMultiPartVfx(assetPath, out var contract))
                     {
