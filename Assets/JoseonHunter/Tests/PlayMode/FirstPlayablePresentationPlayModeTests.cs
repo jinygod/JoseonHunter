@@ -19,22 +19,30 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            Assert.That(controller, Is.Not.Null);
-            var player = controller.transform.Find("RuntimeObjects/Han Yeonhwa");
-            Assert.That(player, Is.Not.Null);
-            player.position = new Vector3(2f, 0f, 0f);
-            yield return null;
+            try
+            {
+                Assert.That(controller, Is.Not.Null);
+                var player = controller.transform.Find("RuntimeObjects/Han Yeonhwa");
+                Assert.That(player, Is.Not.Null);
+                player.position = new Vector3(2f, 0f, 0f);
+                yield return null;
 
-            var enemy = controller.SpawnEnemyForTests(new Vector2(4f, 0f));
-            var beforeCamera = Camera.main.transform.position;
-            var beforeElapsed = controller.UiState.Elapsed;
-            var beforeEnemy = enemy.WorldPosition;
-            Assert.That(controller.Flow.TryTransition(GameFlowState.Paused), Is.True);
-            yield return new WaitForSecondsRealtime(.2f);
+                var enemy = controller.SpawnEnemyForTests(new Vector2(4f, 0f));
+                var beforeCamera = Camera.main.transform.position;
+                var beforeElapsed = controller.UiState.Elapsed;
+                var beforeEnemy = enemy.WorldPosition;
+                Assert.That(controller.Flow.TryTransition(GameFlowState.Paused), Is.True);
+                yield return new WaitForSecondsRealtime(.2f);
 
-            Assert.That(controller.UiState.Elapsed, Is.EqualTo(beforeElapsed));
-            Assert.That(Camera.main.transform.position, Is.EqualTo(beforeCamera));
-            Assert.That(enemy.WorldPosition, Is.EqualTo(beforeEnemy));
+                Assert.That(controller.UiState.Elapsed, Is.EqualTo(beforeElapsed));
+                Assert.That(Camera.main.transform.position, Is.EqualTo(beforeCamera));
+                Assert.That(enemy.WorldPosition, Is.EqualTo(beforeEnemy));
+            }
+            finally
+            {
+                if (controller != null) controller.Flow?.ResetToPlaying();
+                Time.timeScale = 1f;
+            }
         }
 
         [UnityTest]
