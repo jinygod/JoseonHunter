@@ -12,10 +12,3 @@
 
 - Added EditMode coverage for same-side movement, real-time crossing/re-entry behavior including large frames, oldest-set eviction, level-five four-post formation, and centered-pivot PPU32 transparent, endpoint, and 45-degree mask geometry.
 - Ran `git diff --check` and reviewed only the Task 12 diff. Unity and repository-wide tests were intentionally not run.
-
-## Final Integrated Fix Round
-
-- Fixed the capture-session `EditorPrefs` leak that could resume a stale portrait capture in a different Unity batch process and call `Camera.Render` under `-nographics`. Pending capture state now records the originating OS PID; foreign or missing owners clear every capture key without resuming capture.
-- Focused capture-policy EditMode verification passed 2/2. The full EditMode suite passed 529/529 at `2026-07-31 20:24:27Z`–`20:24:47Z` (19.974525 s).
-- The stale explicit-confirmation test regression was fixed: the Hwando vertical slice now waits for `IsAwaitingConfirmation`, calls `Confirm()`, and waits for completion before reading the result. Its earlier `Skip()`-then-`LastCompletedResult` NRE no longer occurs; execution now reaches its later unresolved Venom Fang committed-mask assertion.
-- Final PlayMode, retained at `Logs/playmode-results.xml`, failed 79/261: 38 `WeaponPotentialCombatAPlayModeTests`, 39 `WeaponPotentialCombatBPlayModeTests`, Moon Eclipse, and the vertical-slice Venom Fang mask assertion. They remain release limitations. No retained pre-branch full baseline or branch mask-topology/executor evidence establishes their origin as introduced or pre-existing.
