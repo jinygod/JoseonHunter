@@ -36,6 +36,9 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private JangseungGeumjulVisualLibrary jangseungGeumjulVisuals;
 
         private readonly List<EnemyState> enemies = new List<EnemyState>();
+        private readonly List<EnemyState> separationEnemies = new List<EnemyState>();
+        private readonly List<EnemySeparationAgent> separationAgents = new List<EnemySeparationAgent>();
+        private readonly EnemySeparationGrid separationGrid = new EnemySeparationGrid(.84f);
         private readonly List<PickupState> pickups = new List<PickupState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
@@ -226,6 +229,50 @@ namespace JoseonHunter.Runtime.Gameplay
             forceEliteForTests = null;
         }
         public void SpawnEnemyForViewportClearanceTests(bool isBoss, int midBossTier) => SpawnEnemy(isBoss, midBossTier);
+        public void SpawnEnemyForSeparationTests(Vector2 position)
+        {
+            SpawnEnemy(false);
+            enemies[enemies.Count - 1].Object.transform.position = position;
+        }
+        public void SpawnTreasureForSeparationTests(Vector2 position)
+        {
+            SpawnTreasureChest();
+            enemies[enemies.Count - 1].Object.transform.position = position;
+        }
+        public void UpdateEnemiesForSeparationTests(float delta) => UpdateEnemies(delta);
+        public int LastSeparationAgentCountForTests { get; private set; }
+        private readonly List<Vector2> livingEnemyPositionsForTests = new List<Vector2>();
+        public IReadOnlyList<Vector2> LivingEnemyPositionsForTests
+        {
+            get
+            {
+                livingEnemyPositionsForTests.Clear();
+                for (var index = 0; index < enemies.Count; index++)
+                {
+                    var enemy = enemies[index];
+                    if (enemy.Object != null && !enemy.IsTreasure)
+                        livingEnemyPositionsForTests.Add(enemy.Object.transform.position);
+                }
+                return livingEnemyPositionsForTests;
+            }
+        }
+        public float AverageLivingEnemyDistanceToPlayerForTests
+        {
+            get
+            {
+                var count = 0;
+                var total = 0f;
+                var playerPosition = (Vector2)player.transform.position;
+                for (var index = 0; index < enemies.Count; index++)
+                {
+                    var enemy = enemies[index];
+                    if (enemy.Object == null || enemy.IsTreasure) continue;
+                    total += Vector2.Distance(enemy.Object.transform.position, playerPosition);
+                    count++;
+                }
+                return count == 0 ? 0f : total / count;
+            }
+        }
 #endif
 
         public bool IsCombatTargetAlive(int runtimeId) =>
@@ -1038,16 +1085,38 @@ namespace JoseonHunter.Runtime.Gameplay
                     enemies.RemoveAt(index);
                     continue;
                 }
+            }
 
-                if (enemy.IsTreasure)
-                {
-                    continue;
-                }
+            separationEnemies.Clear();
+            separationAgents.Clear();
+            for (var index = 0; index < enemies.Count; index++)
+            {
+                var enemy = enemies[index];
+                if (enemy.IsTreasure) continue;
 
                 enemy.TickStatuses(delta);
+                var rank = enemy.IsBoss
+                    ? EnemyRankProfile.Boss
+                    : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
+                separationEnemies.Add(enemy);
+                separationAgents.Add(new EnemySeparationAgent(
+                    enemy.CombatTarget.RuntimeId,
+                    enemy.Object.transform.position,
+                    VisualScale.ContactRadiusFor(rank)));
+            }
+
+            separationGrid.Rebuild(separationAgents);
+#if UNITY_INCLUDE_TESTS
+            LastSeparationAgentCountForTests = separationAgents.Count;
+#endif
+            for (var index = 0; index < separationEnemies.Count; index++)
+            {
+                var enemy = separationEnemies[index];
 
                 var enemyPosition = (Vector2)enemy.Object.transform.position;
-                var direction = (playerPosition - enemyPosition).normalized;
+                var chase = (playerPosition - enemyPosition).normalized;
+                var separate = separationGrid.Resolve(index, 8);
+                var direction = Vector2.ClampMagnitude(chase + separate * .72f, 1f);
                 var velocity = direction * (enemy.Speed * enemy.MovementMultiplier);
                 enemy.Object.transform.position = enemyPosition + velocity * delta;
                 enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
