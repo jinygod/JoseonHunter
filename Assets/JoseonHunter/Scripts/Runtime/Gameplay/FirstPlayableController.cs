@@ -49,6 +49,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private int affixRollOrdinal;
 #if UNITY_INCLUDE_TESTS
         private Func<WeaponId, int, int, int, IAffixRandom> affixRandomFactoryForTests;
+        private int? spawnSideForTests;
+        private float? spawnTForTests;
+        private float? spawnMarginForTests;
+        private bool? forceEliteForTests;
 #endif
         private readonly PixelHitMask prototypeCombatMask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
         private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
@@ -204,7 +208,24 @@ namespace JoseonHunter.Runtime.Gameplay
             return target;
         }
         public Vector2 LastSpawnPositionForTests { get; private set; }
+        public Vector2 LastSpawnRootPositionForTests { get; private set; }
+        public Bounds LastSpawnRendererBoundsForTests { get; private set; }
         public void SpawnEnemyAtCurrentViewportForTests() => SpawnEnemy(false);
+        public void ConfigureViewportSpawnForTests(int side, float t, float margin, bool forceElite)
+        {
+            spawnSideForTests = side;
+            spawnTForTests = t;
+            spawnMarginForTests = margin;
+            forceEliteForTests = forceElite;
+        }
+        public void ClearViewportSpawnForTests()
+        {
+            spawnSideForTests = null;
+            spawnTForTests = null;
+            spawnMarginForTests = null;
+            forceEliteForTests = null;
+        }
+        public void SpawnEnemyForViewportClearanceTests(bool isBoss, int midBossTier) => SpawnEnemy(isBoss, midBossTier);
 #endif
 
         public bool IsCombatTargetAlive(int runtimeId) =>
@@ -711,11 +732,16 @@ namespace JoseonHunter.Runtime.Gameplay
         private void SpawnEnemy(bool isBoss, int midBossTier = 0)
         {
             var isMidBoss = !isBoss && midBossTier > 0;
-            var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(
-                CurrentViewportBounds(),
-                UnityEngine.Random.Range(0, 4),
-                UnityEngine.Random.value,
-                UnityEngine.Random.Range(VisualScale.SpawnMarginMinimum, VisualScale.SpawnMarginMaximum));
+            var side = UnityEngine.Random.Range(0, 4);
+            var t = UnityEngine.Random.value;
+            var margin = UnityEngine.Random.Range(VisualScale.SpawnMarginMinimum, VisualScale.SpawnMarginMaximum);
+#if UNITY_INCLUDE_TESTS
+            side = spawnSideForTests ?? side;
+            t = spawnTForTests ?? t;
+            margin = spawnMarginForTests ?? margin;
+#endif
+            var viewportBounds = CurrentViewportBounds();
+            var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(viewportBounds, side, t, margin);
 #if UNITY_INCLUDE_TESTS
             LastSpawnPositionForTests = position;
 #endif
@@ -723,6 +749,12 @@ namespace JoseonHunter.Runtime.Gameplay
             var pacing = stageTimeline.Sample(elapsed);
             var isElite = !isBoss && !isMidBoss && elapsed >= 3f &&
                           UnityEngine.Random.value < pacing.EliteChance;
+#if UNITY_INCLUDE_TESTS
+            if (!isBoss && !isMidBoss && forceEliteForTests.HasValue)
+            {
+                isElite = forceEliteForTests.Value;
+            }
+#endif
             var rank = isBoss
                 ? EnemyRankProfile.Boss
                 : (isElite || isMidBoss ? EnemyRankProfile.Elite : EnemyRankProfile.Normal);
@@ -761,6 +793,13 @@ namespace JoseonHunter.Runtime.Gameplay
                         midBossTier >= 2 ? .68f : .42f)
                     : VisualScale.ScaleFor(rank);
             enemyObject.transform.localScale = Vector3.one * displayScale;
+#if UNITY_INCLUDE_TESTS
+            var finalRendererBounds = MoveRendererOutsideViewport(enemyObject.transform, renderer, viewportBounds, side);
+            LastSpawnRootPositionForTests = enemyObject.transform.position;
+            LastSpawnRendererBoundsForTests = finalRendererBounds;
+#else
+            MoveRendererOutsideViewport(enemyObject.transform, renderer, viewportBounds, side);
+#endif
             if (chosenSprite == null)
             {
                 renderer.color = isBoss ? new Color(0.55f, 0.12f, 0.16f) : new Color(0.45f, 0.20f, 0.18f);
@@ -796,6 +835,36 @@ namespace JoseonHunter.Runtime.Gameplay
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
             if (isBoss || isMidBoss) bossAlive = true;
+        }
+
+        private static Bounds MoveRendererOutsideViewport(
+            Transform enemyRoot,
+            SpriteRenderer renderer,
+            Rect viewportBounds,
+            int side)
+        {
+            const float ClearanceEpsilon = .001f;
+            var bounds = renderer.bounds;
+            var distance = side switch
+            {
+                0 => Mathf.Max(0f, viewportBounds.yMax - bounds.min.y + ClearanceEpsilon),
+                1 => Mathf.Max(0f, viewportBounds.xMax - bounds.min.x + ClearanceEpsilon),
+                2 => Mathf.Max(0f, bounds.max.y - viewportBounds.yMin + ClearanceEpsilon),
+                3 => Mathf.Max(0f, bounds.max.x - viewportBounds.xMin + ClearanceEpsilon),
+                _ => 0f
+            };
+            if (distance <= 0f) return bounds;
+
+            var direction = side switch
+            {
+                0 => Vector3.up,
+                1 => Vector3.right,
+                2 => Vector3.down,
+                3 => Vector3.left,
+                _ => Vector3.zero
+            };
+            enemyRoot.position += direction * distance;
+            return renderer.bounds;
         }
 
         private Sprite ChooseNormalEnemySprite()
