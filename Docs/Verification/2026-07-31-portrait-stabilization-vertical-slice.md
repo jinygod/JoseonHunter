@@ -3,6 +3,7 @@
 ## Environment and method
 
 - **Environment:** Unity `6000.5.5f1`, Windows Editor batchmode (`-nographics`), PlayMode test runner; this is Editor/headless evidence, not Android/device evidence.
+- **Provenance:** review-fix base `70c181862eae7247e04558976d4bbfc328879905`; raw Unity XML is refreshed at `Logs/playmode-results.xml` by the commands below (the working artifact is intentionally not source-controlled).
 - **Scenario:** `FirstPlayableLoadPlayModeTests` loads Gameplay, disables automatic enemy/chest timers through the Task 8 seam, creates exactly 30/50/100 enemies at the same point, warms 30 rendered frames, then samples 120 rendered frames.
 - **Metrics:** `Main Thread` recorder (nanoseconds, sorted in a reusable 120-entry array for median/p95), `GC Allocated In Frame` maximum, living enemy count and pairwise minimum spacing. The test restores random state, GameFlow, time scale, and all recorder resources in `finally`.
 - **Contract:** each tier's headless p95 must be at most 33.34 ms (two 60 Hz frame budgets). This is an explicit non-flaky guard against an unbounded tier increase in the headless harness, not a device-frame-budget claim. After warmup, 120 direct `UpdateEnemies` calls allocate 0 managed bytes on the current thread; this isolates the movement/grid path from Editor/UI/test-harness frame allocations.
@@ -27,12 +28,14 @@ All eight marker recorders were valid in every AFTER tier: `JoseonHunter.Run.Upd
 
 `GC Allocated In Frame` is intentionally reported as a whole-frame Editor/harness metric and remains nonzero. It must not be interpreted as enemy movement allocation: the direct warmed movement measurement above is the allocation proof for that path.
 
-## Task 10 decision-gate inputs only
+## Task 10 decision-gate inputs
 
 | Gate input at 100 enemies | Evidence | Task 10 decision |
 | --- | --- | --- |
-| Instantiate/Destroy p95 > 1.0 ms | Not measurable in this steady-state scenario; no marker was added for lifecycle calls. | Not decided here. |
-| Steady lifecycle GC > 512 B/frame | Not isolated; whole-frame Editor GC is 150,843 B max and is not lifecycle attribution. | Not decided here. |
-| Visible spawn burst misses 16.67 ms from lifecycle work | Not exercised by this steady-state headless scenario. | Not decided here. |
+| Instantiate/Destroy p95 > 1.0 ms | 24 high-resolution Stopwatch samples through existing `SpawnEnemy` = **0.1056 ms p95**; existing `ApplyEnemyDamage` cleanup-entry path = **0.0614 ms p95**. | No — neither exceeds 1.0 ms. |
+| Steady lifecycle GC > 512 B/frame | 120 direct warmed existing `UpdateEnemies` calls = **0 B/frame** current-thread managed allocation. | No — 0 B is not greater than 512 B. |
+| Visible spawn burst misses 16.67 ms from lifecycle work | Existing `SpawnBurst(34)` narrow Stopwatch duration = **0.2566 ms**. | No — below 16.67 ms. |
 
-No pooling was implemented or selected in Task 9. Device validation and the targeted lifecycle/burst capture remain required before Task 10 evaluates its gate.
+The lifecycle measurement test is `FirstPlayableLoadPlayModeTests.LifecycleEvidenceMeasuresExistingSpawnCleanupAndBurstAtOneHundredEnemyTier`, run at 2026-07-31 16:55:55Z. It disables automatic spawn/chest timers, seeds 100 enemies through the established load seam, and restores random state, flow, and time scale. Stopwatch attribution is deliberately narrow to the existing synchronous production calls; delayed visual death destruction and Editor/headless rendering are not device evidence.
+
+All three mechanical Task 10 gates are **No** in this captured Editor/headless scenario. No pooling was implemented or selected in Task 9; a future Task 10 decision can consume these rows directly.

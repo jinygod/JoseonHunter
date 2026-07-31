@@ -1,5 +1,6 @@
 using System.Collections;
 using JoseonHunter.Domain.Runs;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using Unity.Profiling;
@@ -14,6 +15,7 @@ namespace JoseonHunter.Tests.PlayMode
         private const int WarmupFrameCount = 30;
         private const int SampleFrameCount = 120;
         private static readonly long[] FrameDurationsNanoseconds = new long[SampleFrameCount];
+        private static readonly double[] LifecycleMilliseconds = new double[24];
         private static readonly string[] MarkerNames =
         {
             FirstPlayableProfilerMarkers.RunUpdateName,
@@ -97,6 +99,99 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator ProfilerMarkersRecordBurstHudAndModalLifecyclePaths()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(bootstrap, Is.Not.Null);
+
+            var randomState = Random.state;
+            var originalTimeScale = Time.timeScale;
+            var spawnRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.SpawnName, 8);
+            var hudRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.UiHudName, 8);
+            var modalRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.UiModalName, 16);
+            try
+            {
+                controller.AdvanceStageForTests(119f, 121f);
+                yield return new WaitForSeconds(.12f);
+                controller.OpenUpgradeForTests();
+                yield return null;
+                bootstrap.gameObject.SetActive(false);
+                yield return null;
+
+                Assert.That(spawnRecorder.Valid, Is.True);
+                Assert.That(hudRecorder.Valid, Is.True);
+                Assert.That(modalRecorder.Valid, Is.True);
+                Assert.That(HasNonZeroSample(spawnRecorder), Is.True);
+                Assert.That(HasNonZeroSample(hudRecorder), Is.True);
+                Assert.That(HasNonZeroSample(modalRecorder), Is.True);
+            }
+            finally
+            {
+                if (bootstrap != null) bootstrap.gameObject.SetActive(true);
+                modalRecorder.Dispose();
+                hudRecorder.Dispose();
+                spawnRecorder.Dispose();
+                Random.state = randomState;
+                controller.Flow.ResetToPlaying();
+                Time.timeScale = originalTimeScale;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator LifecycleEvidenceMeasuresExistingSpawnCleanupAndBurstAtOneHundredEnemyTier()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            Assert.That(controller, Is.Not.Null);
+            var randomState = Random.state;
+            var originalTimeScale = Time.timeScale;
+            try
+            {
+                controller.ConfigureSeparationLoadScenarioForTests();
+                for (var index = 0; index < 100; index++) controller.SpawnEnemyForSeparationTests(new Vector2(10f, 0f));
+                for (var index = 0; index < LifecycleMilliseconds.Length; index++)
+                {
+                    var timer = System.Diagnostics.Stopwatch.StartNew();
+                    controller.SpawnEnemyForLifecycleTests();
+                    timer.Stop();
+                    LifecycleMilliseconds[index] = timer.Elapsed.TotalMilliseconds;
+                }
+                var spawnP95 = Percentile95(LifecycleMilliseconds);
+
+                for (var index = 0; index < LifecycleMilliseconds.Length; index++)
+                {
+                    var timer = System.Diagnostics.Stopwatch.StartNew();
+                    controller.DestroyLastEnemyForLifecycleTests();
+                    timer.Stop();
+                    LifecycleMilliseconds[index] = timer.Elapsed.TotalMilliseconds;
+                }
+                var cleanupP95 = Percentile95(LifecycleMilliseconds);
+                yield return null;
+
+                var steadyGcBefore = System.GC.GetAllocatedBytesForCurrentThread();
+                for (var tick = 0; tick < SampleFrameCount; tick++) controller.UpdateEnemiesForTests(.05f);
+                var steadyGcPerFrame = (System.GC.GetAllocatedBytesForCurrentThread() - steadyGcBefore) / SampleFrameCount;
+                var burstTimer = System.Diagnostics.Stopwatch.StartNew();
+                controller.SpawnBurstForTests(34);
+                burstTimer.Stop();
+                TestContext.WriteLine($"LIFECYCLE 100 spawnP95Ms={spawnP95:F4}; cleanupP95Ms={cleanupP95:F4}; steadyLifecycleGcBytesPerFrame={steadyGcPerFrame}; burst34Ms={burstTimer.Elapsed.TotalMilliseconds:F4}");
+                Assert.That(spawnP95, Is.GreaterThanOrEqualTo(0d));
+                Assert.That(cleanupP95, Is.GreaterThanOrEqualTo(0d));
+            }
+            finally
+            {
+                Random.state = randomState;
+                controller.Flow.ResetToPlaying();
+                Time.timeScale = originalTimeScale;
+            }
+        }
+
         private static IEnumerator VerifyCrowd(int count)
         {
             SceneManager.LoadScene("Gameplay");
@@ -130,6 +225,20 @@ namespace JoseonHunter.Tests.PlayMode
                 controller.Flow.ResetToPlaying();
                 Time.timeScale = 1f;
             }
+        }
+
+        private static bool HasNonZeroSample(ProfilerRecorder recorder)
+        {
+            var samples = recorder.ToArray();
+            for (var index = 0; index < samples.Length; index++)
+                if (samples[index].Value > 0) return true;
+            return false;
+        }
+
+        private static double Percentile95(double[] values)
+        {
+            System.Array.Sort(values);
+            return values[(values.Length * 95 + 99) / 100 - 1];
         }
 
         private static IEnumerator CaptureLoadEvidence(int count)
@@ -183,6 +292,8 @@ namespace JoseonHunter.Tests.PlayMode
                 TestContext.WriteLine($"LOAD AFTER count={count}; warmupFrames={WarmupFrameCount}; sampleFrames={SampleFrameCount}; active={positions.Count}; medianMs={medianMilliseconds:F3}; p95Ms={p95Milliseconds:F3}; maxGcBytes={maximumGcBytes}; minSpacing={minimumSpacing:F4}; movementTickAllocatedBytes={movementAllocationBytes}; mainThreadValid={frameTimeRecorder.Valid}; markers=[{markerAvailability}]");
 
                 Assert.That(frameTimeRecorder.Valid, Is.True, "The Main Thread recorder must be available in this test environment.");
+                Assert.That(gcRecorder.Valid, Is.True, "The GC Allocated In Frame recorder must be available in this test environment.");
+                Assert.That(positions.Count, Is.EqualTo(count), "The requested active count must survive the measured window.");
                 for (var markerIndex = 0; markerIndex < markerRecorders.Length; markerIndex++)
                     Assert.That(markerRecorders[markerIndex].Valid, Is.True, $"The '{MarkerNames[markerIndex]}' marker must be available.");
                 Assert.That(movementAllocationBytes, Is.EqualTo(0L), "Enemy movement must not allocate managed memory after warmup.");

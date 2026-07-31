@@ -101,28 +101,36 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnDestroy()
         {
-            CancelUiModalPresentation();
-            UnbindController();
-            if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
-            if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
-            if (affixReveal != null) affixReveal.RevealCompleted -= OnRewardRevealCompleted;
-            if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
-            if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
-            if (instance == this) instance = null;
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                CancelUiModalPresentation();
+                UnbindController();
+                if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
+                if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
+                if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
+                if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
+                if (instance == this) instance = null;
+            }
         }
 
         private void OnDisable()
         {
-            upgradeChoice?.CloseImmediately();
-            CloseRewardReveal();
-            CancelUiModalPresentation();
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                upgradeChoice?.CloseImmediately();
+                CloseRewardReveal();
+                CancelUiModalPresentation();
+            }
         }
 
         private void CancelUiModalPresentation()
         {
-            if (boundController == null) return;
-            boundController.CancelUiModalPresentation();
-            SetBackgroundRaycastsEnabled(true);
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                if (boundController == null) return;
+                boundController.CancelUiModalPresentation();
+                SetBackgroundRaycastsEnabled(true);
+            }
         }
 
         private void Update()

@@ -246,6 +246,13 @@ namespace JoseonHunter.Runtime.Gameplay
         }
         public bool TickGameplayIfRunningForTests(float delta) => TickGameplayIfRunning(delta);
         public void UpdateEnemiesForTests(float delta) => UpdateEnemies(delta);
+        public void SpawnBurstForTests(int count) => SpawnBurst(count);
+        public int EnemyCountForTests => enemies.Count;
+        public void SpawnEnemyForLifecycleTests() => SpawnEnemy(false);
+        public void DestroyLastEnemyForLifecycleTests()
+        {
+            if (enemies.Count != 0) ApplyEnemyDamage(enemies[enemies.Count - 1], float.MaxValue);
+        }
         public void SetContactInvulnerabilityForTests(float seconds) => contactInvulnerability = Mathf.Max(0f, seconds);
         public float ContactInvulnerabilityForTests => contactInvulnerability;
         public int LastSeparationAgentCountForTests { get; private set; }
@@ -1079,10 +1086,13 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void SpawnBurst(int count)
         {
-            var activeCap = stageTimeline.Sample(elapsed).ActiveCap;
-            for (var index = 0; index < count && enemies.Count < activeCap; index++)
+            using (FirstPlayableProfilerMarkers.Spawn.Auto())
             {
-                SpawnEnemy(false);
+                var activeCap = stageTimeline.Sample(elapsed).ActiveCap;
+                for (var index = 0; index < count && enemies.Count < activeCap; index++)
+                {
+                    SpawnEnemy(false);
+                }
             }
         }
 
@@ -1107,6 +1117,15 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
             }
 
+            using (FirstPlayableProfilerMarkers.EnemyMove.Auto())
+            {
+                for (var index = 0; index < enemies.Count; index++)
+                {
+                    var enemy = enemies[index];
+                    if (!enemy.IsTreasure) enemy.TickStatuses(delta);
+                }
+            }
+
             using (FirstPlayableProfilerMarkers.EnemyGrid.Auto())
             {
                 separationEnemies.Clear();
@@ -1116,7 +1135,6 @@ namespace JoseonHunter.Runtime.Gameplay
                     var enemy = enemies[index];
                     if (enemy.IsTreasure) continue;
 
-                    enemy.TickStatuses(delta);
                     var rank = enemy.IsBoss
                         ? EnemyRankProfile.Boss
                         : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
