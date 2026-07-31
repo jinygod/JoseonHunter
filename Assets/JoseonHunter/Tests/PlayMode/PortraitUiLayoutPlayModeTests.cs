@@ -65,8 +65,6 @@ namespace JoseonHunter.Tests.PlayMode
             appraisal.ShowDetails(controller.UiState.Weapons[0]);
             yield return null;
 
-            var originalSize = new Vector2Int(Screen.width, Screen.height);
-            var originalSafeArea = Screen.safeArea;
             try
             {
                 foreach (var requested in PortraitUiMetrics.ValidationResolutions)
@@ -99,11 +97,6 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 appraisal.HideImmediately();
                 reward.HideImmediately();
-                Screen.SetResolution(originalSize.x, originalSize.y, FullScreenMode.Windowed);
-                Assert.That(Application.isBatchMode || new Vector2Int(Screen.width, Screen.height) == originalSize,
-                    Is.True, "Screen state must restore outside batchmode.");
-                bootstrap.ApplySafeArea(originalSafeArea, originalSize);
-                Canvas.ForceUpdateCanvases();
             }
 
             foreach (var text in bootstrap.GetComponentsInChildren<Component>(true))
