@@ -19,7 +19,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level_up_opens_cards_accepts_one_choice_restores_combat_and_sequences_the_queue()
+        public IEnumerator Level_up_keeps_combat_paused_until_reward_confirmation_then_sequences_the_queue()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -35,7 +35,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(rewardReveal, Is.Not.Null);
             Assert.That(bootstrap.BoundController, Is.EqualTo(controller));
 
-            controller.OpenUpgradeForTests();
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
             controller.AddExperienceForTests(100);
             yield return new WaitForSecondsRealtime(.35f);
             Assert.That(Time.timeScale, Is.EqualTo(0f));
@@ -50,12 +50,15 @@ namespace JoseonHunter.Tests.PlayMode
             yield return new WaitForSecondsRealtime(.25f);
 
             Assert.That(controller.AppliedUpgradeCount, Is.EqualTo(1));
-            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Assert.That(Time.timeScale, Is.Zero);
             Assert.That(rewardReveal.IsRevealing, Is.True);
             Assert.That(controller.IsUpgradeOpen, Is.False,
                 "The queued choice must wait until the unscaled reward reveal completes.");
 
             yield return new WaitForSecondsRealtime(.5f);
+            Assert.That(rewardReveal.IsAwaitingConfirmation, Is.True);
+            rewardReveal.Confirm();
+            yield return new WaitForSecondsRealtime(.2f);
             Assert.That(rewardReveal.IsRevealing, Is.False);
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
@@ -156,7 +159,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ReadOnlyWeaponDetailsPauseAndRestoreCombat()
+        public IEnumerator ReadOnlyWeaponDetailsDoNotOwnGameTime()
         {
             var root = new GameObject("Read Only Detail Test");
             var presenter = root.AddComponent<WeaponAffixRevealPresenter>();
@@ -170,7 +173,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             Assert.That(presenter.IsDetailOpen, Is.True);
-            Assert.That(Time.timeScale, Is.Zero);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
             Assert.That(presenter.DisplayedAffixText, Is.EqualTo("Damage +24%"));
             presenter.HideImmediately();
             Assert.That(Time.timeScale, Is.EqualTo(1f));
