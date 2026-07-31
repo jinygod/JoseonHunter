@@ -11,7 +11,6 @@ namespace JoseonHunter.Presentation.UI
     [DisallowMultipleComponent]
     public sealed class UpgradeChoicePresenter : MonoBehaviour
     {
-        private const float SlowdownDuration = .3f;
         private const float CardEntranceDuration = .18f;
         private const float CloseDuration = .15f;
 
@@ -51,6 +50,7 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             overlay = root.AddComponent<CanvasGroup>();
             overlay.alpha = 0f;
+            overlay.blocksRaycasts = true;
             cardsRoot = RuntimeUiFactory.Rect("Upgrade Cards", root.transform).gameObject;
             RuntimeUiFactory.Stretch(cardsRoot.GetComponent<RectTransform>(), 64f, 84f, 64f, 84f);
             heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "CHOOSE A BLESSING", 34f, TextAlignmentOptions.Center);
@@ -81,7 +81,6 @@ namespace JoseonHunter.Presentation.UI
             root.SetActive(true);
             cardsRoot.SetActive(false);
             overlay.alpha = 0f;
-            Time.timeScale = 1f;
             openRoutine = StartCoroutine(OpenRoutine());
         }
 
@@ -91,7 +90,6 @@ namespace JoseonHunter.Presentation.UI
             if (closeRoutine != null) StopCoroutine(closeRoutine);
             openRoutine = null;
             closeRoutine = null;
-            Time.timeScale = 1f;
             IsOpen = false;
             IsChoiceLocked = false;
             selectedChoice = false;
@@ -99,19 +97,17 @@ namespace JoseonHunter.Presentation.UI
             if (root != null) root.SetActive(false);
         }
 
+        public void CloseAfterExternalSelection()
+        {
+            if (!IsOpen || IsChoiceLocked) return;
+            IsChoiceLocked = true;
+            selectedChoice = true;
+            closeRoutine = StartCoroutine(CloseRoutine());
+        }
+
         private IEnumerator OpenRoutine()
         {
             var elapsed = 0f;
-            while (elapsed < SlowdownDuration)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                var progress = Mathf.Clamp01(elapsed / SlowdownDuration);
-                Time.timeScale = Mathf.Lerp(1f, .08f, progress);
-                overlay.alpha = progress;
-                yield return null;
-            }
-
-            Time.timeScale = 0f;
             overlay.alpha = 1f;
             cardsRoot.SetActive(true);
             for (var index = 0; index < cards.Length; index++)

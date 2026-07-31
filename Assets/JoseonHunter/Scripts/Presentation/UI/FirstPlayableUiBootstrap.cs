@@ -1,7 +1,9 @@
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Domain.Runs;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace JoseonHunter.Presentation.UI
@@ -18,6 +20,8 @@ namespace JoseonHunter.Presentation.UI
         private RewardRevealPresenter rewardReveal;
         private WeaponAffixRevealPresenter affixReveal;
         private UpgradeChoicePresenter upgradeChoice;
+        private CanvasGroup combatHudGroup;
+        private CanvasGroup weaponRackGroup;
         private RectTransform safeAreaContainer;
         private Rect lastSafeArea;
         private Vector2 lastScreenSize;
@@ -34,10 +38,17 @@ namespace JoseonHunter.Presentation.UI
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureBootstrap()
         {
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded += OnSceneLoaded;
             if (FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length != 0)
                 return;
 
             new GameObject("First Playable UI").AddComponent<FirstPlayableUiBootstrap>();
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (scene.name == "Gameplay") EnsureBootstrap();
         }
 
         private void Awake()
@@ -57,10 +68,12 @@ namespace JoseonHunter.Presentation.UI
             var hudRoot = RuntimeUiFactory.Rect("Combat HUD", safeAreaContainer);
             RuntimeUiFactory.Stretch(hudRoot, 0f, 0f, 0f, 0f);
             combatHud = hudRoot.gameObject.AddComponent<CombatHudPresenter>();
+            combatHudGroup = hudRoot.gameObject.AddComponent<CanvasGroup>();
             combatHud.Build();
             var rackRoot = RuntimeUiFactory.Rect("Weapon Rack", safeAreaContainer);
             RuntimeUiFactory.Stretch(rackRoot, 0f, 0f, 0f, 0f);
             weaponRack = rackRoot.gameObject.AddComponent<WeaponRackPresenter>();
+            weaponRackGroup = rackRoot.gameObject.AddComponent<CanvasGroup>();
             weaponRack.WeaponSelected += OpenWeaponDetails;
             var rewardRoot = RuntimeUiFactory.Rect("Reward Reveal", safeAreaContainer);
             RuntimeUiFactory.Stretch(rewardRoot, 0f, 0f, 0f, 0f);
@@ -68,6 +81,7 @@ namespace JoseonHunter.Presentation.UI
             rewardReveal.RevealCompleted += OnRewardRevealCompleted;
             affixReveal = rewardRoot.gameObject.AddComponent<WeaponAffixRevealPresenter>();
             affixReveal.RevealCompleted += OnRewardRevealCompleted;
+            affixReveal.DetailClosed += OnWeaponDetailsClosed;
             var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", safeAreaContainer);
             RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
@@ -81,6 +95,7 @@ namespace JoseonHunter.Presentation.UI
             if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (affixReveal != null) affixReveal.RevealCompleted -= OnRewardRevealCompleted;
+            if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
             if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
             if (instance == this) instance = null;
         }
@@ -133,6 +148,7 @@ namespace JoseonHunter.Presentation.UI
 
         private void OpenUpgradeChoice(UpgradeChoiceState state)
         {
+            SetBackgroundRaycastsEnabled(false);
             upgradeChoice?.Open(state, boundController.TryChooseUpgrade);
         }
 
@@ -145,7 +161,15 @@ namespace JoseonHunter.Presentation.UI
         {
             if (affixReveal == null || affixReveal.IsRevealing || upgradeChoice == null || upgradeChoice.IsOpen)
                 return;
+            if (boundController == null || !boundController.Flow.TryTransition(GameFlowState.Paused)) return;
+            SetBackgroundRaycastsEnabled(false);
             affixReveal.ShowDetails(weapon);
+        }
+
+        private void OnWeaponDetailsClosed()
+        {
+            boundController?.Flow.TryTransition(GameFlowState.Playing);
+            SetBackgroundRaycastsEnabled(true);
         }
 
         private void OnUpgradeChosen(ProgressionRewardEvent reward)
@@ -154,6 +178,7 @@ namespace JoseonHunter.Presentation.UI
             waitingForChoiceClose = true;
             pendingReward = reward;
             hasPendingReward = true;
+            upgradeChoice?.CloseAfterExternalSelection();
             if (reward.Kind != ProgressionRewardKind.Support)
             {
                 var state = boundController.UiState;
@@ -172,6 +197,7 @@ namespace JoseonHunter.Presentation.UI
             affixReveal?.HideImmediately();
             hasPendingReward = false;
             weaponRack?.ResetPulses();
+            SetBackgroundRaycastsEnabled(true);
         }
 
         private void NotifyUpgradePresentationClosed()
@@ -218,6 +244,13 @@ namespace JoseonHunter.Presentation.UI
         {
             if (waitingForChoiceClose || waitingForRewardReveal) return;
             boundController?.NotifyUpgradePresentationClosed();
+            SetBackgroundRaycastsEnabled(true);
+        }
+
+        private void SetBackgroundRaycastsEnabled(bool enabled)
+        {
+            if (combatHudGroup != null) combatHudGroup.blocksRaycasts = enabled;
+            if (weaponRackGroup != null) weaponRackGroup.blocksRaycasts = enabled;
         }
 
         public void ApplySafeArea(Rect safeArea, Vector2 screenSize)

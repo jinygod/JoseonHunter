@@ -154,6 +154,7 @@ namespace JoseonHunter.Runtime.Gameplay
         /// <summary>Publishes forced offers atomically so tests exercise the same controller and visible-card identities.</summary>
         public void OpenUpgradeOffersForTests(params UpgradeOffer[] offers)
         {
+            if (!flow.TryTransition(GameFlowState.LevelUpSelection)) return;
             upgradeOpen = true;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
@@ -1284,6 +1285,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OpenUpgrade()
         {
+            if (!flow.TryTransition(GameFlowState.LevelUpSelection)) return;
             upgradeOpen = true;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
@@ -1305,6 +1307,8 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 return false;
             }
+
+            if (!flow.TryTransition(GameFlowState.AugmentResult)) return false;
 
             var reward = ApplyUpgrade(upgradeOfferData[index]);
             upgradeOpen = false;
@@ -1331,6 +1335,10 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 pendingUpgradeCount--;
                 OpenUpgrade();
+            }
+            else
+            {
+                flow.TryTransition(GameFlowState.Playing);
             }
 
             return true;

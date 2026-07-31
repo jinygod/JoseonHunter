@@ -18,9 +18,11 @@ namespace JoseonHunter.Presentation.UI
         private TextMeshProUGUI glyph;
         private TextMeshProUGUI title;
         private TextMeshProUGUI detail;
+        private Button confirmButton;
         private Coroutine revealRoutine;
 
         public bool IsRevealing => revealRoutine != null;
+        public bool IsAwaitingConfirmation { get; private set; }
         public event Action RevealCompleted;
 
         public static int IntensityFor(ProgressionRewardKind kind) => kind switch
@@ -42,6 +44,7 @@ namespace JoseonHunter.Presentation.UI
             glyph.gameObject.SetActive(reward.Icon == null);
             glyph.text = GlyphFor(reward.Kind);
             root.SetActive(true);
+            IsAwaitingConfirmation = false;
             revealRoutine = StartCoroutine(PlayRoutine(reward.Kind));
         }
 
@@ -49,7 +52,14 @@ namespace JoseonHunter.Presentation.UI
         {
             if (revealRoutine != null) StopCoroutine(revealRoutine);
             revealRoutine = null;
+            IsAwaitingConfirmation = false;
             if (root != null) root.SetActive(false);
+        }
+
+        public void Confirm()
+        {
+            if (!IsAwaitingConfirmation) return;
+            IsAwaitingConfirmation = false;
         }
 
         private void OnDisable() => HideImmediately();
@@ -69,6 +79,11 @@ namespace JoseonHunter.Presentation.UI
                 yield return null;
             }
 
+            canvasGroup.alpha = intensity;
+            IsAwaitingConfirmation = true;
+            while (IsAwaitingConfirmation)
+                yield return null;
+
             revealRoutine = null;
             root.SetActive(false);
             RevealCompleted?.Invoke();
@@ -80,7 +95,8 @@ namespace JoseonHunter.Presentation.UI
 
             root = RuntimeUiFactory.Rect("Reward Reveal", transform).gameObject;
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
-            root.AddComponent<CanvasGroup>();
+            var canvasGroup = root.AddComponent<CanvasGroup>();
+            canvasGroup.blocksRaycasts = true;
             overlay = RuntimeUiFactory.Image("Evolution Overlay", root.transform, Color.clear);
             RuntimeUiFactory.Stretch(overlay.rectTransform, 0f, 0f, 0f, 0f);
             var panel = RuntimeUiFactory.Image("Reward Panel", root.transform, JoseonUiPalette.Ink);
@@ -96,6 +112,13 @@ namespace JoseonHunter.Presentation.UI
             Position(title.rectTransform, new Vector2(0f, .5f), new Vector2(206f, 34f), new Vector2(470f, 54f), new Vector2(0f, .5f));
             detail = RuntimeUiFactory.Text("Detail", panel.transform, string.Empty, 24f, TextAlignmentOptions.Left);
             Position(detail.rectTransform, new Vector2(0f, .5f), new Vector2(206f, -34f), new Vector2(470f, 42f), new Vector2(0f, .5f));
+            confirmButton = RuntimeUiFactory.Button("Confirm Reward", panel.transform, Color.white);
+            Position(confirmButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-28f, 22f),
+                new Vector2(152f, 42f), new Vector2(1f, 0f));
+            confirmButton.onClick.AddListener(Confirm);
+            var confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "CONFIRM", 18f,
+                TextAlignmentOptions.Center);
+            RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 6f, 4f, 6f, 4f);
             root.SetActive(false);
         }
 

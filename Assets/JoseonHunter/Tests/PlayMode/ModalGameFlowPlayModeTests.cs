@@ -1,0 +1,119 @@
+using System.Collections;
+using JoseonHunter.Content.Weapons;
+using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Runs;
+using JoseonHunter.Presentation.UI;
+using JoseonHunter.Runtime.Gameplay;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+
+namespace JoseonHunter.Tests.PlayMode
+{
+    public sealed class ModalGameFlowPlayModeTests
+    {
+        [TearDown]
+        public void RestoreTimeScale() => Time.timeScale = 1f;
+
+        [UnityTest]
+        public IEnumerator Weapon_appraisal_keeps_gameplay_paused_until_confirmation()
+        {
+            yield return LoadGameplay();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            Assert.That(Object.FindFirstObjectByType<FirstPlayableUiBootstrap>().BoundController, Is.SameAs(controller));
+            var elapsedBefore = controller.UiState.Elapsed;
+
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer(
+                WeaponId.HwandoFlyingBlade.Value, UpgradeKind.Weapon, 2));
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.LevelUpSelection));
+            Assert.That(Time.timeScale, Is.Zero);
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.AugmentResult));
+
+            yield return new WaitForSecondsRealtime(.6f);
+            Assert.That(Time.timeScale, Is.Zero);
+            Assert.That(controller.UiState.Elapsed, Is.EqualTo(elapsedBefore));
+            affix.Skip();
+            yield return new WaitForSecondsRealtime(1.4f);
+            Assert.That(affix.IsAwaitingConfirmation, Is.True);
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.AugmentResult));
+
+            affix.Confirm();
+            yield return new WaitForSecondsRealtime(.2f);
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
+        }
+
+        [UnityTest]
+        public IEnumerator Confirming_appraisal_opens_a_queued_level_without_resuming_gameplay()
+        {
+            yield return LoadGameplay();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            Assert.That(Object.FindFirstObjectByType<FirstPlayableUiBootstrap>().BoundController, Is.SameAs(controller));
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer(
+                WeaponId.HwandoFlyingBlade.Value, UpgradeKind.Weapon, 2));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+            controller.AddExperienceForTests(100);
+
+            yield return new WaitForSecondsRealtime(.6f);
+            affix.Skip();
+            yield return new WaitForSecondsRealtime(1.4f);
+            affix.Confirm();
+            yield return new WaitForSecondsRealtime(.2f);
+
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.LevelUpSelection));
+            Assert.That(controller.IsUpgradeOpen, Is.True);
+            Assert.That(Time.timeScale, Is.Zero);
+        }
+
+        [UnityTest]
+        public IEnumerator Weapon_detail_pauses_playing_and_restores_it_when_dismissed()
+        {
+            yield return LoadGameplay();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var rack = Object.FindFirstObjectByType<WeaponRackPresenter>();
+            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            var slot = rack.transform.Find("Weapon Slot 0").GetComponent<UnityEngine.UI.Button>();
+
+            ExecuteEvents.Execute<IPointerClickHandler>(slot.gameObject,
+                new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
+            yield return null;
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Paused));
+            Assert.That(affix.IsDetailOpen, Is.True);
+            Assert.That(Time.timeScale, Is.Zero);
+
+            ExecuteEvents.Execute<IPointerClickHandler>(affix.gameObject,
+                new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
+            yield return null;
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
+        }
+
+        [UnityTest]
+        public IEnumerator Gameplay_scene_reload_creates_one_bootstrap_and_binds_the_new_controller()
+        {
+            yield return LoadGameplay();
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+
+            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            Assert.That(bootstrap, Is.Not.Null);
+            Assert.That(bootstrap.BoundController, Is.SameAs(controller));
+            Assert.That(Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include,
+                FindObjectsSortMode.None), Has.Length.EqualTo(1));
+        }
+
+        private static IEnumerator LoadGameplay()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            yield return null;
+        }
+    }
+}

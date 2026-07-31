@@ -65,7 +65,6 @@ namespace JoseonHunter.Presentation.UI
         private bool confirmRequested;
         private bool completed;
         private bool readOnlyDetail;
-        private float detailPreviousTimeScale = 1f;
         private WeaponAffixPresentationCatalogAsset catalogForTests;
 
 #if UNITY_INCLUDE_TESTS
@@ -104,6 +103,7 @@ namespace JoseonHunter.Presentation.UI
                 ? float.NegativeInfinity
                 : reelWindows[index + 1].rectTransform.anchoredPosition.y;
         public event Action RevealCompleted;
+        public event Action DetailClosed;
 
         public void Play(WeaponAffixRollResult result)
         {
@@ -185,8 +185,6 @@ namespace JoseonHunter.Presentation.UI
             }
 
             readOnlyDetail = true;
-            detailPreviousTimeScale = Time.timeScale;
-            Time.timeScale = 0f;
             shell.sprite = activeCatalog.AppraisalScroll;
             topRoller.sprite = activeCatalog.AppraisalRoller;
             bottomRoller.sprite = activeCatalog.AppraisalRoller;
@@ -235,8 +233,6 @@ namespace JoseonHunter.Presentation.UI
 
         public void HideImmediately()
         {
-            if (readOnlyDetail)
-                Time.timeScale = detailPreviousTimeScale;
             if (routine != null)
                 StopCoroutine(routine);
             routine = null;
@@ -257,7 +253,7 @@ namespace JoseonHunter.Presentation.UI
         {
             if (readOnlyDetail)
             {
-                HideImmediately();
+                DismissDetails();
                 return;
             }
             if (Phase == RevealPhase.Reading)
@@ -564,6 +560,7 @@ namespace JoseonHunter.Presentation.UI
                 new Color(.008f, .012f, .022f, .90f)).gameObject;
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             group = root.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = true;
 
             panelRect = RuntimeUiFactory.Rect("Weapon Appraisal Panel", root.transform);
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(.5f, .5f);
@@ -671,9 +668,16 @@ namespace JoseonHunter.Presentation.UI
         private void OnConfirmButton()
         {
             if (readOnlyDetail)
-                HideImmediately();
+                DismissDetails();
             else
                 Confirm();
+        }
+
+        private void DismissDetails()
+        {
+            if (!readOnlyDetail) return;
+            HideImmediately();
+            DetailClosed?.Invoke();
         }
 
         private static Vector2 PotentialRowPosition(int index) =>

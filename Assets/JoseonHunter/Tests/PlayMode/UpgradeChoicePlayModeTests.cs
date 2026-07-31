@@ -18,7 +18,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Upgrade_open_slows_for_point_three_seconds_then_pauses()
+        public IEnumerator Upgrade_open_animates_on_unscaled_time_without_owning_game_time()
         {
             var go = new GameObject("Upgrade Presenter");
             var presenter = go.AddComponent<UpgradeChoicePresenter>();
@@ -26,10 +26,10 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Open(Choices(), _ => true);
 
             yield return new WaitForSecondsRealtime(.15f);
-            Assert.That(Time.timeScale, Is.InRange(.01f, .99f));
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
 
             yield return new WaitForSecondsRealtime(.20f);
-            Assert.That(Time.timeScale, Is.EqualTo(0f));
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
             Assert.That(presenter.IsOpen, Is.True);
 
             presenter.CloseImmediately();

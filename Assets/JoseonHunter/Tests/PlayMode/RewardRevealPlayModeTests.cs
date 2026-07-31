@@ -1,4 +1,5 @@
 using System.Collections;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
@@ -30,6 +31,9 @@ namespace JoseonHunter.Tests.PlayMode
             yield return new WaitForSecondsRealtime(.3f);
             Assert.That(presenter.IsRevealing, Is.True);
             yield return new WaitForSecondsRealtime(.35f);
+            Assert.That(presenter.IsAwaitingConfirmation, Is.True);
+            presenter.Confirm();
+            yield return null;
             Assert.That(presenter.IsRevealing, Is.False);
             Time.timeScale = 1f;
             Object.Destroy(presenter.gameObject);
@@ -40,13 +44,20 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
+            yield return null;
+            yield return null;
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            controller.AddExperienceForTests(100);
+            var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
             Assert.That(controller.TryChooseUpgrade(0), Is.True);
+            controller.AddExperienceForTests(100);
 
             yield return new WaitForSecondsRealtime(.25f);
             Assert.That(controller.IsUpgradeOpen, Is.False);
             yield return new WaitForSecondsRealtime(.5f);
+            Assert.That(reward.IsAwaitingConfirmation, Is.True);
+            reward.Confirm();
+            yield return new WaitForSecondsRealtime(.1f);
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
 
