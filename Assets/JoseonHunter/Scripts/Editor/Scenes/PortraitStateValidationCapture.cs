@@ -16,6 +16,9 @@ namespace JoseonHunter.Editor.Scenes
     public static class PortraitStateValidationCapturePolicy
     {
         public static bool ShouldCaptureThisTick(int updatesSinceTransition) => updatesSinceTransition <= 0;
+
+        public static bool CanResumeInCurrentProcess(int captureProcessId, int currentProcessId) =>
+            captureProcessId == currentProcessId;
     }
 
     internal static class PortraitStateCaptureSession
@@ -26,12 +29,15 @@ namespace JoseonHunter.Editor.Scenes
         private const string PhaseKey = Prefix + "Phase";
         private const string ReadyKey = Prefix + "Ready";
         private const string FailedKey = Prefix + "Failed";
+        private const string ProcessIdKey = Prefix + "ProcessId";
 
         public static bool IsPending => EditorPrefs.GetBool(PendingKey, false);
         public static int ResolutionIndex => EditorPrefs.GetInt(ResolutionKey, 0);
         public static int Phase => EditorPrefs.GetInt(PhaseKey, 0);
         public static bool IsReadyToCapture => EditorPrefs.GetBool(ReadyKey, false);
         public static bool Failed => EditorPrefs.GetBool(FailedKey, false);
+        public static bool IsOwnedByCurrentProcess => PortraitStateValidationCapturePolicy.CanResumeInCurrentProcess(
+            EditorPrefs.GetInt(ProcessIdKey, -1), System.Diagnostics.Process.GetCurrentProcess().Id);
 
         public static void Begin()
         {
@@ -40,6 +46,7 @@ namespace JoseonHunter.Editor.Scenes
             EditorPrefs.SetInt(PhaseKey, 0);
             EditorPrefs.SetBool(ReadyKey, false);
             EditorPrefs.SetBool(FailedKey, false);
+            EditorPrefs.SetInt(ProcessIdKey, System.Diagnostics.Process.GetCurrentProcess().Id);
         }
 
         public static void SaveProgress(int resolutionIndex, int phase)
@@ -60,6 +67,7 @@ namespace JoseonHunter.Editor.Scenes
             EditorPrefs.DeleteKey(PhaseKey);
             EditorPrefs.DeleteKey(ReadyKey);
             EditorPrefs.DeleteKey(FailedKey);
+            EditorPrefs.DeleteKey(ProcessIdKey);
         }
     }
 
@@ -117,6 +125,11 @@ namespace JoseonHunter.Editor.Scenes
         private static void ResumeAfterDomainReload()
         {
             Debug.Log($"Portrait state capture domain reload resume; pending={PortraitStateCaptureSession.IsPending}; playing={EditorApplication.isPlaying}.");
+            if (PortraitStateCaptureSession.IsPending && !PortraitStateCaptureSession.IsOwnedByCurrentProcess)
+            {
+                PortraitStateCaptureSession.Clear();
+                return;
+            }
             AttachPlayModeHandler();
             if (PortraitStateCaptureSession.IsPending && EditorApplication.isPlaying)
                 BeginPlayModeCapture();
@@ -133,7 +146,8 @@ namespace JoseonHunter.Editor.Scenes
             Debug.Log($"Portrait state capture play-mode event={state}; pending={PortraitStateCaptureSession.IsPending}; playing={EditorApplication.isPlaying}.");
             if (state == PlayModeStateChange.EnteredPlayMode)
             {
-                BeginPlayModeCapture();
+                if (PortraitStateCaptureSession.IsPending && PortraitStateCaptureSession.IsOwnedByCurrentProcess)
+                    BeginPlayModeCapture();
                 return;
             }
 

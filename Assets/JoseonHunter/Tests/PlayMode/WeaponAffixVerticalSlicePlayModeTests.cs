@@ -75,9 +75,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.IsUpgradeOpen, Is.False, "queued upgrade is gated by reveal completion");
 
             ExecuteEvents.Execute<IPointerClickHandler>(reveal.gameObject, new PointerEventData(EventSystem.current), ExecuteEvents.pointerClickHandler);
-            yield return new WaitForSecondsRealtime(.72f);
+            yield return WaitUntil(() => reveal.IsAwaitingConfirmation, "the skipped jackpot reel to await explicit confirmation");
+            reveal.Confirm();
+            yield return WaitUntil(() => !reveal.IsRevealing, "the confirmed jackpot reel to complete");
             Assert.That(reveal.LastCompletedResult.NewPotentials, Is.EqualTo(profile.PotentialIds));
-            Assert.That(controller.IsUpgradeOpen, Is.True, "queued upgrade opens only after the skipped jackpot reel completes");
+            Assert.That(controller.IsUpgradeOpen, Is.True, "queued upgrade opens only after the confirmed jackpot reel completes");
 
             var potentialCells = rack.GetComponentsInChildren<Image>(true)
                 .Where(image => image.name.StartsWith("Potential Cell")).ToArray();
@@ -162,6 +164,17 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(sprite, Is.Not.Null, potential.Value);
             Assert.That(texture, Is.Not.Null, potential.Value);
             return PixelHitMask.FromTexture(texture, sprite.pivot, sprite.pixelsPerUnit);
+        }
+
+        private static IEnumerator WaitUntil(System.Func<bool> predicate, string condition)
+        {
+            var deadline = Time.realtimeSinceStartup + 5f;
+            while (!predicate())
+            {
+                Assert.That(Time.realtimeSinceStartup, Is.LessThan(deadline),
+                    $"Timed out waiting for {condition}.");
+                yield return null;
+            }
         }
 
         private sealed class PerfectThreeLineRandom : IAffixRandom

@@ -24,6 +24,8 @@ namespace JoseonHunter.Tests.EditMode
         {
             Assert.That(PortraitStateValidationCapturePolicy.ShouldCaptureThisTick(1), Is.False);
             Assert.That(PortraitStateValidationCapturePolicy.ShouldCaptureThisTick(0), Is.True);
+            Assert.That(PortraitStateValidationCapturePolicy.CanResumeInCurrentProcess(4815, 4815), Is.True);
+            Assert.That(PortraitStateValidationCapturePolicy.CanResumeInCurrentProcess(4815, 9261), Is.False);
         }
     }
 }
