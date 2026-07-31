@@ -120,7 +120,17 @@ namespace JoseonHunter.Tests.PlayMode
                 yield return new WaitForSeconds(.12f);
                 controller.OpenUpgradeForTests();
                 yield return null;
-                bootstrap.gameObject.SetActive(false);
+                modalRecorder.Dispose();
+                modalRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.UiModalName, 16);
+                controller.ResetRunForTests();
+                yield return null;
+
+                Assert.That(HasNonZeroSample(modalRecorder), Is.True, "RunReset close leaves must record Modal after the open sample is cleared.");
+                modalRecorder.Dispose();
+                controller.OpenUpgradeForTests();
+                yield return null;
+                modalRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.UiModalName, 16);
+                Object.Destroy(bootstrap.gameObject);
                 yield return null;
 
                 Assert.That(spawnRecorder.Valid, Is.True);
@@ -128,11 +138,10 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(modalRecorder.Valid, Is.True);
                 Assert.That(HasNonZeroSample(spawnRecorder), Is.True);
                 Assert.That(HasNonZeroSample(hudRecorder), Is.True);
-                Assert.That(HasNonZeroSample(modalRecorder), Is.True);
+                Assert.That(HasNonZeroSample(modalRecorder), Is.True, "Destroy cleanup leaves must record Modal after the open sample is cleared.");
             }
             finally
             {
-                if (bootstrap != null) bootstrap.gameObject.SetActive(true);
                 modalRecorder.Dispose();
                 hudRecorder.Dispose();
                 spawnRecorder.Dispose();
@@ -151,6 +160,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller, Is.Not.Null);
             var randomState = Random.state;
             var originalTimeScale = Time.timeScale;
+            var originalElapsed = controller.ElapsedForTests;
             var burstRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.SpawnName, 8);
             try
             {
@@ -186,6 +196,8 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(controller.EnemyCountForTests, Is.EqualTo(134));
                 yield return null;
                 Assert.That(HasNonZeroSample(burstRecorder), Is.True);
+                Assert.That(burstTimer.Elapsed.TotalMilliseconds, Is.LessThan(16.67d),
+                    $"Editor/headless SpawnBurst(34) lifecycle gate missed 16.67 ms: {burstTimer.Elapsed.TotalMilliseconds:F4} ms at 100→134 active enemies.");
                 TestContext.WriteLine($"LIFECYCLE 100 spawnP95Ms={spawnP95:F4}; cleanupEntryP95Ms={cleanupP95:F4}; steadyLifecycleGcBytesPerFrame={steadyGcPerFrame}; burst34Ms={burstTimer.Elapsed.TotalMilliseconds:F4}; burstActiveBefore=100; burstActiveAfter=134");
                 Assert.That(spawnP95, Is.GreaterThanOrEqualTo(0d));
                 Assert.That(cleanupP95, Is.GreaterThanOrEqualTo(0d));
@@ -194,6 +206,7 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 burstRecorder.Dispose();
                 Random.state = randomState;
+                controller.RestoreElapsedForTests(originalElapsed);
                 controller.Flow.ResetToPlaying();
                 Time.timeScale = originalTimeScale;
             }
