@@ -91,6 +91,7 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnDestroy()
         {
+            CancelUiModalPresentation();
             UnbindController();
             if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
@@ -104,6 +105,14 @@ namespace JoseonHunter.Presentation.UI
         {
             upgradeChoice?.CloseImmediately();
             CloseRewardReveal();
+            CancelUiModalPresentation();
+        }
+
+        private void CancelUiModalPresentation()
+        {
+            if (boundController == null) return;
+            boundController.CancelUiModalPresentation();
+            SetBackgroundRaycastsEnabled(true);
         }
 
         private void Update()

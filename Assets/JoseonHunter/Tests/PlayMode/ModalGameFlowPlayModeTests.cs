@@ -108,6 +108,53 @@ namespace JoseonHunter.Tests.PlayMode
                 FindObjectsSortMode.None), Has.Length.EqualTo(1));
         }
 
+        [UnityTest]
+        public IEnumerator Forced_offer_helper_transitions_and_publishes_like_the_upgrade_flow()
+        {
+            yield return LoadGameplay();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+
+            controller.SetUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
+            yield return null;
+
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.LevelUpSelection));
+            Assert.That(controller.IsUpgradeOpen, Is.True);
+            Assert.That(choice.IsOpen, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator Disabling_bootstrap_cancels_open_levelup_and_restores_playing()
+        {
+            yield return LoadGameplay();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
+
+            bootstrap.gameObject.SetActive(false);
+            yield return null;
+
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+
+        [UnityTest]
+        public IEnumerator Destroying_bootstrap_cancels_augment_result_and_restores_playing()
+        {
+            yield return LoadGameplay();
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+
+            Object.Destroy(bootstrap.gameObject);
+            yield return null;
+
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+        }
+
         private static IEnumerator LoadGameplay()
         {
             SceneManager.LoadScene("Gameplay");

@@ -147,9 +147,18 @@ namespace JoseonHunter.Runtime.Gameplay
         public void OpenUpgradeForTests() => OpenUpgrade();
         public void SetUpgradeOffersForTests(params UpgradeOffer[] offers)
         {
+            if (!upgradeOpen && !flow.TryTransition(GameFlowState.LevelUpSelection)) return;
             upgradeOpen = true;
             upgradeOfferData.Clear();
-            upgradeOfferData.AddRange(offers);
+            upgradeOffers.Clear();
+            if (offers != null) upgradeOfferData.AddRange(offers);
+            var choices = new List<UpgradeChoiceView>(upgradeOfferData.Count);
+            foreach (var offer in upgradeOfferData)
+            {
+                upgradeOffers.Add(FormatUpgradeOffer(offer));
+                choices.Add(BuildUpgradeChoiceView(offer));
+            }
+            UpgradeOpened?.Invoke(new UpgradeChoiceState(level, choices));
         }
         /// <summary>Publishes forced offers atomically so tests exercise the same controller and visible-card identities.</summary>
         public void OpenUpgradeOffersForTests(params UpgradeOffer[] offers)
@@ -1342,6 +1351,23 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             return true;
+        }
+
+        /// <summary>Clears a UI-owned modal when its bootstrap is disabled or destroyed.</summary>
+        public void CancelUiModalPresentation()
+        {
+            if (flow == null) return;
+            if (flow.State == GameFlowState.LevelUpSelection || flow.State == GameFlowState.AugmentResult)
+            {
+                upgradeOpen = false;
+                awaitingUpgradePresentationClose = false;
+                upgradeOffers.Clear();
+                upgradeOfferData.Clear();
+            }
+
+            if (flow.State == GameFlowState.LevelUpSelection || flow.State == GameFlowState.AugmentResult ||
+                flow.State == GameFlowState.Paused)
+                flow.ResetToPlaying();
         }
 
         // Retained for the existing gameplay smoke test while presentation migrates to TryChooseUpgrade.
