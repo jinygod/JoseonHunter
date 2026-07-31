@@ -1,11 +1,37 @@
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Editor.Scenes;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace JoseonHunter.Tests.EditMode
 {
     public sealed class EightWeaponPolishCapturePolicyTests
     {
+        [Test]
+        public void HwandoContactPredicateRejectsBladeOnlyAndRequiresAnActiveTransientCue()
+        {
+            var blade = new GameObject("Hwando Flying Blade").AddComponent<SpriteRenderer>();
+            var cue = new GameObject("Weapon Transient Visual").AddComponent<SpriteRenderer>();
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f);
+            cue.sprite = sprite;
+            cue.gameObject.SetActive(false);
+            try
+            {
+                Assert.That(CapturePhasePolicy.HasActiveHwandoContactCue(new[] { blade }), Is.False);
+                Assert.That(CapturePhasePolicy.HasActiveHwandoContactCue(new[] { blade, cue }), Is.False);
+                cue.gameObject.SetActive(true);
+                Assert.That(CapturePhasePolicy.HasActiveHwandoContactCue(new[] { blade, cue }), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(blade.gameObject);
+                Object.DestroyImmediate(cue.gameObject);
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(texture);
+            }
+        }
+
         [TearDown]
         public void TearDown()
         {

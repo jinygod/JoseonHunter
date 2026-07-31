@@ -101,7 +101,7 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(executor.PooledBladeCount, Is.EqualTo(1));
             });
 
-            runtime.Dispose(); Object.DestroyImmediate(sprite); Object.DestroyImmediate(texture);
+            Object.DestroyImmediate(sprite); Object.DestroyImmediate(texture);
         }
 
         [Test]
@@ -119,6 +119,46 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(fixture.Executor.ReturnedToPoolCount, Is.EqualTo(3));
                 Assert.That(fixture.Executor.PooledBladeCount, Is.EqualTo(3));
             });
+        }
+
+        [Test]
+        public void FlyingBlade_LevelFiveRuntimeRegistrationShowsThreeStaggeredVisibleBladesAndReturnsEachToPool()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var executor = new FlyingBladeExecutor(runtime, 10f, 10f, 2f, 2f, 3, 5);
+            runtime.Register(WeaponId.HwandoFlyingBlade, executor);
+            var target = new TestTarget(5, new Float2(1f, 0f), mask);
+            registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            runtime.SetSpriteResolver(_ => sprite);
+            runtime.SetPresentationSpriteResolver((_, _) => sprite);
+
+            runtime.Tick(.01f, Vector2.zero, root.transform, sprite, 0);
+            Assert.That(executor.DelayedBladeCount, Is.EqualTo(2));
+            AssertVisibleLevelFiveBlades(sprite, 3);
+            var firstPosition = root.transform.Find("Hwando Flying Blade").position;
+
+            runtime.Tick(.1f, Vector2.zero, root.transform, sprite, 0);
+            Assert.That(executor.DelayedBladeCount, Is.EqualTo(1));
+            Assert.That(root.transform.Find("Hwando Flying Blade").position, Is.Not.EqualTo(firstPosition),
+                "The leading blade must advance before the next stagger slot starts.");
+
+            for (var tick = 0; tick < 98; tick++) runtime.Tick(.05f, Vector2.zero, root.transform, sprite, 0);
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(Count(events, ContactPhase.Outbound), Is.EqualTo(3));
+                Assert.That(Count(events, ContactPhase.Inbound), Is.EqualTo(3));
+                Assert.That(executor.ReturnedToPoolCount, Is.EqualTo(3));
+                Assert.That(executor.PooledBladeCount, Is.EqualTo(3));
+            });
+
+            Object.DestroyImmediate(sprite); Object.DestroyImmediate(texture);
         }
 
         [Test]
@@ -1376,6 +1416,22 @@ namespace JoseonHunter.Tests.EditMode
             var result = 0;
             foreach (var confirmed in events) if (confirmed.Phase == phase) result++;
             return result;
+        }
+
+        private void AssertVisibleLevelFiveBlades(Sprite sprite, int expectedCount)
+        {
+            var blades = root.GetComponentsInChildren<SpriteRenderer>(true)
+                .Where(renderer => renderer.gameObject.name == "Hwando Flying Blade")
+                .ToArray();
+            Assert.That(blades, Has.Length.EqualTo(expectedCount));
+            foreach (var blade in blades)
+            {
+                Assert.That(blade.enabled, Is.True);
+                Assert.That(blade.gameObject.activeInHierarchy, Is.True);
+                Assert.That(blade.sprite, Is.SameAs(sprite));
+                Assert.That(blade.transform.localScale.x, Is.EqualTo(WeaponPresentationScale.For(
+                    WeaponId.HwandoFlyingBlade, WeaponVisualStage.Projectile, 1f, 5, false)).Within(.0001f));
+            }
         }
 
         private static JangseungGeumjulVisualLibrary CreateJangseungVisualLibrary(out List<UnityEngine.Object> assets)

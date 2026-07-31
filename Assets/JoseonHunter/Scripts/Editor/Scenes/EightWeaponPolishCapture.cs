@@ -24,6 +24,7 @@ namespace JoseonHunter.Editor.Scenes
     internal enum CapturePredicateKind
     {
         WeaponPresentation,
+        HwandoContact,
         NearPlayerPresentation,
         SpecialEvolved,
         SunPiercer
@@ -46,6 +47,9 @@ namespace JoseonHunter.Editor.Scenes
 
         public static CapturePredicateKind PredicateFor(EightWeaponPolishCapture.CaptureCase captureCase)
         {
+            if (captureCase.WeaponId.Equals(WeaponId.HwandoFlyingBlade) &&
+                captureCase.Level == 1 && !captureCase.Evolved)
+                return CapturePredicateKind.HwandoContact;
             if (captureCase.Evolved &&
                 (captureCase.WeaponId.Equals(WeaponId.FrostFlask) ||
                  captureCase.WeaponId.Equals(WeaponId.JangseungWard) ||
@@ -63,6 +67,13 @@ namespace JoseonHunter.Editor.Scenes
             }
 
             return CapturePredicateKind.WeaponPresentation;
+        }
+
+        public static bool HasActiveHwandoContactCue(IEnumerable<SpriteRenderer> renderers)
+        {
+            return renderers != null && renderers.Any(renderer => renderer != null &&
+                renderer.gameObject.name == "Weapon Transient Visual" &&
+                renderer.enabled && renderer.gameObject.activeInHierarchy && renderer.sprite != null);
         }
     }
 
@@ -448,6 +459,8 @@ namespace JoseonHunter.Editor.Scenes
             {
                 CapturePredicateKind.SpecialEvolved => IsSpecialEvolvedPhaseActive(),
                 CapturePredicateKind.SunPiercer => IsSunPiercerActive(),
+                CapturePredicateKind.HwandoContact => CapturePhasePolicy.HasActiveHwandoContactCue(
+                    Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)),
                 CapturePredicateKind.NearPlayerPresentation => HasActiveWeaponPresentation(),
                 CapturePredicateKind.WeaponPresentation => HasActiveWeaponPresentation(),
                 _ => false

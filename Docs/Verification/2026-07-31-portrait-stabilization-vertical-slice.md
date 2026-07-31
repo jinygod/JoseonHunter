@@ -59,7 +59,7 @@ This decision is limited to the captured Windows Editor batchmode/headless scena
 | Han Yeonhwa, Plague Rat, Bandit, Dokkaebi, Sakkat Specter, Vengeful Spirit, Dokkaebi Captain, Fallen General | All 8 resolve in the checked-in `CombatMotionLibrary.asset`; every idle/move frame is non-null, Point-filtered, and exactly 64 PPU. Han Yeonhwa is exactly 4 idle / 8 move frames. |
 
 - The audit regression opens `Gameplay.unity` and reads the actual `FirstPlayableController` serialized fields; it does not construct a duplicate library fixture.
-- Flying-blade production-path coverage records a visible active outbound blade, resolved projectile scale and frame sprite, visible contact transient, inbound blade visibility, one outbound/inbound contact for the single target, plus level-five two-blade staggering and all three blades returned to the pool. No damage, cooldown, range, targeting, or evolution values were changed.
+- Flying-blade production-path coverage records a visible active outbound blade, resolved projectile scale and frame sprite, visible contact transient, inbound blade visibility, one outbound/inbound contact for the single target, plus a registered runtime level-five volley with three visible blade renderers, stagger progression, three outbound/inbound contacts, and all three blades returned to the pool. No damage, cooldown, range, targeting, or evolution values were changed.
 - PixelLab result: **no generation**. Existing imported frames and weapon presentation assets resolve every audited named gap; no external request was attempted and cost is **0** (ledger balance: 1,512).
 
 ### Runtime capture evidence (1080x1920)
@@ -68,7 +68,7 @@ The existing deterministic Gameplay weapon capture was run through `EightWeaponP
 
 | Capture | Dimensions | SHA-256 | Finding |
 | --- | --- | --- | --- |
-| `hwando_flying_blade-level-1.png` | 1080x1920 | `3e86f5ef8c102be835b5ad232d75e630a5fb0b0b23d6ba6b9d5aa092fa8d1e4e` | Bound player/enemy sprites and level-one outbound/contact phase visible. |
-| `hwando_flying_blade-level-3.png` | 1080x1920 | `cfde197c12af83c5ee8cef2f192bc8e4490b7a8661975ac321f462f0fce62556` | Bound sprites and continuing phase cadence visible. |
-| `hwando_flying_blade-level-5.png` | 1080x1920 | `7c0c89f013cf72e508c428e9a3d7a441433c3b8efc665d935be57be64e26df86` | Level-five staggered flying-blade presentation visible. |
-| `hwando_flying_blade-evolved.png` | 1080x1920 | `fe00840f13513bab704ba3318c85659059e94b1ddf4e4eda7a41d538f9e4c56f` | Evolved Hwando presentation visible. |
+| `hwando_flying_blade-level-1.png` | 1080x1920 | `9c2e760cfc862352f52c792f469722ead3ce1e2a6ba1a3f8472fd32487677daa` | Bound player/enemy sprites, active blade, visible damage/contact cue; capture gate requires an active sprite-bearing `Weapon Transient Visual`, not a blade/afterimage. |
+| `hwando_flying_blade-level-3.png` | 1080x1920 | `0f8f7668a7ef17da0818028ce512898f0dc6eab02f0187edeae06fe65cef91a4` | Bound sprites and continuing phase cadence visible. |
+| `hwando_flying_blade-level-5.png` | 1080x1920 | `940fe02fb55ea1876278d7be2860ef2a39f30ba7058a75257d3793444114bf15` | Level-five staggered flying-blade presentation visible. |
+| `hwando_flying_blade-evolved.png` | 1080x1920 | `4e6d6916db16976007afcc7e2d92a78458cd7d5acff2aa1c2dc7b03ba1441f00` | Evolved Hwando presentation visible. |
