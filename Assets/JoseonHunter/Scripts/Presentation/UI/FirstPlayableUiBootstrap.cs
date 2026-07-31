@@ -135,12 +135,15 @@ namespace JoseonHunter.Presentation.UI
             if (boundController == null || Time.unscaledTime < nextRenderTime) return;
 
             nextRenderTime = Time.unscaledTime + RenderInterval;
-            var state = boundController.UiState;
-            combatHud.Render(state);
-            var signature = WeaponSignature(state);
-            if (signature == weaponSignature) return;
-            weaponSignature = signature;
-            weaponRack.Render(state.Weapons);
+            using (FirstPlayableProfilerMarkers.UiHud.Auto())
+            {
+                var state = boundController.UiState;
+                combatHud.Render(state);
+                var signature = WeaponSignature(state);
+                if (signature == weaponSignature) return;
+                weaponSignature = signature;
+                weaponRack.Render(state.Weapons);
+            }
         }
 
         private void BindController(FirstPlayableController controller)
@@ -167,9 +170,12 @@ namespace JoseonHunter.Presentation.UI
 
         private void OpenUpgradeChoice(UpgradeChoiceState state)
         {
-            SetBackgroundRaycastsEnabled(false);
-            SetModalScrimVisible(true);
-            upgradeChoice?.Open(state, boundController.TryChooseUpgrade);
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                SetBackgroundRaycastsEnabled(false);
+                SetModalScrimVisible(true);
+                upgradeChoice?.Open(state, boundController.TryChooseUpgrade);
+            }
         }
 
         private void CloseUpgradeChoice()
@@ -179,55 +185,70 @@ namespace JoseonHunter.Presentation.UI
 
         private void OpenWeaponDetails(WeaponSlotView weapon)
         {
-            if (affixReveal == null || affixReveal.IsRevealing || upgradeChoice == null || upgradeChoice.IsOpen)
-                return;
-            if (boundController == null || !boundController.Flow.TryTransition(GameFlowState.Paused)) return;
-            SetBackgroundRaycastsEnabled(false);
-            SetModalScrimVisible(true);
-            affixReveal.ShowDetails(weapon);
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                if (affixReveal == null || affixReveal.IsRevealing || upgradeChoice == null || upgradeChoice.IsOpen)
+                    return;
+                if (boundController == null || !boundController.Flow.TryTransition(GameFlowState.Paused)) return;
+                SetBackgroundRaycastsEnabled(false);
+                SetModalScrimVisible(true);
+                affixReveal.ShowDetails(weapon);
+            }
         }
 
         private void OnWeaponDetailsClosed()
         {
-            boundController?.Flow.TryTransition(GameFlowState.Playing);
-            SetBackgroundRaycastsEnabled(true);
-            SetModalScrimVisible(false);
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                boundController?.Flow.TryTransition(GameFlowState.Playing);
+                SetBackgroundRaycastsEnabled(true);
+                SetModalScrimVisible(false);
+            }
         }
 
         private void OnUpgradeChosen(ProgressionRewardEvent reward)
         {
-            waitingForRewardReveal = true;
-            waitingForChoiceClose = true;
-            pendingReward = reward;
-            hasPendingReward = true;
-            upgradeChoice?.CloseAfterExternalSelection();
-            if (reward.Kind != ProgressionRewardKind.Support)
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
             {
-                var state = boundController.UiState;
-                weaponSignature = WeaponSignature(state);
-                weaponRack.Render(state.Weapons);
-                weaponRack.Pulse(reward.WeaponId, reward.NewLevel, reward.AffixResult?.NewPotentials.Count ?? 0);
+                waitingForRewardReveal = true;
+                waitingForChoiceClose = true;
+                pendingReward = reward;
+                hasPendingReward = true;
+                upgradeChoice?.CloseAfterExternalSelection();
+                if (reward.Kind != ProgressionRewardKind.Support)
+                {
+                    var state = boundController.UiState;
+                    weaponSignature = WeaponSignature(state);
+                    weaponRack.Render(state.Weapons);
+                    weaponRack.Pulse(reward.WeaponId, reward.NewLevel, reward.AffixResult?.NewPotentials.Count ?? 0);
+                }
             }
 
         }
 
         private void CloseRewardReveal()
         {
-            waitingForRewardReveal = false;
-            waitingForChoiceClose = false;
-            rewardReveal?.HideImmediately();
-            affixReveal?.HideImmediately();
-            hasPendingReward = false;
-            weaponRack?.ResetPulses();
-            SetBackgroundRaycastsEnabled(true);
-            SetModalScrimVisible(false);
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                waitingForRewardReveal = false;
+                waitingForChoiceClose = false;
+                rewardReveal?.HideImmediately();
+                affixReveal?.HideImmediately();
+                hasPendingReward = false;
+                weaponRack?.ResetPulses();
+                SetBackgroundRaycastsEnabled(true);
+                SetModalScrimVisible(false);
+            }
         }
 
         private void NotifyUpgradePresentationClosed()
         {
-            waitingForChoiceClose = false;
-            PlayPendingRewardAfterChoiceClose();
-            NotifyUpgradeWhenPresentationComplete();
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                waitingForChoiceClose = false;
+                PlayPendingRewardAfterChoiceClose();
+                NotifyUpgradeWhenPresentationComplete();
+            }
         }
 
         private void PlayPendingRewardAfterChoiceClose()
@@ -259,8 +280,11 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnRewardRevealCompleted()
         {
-            waitingForRewardReveal = false;
-            NotifyUpgradeWhenPresentationComplete();
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                waitingForRewardReveal = false;
+                NotifyUpgradeWhenPresentationComplete();
+            }
         }
 
         private void NotifyUpgradeWhenPresentationComplete()

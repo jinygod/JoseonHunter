@@ -245,6 +245,7 @@ namespace JoseonHunter.Runtime.Gameplay
             chestSpawnTimer = float.PositiveInfinity;
         }
         public bool TickGameplayIfRunningForTests(float delta) => TickGameplayIfRunning(delta);
+        public void UpdateEnemiesForTests(float delta) => UpdateEnemies(delta);
         public void SetContactInvulnerabilityForTests(float seconds) => contactInvulnerability = Mathf.Max(0f, seconds);
         public float ContactInvulnerabilityForTests => contactInvulnerability;
         public int LastSeparationAgentCountForTests { get; private set; }
@@ -481,17 +482,20 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void Update()
         {
-            if (runEnded)
+            using (FirstPlayableProfilerMarkers.RunUpdate.Auto())
             {
-                if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                if (runEnded)
                 {
-                    ResetRun();
+                    if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+                    {
+                        ResetRun();
+                    }
+
+                    return;
                 }
 
-                return;
+                TickGameplayIfRunning(Time.deltaTime);
             }
-
-            TickGameplayIfRunning(Time.deltaTime);
         }
 
         private bool TickGameplayIfRunning(float delta)
@@ -518,11 +522,14 @@ namespace JoseonHunter.Runtime.Gameplay
 
             ReadMovement();
             UpdatePlayer(delta);
-            UpdateSpawning(delta);
-            UpdateTreasureSpawning(delta);
+            using (FirstPlayableProfilerMarkers.Spawn.Auto())
+            {
+                UpdateSpawning(delta);
+                UpdateTreasureSpawning(delta);
+            }
             UpdateEnemies(delta);
-            UpdateAttack(delta);
-            UpdatePickups(delta);
+            using (FirstPlayableProfilerMarkers.Weapon.Auto()) UpdateAttack(delta);
+            using (FirstPlayableProfilerMarkers.Pickup.Auto()) UpdatePickups(delta);
             UpdateGeumjul(delta);
             UpdateField();
 
@@ -1100,55 +1107,61 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
             }
 
-            separationEnemies.Clear();
-            separationAgents.Clear();
-            for (var index = 0; index < enemies.Count; index++)
+            using (FirstPlayableProfilerMarkers.EnemyGrid.Auto())
             {
-                var enemy = enemies[index];
-                if (enemy.IsTreasure) continue;
+                separationEnemies.Clear();
+                separationAgents.Clear();
+                for (var index = 0; index < enemies.Count; index++)
+                {
+                    var enemy = enemies[index];
+                    if (enemy.IsTreasure) continue;
 
-                enemy.TickStatuses(delta);
-                var rank = enemy.IsBoss
-                    ? EnemyRankProfile.Boss
-                    : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
-                separationEnemies.Add(enemy);
-                separationAgents.Add(new EnemySeparationAgent(
-                    enemy.CombatTarget.RuntimeId,
-                    enemy.Object.transform.position,
-                    VisualScale.ContactRadiusFor(rank)));
+                    enemy.TickStatuses(delta);
+                    var rank = enemy.IsBoss
+                        ? EnemyRankProfile.Boss
+                        : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
+                    separationEnemies.Add(enemy);
+                    separationAgents.Add(new EnemySeparationAgent(
+                        enemy.CombatTarget.RuntimeId,
+                        enemy.Object.transform.position,
+                        VisualScale.ContactRadiusFor(rank)));
+                }
+
+                separationGrid.Rebuild(separationAgents);
             }
-
-            separationGrid.Rebuild(separationAgents);
 #if UNITY_INCLUDE_TESTS
             LastSeparationAgentCountForTests = separationAgents.Count;
 #endif
-            for (var index = 0; index < separationEnemies.Count; index++)
+            using (FirstPlayableProfilerMarkers.EnemyMove.Auto())
             {
-                var enemy = separationEnemies[index];
-
-                var enemyPosition = (Vector2)enemy.Object.transform.position;
-                var chase = (playerPosition - enemyPosition).normalized;
-                var separate = separationGrid.Resolve(index, 8);
-                var direction = Vector2.ClampMagnitude(chase + separate * .72f, 1f);
-                var velocity = direction * (enemy.Speed * enemy.MovementMultiplier);
-                enemy.Object.transform.position = enemyPosition + velocity * delta;
-                enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
-
-                var rank = enemy.IsBoss
-                    ? EnemyRankProfile.Boss
-                    : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
-                var hitDistance = VisualScale.ContactRadiusFor(rank);
-                if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
-                    contactInvulnerability <= 0f)
+                for (var index = 0; index < separationEnemies.Count; index++)
                 {
-                    playerHealth = Mathf.Max(0f, playerHealth - enemy.ContactDamage);
-                    UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
-                    contactInvulnerability = 0.55f;
-                    StartCoroutine(FlashPlayer());
-                    if (playerHealth <= 0f)
+                    var enemy = separationEnemies[index];
+
+                    var enemyPosition = (Vector2)enemy.Object.transform.position;
+                    var chase = (playerPosition - enemyPosition).normalized;
+                    var separate = separationGrid.Resolve(index, 8);
+                    var direction = Vector2.ClampMagnitude(chase + separate * .72f, 1f);
+                    var velocity = direction * (enemy.Speed * enemy.MovementMultiplier);
+                    enemy.Object.transform.position = enemyPosition + velocity * delta;
+                    enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
+
+                    var rank = enemy.IsBoss
+                        ? EnemyRankProfile.Boss
+                        : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
+                    var hitDistance = VisualScale.ContactRadiusFor(rank);
+                    if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
+                        contactInvulnerability <= 0f)
                     {
-                        EndRun(false);
-                        return;
+                        playerHealth = Mathf.Max(0f, playerHealth - enemy.ContactDamage);
+                        UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
+                        contactInvulnerability = 0.55f;
+                        StartCoroutine(FlashPlayer());
+                        if (playerHealth <= 0f)
+                        {
+                            EndRun(false);
+                            return;
+                        }
                     }
                 }
             }
