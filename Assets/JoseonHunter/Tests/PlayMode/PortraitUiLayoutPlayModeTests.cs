@@ -11,6 +11,29 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class PortraitUiLayoutPlayModeTests
     {
+        private Vector2Int originalResolution;
+        private Rect originalSafeArea;
+
+        [UnitySetUp]
+        public IEnumerator CaptureScreenState()
+        {
+            originalResolution = new Vector2Int(Screen.width, Screen.height);
+            originalSafeArea = Screen.safeArea;
+            yield return null;
+        }
+
+        [UnityTearDown]
+        public IEnumerator RestoreScreenAndModalState()
+        {
+            Screen.SetResolution(originalResolution.x, originalResolution.y, FullScreenMode.Windowed);
+            for (var frame = 0; frame < 12 && (Screen.width != originalResolution.x || Screen.height != originalResolution.y); frame++)
+                yield return null;
+            Assert.That(Application.isBatchMode || new Vector2Int(Screen.width, Screen.height) == originalResolution, Is.True);
+            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            if (bootstrap != null) bootstrap.ApplySafeArea(originalSafeArea, originalResolution);
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+        }
         [UnityTest]
         public IEnumerator Portrait_canvas_safe_areas_and_runtime_font_cover_every_validation_resolution()
         {
@@ -72,7 +95,10 @@ namespace JoseonHunter.Tests.PlayMode
                 appraisal.HideImmediately();
                 reward.HideImmediately();
                 Screen.SetResolution(originalSize.x, originalSize.y, FullScreenMode.Windowed);
+                Assert.That(Application.isBatchMode || new Vector2Int(Screen.width, Screen.height) == originalSize,
+                    Is.True, "Screen state must restore outside batchmode.");
                 bootstrap.ApplySafeArea(originalSafeArea, originalSize);
+                Canvas.ForceUpdateCanvases();
             }
 
             foreach (var text in bootstrap.GetComponentsInChildren<Component>(true))
@@ -123,18 +149,29 @@ namespace JoseonHunter.Tests.PlayMode
         {
             foreach (var target in PortraitUiMetrics.ValidationResolutions)
             {
-                var root = new GameObject("Virtual Canvas " + target, typeof(RectTransform), typeof(Canvas),
+                RectTransform root = null;
+                GameObject cameraObject = null;
+                RenderTexture targetTexture = null;
+                try
+                {
+                root = new GameObject("Virtual Canvas " + target, typeof(RectTransform), typeof(Canvas),
                     typeof(CanvasScaler)).GetComponent<RectTransform>();
                 var canvas = root.GetComponent<Canvas>();
-                canvas.renderMode = RenderMode.WorldSpace;
+                cameraObject = new GameObject("Virtual Canvas Camera");
+                var camera = cameraObject.AddComponent<Camera>();
+                camera.enabled = false;
+                targetTexture = new RenderTexture(target.x, target.y, 16);
+                camera.targetTexture = targetTexture;
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
                 var harnessScaler = root.GetComponent<CanvasScaler>();
                 harnessScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
                 harnessScaler.referenceResolution = PortraitUiMetrics.ReferenceResolution;
                 harnessScaler.matchWidthOrHeight = .5f;
-                harnessScaler.enabled = false;
                 root.pivot = new Vector2(.5f, .5f);
                 root.localScale = Vector3.one;
-                root.sizeDelta = PortraitUiMetrics.CanvasSizeFor(target);
+                Canvas.ForceUpdateCanvases();
+                Assert.That(Vector2.Distance(canvas.renderingDisplaySize, target), Is.LessThan(.1f));
                 var safe = Child("Safe", root);
                 safe.anchorMin = new Vector2(0f, .04f);
                 safe.anchorMax = new Vector2(1f, .965f);
@@ -159,15 +196,43 @@ namespace JoseonHunter.Tests.PlayMode
                 rack.Render(weapons); rack.ApplyPortraitLayout();
                 var upgrade = Child("Upgrade", modal).gameObject.AddComponent<UpgradeChoicePresenter>();
                 upgrade.BuildForTests(); upgrade.ApplyPortraitLayout();
+                var reward = Child("Reward", modal).gameObject.AddComponent<RewardRevealPresenter>();
+                reward.Play(new ProgressionRewardEvent("boots", null, 1, ProgressionRewardKind.Support,
+                    "능력 강화", "+12%", null));
+                var affix = Child("Affix", modal).gameObject.AddComponent<WeaponAffixRevealPresenter>();
+                affix.SetCatalogForTests(TestCatalog());
+                affix.Play(TestModel());
                 Canvas.ForceUpdateCanvases();
                 hud.ApplyPortraitLayout(); rack.ApplyPortraitLayout(); upgrade.ApplyPortraitLayout();
                 AssertBounds(root, "Vitals", safe);
-                AssertBounds(root, "Weapon Slot 0", safe);
-                AssertBounds(root, "Weapon Slot 7", safe);
-                AssertBounds(root, "Upgrade Card 0", modal);
-                AssertBounds(root, "Upgrade Card 1", modal);
-                AssertBounds(root, "Upgrade Card 2", modal);
-                Object.DestroyImmediate(root.gameObject);
+                AssertBounds(root, "Boss Health", safe);
+                AssertBounds(root, "Rack", safe);
+                for (var index = 0; index < 8; index++) AssertBounds(root, "Weapon Slot " + index, safe);
+                for (var index = 0; index < 3; index++)
+                {
+                    var card = AssertBounds(root, "Upgrade Card " + index, modal);
+                    Assert.That(card.rect.width, Is.LessThanOrEqualTo(936f));
+                }
+                AssertButtonsContained(rack.transform, safe, 8);
+                AssertButtonsContained(upgrade.transform, modal, 3);
+                AssertButtonsContained(reward.transform, modal, 1);
+                AssertBounds(root, "Confirm Reward", modal);
+                var panel = AssertBounds(root, "Weapon Appraisal Panel", modal);
+                Assert.That(panel.rect.width, Is.LessThanOrEqualTo(936f));
+                Assert.That(panel.rect.height, Is.LessThanOrEqualTo(1320f));
+                AssertBounds(root, "Confirm Result", modal);
+                AssertButtonsContained(affix.transform, modal, 1);
+                }
+                finally
+                {
+                    if (targetTexture != null)
+                    {
+                        if (targetTexture.IsCreated()) targetTexture.Release();
+                        Object.DestroyImmediate(targetTexture);
+                    }
+                    if (cameraObject != null) Object.DestroyImmediate(cameraObject);
+                    if (root != null) Object.DestroyImmediate(root.gameObject);
+                }
             }
         }
 
@@ -203,11 +268,34 @@ namespace JoseonHunter.Tests.PlayMode
             return child;
         }
 
-        private static void AssertBounds(RectTransform root, string name, RectTransform owner)
+        private static RectTransform AssertBounds(RectTransform root, string name, RectTransform owner)
         {
             var match = System.Array.Find(root.GetComponentsInChildren<RectTransform>(true), rect => rect.name == name);
             Assert.That(match, Is.Not.Null, name);
             Assert.That(IsContained(owner, match), Is.True, name);
+            return match;
+        }
+
+        private static void AssertButtonsContained(Transform root, RectTransform owner, int minimum)
+        {
+            var buttons = root.GetComponentsInChildren<Button>(true);
+            Assert.That(buttons.Length, Is.GreaterThanOrEqualTo(minimum));
+            foreach (var button in buttons) Assert.That(IsContained(owner, button.GetComponent<RectTransform>()), Is.True,
+                button.name);
+        }
+
+        private static JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset TestCatalog()
+        {
+            var texture = new Texture2D(2, 2); var sprite = Sprite.Create(texture, new Rect(0, 0, 2, 2), new Vector2(.5f, .5f));
+            var catalog = ScriptableObject.CreateInstance<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>();
+            catalog.SetSlotKitForTests(sprite, sprite, sprite, sprite, sprite); catalog.SetAppraisalKitForImport(sprite, sprite, sprite, sprite);
+            return catalog;
+        }
+
+        private static WeaponAppraisalViewModel TestModel()
+        {
+            var result = new JoseonHunter.Domain.Progression.WeaponAffixRollResult(new JoseonHunter.Domain.Progression.WeaponAffixRoll(JoseonHunter.Domain.Progression.WeaponAffixStat.Damage, JoseonHunter.Domain.Progression.WeaponAffixTier.High, 23d), System.Array.Empty<JoseonHunter.Domain.Progression.WeaponPotentialId>());
+            return WeaponAppraisalViewModel.From(new ProgressionRewardEvent("hwando_flying_blade", "hwando_flying_blade", 2, ProgressionRewardKind.WeaponLevel, "Hwando", "Level 2", null, result), new WeaponSlotView("hwando_flying_blade", "Hwando", 2, null));
         }
     }
 }
