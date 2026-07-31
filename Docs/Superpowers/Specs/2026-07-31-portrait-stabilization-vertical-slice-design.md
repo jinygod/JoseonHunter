@@ -1,8 +1,11 @@
 # Portrait Stabilization Vertical Slice Design
 
-**Status:** Approved on 2026-07-31  
-**Project:** JoseonHunter  
-**Target:** Unity 6.5, Android, portrait-only mobile  
+**Status:** Approved on 2026-07-31
+
+**Project:** JoseonHunter
+
+**Target:** Unity 6.5, Android, portrait-only mobile
+
 **Supersedes for this stabilization pass:** landscape-oriented runtime layout and scattered pause ownership
 
 ## 1. Purpose
