@@ -47,6 +47,7 @@ namespace JoseonHunter.Presentation.UI
                 if (index == slots.Count) slots.Add(CreateSlot(index));
                 PopulateSlot(slots[index], weapons[index]);
             }
+            ApplyPortraitLayout();
         }
 
         public void Pulse(string weaponId, int newLevel, int newPotentialCount = 0)
@@ -75,12 +76,7 @@ namespace JoseonHunter.Presentation.UI
             var rect = slot.Root.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
             rect.pivot = new Vector2(.5f, 0f);
-            var column = index % 2;
-            var row = index / 2;
-            var x = column == 0 ? -249f : 249f;
-            rect.anchoredPosition = new Vector2(x, PortraitUiMetrics.BottomMargin + row *
-                (PortraitUiMetrics.RackSlotHeight + 24f));
-            rect.sizeDelta = new Vector2(PortraitUiMetrics.RackSlotWidth, PortraitUiMetrics.RackSlotHeight);
+            LayoutSlot(slot, index);
             slot.Accent = RuntimeUiFactory.Image("Accent", slot.Root.transform, JoseonUiPalette.Gold);
             var accentRect = slot.Accent.rectTransform;
             accentRect.anchorMin = new Vector2(0f, 0f);
@@ -120,6 +116,27 @@ namespace JoseonHunter.Presentation.UI
                 slot.PotentialCells[potentialIndex] = cell;
             }
             return slot;
+        }
+
+        public void ApplyPortraitLayout()
+        {
+            for (var index = 0; index < slots.Count; index++) LayoutSlot(slots[index], index);
+        }
+
+        private void LayoutSlot(Slot slot, int index)
+        {
+            if (slot.Root == null) return;
+            var rect = slot.Root.GetComponent<RectTransform>();
+            var rackRect = transform as RectTransform;
+            var availableWidth = rackRect == null ? 0f : rackRect.rect.width;
+            var width = availableWidth <= 0f ? PortraitUiMetrics.RackSlotWidth : Mathf.Min(
+                PortraitUiMetrics.RackSlotWidth, Mathf.Max(0f, (availableWidth - 24f) * .5f));
+            var column = index % 2;
+            var row = index / 2;
+            var x = (width + 24f) * .5f * (column == 0 ? -1f : 1f);
+            rect.anchoredPosition = new Vector2(x, PortraitUiMetrics.BottomMargin + row *
+                (PortraitUiMetrics.RackSlotHeight + 24f));
+            rect.sizeDelta = new Vector2(width, PortraitUiMetrics.RackSlotHeight);
         }
 
         private void PopulateSlot(Slot slot, WeaponSlotView weapon)

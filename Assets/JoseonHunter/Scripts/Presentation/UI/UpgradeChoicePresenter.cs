@@ -58,6 +58,7 @@ namespace JoseonHunter.Presentation.UI
             Position(heading.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -8f), new Vector2(920f, 58f), new Vector2(.5f, 1f));
 
             for (var index = 0; index < cards.Length; index++) cards[index] = CreateCard(index);
+            ApplyPortraitLayout();
             root.SetActive(false);
         }
 
@@ -104,6 +105,16 @@ namespace JoseonHunter.Presentation.UI
             IsChoiceLocked = true;
             selectedChoice = true;
             closeRoutine = StartCoroutine(CloseRoutine());
+        }
+
+        public void ApplyPortraitLayout()
+        {
+            if (cardsRoot == null) return;
+            var width = PortraitUiMetrics.ContainedWidth(transform as RectTransform, PortraitUiMetrics.ModalWidth);
+            for (var index = 0; index < cards.Length; index++)
+                if (cards[index] != null)
+                    cards[index].Button.GetComponent<RectTransform>().sizeDelta =
+                        new Vector2(width, PortraitUiMetrics.UpgradeCardHeight);
         }
 
         private IEnumerator OpenRoutine()

@@ -17,5 +17,21 @@ namespace JoseonHunter.Presentation.UI
         public const float UpgradeCardHeight = 236f;
         public const float RackSlotWidth = 474f;
         public const float RackSlotHeight = 104f;
+
+        public static float ContainedWidth(RectTransform parent, float maximum)
+        {
+            return ContainedWidth(parent == null ? 0f : parent.rect.width, maximum);
+        }
+
+        public static float ContainedWidth(float availableWidth, float maximum) =>
+            availableWidth <= 0f ? maximum : Mathf.Min(maximum, availableWidth);
+
+        public static Vector2 CanvasSizeFor(Vector2 pixelSize)
+        {
+            var widthScale = pixelSize.x / ReferenceResolution.x;
+            var heightScale = pixelSize.y / ReferenceResolution.y;
+            var scale = Mathf.Sqrt(widthScale * heightScale);
+            return pixelSize / scale;
+        }
     }
 }

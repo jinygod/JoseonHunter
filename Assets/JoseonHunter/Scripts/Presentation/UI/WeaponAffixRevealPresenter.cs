@@ -61,6 +61,8 @@ namespace JoseonHunter.Presentation.UI
         private float finishAt;
         private float skipSourceElapsed;
         private float skipTargetElapsed;
+        private float appraisalWidth = AppraisalWidth;
+        private float appraisalHeight = AppraisalHeight;
         private bool skipActive;
         private bool confirmRequested;
         private bool completed;
@@ -425,8 +427,8 @@ namespace JoseonHunter.Presentation.UI
             ScrollOpenFraction = Mathf.Clamp01(fraction);
             if (scrollViewport == null)
                 return;
-            var visibleHeight = Mathf.Max(8f, AppraisalHeight * ScrollOpenFraction);
-            scrollViewport.sizeDelta = new Vector2(AppraisalWidth, visibleHeight);
+            var visibleHeight = Mathf.Max(8f, appraisalHeight * ScrollOpenFraction);
+            scrollViewport.sizeDelta = new Vector2(appraisalWidth, visibleHeight);
             var rollerY = Mathf.Max(0f, visibleHeight * .5f - 16f);
             if (topRoller != null)
                 topRoller.rectTransform.anchoredPosition = new Vector2(0f, rollerY);
@@ -662,7 +664,20 @@ namespace JoseonHunter.Presentation.UI
             confirmLabel.fontStyle = FontStyles.Bold;
             confirmLabel.color = new Color(1f, .91f, .58f);
 
+            ApplyPortraitLayout();
             root.SetActive(false);
+        }
+
+        public void ApplyPortraitLayout()
+        {
+            if (panelRect == null) return;
+            appraisalWidth = PortraitUiMetrics.ContainedWidth(transform as RectTransform, AppraisalWidth);
+            var parentRect = transform as RectTransform;
+            appraisalHeight = PortraitUiMetrics.ContainedWidth(parentRect == null ? 0f : parentRect.rect.height,
+                AppraisalHeight);
+            panelRect.sizeDelta = new Vector2(appraisalWidth, appraisalHeight);
+            if (shell != null) shell.rectTransform.sizeDelta = panelRect.sizeDelta;
+            SetScrollOpen(ScrollOpenFraction);
         }
 
         private void OnConfirmButton()

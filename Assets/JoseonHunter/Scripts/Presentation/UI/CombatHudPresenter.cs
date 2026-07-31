@@ -19,12 +19,14 @@ namespace JoseonHunter.Presentation.UI
         private Image experienceFill;
         private Image bossFill;
         private GameObject bossRoot;
+        private RectTransform vitalsRect;
 
         public void Build()
         {
             if (levelText != null) return;
 
             var topLeft = RuntimeUiFactory.Image("Vitals", transform, JoseonUiPalette.Ink).rectTransform;
+            vitalsRect = topLeft;
             topLeft.anchorMin = topLeft.anchorMax = new Vector2(.5f, 1f);
             topLeft.pivot = new Vector2(.5f, 1f);
             topLeft.anchoredPosition = new Vector2(0f, -PortraitUiMetrics.TopMargin);
@@ -68,6 +70,18 @@ namespace JoseonHunter.Presentation.UI
             bossText = Label("Boss Label", bossRect, new Vector2(0f, -8f), new Vector2(590f, 26f), 21f, TextAlignmentOptions.Center);
             bossFill = Bar("Boss Fill", bossRect, new Vector2(15f, -49f), new Vector2(590f, 18f), JoseonUiPalette.Crimson);
             bossRoot.SetActive(false);
+            ApplyPortraitLayout();
+        }
+
+        public void ApplyPortraitLayout()
+        {
+            if (vitalsRect == null) return;
+            vitalsRect.sizeDelta = new Vector2(PortraitUiMetrics.ContainedWidth(transform as RectTransform, 984f), 176f);
+            if (bossRoot != null)
+            {
+                var bossRect = bossRoot.GetComponent<RectTransform>();
+                bossRect.sizeDelta = new Vector2(PortraitUiMetrics.ContainedWidth(transform as RectTransform, 936f), 82f);
+            }
         }
 
         public void Render(FirstPlayableUiState state)

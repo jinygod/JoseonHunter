@@ -292,6 +292,11 @@ namespace JoseonHunter.Presentation.UI
             var max = new Vector2(safeArea.xMax / screenSize.x, safeArea.yMax / screenSize.y);
             ApplyNormalizedSafeArea(safeAreaContainer, min, max);
             ApplyNormalizedSafeArea(modalSafeAreaContainer, min, max);
+            Canvas.ForceUpdateCanvases();
+            combatHud?.ApplyPortraitLayout();
+            weaponRack?.ApplyPortraitLayout();
+            upgradeChoice?.ApplyPortraitLayout();
+            affixReveal?.ApplyPortraitLayout();
         }
 
         private static void ApplyNormalizedSafeArea(RectTransform container, Vector2 min, Vector2 max)
