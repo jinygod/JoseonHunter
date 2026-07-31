@@ -45,3 +45,4 @@ timestamp,asset_id,job_id,tool,prompt_revision,cost,status,remaining_generations
 2026-07-29T09:28:00+09:00,dokkaebi_captain_idle,19b577d8-e7b9-48ff-8edc-f68e91451a8c,animate_image,combat-motion-idle-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Elites/DokkaebiCaptain/Idle
 2026-07-29T09:29:00+09:00,fallen_general_walk,418b7f24-000e-40ae-b322-4f8f286f09e3,animate_image,combat-motion-walk-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Bosses/FallenGeneral/Walk
 2026-07-29T09:30:00+09:00,fallen_general_idle,f364ef4a-0d53-4fe5-9f87-e600d16535a8,animate_image,combat-motion-idle-v1,1,approved_animation_frames,,Assets/JoseonHunter/Art/Animation/Bosses/FallenGeneral/Idle
+2026-07-31T19:49:02+09:00,portrait_stabilization_audit,,get_balance,portrait-stabilization-v1,0,no_generation_existing_assets_sufficient,1512,

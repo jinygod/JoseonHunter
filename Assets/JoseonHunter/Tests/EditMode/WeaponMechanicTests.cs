@@ -53,6 +53,75 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void FlyingBlade_ProductionVisualPathShowsOutboundContactInboundAndPoolReturnAtLevelFive()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var executor = new FlyingBladeExecutor(runtime, 10f, 10f, 2f, 2f, 1, 1);
+            var target = new TestTarget(5, new Float2(1f, 0f), mask);
+            registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            var context = new WeaponExecutionContext(
+                default, root.transform, sprite, null,
+                (_, _) => sprite, null, 0, 1);
+
+            executor.Tick(.01f, context);
+            var outbound = root.transform.Find("Hwando Flying Blade");
+            Assert.That(outbound, Is.Not.Null);
+            Assert.That(outbound.gameObject.activeSelf, Is.True);
+            Assert.That(outbound.GetComponent<SpriteRenderer>().sprite, Is.SameAs(sprite));
+            Assert.That(outbound.localScale.x, Is.EqualTo(WeaponPresentationScale.For(
+                WeaponId.HwandoFlyingBlade, WeaponVisualStage.Projectile, 1f, 1, false)).Within(.0001f));
+
+            var tick = 2;
+            while (Count(events, ContactPhase.Outbound) == 0 && tick < 30)
+                executor.Tick(.05f, new WeaponExecutionContext(default, root.transform, sprite, null, (_, _) => sprite, null, 0, tick++));
+            Assert.That(Count(events, ContactPhase.Outbound), Is.EqualTo(1));
+            Assert.That(root.GetComponentsInChildren<SpriteRenderer>(true).Any(renderer =>
+                renderer.gameObject.name == "Weapon Transient Visual" && renderer.gameObject.activeSelf && renderer.sprite == sprite), Is.True,
+                "Confirmed contact must create a visible impact cue.");
+
+            while (!executor.FirstActiveInboundForTests && tick < 50)
+                executor.Tick(.05f, new WeaponExecutionContext(default, root.transform, sprite, null, (_, _) => sprite, null, 0, tick++));
+            Assert.That(executor.FirstActiveInboundForTests, Is.True);
+            Assert.That(outbound.gameObject.activeSelf, Is.True, "Inbound travel must keep the blade visible.");
+
+            while (executor.ActiveBladeCount > 0 && tick < 100)
+                executor.Tick(.05f, new WeaponExecutionContext(default, root.transform, sprite, null, (_, _) => sprite, null, 0, tick++));
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(Count(events, ContactPhase.Outbound), Is.EqualTo(1));
+                Assert.That(Count(events, ContactPhase.Inbound), Is.EqualTo(1));
+                Assert.That(executor.ReturnedToPoolCount, Is.EqualTo(1));
+                Assert.That(executor.PooledBladeCount, Is.EqualTo(1));
+            });
+
+            runtime.Dispose(); Object.DestroyImmediate(sprite); Object.DestroyImmediate(texture);
+        }
+
+        [Test]
+        public void FlyingBlade_LevelFiveKeepsStaggerAndPoolsEveryVisibleBlade()
+        {
+            var fixture = CreateFixture(new Float2(1f, 0f), 3, level: 5);
+
+            fixture.Executor.Tick(.01f, fixture.Context(1));
+            Assert.That(fixture.Executor.DelayedBladeCount, Is.EqualTo(2));
+            for (var tick = 2; tick <= 100; tick++) fixture.Executor.Tick(.05f, fixture.Context(tick));
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(fixture.Executor.ActiveBladeCount, Is.Zero);
+                Assert.That(fixture.Executor.ReturnedToPoolCount, Is.EqualTo(3));
+                Assert.That(fixture.Executor.PooledBladeCount, Is.EqualTo(3));
+            });
+        }
+
+        [Test]
         public void LevelFiveVolleyUsesThreeStaggeredBlades()
         {
             var fixture = CreateFixture(new Float2(1f, 0f), 3);
@@ -1287,13 +1356,13 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(executor.DisposeCount, Is.EqualTo(1), "A repeated teardown must not dispose presentation pools twice.");
         }
 
-        private Fixture CreateFixture(Float2 targetPosition, int bladeCount)
+        private Fixture CreateFixture(Float2 targetPosition, int bladeCount, int level = 1)
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
             var damage = new CombatDamageService(registry);
             var runtime = new WeaponRuntimeController(registry, damage, mask);
-            var executor = new FlyingBladeExecutor(runtime, 10f, 10f, 2f, 2f, bladeCount);
+            var executor = new FlyingBladeExecutor(runtime, 10f, 10f, 2f, 2f, bladeCount, level);
             runtime.Register(executor);
             var target = new TestTarget(5, targetPosition, mask);
             registry.Register(target);

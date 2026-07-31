@@ -71,16 +71,29 @@ namespace JoseonHunter.Editor.Scenes
         private const string PendingKey = "JoseonHunter.EightWeaponPolishCapture.Pending";
         private const string WeaponKey = PendingKey + ".Weapon";
         private const string ReadabilityKey = PendingKey + ".Readability";
+        private const string WidthKey = PendingKey + ".Width";
+        private const string HeightKey = PendingKey + ".Height";
 
         public static bool IsPending => SessionState.GetBool(PendingKey, false);
         public static string WeaponFilter => SessionState.GetString(WeaponKey, string.Empty);
         public static bool IsReadabilityCapture => SessionState.GetBool(ReadabilityKey, false);
+        public static int Width => SessionState.GetInt(WidthKey, 360);
+        public static int Height => SessionState.GetInt(HeightKey, 800);
 
         public static void Begin(string selectedWeapon, bool isReadabilityCapture = false)
         {
             SessionState.SetBool(PendingKey, true);
             SessionState.SetString(WeaponKey, selectedWeapon ?? string.Empty);
             SessionState.SetBool(ReadabilityKey, isReadabilityCapture);
+            SessionState.SetInt(WidthKey, 360);
+            SessionState.SetInt(HeightKey, 800);
+        }
+
+        public static void BeginPortraitWeapon(string selectedWeapon)
+        {
+            Begin(selectedWeapon);
+            SessionState.SetInt(WidthKey, 1080);
+            SessionState.SetInt(HeightKey, 1920);
         }
 
         public static void Clear()
@@ -88,6 +101,8 @@ namespace JoseonHunter.Editor.Scenes
             SessionState.EraseBool(PendingKey);
             SessionState.EraseString(WeaponKey);
             SessionState.EraseBool(ReadabilityKey);
+            SessionState.EraseInt(WidthKey);
+            SessionState.EraseInt(HeightKey);
         }
     }
 
@@ -97,8 +112,8 @@ namespace JoseonHunter.Editor.Scenes
         private const string MenuPath = "Tools/Joseon Hunter/Capture/Eight Weapon Polish";
         private const string ReadabilityMenuPath = "Tools/Joseon Hunter/Capture/Jangseung Geumjul Readability";
         private const string VerificationCapturePath = "Logs/jangseung-geumjul-gameplay.png";
-        private const int CaptureWidth = 360;
-        private const int CaptureHeight = 800;
+        private static int CaptureWidth = 360;
+        private static int CaptureHeight = 800;
         private const double SettleSeconds = 0.35d;
         private const double FirstCycleSeconds = 1.6d;
         private const double MeaningfulPhaseTimeoutSeconds = 2.5d;
@@ -215,6 +230,14 @@ namespace JoseonHunter.Editor.Scenes
             BeginReadabilityCapture();
         }
 
+        /// <summary>Task 11 evidence entry point: captures all Hwando levels at the portrait reference resolution.</summary>
+        public static void CaptureHwandoPortraitInBatchMode()
+        {
+            BeginCapture(WeaponId.HwandoFlyingBlade.Value);
+            if (CaptureSessionState.IsPending)
+                CaptureSessionState.BeginPortraitWeapon(WeaponId.HwandoFlyingBlade.Value);
+        }
+
         public static void CaptureWeapon(WeaponId weaponId)
         {
             BeginCapture(weaponId.Value);
@@ -276,6 +299,8 @@ namespace JoseonHunter.Editor.Scenes
         {
             try
             {
+                CaptureWidth = CaptureSessionState.Width;
+                CaptureHeight = CaptureSessionState.Height;
                 Screen.SetResolution(CaptureWidth, CaptureHeight, false);
                 caseIndex = 0;
                 weaponFilter = CaptureSessionState.WeaponFilter;
@@ -746,12 +771,11 @@ namespace JoseonHunter.Editor.Scenes
             controller = null;
             playerTransform = null;
             weaponFilter = null;
-            var completedReadabilityCapture = readabilityCapture;
             readabilityCapture = false;
             readabilityStep = 0;
             if (exitPlayMode && EditorApplication.isPlaying)
                 EditorApplication.isPlaying = false;
-            if (completedReadabilityCapture && Application.isBatchMode && !EditorApplication.isPlaying)
+            if (Application.isBatchMode && !EditorApplication.isPlaying)
                 EditorApplication.Exit(0);
         }
 
