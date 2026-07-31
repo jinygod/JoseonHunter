@@ -151,10 +151,13 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller, Is.Not.Null);
             var randomState = Random.state;
             var originalTimeScale = Time.timeScale;
+            var burstRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, FirstPlayableProfilerMarkers.SpawnName, 8);
             try
             {
                 controller.ConfigureSeparationLoadScenarioForTests();
+                controller.ConfigureFinalSurgePacingForTests();
                 for (var index = 0; index < 100; index++) controller.SpawnEnemyForSeparationTests(new Vector2(10f, 0f));
+                Assert.That(controller.EnemyCountForTests, Is.EqualTo(100));
                 for (var index = 0; index < LifecycleMilliseconds.Length; index++)
                 {
                     var timer = System.Diagnostics.Stopwatch.StartNew();
@@ -180,12 +183,16 @@ namespace JoseonHunter.Tests.PlayMode
                 var burstTimer = System.Diagnostics.Stopwatch.StartNew();
                 controller.SpawnBurstForTests(34);
                 burstTimer.Stop();
-                TestContext.WriteLine($"LIFECYCLE 100 spawnP95Ms={spawnP95:F4}; cleanupP95Ms={cleanupP95:F4}; steadyLifecycleGcBytesPerFrame={steadyGcPerFrame}; burst34Ms={burstTimer.Elapsed.TotalMilliseconds:F4}");
+                Assert.That(controller.EnemyCountForTests, Is.EqualTo(134));
+                yield return null;
+                Assert.That(HasNonZeroSample(burstRecorder), Is.True);
+                TestContext.WriteLine($"LIFECYCLE 100 spawnP95Ms={spawnP95:F4}; cleanupEntryP95Ms={cleanupP95:F4}; steadyLifecycleGcBytesPerFrame={steadyGcPerFrame}; burst34Ms={burstTimer.Elapsed.TotalMilliseconds:F4}; burstActiveBefore=100; burstActiveAfter=134");
                 Assert.That(spawnP95, Is.GreaterThanOrEqualTo(0d));
                 Assert.That(cleanupP95, Is.GreaterThanOrEqualTo(0d));
             }
             finally
             {
+                burstRecorder.Dispose();
                 Random.state = randomState;
                 controller.Flow.ResetToPlaying();
                 Time.timeScale = originalTimeScale;

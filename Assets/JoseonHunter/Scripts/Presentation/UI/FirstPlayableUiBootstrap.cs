@@ -101,26 +101,20 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnDestroy()
         {
-            using (FirstPlayableProfilerMarkers.UiModal.Auto())
-            {
-                CancelUiModalPresentation();
-                UnbindController();
-                if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
-                if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
-                if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
-                if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
-                if (instance == this) instance = null;
-            }
+            CancelUiModalPresentation();
+            UnbindController();
+            if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
+            if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
+            if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
+            if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
+            if (instance == this) instance = null;
         }
 
         private void OnDisable()
         {
-            using (FirstPlayableProfilerMarkers.UiModal.Auto())
-            {
-                upgradeChoice?.CloseImmediately();
-                CloseRewardReveal();
-                CancelUiModalPresentation();
-            }
+            CloseUpgradeChoice();
+            CloseRewardReveal();
+            CancelUiModalPresentation();
         }
 
         private void CancelUiModalPresentation()
@@ -188,7 +182,7 @@ namespace JoseonHunter.Presentation.UI
 
         private void CloseUpgradeChoice()
         {
-            upgradeChoice?.CloseImmediately();
+            using (FirstPlayableProfilerMarkers.UiModal.Auto()) upgradeChoice?.CloseImmediately();
         }
 
         private void OpenWeaponDetails(WeaponSlotView weapon)

@@ -247,6 +247,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public bool TickGameplayIfRunningForTests(float delta) => TickGameplayIfRunning(delta);
         public void UpdateEnemiesForTests(float delta) => UpdateEnemies(delta);
         public void SpawnBurstForTests(int count) => SpawnBurst(count);
+        public void ConfigureFinalSurgePacingForTests() => elapsed = stageTimeline.ToRunSeconds(720f);
         public int EnemyCountForTests => enemies.Count;
         public void SpawnEnemyForLifecycleTests() => SpawnEnemy(false);
         public void DestroyLastEnemyForLifecycleTests()

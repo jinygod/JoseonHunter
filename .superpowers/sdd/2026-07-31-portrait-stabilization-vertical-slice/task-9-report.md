@@ -33,3 +33,8 @@ See `Docs/Verification/2026-07-31-portrait-stabilization-vertical-slice.md`. Thi
 ## Final fix validation
 
 - Marker EditMode **1/1**, grid **8/8**, representative PlayMode **23/23**, and full EditMode **522/522** passed on final HEAD.
+
+## Review fix round 2
+
+- Final-surge pacing creates a real 34-enemy production burst at 100 → 134 active enemies; fresh timing was **5.8618 ms** and the Spawn recorder buffer was nonzero.
+- UI Modal ownership uses sequential leaf scopes for RunReset close handlers and disable/destroy cancellation rather than outer nested scopes.
