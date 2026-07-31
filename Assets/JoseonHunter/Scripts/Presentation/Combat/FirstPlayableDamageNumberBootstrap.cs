@@ -38,18 +38,21 @@ namespace JoseonHunter.Presentation.Combat
 
             pool.Unbind();
             feedbackDirector.Unbind();
+            feedbackDirector.BindGameFlow(null);
             boundService = service;
             if (boundService == null) return;
 
             pool.Bind(boundService);
             feedbackDirector.SetTargetAlivePredicate(controller.IsCombatTargetAlive);
             feedbackDirector.Bind(boundService);
+            feedbackDirector.BindGameFlow(controller.Flow);
         }
 
         private void OnDestroy()
         {
             if (pool != null) pool.Unbind();
             if (feedbackDirector != null) feedbackDirector.Unbind();
+            if (feedbackDirector != null) feedbackDirector.BindGameFlow(null);
             boundService = null;
         }
     }

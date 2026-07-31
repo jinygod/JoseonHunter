@@ -54,6 +54,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly Dictionary<Sprite, PixelHitMask> hurtMasksBySprite = new Dictionary<Sprite, PixelHitMask>();
 
         private Camera gameplayCamera;
+        private GameFlowCoordinator flow;
         private Transform flatField;
         private Transform runtimeObjects;
         private GameObject player;
@@ -108,6 +109,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         /// <summary>Read-only combat event source for presentation components.</summary>
         public CombatDamageService CombatDamageService => combatDamageService;
+        public GameFlowCoordinator Flow => flow;
         public WeaponRuntimeController WeaponRuntime => weaponRuntime;
         public IReadOnlyList<WeaponId> RegisteredWeaponIds => registeredWeaponIds;
         public FirstPlayableUiState UiState => BuildUiState();
@@ -366,6 +368,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void Awake()
         {
+            flow = GetComponent<GameFlowCoordinator>() ?? gameObject.AddComponent<GameFlowCoordinator>();
             Application.targetFrameRate = 60;
             SetupCamera();
             CreateSharedSprite();
@@ -375,7 +378,6 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnDestroy()
         {
-            Time.timeScale = 1f;
             geumjulPresenter?.Clear();
             weaponRuntime?.Dispose();
             weaponRuntime = null;
@@ -390,11 +392,6 @@ namespace JoseonHunter.Runtime.Gameplay
             }
         }
 
-        private void OnDisable()
-        {
-            Time.timeScale = 1f;
-        }
-
         private void Update()
         {
             if (runEnded)
@@ -407,12 +404,17 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
+            if (flow == null || !flow.IsGameplayRunning) return;
+            TickGameplay(Time.deltaTime);
+        }
+
+        private void TickGameplay(float delta)
+        {
             if (upgradeOpen)
             {
                 return;
             }
 
-            var delta = Time.deltaTime;
             var previousElapsed = elapsed;
             elapsed = Mathf.Min(TestDuration, elapsed + delta);
             contactInvulnerability = Mathf.Max(0f, contactInvulnerability - delta);
@@ -435,7 +437,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void LateUpdate()
         {
-            if (gameplayCamera != null && player != null)
+            if (flow != null && flow.IsGameplayRunning && gameplayCamera != null && player != null)
             {
                 UpdateCamera();
             }
@@ -491,7 +493,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ResetRun()
         {
-            Time.timeScale = 1f;
+            flow?.ResetToPlaying();
             var visualLibrary = ResolveJangseungGeumjulVisualLibrary();
             geumjulPresenter?.Clear();
             weaponRuntime?.Dispose();
@@ -645,7 +647,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 ref cameraFollowVelocity,
                 0.12f,
                 100f,
-                Time.unscaledDeltaTime);
+                Time.deltaTime);
         }
 
         private void UpdateField()
@@ -1647,6 +1649,7 @@ namespace JoseonHunter.Runtime.Gameplay
             runEnded = true;
             victory = didWin;
             movement = Vector2.zero;
+            flow?.TryTransition(GameFlowState.GameOver);
         }
 
         private PixelHitMask MaskFor(SpriteRenderer renderer)

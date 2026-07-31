@@ -2,8 +2,10 @@ using System;
 using System.Reflection;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Presentation.Combat;
 using JoseonHunter.Runtime.Combat;
+using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -13,6 +15,34 @@ namespace JoseonHunter.Tests.PlayMode
     {
         private static readonly MethodInfo PreCull = typeof(CombatFeedbackDirector).GetMethod("OnCameraPreCull", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly MethodInfo PostRender = typeof(CombatFeedbackDirector).GetMethod("OnCameraPostRender", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        [Test]
+        public void Paused_flow_clears_impulse_before_rendering()
+        {
+            var cameraObject = new GameObject("Feedback Camera");
+            cameraObject.tag = "MainCamera";
+            var camera = cameraObject.AddComponent<Camera>();
+            var root = new GameObject("Feedback Director");
+            var flow = root.AddComponent<GameFlowCoordinator>();
+            var director = root.AddComponent<CombatFeedbackDirector>();
+            var baseline = new Vector3(2f, 3f, -10f);
+
+            try
+            {
+                director.BindGameFlow(flow);
+                TriggerCriticalImpulse(director);
+                Assert.That(flow.TryTransition(GameFlowState.Paused), Is.True);
+                camera.transform.position = baseline;
+                Invoke(PreCull, director, camera);
+                Assert.That(camera.transform.position, Is.EqualTo(baseline));
+            }
+            finally
+            {
+                Time.timeScale = 1f;
+                UnityEngine.Object.DestroyImmediate(root);
+                UnityEngine.Object.DestroyImmediate(cameraObject);
+            }
+        }
 
         [Test]
         public void Render_scoped_impulse_restores_each_camera_owner_baseline()

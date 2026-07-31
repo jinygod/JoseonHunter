@@ -2,8 +2,9 @@ using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
-using JoseonHunter.Presentation.UI;
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Runtime.Combat;
+using JoseonHunter.Runtime.Gameplay;
 using UnityEngine;
 
 namespace JoseonHunter.Presentation.Combat
@@ -70,9 +71,7 @@ namespace JoseonHunter.Presentation.Combat
         private Func<int, bool> isTargetAlive;
         private Texture2D flashTexture;
         private Sprite flashSprite;
-        private float hitStopRemaining;
-        private float timeScaleBeforeHitStop = 1f;
-        private bool ownsHitStop;
+        private GameFlowCoordinator flow;
         private float impulseRemaining;
         private float impulseMagnitude;
         private Camera renderCamera;
@@ -90,21 +89,23 @@ namespace JoseonHunter.Presentation.Combat
         private void OnEnable()
         {
             Subscribe();
+            SubscribeFlow();
             Camera.onPreCull += OnCameraPreCull;
             Camera.onPostRender += OnCameraPostRender;
         }
         private void OnDisable()
         {
             Unsubscribe();
+            UnsubscribeFlow();
             Camera.onPreCull -= OnCameraPreCull;
             Camera.onPostRender -= OnCameraPostRender;
-            RestoreHitStop();
             RestoreRenderBaseline();
         }
 
         private void OnDestroy()
         {
             Unbind();
+            BindGameFlow(null);
             if (flashSprite != null) Destroy(flashSprite);
             if (flashTexture != null) Destroy(flashTexture);
         }
@@ -113,7 +114,6 @@ namespace JoseonHunter.Presentation.Combat
         {
             var delta = Time.unscaledDeltaTime;
             UpdateFlashes(delta);
-            UpdateHitStop(delta);
             impulseRemaining = Mathf.Max(0f, impulseRemaining - delta);
         }
 
@@ -121,6 +121,7 @@ namespace JoseonHunter.Presentation.Combat
         {
             // A previous camera can be skipped when cameras switch or rendering is interrupted.
             RestoreRenderBaseline();
+            if (flow != null && !flow.IsGameplayRunning) return;
             if (camera == null || camera != Camera.main || impulseRemaining <= 0f || impulseMagnitude <= 0f) return;
 
             var amount = impulseMagnitude * Mathf.Clamp01(impulseRemaining / 0.055f);
@@ -147,7 +148,14 @@ namespace JoseonHunter.Presentation.Combat
         {
             Unsubscribe();
             damageService = null;
-            RestoreHitStop();
+        }
+
+        public void BindGameFlow(GameFlowCoordinator value)
+        {
+            if (ReferenceEquals(flow, value)) return;
+            UnsubscribeFlow();
+            flow = value;
+            SubscribeFlow();
         }
 
         public void SetTargetAlivePredicate(Func<int, bool> predicate) => isTargetAlive = predicate;
@@ -160,6 +168,23 @@ namespace JoseonHunter.Presentation.Combat
         private void Unsubscribe()
         {
             if (damageService != null) damageService.DamageConfirmed -= OnDamageConfirmed;
+        }
+
+        private void SubscribeFlow()
+        {
+            if (isActiveAndEnabled && flow != null) flow.StateChanged += OnFlowStateChanged;
+        }
+
+        private void UnsubscribeFlow()
+        {
+            if (flow != null) flow.StateChanged -= OnFlowStateChanged;
+        }
+
+        private void OnFlowStateChanged(GameFlowState previous, GameFlowState current)
+        {
+            if (current == GameFlowState.Playing) return;
+            impulseRemaining = 0f;
+            RestoreRenderBaseline();
         }
 
         private void OnDamageConfirmed(ConfirmedDamageEvent confirmed)
@@ -176,40 +201,7 @@ namespace JoseonHunter.Presentation.Combat
             }
         }
 
-        private void BeginHitStop(float duration)
-        {
-            if (UpgradeChoiceOwnsPause() || Time.timeScale <= 0f) return;
-            if (!ownsHitStop)
-            {
-                timeScaleBeforeHitStop = Time.timeScale;
-                ownsHitStop = true;
-                Time.timeScale = 0f;
-            }
-            hitStopRemaining = Mathf.Max(hitStopRemaining, duration);
-        }
-
-        private void UpdateHitStop(float delta)
-        {
-            if (!ownsHitStop) return;
-            hitStopRemaining -= delta;
-            if (hitStopRemaining <= 0f) RestoreHitStop();
-        }
-
-        private void RestoreHitStop()
-        {
-            if (!ownsHitStop) return;
-            ownsHitStop = false;
-            hitStopRemaining = 0f;
-            // Upgrade choice owns its own slowdown/pause, so this director must never unpause it.
-            if (!UpgradeChoiceOwnsPause()) Time.timeScale = timeScaleBeforeHitStop;
-            timeScaleBeforeHitStop = 1f;
-        }
-
-        private static bool UpgradeChoiceOwnsPause()
-        {
-            var presenter = UnityEngine.Object.FindFirstObjectByType<UpgradeChoicePresenter>();
-            return presenter != null && presenter.IsOpen;
-        }
+        private void BeginHitStop(float duration) => flow?.RequestHitStop(duration);
 
         private void CreateFlashPool()
         {
