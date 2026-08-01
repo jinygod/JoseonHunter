@@ -55,3 +55,12 @@
 - The appraisal presenter owns the reel stop, post-stop 0-to-result count-up, tick pulse, final punch, and confirmation lock. Standard results count for 0.75 s; high/perfect results count for 0.90 s. Text over the dark reel uses the high-contrast panel palette, not hanji ink.
 - The portrait gameplay camera uses orthographic size 18 (formerly 7.25), while the independent spawn camera profile uses 8.5. Treat these as separate authored profiles.
 - Latest verification record: `Docs/Verification/2026-08-01-portrait-typography-appraisal-camera.md`. Full EditMode passed 544/544, focused appraisal PlayMode passed 28/28, the Android development APK built successfully, and all 20 portrait state captures were visually inspected. The complete PlayMode suite still has 79 deferred weapon-potential combat failures, so the project-wide test status is not green.
+
+## Combat performance and pickup handoff (2026-08-01)
+
+- Projectile performance uses two conservative broad phases before exact pixel contact: active-pixel world bounds in `PixelMaskContactService`, followed by a once-per-tick swept candidate list in `LinearProjectileExecutor`. Never remove the exact final pixel test or change target order when optimizing this path.
+- The final eight-level-five-weapon/100-target direct CPU measurement is 3.3120 ms average per 0.05-second simulation tick with 0 B managed allocation. Gakgung fell from 271.1035 to 1.6694 ms in the isolated harness; Singijeon fell from 60.8499 to 0.8888 ms.
+- Starting pickup attraction radius is 0.58 world units; final collection remains 0.42. Warding bell still adds 0.7.
+- Visual assets are checked in on `master`; runtime combat animation is PNG-frame/code-driven rather than Mecanim `.anim`/`.controller` assets.
+- First and repeated Gameplay loads measured 376.874 and 375.783 ms after Editor compilation/import. A static font-atlas experiment was slower and was rejected. Treat immediate post-compile Editor delay separately from runtime combat performance.
+- Latest evidence: `Docs/Verification/2026-08-01-combat-performance-and-pickup-range.md`. Full EditMode 544/544, performance 3/3, pickup 2/2, load 9/9, eight-weapon behavior 9/9, and Android development build passed. Device profiling remains outstanding.
