@@ -65,6 +65,12 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator LoadMeasurementRecordsProfilerAvailabilityAtMobileCapOfOneHundredFortyEnemies()
+        {
+            yield return CaptureLoadEvidence(140);
+        }
+
+        [UnityTest]
         public IEnumerator FullGameplayTickRunsOnlyWhileFlowIsPlaying()
         {
             SceneManager.LoadScene("Gameplay");

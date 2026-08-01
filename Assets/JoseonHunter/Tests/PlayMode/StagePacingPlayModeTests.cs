@@ -26,7 +26,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator PrototypeDurationAndInitialEnemiesUseIndependentPortraitEngagementBounds()
+        public IEnumerator PrototypeDurationAndInitialEnemiesUseTheRealPortraitViewport()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -46,10 +46,7 @@ namespace JoseonHunter.Tests.PlayMode
                 {
                     camera.aspect = aspect;
                     controller.SpawnEnemyAtCurrentViewportForTests();
-                    var engagement = CombatVisualScaleProfile.MobilePortrait.SpawnBounds(
-                        camera.transform.position, aspect);
-                    Assert.That(engagement.Contains(controller.LastSpawnPositionForTests), Is.False);
-                    Assert.That(ViewportBounds(camera).Contains(controller.LastSpawnPositionForTests), Is.True);
+                    Assert.That(ViewportBounds(camera).Contains(controller.LastSpawnPositionForTests), Is.False);
                 }
             }
             finally
@@ -60,7 +57,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator SpawnedRendererBoundsStayOutsideEngagementBoundsForEverySideAndRank()
+        public IEnumerator SpawnedRendererBoundsStayOutsideActualViewportForEverySideAndRank()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -86,8 +83,7 @@ namespace JoseonHunter.Tests.PlayMode
                         controller.ConfigureViewportSpawnForTests(side, .5f, scenario.Margin, scenario.ForceElite);
                         controller.SpawnEnemyForViewportClearanceTests(scenario.IsBoss, scenario.MidBossTier);
 
-                        var view = CombatVisualScaleProfile.MobilePortrait.SpawnBounds(
-                            camera.transform.position, camera.aspect);
+                        var view = ViewportBounds(camera);
                         AssertRendererIsOutside(view, side, controller.LastSpawnRendererBoundsForTests);
                         AssertRootRemainsOutside(view, side, scenario.Margin, controller.LastSpawnRootPositionForTests);
                     }

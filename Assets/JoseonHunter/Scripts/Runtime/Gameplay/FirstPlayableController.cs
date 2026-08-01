@@ -75,6 +75,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private WeaponRuntimeController weaponRuntime;
         private readonly WeaponPixelMaskCatalog weaponMasks = new WeaponPixelMaskCatalog();
         private readonly List<WeaponId> registeredWeaponIds = new List<WeaponId>();
+        private EnemySpriteRoster enemySpriteRoster;
+        private WaveSpawnDirector waveSpawnDirector;
         private Texture2D solidTexture;
         private Sprite solidSprite;
         private Vector2 touchStart;
@@ -113,6 +115,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private int waveAnnouncementIntensity;
 
         private const float PrototypeDurationSeconds = 180f;
+        private const int RunSpawnSeed = 0x4A4F5345;
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
         private const string BattlefieldPresentationResourcesPath = "Presentation/BattlefieldPresentationLibrary";
         private const float StartingPickupRadius = .58f;
@@ -137,6 +140,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public int WeaponRebuildCountForTests { get; private set; }
         public int MidBossSpawnCountForTests { get; private set; }
         public int FinalBossSpawnCountForTests { get; private set; }
+        public int PackSpawnCountForTests { get; private set; }
         public bool RunEndedForTests => runEnded;
         public bool VictoryForTests => victory;
         public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
@@ -253,6 +257,14 @@ namespace JoseonHunter.Runtime.Gameplay
         public void ConfigureFinalSurgePacingForTests() => elapsed = stageTimeline.ToRunSeconds(720f);
         public float ElapsedForTests => elapsed;
         public void RestoreElapsedForTests(float value) => elapsed = value;
+        public void SetElapsedForTests(float value)
+        {
+            elapsed = Mathf.Clamp(value, 0f, PrototypeDurationSeconds);
+            spawnTimer = 0f;
+            waveSpawnDirector?.Reset();
+            PackSpawnCountForTests = 0;
+        }
+        public void TickSpawningForTests(float delta) => UpdateSpawning(delta);
         public int EnemyCountForTests => enemies.Count;
         public void SpawnEnemyForLifecycleTests() => SpawnEnemy(false);
         public void DestroyLastEnemyForLifecycleTests()
@@ -263,6 +275,21 @@ namespace JoseonHunter.Runtime.Gameplay
         public float ContactInvulnerabilityForTests => contactInvulnerability;
         public int LastSeparationAgentCountForTests { get; private set; }
         private readonly List<Vector2> livingEnemyPositionsForTests = new List<Vector2>();
+        private readonly List<string> livingNormalEnemyIdsForTests = new List<string>();
+        public IReadOnlyList<string> LivingNormalEnemyIdsForTests
+        {
+            get
+            {
+                livingNormalEnemyIdsForTests.Clear();
+                for (var index = 0; index < enemies.Count; index++)
+                {
+                    var enemy = enemies[index];
+                    if (enemy.Object == null || enemy.IsTreasure || enemy.IsBoss || enemy.IsMidBoss) continue;
+                    livingNormalEnemyIdsForTests.Add(enemy.ContentId);
+                }
+                return livingNormalEnemyIdsForTests;
+            }
+        }
         public IReadOnlyList<Vector2> LivingEnemyPositionsForTests
         {
             get
@@ -329,6 +356,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public int MidBossTier;
             public bool IsTreasure;
             public int ExperienceValue = 1;
+            public string ContentId;
             public ICombatTarget CombatTarget;
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
@@ -657,6 +685,8 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetJangseungGeumjulVisualLibrary(visualLibrary);
             elapsed = 0f;
             stageTimeline = StagePacingTimeline.ForDuration(PrototypeDurationSeconds);
+            enemySpriteRoster = new EnemySpriteRoster(enemySprite, enemySpriteAlt, enemySprites);
+            waveSpawnDirector = new WaveSpawnDirector(RunSpawnSeed);
             processedStageMilestones = 0;
             finalBossWarning = false;
             waveAnnouncement = string.Empty;
@@ -720,6 +750,7 @@ namespace JoseonHunter.Runtime.Gameplay
             AppliedUpgradeCount = 0;
             MidBossSpawnCountForTests = 0;
             FinalBossSpawnCountForTests = 0;
+            PackSpawnCountForTests = 0;
 #endif
             RunReset?.Invoke();
         }
@@ -787,8 +818,20 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateSpawning(float delta)
         {
+            var phase = RunClock.PhaseAt(elapsed);
+            var wave = WaveSchedule.For(phase);
+            if (phase == RunPhase.BossWarning || phase == RunPhase.Boss || phase == RunPhase.Expired)
+                return;
+
+            var activeEnemyCount = ActiveCombatEnemyCount();
+            var availableSlots = Mathf.Max(0, wave.ActiveCap - activeEnemyCount);
+            if (waveSpawnDirector.TryCreatePack(elapsed, availableSlots, out var pack))
+            {
+                activeEnemyCount += SpawnPack(pack, wave.ActiveCap, activeEnemyCount);
+            }
+
             var pacing = stageTimeline.Sample(elapsed);
-            if (enemies.Count >= pacing.ActiveCap)
+            if (activeEnemyCount >= wave.ActiveCap)
             {
                 return;
             }
@@ -802,33 +845,72 @@ namespace JoseonHunter.Runtime.Gameplay
             spawnTimer = EnemyDensityProfile.SpawnInterval(pacing);
             var batchSize = EnemyDensityProfile.BatchSize(pacing);
             for (var index = 0;
-                 index < batchSize && enemies.Count < pacing.ActiveCap;
+                 index < batchSize && activeEnemyCount < wave.ActiveCap;
                  index++)
             {
-                SpawnEnemy(false);
+                SpawnEnemy(false, 0, waveSpawnDirector.SelectNormal(phase));
+                activeEnemyCount++;
             }
         }
 
-        private Rect CurrentSpawnBounds()
+        private int ActiveCombatEnemyCount()
         {
-            var center = player != null ? (Vector2)player.transform.position :
-                gameplayCamera != null ? (Vector2)gameplayCamera.transform.position : Vector2.zero;
-            var aspect = gameplayCamera != null ? gameplayCamera.aspect : 9f / 16f;
-            return VisualScale.SpawnBounds(center, aspect);
+            var count = 0;
+            for (var index = 0; index < enemies.Count; index++)
+            {
+                var enemy = enemies[index];
+                if (enemy.Object != null && !enemy.IsTreasure) count++;
+            }
+
+            return count;
         }
 
-        private void SpawnEnemy(bool isBoss, int midBossTier = 0)
+        private int SpawnPack(in EnemyPackPlan pack, int activeCap, int activeEnemyCount)
+        {
+            var spawned = 0;
+            var count = Mathf.Min(pack.Count, Mathf.Max(0, activeCap - activeEnemyCount));
+            for (var index = 0; index < count; index++)
+            {
+                var t = Mathf.Lerp(.08f, .92f, (index + .5f) / count);
+                SpawnEnemy(false, 0, pack.ContentId, pack.Side, t);
+                spawned++;
+            }
+
+#if UNITY_INCLUDE_TESTS
+            PackSpawnCountForTests += spawned;
+#endif
+            return spawned;
+        }
+
+        private Rect CurrentVisibleBounds()
+        {
+            if (gameplayCamera == null)
+                return VisualScale.SpawnBounds(
+                    player != null ? (Vector2)player.transform.position : Vector2.zero,
+                    9f / 16f);
+
+            var bottomLeft = gameplayCamera.ViewportToWorldPoint(Vector3.zero);
+            var topRight = gameplayCamera.ViewportToWorldPoint(Vector3.one);
+            return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+        }
+
+        private void SpawnEnemy(
+            bool isBoss,
+            int midBossTier = 0,
+            string normalContentId = null,
+            int? authoredSide = null,
+            float? authoredT = null)
         {
             var isMidBoss = !isBoss && midBossTier > 0;
-            var side = UnityEngine.Random.Range(0, 4);
-            var t = UnityEngine.Random.value;
+            var side = authoredSide ?? UnityEngine.Random.Range(0, 4);
+            var t = authoredT ?? UnityEngine.Random.value;
             var margin = UnityEngine.Random.Range(VisualScale.SpawnMarginMinimum, VisualScale.SpawnMarginMaximum);
 #if UNITY_INCLUDE_TESTS
             side = spawnSideForTests ?? side;
             t = spawnTForTests ?? t;
             margin = spawnMarginForTests ?? margin;
 #endif
-            var spawnBounds = CurrentSpawnBounds();
+            var spawnBounds = CurrentVisibleBounds();
             var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(spawnBounds, side, t, margin);
 #if UNITY_INCLUDE_TESTS
             LastSpawnPositionForTests = position;
@@ -846,6 +928,11 @@ namespace JoseonHunter.Runtime.Gameplay
             var rank = isBoss
                 ? EnemyRankProfile.Boss
                 : (isElite || isMidBoss ? EnemyRankProfile.Elite : EnemyRankProfile.Normal);
+            var resolvedContentId = isBoss
+                ? "fallen_general"
+                : isMidBoss ? "dokkaebi_captain" :
+                string.IsNullOrEmpty(normalContentId) ?
+                    waveSpawnDirector.SelectNormal(RunClock.PhaseAt(elapsed)) : normalContentId;
             var chosenSprite = isBoss
                 ? bossSprite
                 : (isMidBoss
@@ -853,7 +940,7 @@ namespace JoseonHunter.Runtime.Gameplay
                         eliteSprite != null ? eliteSprite : ChooseNormalEnemySprite())
                     : isElite && eliteSprite != null
                     ? eliteSprite
-                    : ChooseNormalEnemySprite());
+                    : enemySpriteRoster.Resolve(resolvedContentId));
             var enemyObject = CreateCombatantObject(
                 isBoss ? "Fallen General" :
                 isMidBoss ? (midBossTier >= 2 ? "Vengeful Field Commander" : "Dokkaebi Captain") :
@@ -911,7 +998,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 IsElite = rank.IsElite,
                 IsMidBoss = isMidBoss,
                 MidBossTier = midBossTier,
-                ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue
+                ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue,
+                ContentId = resolvedContentId
             };
             if (rank.IsElite || isMidBoss)
             {
@@ -1102,10 +1190,13 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             using (FirstPlayableProfilerMarkers.Spawn.Auto())
             {
-                var activeCap = stageTimeline.Sample(elapsed).ActiveCap;
-                for (var index = 0; index < count && enemies.Count < activeCap; index++)
+                var phase = RunClock.PhaseAt(elapsed);
+                var activeCap = WaveSchedule.For(phase).ActiveCap;
+                var activeCount = ActiveCombatEnemyCount();
+                for (var index = 0; index < count && activeCount < activeCap; index++)
                 {
-                    SpawnEnemy(false);
+                    SpawnEnemy(false, 0, waveSpawnDirector.SelectNormal(phase));
+                    activeCount++;
                 }
             }
         }
