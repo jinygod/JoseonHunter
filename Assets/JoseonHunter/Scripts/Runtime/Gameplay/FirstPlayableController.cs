@@ -113,6 +113,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private const float PrototypeDurationSeconds = 180f;
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
+        private const float StartingPickupRadius = .58f;
 
         /// <summary>Read-only combat event source for presentation components.</summary>
         public CombatDamageService CombatDamageService => combatDamageService;
@@ -646,7 +647,7 @@ namespace JoseonHunter.Runtime.Gameplay
             playerMaxHealth = 100f;
             playerHealth = playerMaxHealth;
             moveSpeed = 2.4f;
-            pickupRadius = 2.2f;
+            pickupRadius = StartingPickupRadius;
             geumjulDamage = 38f;
             spawnTimer = 0.2f;
             chestSpawnTimer = 18f;
