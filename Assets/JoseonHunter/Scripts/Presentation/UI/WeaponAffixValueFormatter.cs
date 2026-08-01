@@ -1,4 +1,5 @@
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
 
 namespace JoseonHunter.Presentation.UI
@@ -12,8 +13,7 @@ namespace JoseonHunter.Presentation.UI
 
         public static string Describe(WeaponAffixRoll roll, int displayedValue)
         {
-            var sign = displayedValue >= 0 ? "+" : string.Empty;
-            return $"{roll.Stat} {sign}{displayedValue}%";
+            return WeaponAffixDisplayFormatter.Describe(roll, displayedValue);
         }
     }
 }

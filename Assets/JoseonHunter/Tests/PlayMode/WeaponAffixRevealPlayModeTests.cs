@@ -50,6 +50,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.PotentialRowY(0), Is.GreaterThan(presenter.PotentialRowY(1)));
             Assert.That(presenter.PotentialRowY(1), Is.GreaterThan(presenter.PotentialRowY(2)));
             Assert.That(presenter.DisplayedAffixText, Does.Contain("+0%"));
+            Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("높은 추가옵션"));
+            Assert.That(TextValue(RectNamed(presenter, "Confirm Label")), Is.EqualTo("확인"));
             Object.DestroyImmediate(presenter.gameObject);
         }
 

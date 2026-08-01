@@ -87,7 +87,7 @@ namespace JoseonHunter.Presentation.UI
         public void Render(FirstPlayableUiState state)
         {
             Build();
-            levelText.text = $"LEVEL {state.Level}";
+            levelText.text = $"레벨 {state.Level}";
             healthText.text = $"HP {Mathf.CeilToInt(state.Health)} / {Mathf.CeilToInt(state.MaximumHealth)}";
             experienceText.text = $"XP {state.Experience} / {state.ExperienceToNext}    COIN {state.Coins}";
             timerText.text = Mathf.CeilToInt(Mathf.Max(0f, state.Duration - state.Elapsed)).ToString("00");

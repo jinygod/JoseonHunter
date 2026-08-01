@@ -166,7 +166,7 @@ namespace JoseonHunter.Tests.PlayMode
             var presenter = root.AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
             var weapon = new WeaponSlotView("gakgung_shot", "각궁", 3, null,
-                "Damage +24%", new[] { JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungFullDraw },
+                "피해량 +24%", new[] { JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungFullDraw },
                 behavior: "적을 관통하는 화살");
             Time.timeScale = 1f;
 
@@ -175,7 +175,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(presenter.IsDetailOpen, Is.True);
             Assert.That(Time.timeScale, Is.EqualTo(1f));
-            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("Damage +24%"));
+            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("피해량 +24%"));
             presenter.HideImmediately();
             Assert.That(Time.timeScale, Is.EqualTo(1f));
             Object.Destroy(root);

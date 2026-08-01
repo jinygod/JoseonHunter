@@ -1668,11 +1668,16 @@ namespace JoseonHunter.Runtime.Gameplay
             if (!weaponAffixes.TryProfileFor(weaponId, out var profile) || profile.GeneralRolls.Count == 0) return string.Empty;
             var modifiers = WeaponRuntimeModifiers.From(profile);
             var values = new List<string>();
-            if (modifiers.DamageBonus != 0f) values.Add($"Damage +{Mathf.RoundToInt(modifiers.DamageBonus * 100f)}%");
-            if (modifiers.CooldownReduction != 0f) values.Add($"Cooldown -{Mathf.RoundToInt(modifiers.CooldownReduction * 100f)}%");
-            if (modifiers.AreaBonus != 0f) values.Add($"Area +{Mathf.RoundToInt(modifiers.AreaBonus * 100f)}%");
-            if (modifiers.SpeedBonus != 0f) values.Add($"Speed +{Mathf.RoundToInt(modifiers.SpeedBonus * 100f)}%");
-            if (modifiers.DurationBonus != 0f) values.Add($"Duration +{Mathf.RoundToInt(modifiers.DurationBonus * 100f)}%");
+            if (modifiers.DamageBonus != 0f) values.Add(WeaponAffixDisplayFormatter.Describe(
+                WeaponAffixStat.Damage, Mathf.RoundToInt(modifiers.DamageBonus * 100f)));
+            if (modifiers.CooldownReduction != 0f) values.Add(WeaponAffixDisplayFormatter.Describe(
+                WeaponAffixStat.Cooldown, -Mathf.RoundToInt(modifiers.CooldownReduction * 100f)));
+            if (modifiers.AreaBonus != 0f) values.Add(WeaponAffixDisplayFormatter.Describe(
+                WeaponAffixStat.Area, Mathf.RoundToInt(modifiers.AreaBonus * 100f)));
+            if (modifiers.SpeedBonus != 0f) values.Add(WeaponAffixDisplayFormatter.Describe(
+                WeaponAffixStat.ProjectileSpeed, Mathf.RoundToInt(modifiers.SpeedBonus * 100f)));
+            if (modifiers.DurationBonus != 0f) values.Add(WeaponAffixDisplayFormatter.Describe(
+                WeaponAffixStat.Duration, Mathf.RoundToInt(modifiers.DurationBonus * 100f)));
             return string.Join(" · ", values);
         }
 

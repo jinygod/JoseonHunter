@@ -53,7 +53,7 @@ namespace JoseonHunter.Presentation.UI
         public void Pulse(string weaponId, int newLevel, int newPotentialCount = 0)
         {
             if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
-            slot.Level.text = $"LEVEL {newLevel}";
+            slot.Level.text = $"레벨 {newLevel}";
             StopPulse(slot);
             slot.PulseRoutine = StartCoroutine(PulseRoutine(slot, newPotentialCount));
         }
@@ -149,7 +149,7 @@ namespace JoseonHunter.Presentation.UI
             slot.Icon.sprite = weapon.Icon;
             slot.Icon.enabled = weapon.Icon != null;
             slot.Name.text = weapon.DisplayName;
-            slot.Level.text = $"LEVEL {weapon.Level}";
+            slot.Level.text = $"레벨 {weapon.Level}";
             slot.Totals.text = weapon.GeneralAffixSummary;
             var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
             if (catalog == null || !catalog.HasRequiredUiSprites)

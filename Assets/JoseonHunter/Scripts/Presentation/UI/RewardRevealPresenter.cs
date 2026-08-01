@@ -118,7 +118,7 @@ namespace JoseonHunter.Presentation.UI
             Position(confirmButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-28f, 22f),
                 new Vector2(152f, 42f), new Vector2(1f, 0f));
             confirmButton.onClick.AddListener(Confirm);
-            var confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "CONFIRM", 18f,
+            var confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "확인", 18f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 6f, 4f, 6f, 4f);
             root.SetActive(false);

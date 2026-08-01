@@ -203,7 +203,7 @@ namespace JoseonHunter.Presentation.UI
             weaponIcon.sprite = weapon.Icon != null ? weapon.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
             weaponName.text = weapon.DisplayName;
-            weaponLevel.text = $"LEVEL {weapon.Level} · 현재 무기";
+            weaponLevel.text = $"레벨 {weapon.Level} · 현재 무기";
             weaponBehavior.text = weapon.Behavior;
             title.text = "현재 추가옵션";
             detail.text = string.IsNullOrEmpty(weapon.GeneralAffixSummary)
@@ -510,8 +510,8 @@ namespace JoseonHunter.Presentation.UI
             detail.text = WeaponAffixValueFormatter.Describe(activeResult.General, 0);
             weaponName.text = activeModel.DisplayName;
             weaponLevel.text = activeModel.IsNewAcquisition
-                ? $"LEVEL {activeModel.Level} · 신규 무기"
-                : $"LEVEL {activeModel.Level} · 강화 감정";
+                ? $"레벨 {activeModel.Level} · 신규 무기"
+                : $"레벨 {activeModel.Level} · 강화 감정";
             weaponBehavior.text = activeModel.Behavior;
             accumulatedAffixSummary.text = string.IsNullOrEmpty(activeModel.AccumulatedAffixSummary)
                 ? string.Empty
@@ -671,7 +671,7 @@ namespace JoseonHunter.Presentation.UI
             confirmRect.sizeDelta = new Vector2(310f, 62f);
             confirmButton.image.preserveAspect = false;
             confirmButton.onClick.AddListener(OnConfirmButton);
-            confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "확인  ·  계속", 21f,
+            confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "확인", 21f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 12f, 5f, 12f, 5f);
             confirmLabel.fontStyle = FontStyles.Bold;
@@ -829,7 +829,7 @@ namespace JoseonHunter.Presentation.UI
         }
 
         private static string TierName(WeaponAffixTier tier) =>
-            tier == WeaponAffixTier.Perfect ? "완벽한 추가옵션" :
+            tier == WeaponAffixTier.Perfect ? "최대 추가옵션" :
             tier == WeaponAffixTier.High ? "높은 추가옵션" : "추가옵션";
 
         private static string PotentialName(WeaponPotentialId id)
