@@ -63,6 +63,53 @@ namespace JoseonHunter.Editor.Scenes
             }
         }
 
+        [MenuItem("JoseonHunter/Validation/Capture Bootstrap Loading")]
+        public static void CapturePreview()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (prefab == null) throw new InvalidOperationException($"Missing loading prefab: {PrefabPath}");
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cameraObject = new GameObject("Bootstrap Preview Camera", typeof(Camera));
+            SceneManager.MoveGameObjectToScene(cameraObject, scene);
+            var camera = cameraObject.GetComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(.018f, .026f, .035f, 1f);
+            camera.orthographic = true;
+            camera.transform.position = new Vector3(0f, 0f, -10f);
+
+            var instance = PrefabUtility.InstantiatePrefab(prefab, scene) as GameObject;
+            if (instance == null) throw new InvalidOperationException("Could not instantiate loading preview.");
+            var canvas = instance.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = camera;
+            canvas.planeDistance = 1f;
+
+            var output = Path.GetFullPath("Artifacts/BootstrapLoading");
+            Directory.CreateDirectory(output);
+            var resolutions = new[] { new Vector2Int(720, 1280), new Vector2Int(1080, 2340) };
+            foreach (var resolution in resolutions)
+                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}.png"));
+
+            UnityEngine.Object.DestroyImmediate(instance);
+            UnityEngine.Object.DestroyImmediate(cameraObject);
+            Debug.Log($"Captured Bootstrap loading previews to {output}.");
+        }
+
+        public static void CapturePreviewInBatchMode()
+        {
+            try
+            {
+                CapturePreview();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
+
         private static GameObject BuildPrefab()
         {
             var root = new GameObject(
@@ -88,11 +135,14 @@ namespace JoseonHunter.Editor.Scenes
                     new Color(.018f, .026f, .035f, 1f));
                 Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
+                var spiritSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpiritFlamePath);
                 var halo = Image("Spirit Halo", root.transform, new Color(.08f, .33f, .31f, .16f));
+                halo.sprite = spiritSprite;
+                halo.preserveAspect = true;
                 SetAnchored(halo.rectTransform, new Vector2(.5f, .5f), new Vector2(360f, 360f), new Vector2(0f, 70f));
 
                 var flame = Image("Spirit Flame", root.transform, Color.white);
-                flame.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpiritFlamePath);
+                flame.sprite = spiritSprite;
                 flame.preserveAspect = true;
                 SetAnchored(flame.rectTransform, new Vector2(.5f, .5f), new Vector2(154f, 154f), new Vector2(0f, 75f));
 
@@ -127,6 +177,30 @@ namespace JoseonHunter.Editor.Scenes
             finally
             {
                 UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void Capture(Camera camera, Vector2Int resolution, string outputPath)
+        {
+            var renderTexture = new RenderTexture(resolution.x, resolution.y, 24, RenderTextureFormat.ARGB32);
+            var texture = new Texture2D(resolution.x, resolution.y, TextureFormat.RGBA32, false);
+            var previous = RenderTexture.active;
+            try
+            {
+                camera.targetTexture = renderTexture;
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                RenderTexture.active = renderTexture;
+                texture.ReadPixels(new Rect(0f, 0f, resolution.x, resolution.y), 0, 0);
+                texture.Apply();
+                File.WriteAllBytes(outputPath, texture.EncodeToPNG());
+            }
+            finally
+            {
+                camera.targetTexture = null;
+                RenderTexture.active = previous;
+                UnityEngine.Object.DestroyImmediate(texture);
+                UnityEngine.Object.DestroyImmediate(renderTexture);
             }
         }
 
