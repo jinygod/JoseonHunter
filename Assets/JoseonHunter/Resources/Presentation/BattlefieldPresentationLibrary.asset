@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e38a90b9bfbe77499159a6aa76311d3, type: 3}
+  m_Name: BattlefieldPresentationLibrary
+  m_EditorClassIdentifier: JoseonHunter.Runtime::JoseonHunter.Runtime.Gameplay.BattlefieldPresentationLibrary
+  chunkPrefab: {fileID: 4012311003393746107, guid: c42d35b24f2cfc344956c303fe181c96, type: 3}
+  groundTile: {fileID: 21300000, guid: 700e3f2df5449514388ca59da95010b4, type: 3}
+  alternateGroundTile: {fileID: 0}
+  decorations:
+  - {fileID: 21300000, guid: d909069f313bfc24fac1d9a087a2af88, type: 3}
+  - {fileID: 21300000, guid: 377eaea2f3a59c443addc3541e49f9fe, type: 3}
+  - {fileID: 21300000, guid: 6c52a255eaf8c8e40be4ed316ab157aa, type: 3}
+  - {fileID: 21300000, guid: f0f44faea03251f41b4918c2d0a46aff, type: 3}

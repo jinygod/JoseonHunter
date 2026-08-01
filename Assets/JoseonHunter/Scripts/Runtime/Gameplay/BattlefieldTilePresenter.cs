@@ -20,6 +20,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private Sprite alternateTile;
         private IReadOnlyList<Sprite> decals;
         private Sprite fallbackSprite;
+        private BattlefieldChunkView chunkPrefab;
         private int battlefieldSeed;
         private Vector2Int centerCoordinate;
         private bool built;
@@ -44,6 +45,17 @@ namespace JoseonHunter.Runtime.Gameplay
             Sprite fallbackSprite,
             int battlefieldSeed)
         {
+            BuildInfinite(null, primaryTile, alternateTile, decals, fallbackSprite, battlefieldSeed);
+        }
+
+        public void BuildInfinite(
+            BattlefieldChunkView chunkPrefab,
+            Sprite primaryTile,
+            Sprite alternateTile,
+            IReadOnlyList<Sprite> decals,
+            Sprite fallbackSprite,
+            int battlefieldSeed)
+        {
             for (var index = transform.childCount - 1; index >= 0; index--)
             {
                 Destroy(transform.GetChild(index).gameObject);
@@ -53,6 +65,7 @@ namespace JoseonHunter.Runtime.Gameplay
             this.alternateTile = alternateTile;
             this.decals = decals;
             this.fallbackSprite = fallbackSprite;
+            this.chunkPrefab = chunkPrefab;
             this.battlefieldSeed = battlefieldSeed;
             RebuildCount = 0;
             centerCoordinate = Vector2Int.zero;
@@ -60,9 +73,17 @@ namespace JoseonHunter.Runtime.Gameplay
 
             for (var index = 0; index < chunks.Length; index++)
             {
-                var chunkObject = new GameObject("Battlefield Chunk");
-                chunkObject.transform.SetParent(transform, false);
-                chunks[index] = chunkObject.AddComponent<BattlefieldChunkView>();
+                if (chunkPrefab != null)
+                {
+                    chunks[index] = Instantiate(chunkPrefab, transform);
+                    chunks[index].gameObject.SetActive(true);
+                }
+                else
+                {
+                    var chunkObject = new GameObject("Battlefield Chunk");
+                    chunkObject.transform.SetParent(transform, false);
+                    chunks[index] = chunkObject.AddComponent<BattlefieldChunkView>();
+                }
                 Assign(index, required[index]);
             }
 

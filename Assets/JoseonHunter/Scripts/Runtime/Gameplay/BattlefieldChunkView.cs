@@ -7,14 +7,16 @@ namespace JoseonHunter.Runtime.Gameplay
     public sealed class BattlefieldChunkView : MonoBehaviour
     {
         private const int DecorationCapacity = 4;
-        private SpriteRenderer ground;
-        private readonly SpriteRenderer[] decorations = new SpriteRenderer[DecorationCapacity];
+        [SerializeField] private SpriteRenderer ground;
+        [SerializeField] private SpriteRenderer[] decorations = new SpriteRenderer[DecorationCapacity];
 
         public Vector2Int Coordinate { get; private set; }
         public int DecorationSignature { get; private set; }
 
         public void EnsureStructure()
         {
+            if (decorations == null || decorations.Length != DecorationCapacity)
+                System.Array.Resize(ref decorations, DecorationCapacity);
             if (ground == null)
             {
                 var groundObject = new GameObject("Ground");

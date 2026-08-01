@@ -3,12 +3,37 @@ using System.Linq;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class BattlefieldTilePresenterPlayModeTests
     {
+        [UnityTest]
+        public IEnumerator GameplayResolvesFolkFieldPresentationLibraryAndTracksNineChunks()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+
+            var library = Resources.Load<ScriptableObject>(
+                "Presentation/BattlefieldPresentationLibrary");
+            var presenter = Object.FindAnyObjectByType<BattlefieldTilePresenter>();
+            var groundSprites = presenter == null
+                ? System.Array.Empty<string>()
+                : presenter.GetComponentsInChildren<SpriteRenderer>()
+                    .Where(renderer => renderer.gameObject.name == "Ground" && renderer.sprite != null)
+                    .Select(renderer => renderer.sprite.name)
+                    .ToArray();
+
+            Assert.That(library, Is.Not.Null);
+            Assert.That(presenter, Is.Not.Null);
+            Assert.That(presenter.ActiveChunkCount, Is.EqualTo(9));
+            Assert.That(groundSprites, Is.Not.Empty);
+            Assert.That(groundSprites, Is.All.EqualTo("joseon_folk_field_tile"));
+        }
+
         [UnityTest]
         public IEnumerator InfiniteBattlefieldKeepsNineChunksAndDoesNotRebuildInsideOneCoordinate()
         {

@@ -63,6 +63,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private Camera gameplayCamera;
         private GameFlowCoordinator flow;
         private Transform flatField;
+        private BattlefieldTilePresenter battlefieldPresenter;
         private Transform runtimeObjects;
         private GameObject player;
         private SpriteRenderer playerRenderer;
@@ -113,6 +114,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private const float PrototypeDurationSeconds = 180f;
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
+        private const string BattlefieldPresentationResourcesPath = "Presentation/BattlefieldPresentationLibrary";
         private const float StartingPickupRadius = .58f;
 
         /// <summary>Read-only combat event source for presentation components.</summary>
@@ -595,11 +597,27 @@ namespace JoseonHunter.Runtime.Gameplay
 
             flatField = new GameObject("FlatField").transform;
             flatField.SetParent(transform, false);
-            flatField.gameObject.AddComponent<BattlefieldTilePresenter>().Build(
-                battlefieldTilePrimary,
-                battlefieldTileAlternate,
-                battlefieldDecals,
-                solidSprite);
+            battlefieldPresenter = flatField.gameObject.AddComponent<BattlefieldTilePresenter>();
+            var presentation = Resources.Load<BattlefieldPresentationLibrary>(
+                BattlefieldPresentationResourcesPath);
+            if (presentation != null && presentation.GroundTile != null)
+            {
+                battlefieldPresenter.BuildInfinite(
+                    presentation.ChunkPrefab,
+                    presentation.GroundTile,
+                    presentation.AlternateGroundTile,
+                    presentation.Decorations,
+                    solidSprite,
+                    0x4A4F5345);
+            }
+            else
+            {
+                battlefieldPresenter.Build(
+                    battlefieldTilePrimary,
+                    battlefieldTileAlternate,
+                    battlefieldDecals,
+                    solidSprite);
+            }
         }
 
         private void ResetRun()
@@ -763,8 +781,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateField()
         {
-            // The battlefield is deliberately world-anchored. Moving it in camera-sized steps made
-            // its high-contrast landmarks jump underneath the player.
+            if (battlefieldPresenter != null && player != null)
+                battlefieldPresenter.Track(player.transform.position);
         }
 
         private void UpdateSpawning(float delta)

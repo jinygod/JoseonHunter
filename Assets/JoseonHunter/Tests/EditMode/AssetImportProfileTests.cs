@@ -15,6 +15,8 @@ namespace JoseonHunter.Tests.EditMode
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/import_profile_test.png";
         private const string StaticSpriteFixturePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/import_profile_test.png";
+        private const string JoseonFolkFieldTilePath =
+            "Assets/JoseonHunter/Art/World/Runtime/Battlefield/joseon_folk_field_tile.png";
 
         [SetUp]
         public void SetUp()
@@ -106,6 +108,20 @@ namespace JoseonHunter.Tests.EditMode
             var android = texture.GetPlatformTextureSettings("Android");
             Assert.That(android.overridden, Is.True);
             Assert.That(android.format, Is.EqualTo(TextureImporterFormat.ASTC_6x6));
+        }
+
+        [Test]
+        public void JoseonFolkFieldUsesPixelImportProfile()
+        {
+            var texture = AssetImporter.GetAtPath(JoseonFolkFieldTilePath) as TextureImporter;
+
+            Assert.That(texture, Is.Not.Null);
+            Assert.That(texture.textureType, Is.EqualTo(TextureImporterType.Sprite));
+            Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Single));
+            Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(texture.mipmapEnabled, Is.False);
+            Assert.That(texture.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
+            Assert.That(texture.GetPlatformTextureSettings("Android").overridden, Is.False);
         }
 
         [Test]
