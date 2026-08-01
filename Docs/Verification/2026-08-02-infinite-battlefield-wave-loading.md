@@ -137,7 +137,7 @@ The implementation and documentation are committed independently from local user
 - `Assets/JoseonHunter/Resources/Fonts/MaruBuri-SemiBold-Dynamic SDF.asset`
 - untracked `.utmp/`
 
-Global `git diff --check` reports one trailing-space line in the preserved local Gameplay scene (`m_Name:` at line 216). The committed task files pass whitespace inspection; the local user scene was not rewritten to remove it.
+The manually authored C# and documentation pass whitespace inspection. Empty serialized fields in the new Unity UI prefab/meta files were normalized before handoff. Global `git diff --check` still reports one trailing-space line in the preserved local Gameplay scene (`m_Name:` at line 216); that user-owned scene was not rewritten to remove it.
 
 The complete PlayMode suite was not used as the acceptance gate because the previous verified baseline already records 79 deferred weapon-potential combat failures outside this scope. The changed and adjacent runtime surface is covered by the 39-test integrated filter above; no new failure remained in that filter.
 
