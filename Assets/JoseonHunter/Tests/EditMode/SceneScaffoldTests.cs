@@ -6,6 +6,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 using UnityEngine;
 using JoseonHunter.Editor.Scenes;
+using JoseonHunter.Presentation.UI;
 
 namespace JoseonHunter.Tests.EditMode
 {
@@ -38,7 +39,9 @@ namespace JoseonHunter.Tests.EditMode
                 var roots = scene.GetRootGameObjects();
                 var expected = scenePath.EndsWith("Gameplay.unity", StringComparison.Ordinal)
                     ? new[] { "Main Camera", "FirstPlayable", "EventSystem" }
-                    : new[] { "SceneRoot" };
+                    : scenePath.EndsWith("Bootstrap.unity", StringComparison.Ordinal)
+                        ? new[] { "Bootstrap Loading" }
+                        : new[] { "SceneRoot" };
                 CollectionAssert.AreEquivalent(expected, roots.Select(root => root.name));
             }
             finally
@@ -58,6 +61,25 @@ namespace JoseonHunter.Tests.EditMode
                 CollectionAssert.AreEquivalent(
                     new[] { "Main Camera", "FirstPlayable", "EventSystem" },
                     scene.GetRootGameObjects().Select(root => root.name));
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void BootstrapContainsLoadingPresenter()
+        {
+            var scene = EditorSceneManager.OpenScene(
+                "Assets/JoseonHunter/Scenes/Bootstrap.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var presenter = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<BootstrapLoadingPresenter>(true))
+                    .SingleOrDefault();
+                Assert.That(presenter, Is.Not.Null);
             }
             finally
             {

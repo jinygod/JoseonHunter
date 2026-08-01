@@ -497,12 +497,14 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void Awake()
         {
+            GameplayReadySignal.Reset();
             flow = GetComponent<GameFlowCoordinator>() ?? gameObject.AddComponent<GameFlowCoordinator>();
             Application.targetFrameRate = 60;
             SetupCamera();
             CreateSharedSprite();
             CreateField();
             ResetRun();
+            GameplayReadySignal.MarkReady();
         }
 
         private void OnDestroy()
