@@ -20,7 +20,9 @@ namespace JoseonHunter.Tests.PlayMode
             var loader = Object.FindFirstObjectByType<BootstrapLoadingPresenter>();
             Assert.That(loader, Is.Not.Null);
             Assert.That(loader.OpaqueForTests, Is.True);
+            yield return WaitForProgress(loader, 5f);
             Assert.That(loader.ProgressForTests, Is.EqualTo(1f).Within(.001f));
+            yield return WaitForReadiness(5f);
             Assert.That(GameplayReadySignal.IsReady, Is.True);
 
             yield return WaitForLoaderRemoval(5f);
@@ -60,6 +62,25 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 yield return null;
             }
+        }
+
+        private static IEnumerator WaitForProgress(
+            BootstrapLoadingPresenter loader,
+            float timeoutSeconds)
+        {
+            var deadline = Time.realtimeSinceStartup + timeoutSeconds;
+            while (loader != null && loader.ProgressForTests < .999f &&
+                   Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+        }
+
+        private static IEnumerator WaitForReadiness(float timeoutSeconds)
+        {
+            var deadline = Time.realtimeSinceStartup + timeoutSeconds;
+            while (!GameplayReadySignal.IsReady && Time.realtimeSinceStartup < deadline)
+                yield return null;
         }
     }
 }
