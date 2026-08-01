@@ -26,8 +26,6 @@ namespace JoseonHunter.Presentation.UI
         private const int ReelCount = 4;
         private const float AppraisalWidth = PortraitUiMetrics.ModalWidth;
         private const float AppraisalHeight = 1320f;
-        private static readonly Rect AppraisalScrollContentUv =
-            new Rect(97f / 600f, 11f / 448f, 405f / 600f, 210f / 448f);
         private GameObject root;
         private CanvasGroup group;
         private RectTransform panelRect;
@@ -47,6 +45,7 @@ namespace JoseonHunter.Presentation.UI
         private Image weaponIcon;
         private Button confirmButton;
         private TextMeshProUGUI confirmLabel;
+        private TextMeshProUGUI raritySealLabel;
         private readonly Image[] reelWindows = new Image[ReelCount];
         private readonly Image[,] spinningSymbols = new Image[ReelCount, 2];
         private readonly Image[] finalSymbols = new Image[ReelCount];
@@ -70,8 +69,6 @@ namespace JoseonHunter.Presentation.UI
         private bool completed;
         private bool readOnlyDetail;
         private WeaponAffixPresentationCatalogAsset catalogForTests;
-        private Sprite croppedAppraisalScroll;
-        private Sprite croppedAppraisalSource;
 
 #if UNITY_INCLUDE_TESTS
         public void SetCatalogForTests(WeaponAffixPresentationCatalogAsset catalog) => catalogForTests = catalog;
@@ -191,7 +188,7 @@ namespace JoseonHunter.Presentation.UI
             }
 
             readOnlyDetail = true;
-            BindAppraisalScroll(activeCatalog.AppraisalScroll);
+            BindHanjiPanel();
             topRoller.sprite = activeCatalog.AppraisalRoller;
             bottomRoller.sprite = activeCatalog.AppraisalRoller;
             topRoller.enabled = false;
@@ -212,6 +209,7 @@ namespace JoseonHunter.Presentation.UI
             accumulatedAffixSummary.text = string.Empty;
             rarityFrame.enabled = false;
             finalSymbols[0].enabled = false;
+            raritySealLabel.gameObject.SetActive(false);
             burst.enabled = false;
             for (var reel = 0; reel < ReelCount; reel++)
             {
@@ -282,7 +280,6 @@ namespace JoseonHunter.Presentation.UI
         private void OnDestroy()
         {
             HideImmediately();
-            ReleaseCroppedAppraisalScroll();
         }
 
         public static float DurationFor(WeaponAffixRollResult result) =>
@@ -399,7 +396,8 @@ namespace JoseonHunter.Presentation.UI
         private void SetFinalAffixVisible(bool visible)
         {
             finalSymbols[0].enabled = visible;
-            rarityFrame.enabled = visible;
+            rarityFrame.enabled = false;
+            raritySealLabel.gameObject.SetActive(visible);
             title.gameObject.SetActive(true);
             detail.gameObject.SetActive(true);
         }
@@ -461,17 +459,17 @@ namespace JoseonHunter.Presentation.UI
 
         private void BindSprites()
         {
-            BindAppraisalScroll(activeCatalog.AppraisalScroll);
+            BindHanjiPanel();
             topRoller.sprite = activeCatalog.AppraisalRoller;
             bottomRoller.sprite = activeCatalog.AppraisalRoller;
             topRoller.enabled = false;
             bottomRoller.enabled = false;
             rareStamp.sprite = activeCatalog.RareAppraisalStamp;
             confirmButton.image.sprite = activeCatalog.ReelWindow;
-            rarityFrame.sprite = activeCatalog.SpriteForAffix(activeResult.General.Tier);
-            finalSymbols[0].sprite = activeResult.General.Tier == WeaponAffixTier.Standard
-                ? activeCatalog.ReelSymbolStat
-                : activeCatalog.ReelSymbolRarity;
+            rarityFrame.sprite = null;
+            finalSymbols[0].sprite = null;
+            finalSymbols[0].color = SealColor(activeResult.General.Tier);
+            raritySealLabel.text = SealLabel(activeResult.General.Tier);
             for (var reel = 0; reel < ReelCount; reel++)
             {
                 reelWindows[reel].sprite = activeCatalog.ReelWindow;
@@ -526,6 +524,7 @@ namespace JoseonHunter.Presentation.UI
             panelRect.anchoredPosition = Vector2.zero;
             panelRect.localScale = Vector3.one * .94f;
             rarityFrame.enabled = false;
+            raritySealLabel.gameObject.SetActive(false);
             burst.enabled = false;
             rareStamp.enabled = false;
             SetScrollOpen(WeaponAppraisalPresentation.ScrollOpenAt(revealProfile, 0f));
@@ -590,6 +589,7 @@ namespace JoseonHunter.Presentation.UI
             shell.rectTransform.anchorMin = shell.rectTransform.anchorMax = new Vector2(.5f, .5f);
             shell.rectTransform.sizeDelta = panelRect.sizeDelta;
             shell.preserveAspect = false;
+            BuildHanjiBorder(shell.transform);
 
             topRoller = RuntimeUiFactory.Image("Top Scroll Roller", panelRect, Color.white);
             topRoller.rectTransform.anchorMin = topRoller.rectTransform.anchorMax = new Vector2(.5f, .5f);
@@ -648,6 +648,10 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(rarityFrame.rectTransform, -12f, -12f, -12f, -12f);
             rarityFrame.preserveAspect = true;
             rarityFrame.transform.SetAsFirstSibling();
+            raritySealLabel = RuntimeUiFactory.Text("Rarity Seal Label", finalSymbols[0].transform, string.Empty,
+                24f, TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
+            RuntimeUiFactory.Stretch(raritySealLabel.rectTransform, 4f, 4f, 4f, 4f);
+            raritySealLabel.color = JoseonUiPalette.DarkPanelText;
 
             for (var index = 0; index < 3; index++)
             {
@@ -757,50 +761,33 @@ namespace JoseonHunter.Presentation.UI
             stopFlashes[index] = flash;
         }
 
-        private void BindAppraisalScroll(Sprite source)
+        private void BindHanjiPanel()
         {
-            if (source == null)
-            {
-                ReleaseCroppedAppraisalScroll();
-                shell.sprite = null;
-                return;
-            }
-
-            if (croppedAppraisalSource == source && croppedAppraisalScroll != null)
-            {
-                shell.sprite = croppedAppraisalScroll;
-                return;
-            }
-
-            ReleaseCroppedAppraisalScroll();
-            croppedAppraisalSource = source;
-            var sourceRect = source.textureRect;
-            if (sourceRect.width < 64f || sourceRect.height < 64f)
-            {
-                shell.sprite = source;
-                return;
-            }
-
-            var contentRect = new Rect(
-                sourceRect.x + sourceRect.width * AppraisalScrollContentUv.x,
-                sourceRect.y + sourceRect.height * AppraisalScrollContentUv.y,
-                sourceRect.width * AppraisalScrollContentUv.width,
-                sourceRect.height * AppraisalScrollContentUv.height);
-            croppedAppraisalScroll = Sprite.Create(source.texture, contentRect, new Vector2(.5f, .5f),
-                source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
-            croppedAppraisalScroll.name = source.name + " Content";
-            shell.sprite = croppedAppraisalScroll;
+            shell.sprite = null;
+            shell.color = new Color(.94f, .88f, .72f, 1f);
         }
 
-        private void ReleaseCroppedAppraisalScroll()
+        private static void BuildHanjiBorder(Transform parent)
         {
-            croppedAppraisalSource = null;
-            if (croppedAppraisalScroll == null) return;
-            if (Application.isPlaying)
-                Destroy(croppedAppraisalScroll);
-            else
-                DestroyImmediate(croppedAppraisalScroll);
-            croppedAppraisalScroll = null;
+            BorderRail("Hanji Border Top", parent, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -14f), new Vector2(-28f, 8f));
+            BorderRail("Hanji Border Bottom", parent, new Vector2(0f, 0f), new Vector2(1f, 0f),
+                new Vector2(0f, 14f), new Vector2(-28f, 8f));
+            BorderRail("Hanji Border Left", parent, new Vector2(0f, 0f), new Vector2(0f, 1f),
+                new Vector2(14f, 0f), new Vector2(8f, -28f));
+            BorderRail("Hanji Border Right", parent, new Vector2(1f, 0f), new Vector2(1f, 1f),
+                new Vector2(-14f, 0f), new Vector2(8f, -28f));
+        }
+
+        private static void BorderRail(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax,
+            Vector2 position, Vector2 size)
+        {
+            var rail = RuntimeUiFactory.Image(name, parent, JoseonUiPalette.HanjiInk);
+            rail.raycastTarget = false;
+            rail.rectTransform.anchorMin = anchorMin;
+            rail.rectTransform.anchorMax = anchorMax;
+            rail.rectTransform.anchoredPosition = position;
+            rail.rectTransform.sizeDelta = size;
         }
 
         private static TextMeshProUGUI Label(string name, Transform parent, Vector2 position,
@@ -831,6 +818,15 @@ namespace JoseonHunter.Presentation.UI
         private static string TierName(WeaponAffixTier tier) =>
             tier == WeaponAffixTier.Perfect ? "최대 추가옵션" :
             tier == WeaponAffixTier.High ? "높은 추가옵션" : "추가옵션";
+
+        private static string SealLabel(WeaponAffixTier tier) =>
+            tier == WeaponAffixTier.Perfect ? "최대" :
+            tier == WeaponAffixTier.High ? "고급" : "일반";
+
+        private static Color SealColor(WeaponAffixTier tier) =>
+            tier == WeaponAffixTier.Perfect ? JoseonUiPalette.SealCrimson :
+            tier == WeaponAffixTier.High ? new Color(.52f, .16f, .10f, 1f) :
+            JoseonUiPalette.HanjiMutedInk;
 
         private static string PotentialName(WeaponPotentialId id)
         {

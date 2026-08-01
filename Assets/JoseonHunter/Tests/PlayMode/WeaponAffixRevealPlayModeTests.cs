@@ -84,7 +84,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
-        public void Appraisal_scroll_crops_the_unused_transparent_source_canvas()
+        public void Appraisal_uses_a_solid_hanji_panel_without_a_stretched_pixel_background()
         {
             var catalog = Resources.Load<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>(
                 "WeaponAffixPresentationCatalog");
@@ -95,10 +95,26 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.ShowDetails(new WeaponSlotView(
                 WeaponId.HwandoFlyingBlade.Value, "Hwando Flying Blade", 1, null));
 
-            var rendered = ImageNamed(presenter, "PixelLab Appraisal Sheet").sprite;
-            Assert.That(rendered, Is.Not.Null);
-            Assert.That(rendered.rect.width, Is.LessThan(catalog.AppraisalScroll.rect.width * .8f));
-            Assert.That(rendered.rect.height, Is.LessThan(catalog.AppraisalScroll.rect.height * .6f));
+            var panel = ImageNamed(presenter, "PixelLab Appraisal Sheet");
+            Assert.That(panel.sprite, Is.Null);
+            Assert.That(panel.color.a, Is.EqualTo(1f));
+            Assert.That(RectNamed(presenter, "Hanji Border Top"), Is.Not.Null);
+            Assert.That(RectNamed(presenter, "Hanji Border Bottom"), Is.Not.Null);
+
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void General_affix_uses_a_readable_Korean_seal_instead_of_the_coin_symbol()
+        {
+            var presenter = new GameObject("Appraisal Seal Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            var result = Result(WeaponAffixTier.Perfect, 0);
+            presenter.PreviewAtForEditor(result, WeaponAffixRevealPresenter.DurationFor(result));
+
+            Assert.That(ImageNamed(presenter, "Final Symbol 0").sprite, Is.Null);
+            Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
