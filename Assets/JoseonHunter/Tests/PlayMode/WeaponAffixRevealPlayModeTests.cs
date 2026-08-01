@@ -16,15 +16,16 @@ namespace JoseonHunter.Tests.PlayMode
     {
         [TearDown]
         public void RestoreTimeScale() => Time.timeScale = 1f;
-        [TestCase(WeaponAffixTier.Standard, 0, 1.25f)]
-        [TestCase(WeaponAffixTier.High, 0, 1.45f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 1.55f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.10f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 2.28f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 2.40f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 1.82f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.03f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.08f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.25f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 2.43f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 2.61f)]
         public void Duration_uses_the_exact_affix_and_jackpot_caps(WeaponAffixTier tier, int potentialCount, float expected)
         {
-            Assert.That(WeaponAffixRevealPresenter.DurationFor(Result(tier, potentialCount)), Is.EqualTo(expected));
+            Assert.That(WeaponAffixRevealPresenter.DurationFor(Result(tier, potentialCount)),
+                Is.EqualTo(expected).Within(.001f));
         }
 
         [Test]
@@ -115,6 +116,36 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(ImageNamed(presenter, "Final Symbol 0").sprite, Is.Null);
             Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
+
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void General_affix_counts_from_zero_after_stop_before_confirmation_appears()
+        {
+            var presenter = new GameObject("Appraisal Count Up Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            var result = new WeaponAffixRollResult(
+                new WeaponAffixRoll(WeaponAffixStat.Area, WeaponAffixTier.Perfect, 20d),
+                System.Array.Empty<WeaponPotentialId>());
+            var timeline = WeaponAffixRevealTimeline.For(result);
+
+            presenter.PreviewAtForEditor(result, timeline.CountStartsAt - .01f);
+            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("공격 범위 +0%"));
+            Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.False);
+
+            presenter.PreviewAtForEditor(result, (timeline.CountStartsAt + timeline.CountEndsAt) * .5f);
+            Assert.That(presenter.DisplayedAffixText, Is.Not.EqualTo("공격 범위 +0%"));
+            Assert.That(presenter.DisplayedAffixText, Is.Not.EqualTo("공격 범위 +20%"));
+            Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.False);
+
+            presenter.PreviewAtForEditor(result, timeline.CountEndsAt);
+            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("공격 범위 +20%"));
+            Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.False);
+
+            presenter.PreviewAtForEditor(result, timeline.ReadStartsAt);
+            Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.True);
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -353,8 +384,10 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Play(Result(WeaponAffixTier.Standard, 0));
             yield return new WaitForSecondsRealtime(.08f);
             Assert.That(presenter.TensionScale, Is.EqualTo(1f));
-            presenter.Play(Result(WeaponAffixTier.High, 0));
-            yield return new WaitForSecondsRealtime(1.32f);
+            var highResult = Result(WeaponAffixTier.High, 0);
+            var highTimeline = WeaponAffixRevealTimeline.For(highResult);
+            presenter.Play(highResult);
+            yield return new WaitForSecondsRealtime(highTimeline.ReadStartsAt + .08f);
             Assert.That(presenter.TensionScale, Is.Not.EqualTo(1f));
             Object.Destroy(presenter.gameObject);
         }
@@ -378,12 +411,16 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var presenter = new GameObject("Slot Lines Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
-            presenter.Play(Result(WeaponAffixTier.Perfect, 3));
-            yield return new WaitForSecondsRealtime(1.27f);
+            var result = Result(WeaponAffixTier.Perfect, 3);
+            var timeline = WeaponAffixRevealTimeline.For(result);
+            presenter.Play(result);
+            yield return new WaitForSecondsRealtime(timeline.PotentialStopsAt(0) + .04f);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(1));
-            yield return new WaitForSecondsRealtime(.18f);
+            yield return new WaitForSecondsRealtime(
+                timeline.PotentialStopsAt(1) - timeline.PotentialStopsAt(0) + .02f);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(2));
-            yield return new WaitForSecondsRealtime(.18f);
+            yield return new WaitForSecondsRealtime(
+                timeline.PotentialStopsAt(2) - timeline.PotentialStopsAt(1) + .02f);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(3));
             Object.Destroy(presenter.gameObject);
         }

@@ -206,6 +206,8 @@ namespace JoseonHunter.Presentation.UI
             detail.text = string.IsNullOrEmpty(weapon.GeneralAffixSummary)
                 ? "추가옵션 없음"
                 : weapon.GeneralAffixSummary;
+            detail.rectTransform.localScale = Vector3.one;
+            detail.color = JoseonUiPalette.HanjiInk;
             accumulatedAffixSummary.text = string.Empty;
             rarityFrame.enabled = false;
             finalSymbols[0].enabled = false;
@@ -337,10 +339,13 @@ namespace JoseonHunter.Presentation.UI
 
             UpdateSpinningSymbols(time);
             SetFinalAffixVisible(time >= timeline.AffixStopsAt);
-            var countProgress = Mathf.InverseLerp(.10f, timeline.AffixStopsAt, time);
+            var countProgress = Mathf.InverseLerp(timeline.CountStartsAt, timeline.CountEndsAt, time);
             detail.text = WeaponAffixValueFormatter.Describe(
                 activeResult.General,
                 WeaponAppraisalPresentation.DisplayValueAt(activeResult.General.Value, countProgress));
+            detail.rectTransform.localScale = Vector3.one * CountPulseScaleAt(time, countProgress);
+            detail.color = Color.Lerp(JoseonUiPalette.HanjiInk, JoseonUiPalette.SealCrimson,
+                countProgress * countProgress);
             VisiblePotentialCount = 0;
             for (var index = 0; index < 3; index++)
             {
@@ -431,6 +436,23 @@ namespace JoseonHunter.Presentation.UI
                 return 1f;
             var progress = Mathf.InverseLerp(timeline.ReadStartsAt, timeline.ReadStartsAt + .22f, time);
             return 1f + Mathf.Sin(progress * Mathf.PI) * .045f;
+        }
+
+        private float CountPulseScaleAt(float time, float progress)
+        {
+            if (time < timeline.CountStartsAt)
+                return 1f;
+            if (time <= timeline.CountEndsAt)
+            {
+                var targetSteps = Mathf.Max(1, Mathf.Abs(Mathf.RoundToInt((float)activeResult.General.Value)));
+                var tick = 1f - Mathf.Repeat(progress * targetSteps, 1f);
+                return 1f + tick * tick * .045f;
+            }
+
+            var finalAge = time - timeline.CountEndsAt;
+            return finalAge < .16f
+                ? 1f + Mathf.Sin(finalAge / .16f * Mathf.PI) * .10f
+                : 1f;
         }
 
         private void SetScrollOpen(float fraction)
@@ -530,6 +552,8 @@ namespace JoseonHunter.Presentation.UI
             SetScrollOpen(WeaponAppraisalPresentation.ScrollOpenAt(revealProfile, 0f));
             title.gameObject.SetActive(true);
             detail.gameObject.SetActive(true);
+            detail.rectTransform.localScale = Vector3.one;
+            detail.color = JoseonUiPalette.HanjiInk;
             confirmButton.gameObject.SetActive(false);
             confirmButton.interactable = false;
             for (var reel = 0; reel < ReelCount; reel++)

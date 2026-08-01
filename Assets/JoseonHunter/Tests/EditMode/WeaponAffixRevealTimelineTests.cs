@@ -6,16 +6,16 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WeaponAffixRevealTimelineTests
     {
-        [TestCase(WeaponAffixTier.Standard, 0, 1.25f)]
-        [TestCase(WeaponAffixTier.High, 0, 1.45f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 1.55f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.10f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 2.28f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 2.40f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 1.82f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.03f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.08f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.25f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 2.43f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 2.61f)]
         public void Duration_matches_the_pacing_contract(WeaponAffixTier tier, int potentialCount, float expected)
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(tier, potentialCount));
-            Assert.That(timeline.Duration, Is.EqualTo(expected));
+            Assert.That(timeline.Duration, Is.EqualTo(expected).Within(.001f));
         }
 
         [Test]
@@ -36,6 +36,18 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(.4f));
             Assert.That(timeline.AffixStopsAt - timeline.SpinEndsAt, Is.GreaterThanOrEqualTo(.3f));
             Assert.That(timeline.Duration, Is.GreaterThanOrEqualTo(1.2f));
+        }
+
+        [TestCase(WeaponAffixTier.Standard, .75f)]
+        [TestCase(WeaponAffixTier.High, .90f)]
+        [TestCase(WeaponAffixTier.Perfect, .90f)]
+        public void Count_up_begins_only_after_the_reel_stops_and_gets_its_full_window(
+            WeaponAffixTier tier, float expectedDuration)
+        {
+            var timeline = WeaponAffixRevealTimeline.For(Result(tier, 0));
+            Assert.That(timeline.CountStartsAt, Is.GreaterThanOrEqualTo(timeline.AffixStopsAt));
+            Assert.That(timeline.CountEndsAt - timeline.CountStartsAt, Is.EqualTo(expectedDuration).Within(.001f));
+            Assert.That(timeline.ReadStartsAt, Is.GreaterThan(timeline.CountEndsAt));
         }
 
         [Test]
