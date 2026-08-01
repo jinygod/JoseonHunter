@@ -83,6 +83,39 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
         }
 
+        [Test]
+        public void Cards_have_an_opaque_hanji_interior_and_a_centered_text_safe_area()
+        {
+            var go = new GameObject("Upgrade Card Readability Test");
+            var presenter = go.AddComponent<UpgradeChoicePresenter>();
+            presenter.BuildForTests();
+            presenter.Open(Choices(), _ => true);
+            var card = go.GetComponentsInChildren<Button>(true)[0];
+            var fill = card.transform.Find("Hanji Interior")?.GetComponent<Image>();
+
+            Assert.That(fill, Is.Not.Null, "The transparent frame needs an opaque interior layer.");
+            Assert.That(fill.color.a, Is.EqualTo(1f));
+            Assert.That(fill.rectTransform.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(fill.rectTransform.anchorMax, Is.EqualTo(Vector2.one));
+            Assert.That(fill.rectTransform.offsetMin.x, Is.GreaterThanOrEqualTo(14f));
+            Assert.That(fill.rectTransform.offsetMax.x, Is.LessThanOrEqualTo(-14f));
+
+            foreach (var labelName in new[] { "Category", "Name", "Behavior", "Delta" })
+            {
+                var label = card.transform.Find(labelName)?.GetComponent<RectTransform>();
+                Assert.That(label, Is.Not.Null, labelName);
+                Assert.That(label.anchoredPosition.x, Is.GreaterThanOrEqualTo(210f), labelName);
+                Assert.That(label.anchoredPosition.x + label.sizeDelta.x,
+                    Is.LessThanOrEqualTo(880f), labelName);
+            }
+            Assert.That(card.transform.Find("Category").GetComponent<Graphic>().color.grayscale,
+                Is.LessThan(.5f));
+            Assert.That(card.transform.Find("Delta").GetComponent<Graphic>().color.grayscale,
+                Is.LessThan(.5f));
+
+            Object.DestroyImmediate(go);
+        }
+
         [UnityTest]
         public IEnumerator Rejected_card_click_releases_the_choice_lock()
         {

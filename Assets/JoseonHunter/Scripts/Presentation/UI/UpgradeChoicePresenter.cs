@@ -17,6 +17,7 @@ namespace JoseonHunter.Presentation.UI
         private sealed class Card
         {
             public Button Button;
+            public Image Interior;
             public Image Accent;
             public Image Icon;
             public TextMeshProUGUI Glyph;
@@ -186,6 +187,11 @@ namespace JoseonHunter.Presentation.UI
                 card.Button.image.color = Color.white;
                 card.Button.image.type = Image.Type.Sliced;
             }
+            card.Interior = RuntimeUiFactory.Image("Hanji Interior", card.Button.transform,
+                JoseonUiPalette.Hanji);
+            RuntimeUiFactory.Stretch(card.Interior.rectTransform, 18f, 18f, 18f, 18f);
+            card.Interior.transform.SetAsFirstSibling();
+            card.Interior.raycastTarget = false;
             var rect = card.Button.GetComponent<RectTransform>();
             Position(rect, new Vector2(.5f, .5f), new Vector2(0f, 264f - index *
                 (PortraitUiMetrics.UpgradeCardHeight + 28f)), new Vector2(PortraitUiMetrics.ModalWidth,
@@ -201,15 +207,18 @@ namespace JoseonHunter.Presentation.UI
             card.Glyph = RuntimeUiFactory.Text("Glyph", card.Button.transform, string.Empty, 72f, TextAlignmentOptions.Center);
             Position(card.Glyph.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
                 new Vector2(104f, 104f), new Vector2(0f, .5f));
-            card.Category = Label("Category", card.Button.transform, new Vector2(170f, -30f),
-                new Vector2(680f, 26f), 17f, TextAlignmentOptions.Left);
-            card.Name = Label("Name", card.Button.transform, new Vector2(170f, -66f),
-                new Vector2(680f, 38f), 27f, TextAlignmentOptions.Left);
-            card.Behavior = Label("Behavior", card.Button.transform, new Vector2(170f, -114f),
-                new Vector2(680f, 48f), 18f, TextAlignmentOptions.Left);
+            card.Category = Label("Category", card.Button.transform, new Vector2(220f, -30f),
+                new Vector2(620f, 26f), 17f, TextAlignmentOptions.Left);
+            card.Name = Label("Name", card.Button.transform, new Vector2(220f, -66f),
+                new Vector2(620f, 38f), 27f, TextAlignmentOptions.Left);
+            card.Name.color = JoseonUiPalette.Ink;
+            card.Behavior = Label("Behavior", card.Button.transform, new Vector2(220f, -114f),
+                new Vector2(620f, 48f), 18f, TextAlignmentOptions.Left);
+            card.Behavior.color = JoseonUiPalette.Ink;
             card.Behavior.enableWordWrapping = true;
-            card.Delta = Label("Delta", card.Button.transform, new Vector2(170f, -190f),
-                new Vector2(680f, 28f), 20f, TextAlignmentOptions.Left);
+            card.Delta = Label("Delta", card.Button.transform, new Vector2(220f, -190f),
+                new Vector2(620f, 28f), 20f, TextAlignmentOptions.Left);
+            card.Glyph.color = JoseonUiPalette.Ink;
             card.Button.onClick.AddListener(() => Choose(choiceIndex));
             return card;
         }
@@ -217,9 +226,11 @@ namespace JoseonHunter.Presentation.UI
         private static void PopulateCard(Card card, UpgradeChoiceView choice)
         {
             var accent = AccentFor(choice.Kind);
+            var readableAccent = Color.Lerp(accent, JoseonUiPalette.Ink, .45f);
+            readableAccent.a = 1f;
             card.Accent.color = accent;
-            card.Category.color = accent;
-            card.Delta.color = accent;
+            card.Category.color = readableAccent;
+            card.Delta.color = readableAccent;
             card.Category.text = choice.Category;
             card.Name.text = choice.Name;
             card.Behavior.text = choice.Behavior;

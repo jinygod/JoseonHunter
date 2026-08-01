@@ -53,6 +53,107 @@ namespace JoseonHunter.Tests.PlayMode
             Object.DestroyImmediate(presenter.gameObject);
         }
 
+        [Test]
+        public void Appraisal_uses_complete_scroll_and_visible_reel_rows_without_floating_decorations()
+        {
+            var presenter = new GameObject("Appraisal Composition Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            var result = Result(WeaponAffixTier.Perfect, 1);
+            presenter.PreviewAtForEditor(result, WeaponAffixRevealPresenter.DurationFor(result));
+
+            Assert.That(ImageNamed(presenter, "Top Scroll Roller").enabled, Is.False);
+            Assert.That(ImageNamed(presenter, "Bottom Scroll Roller").enabled, Is.False);
+            Assert.That(ImageNamed(presenter, "Jackpot Burst").enabled, Is.False);
+            Assert.That(ImageNamed(presenter, "Rare Appraisal Stamp").enabled, Is.False);
+            for (var index = 0; index < 4; index++)
+            {
+                var window = ImageNamed(presenter, "Reel Window " + index);
+                Assert.That(window.enabled, Is.True, "Reel " + index);
+                Assert.That(window.sprite, Is.Not.Null, "Reel " + index);
+                Assert.That(window.preserveAspect, Is.False,
+                    "The frame must fill its row so the icon well stays inside it.");
+            }
+            var lockedLabel = RectNamed(presenter, "Potential Label 1");
+            Assert.That(lockedLabel.gameObject.activeSelf, Is.True);
+            Assert.That(TextValue(lockedLabel), Does.Contain("잠김"));
+
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void Appraisal_scroll_crops_the_unused_transparent_source_canvas()
+        {
+            var catalog = Resources.Load<JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset>(
+                "WeaponAffixPresentationCatalog");
+            Assert.That(catalog, Is.Not.Null);
+            var presenter = new GameObject("Appraisal Scroll Crop Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(catalog);
+            presenter.ShowDetails(new WeaponSlotView(
+                WeaponId.HwandoFlyingBlade.Value, "Hwando Flying Blade", 1, null));
+
+            var rendered = ImageNamed(presenter, "PixelLab Appraisal Sheet").sprite;
+            Assert.That(rendered, Is.Not.Null);
+            Assert.That(rendered.rect.width, Is.LessThan(catalog.AppraisalScroll.rect.width * .8f));
+            Assert.That(rendered.rect.height, Is.LessThan(catalog.AppraisalScroll.rect.height * .6f));
+
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void Weapon_detail_keeps_the_icon_and_text_inside_separate_safe_columns()
+        {
+            var presenter = new GameObject("Weapon Detail Layout Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.ShowDetails(new WeaponSlotView(
+                WeaponId.HwandoFlyingBlade.Value,
+                "Hwando Flying Blade",
+                3,
+                null,
+                "Damage +24%",
+                potentialIds: new[] { WeaponPotentialId.HwandoVenomFang },
+                behavior: "Returning blade"));
+
+            var icon = RectNamed(presenter, "Weapon Icon");
+            var name = RectNamed(presenter, "Weapon Name");
+            var generalWindow = RectNamed(presenter, "Reel Window 0");
+            var generalTitle = RectNamed(presenter, "Affix Title");
+            Assert.That(icon.anchoredPosition.x, Is.GreaterThanOrEqualTo(-350f));
+            Assert.That(name.anchoredPosition.x - name.sizeDelta.x * .5f,
+                Is.GreaterThanOrEqualTo(icon.anchoredPosition.x + icon.sizeDelta.x * .5f + 24f));
+            Assert.That(generalTitle.GetSiblingIndex(), Is.GreaterThan(generalWindow.GetSiblingIndex()),
+                "The general-affix text must render above its row frame.");
+            Assert.That(ImageNamed(presenter, "Confirm Result").sprite, Is.Not.Null,
+                "Detail mode must bind the framed confirm button instead of showing a white rectangle.");
+
+            for (var index = 1; index < 4; index++)
+            {
+                var window = ImageNamed(presenter, "Reel Window " + index);
+                var viewport = RectNamed(presenter, "Reel Viewport " + index);
+                Assert.That(window.enabled, Is.True, "Reel " + index);
+                Assert.That(window.sprite, Is.Not.Null, "Reel " + index);
+                Assert.That(viewport.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)));
+                Assert.That(viewport.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
+                Assert.That(viewport.anchoredPosition.x, Is.LessThanOrEqualTo(-280f));
+                Assert.That(viewport.sizeDelta.x, Is.LessThanOrEqualTo(130f));
+            }
+            for (var index = 0; index < 4; index++)
+            {
+                Assert.That(ImageNamed(presenter, "Stop Flash " + index).enabled, Is.False,
+                    "An unbound flash image becomes an opaque white panel in detail mode.");
+                Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-0").enabled, Is.False);
+                Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-1").enabled, Is.False);
+            }
+            var emptyPotential = RectNamed(presenter, "Potential Label 1");
+            Assert.That(emptyPotential.gameObject.activeSelf, Is.True);
+            Assert.That(TextValue(emptyPotential), Does.Contain("잠김"));
+            Assert.That(TextColor(emptyPotential).grayscale, Is.GreaterThan(.5f));
+
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
         [UnityTest]
         public IEnumerator RepeatUpgradeOpensQuicklyAndShowsAccumulatedTotal()
         {
@@ -285,6 +386,32 @@ namespace JoseonHunter.Tests.PlayMode
             catalog.SetSlotKitForTests(sprite, sprite, sprite, sprite, sprite);
             catalog.SetAppraisalKitForImport(sprite, sprite, sprite, sprite);
             return catalog;
+        }
+
+        private static Image ImageNamed(Component root, string objectName) =>
+            RectNamed(root, objectName).GetComponent<Image>();
+
+        private static RectTransform RectNamed(Component root, string objectName)
+        {
+            foreach (var rect in root.GetComponentsInChildren<RectTransform>(true))
+                if (rect.name == objectName)
+                    return rect;
+            Assert.Fail("Missing UI object: " + objectName);
+            return null;
+        }
+
+        private static string TextValue(RectTransform rect)
+        {
+            var text = rect.GetComponent("TextMeshProUGUI");
+            Assert.That(text, Is.Not.Null, rect.name);
+            return (string)text.GetType().GetProperty("text").GetValue(text);
+        }
+
+        private static Color TextColor(RectTransform rect)
+        {
+            var text = rect.GetComponent("TextMeshProUGUI");
+            Assert.That(text, Is.Not.Null, rect.name);
+            return (Color)text.GetType().GetProperty("color").GetValue(text);
         }
 
         private static WeaponAppraisalViewModel Model(

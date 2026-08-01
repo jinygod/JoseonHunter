@@ -26,6 +26,8 @@ namespace JoseonHunter.Presentation.UI
         private const int ReelCount = 4;
         private const float AppraisalWidth = PortraitUiMetrics.ModalWidth;
         private const float AppraisalHeight = 1320f;
+        private static readonly Rect AppraisalScrollContentUv =
+            new Rect(97f / 600f, 11f / 448f, 405f / 600f, 210f / 448f);
         private GameObject root;
         private CanvasGroup group;
         private RectTransform panelRect;
@@ -68,6 +70,8 @@ namespace JoseonHunter.Presentation.UI
         private bool completed;
         private bool readOnlyDetail;
         private WeaponAffixPresentationCatalogAsset catalogForTests;
+        private Sprite croppedAppraisalScroll;
+        private Sprite croppedAppraisalSource;
 
 #if UNITY_INCLUDE_TESTS
         public void SetCatalogForTests(WeaponAffixPresentationCatalogAsset catalog) => catalogForTests = catalog;
@@ -187,12 +191,14 @@ namespace JoseonHunter.Presentation.UI
             }
 
             readOnlyDetail = true;
-            shell.sprite = activeCatalog.AppraisalScroll;
+            BindAppraisalScroll(activeCatalog.AppraisalScroll);
             topRoller.sprite = activeCatalog.AppraisalRoller;
             bottomRoller.sprite = activeCatalog.AppraisalRoller;
-            topRoller.enabled = topRoller.sprite != null;
-            bottomRoller.enabled = bottomRoller.sprite != null;
+            topRoller.enabled = false;
+            bottomRoller.enabled = false;
             rareStamp.enabled = false;
+            confirmButton.image.sprite = activeCatalog.ReelWindow;
+            confirmButton.image.preserveAspect = false;
             SetScrollOpen(1f);
             weaponIcon.sprite = weapon.Icon != null ? weapon.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
@@ -207,6 +213,14 @@ namespace JoseonHunter.Presentation.UI
             rarityFrame.enabled = false;
             finalSymbols[0].enabled = false;
             burst.enabled = false;
+            for (var reel = 0; reel < ReelCount; reel++)
+            {
+                reelWindows[reel].sprite = activeCatalog.ReelWindow;
+                reelWindows[reel].enabled = reelWindows[reel].sprite != null;
+                stopFlashes[reel].enabled = false;
+                for (var symbol = 0; symbol < 2; symbol++)
+                    spinningSymbols[reel, symbol].enabled = false;
+            }
             for (var index = 0; index < 3; index++)
             {
                 var hasPotential = index < weapon.PotentialIds.Count;
@@ -219,8 +233,8 @@ namespace JoseonHunter.Presentation.UI
                 finalSymbols[index + 1].enabled = hasPotential;
                 potentialLabels[index].text = hasPotential
                     ? PotentialName(potential) + "\n" + PotentialDescription(potential)
-                    : string.Empty;
-                potentialLabels[index].gameObject.SetActive(hasPotential);
+                    : $"잠재 능력 슬롯 {index + 1} · 잠김";
+                potentialLabels[index].gameObject.SetActive(true);
                 reelWindows[index + 1].rectTransform.anchoredPosition = PotentialRowPosition(index);
             }
 
@@ -264,6 +278,12 @@ namespace JoseonHunter.Presentation.UI
                 Skip();
         }
         private void OnDisable() => HideImmediately();
+
+        private void OnDestroy()
+        {
+            HideImmediately();
+            ReleaseCroppedAppraisalScroll();
+        }
 
         public static float DurationFor(WeaponAffixRollResult result) =>
             WeaponAffixRevealTimeline.For(result).Duration;
@@ -334,7 +354,7 @@ namespace JoseonHunter.Presentation.UI
                 var opened = awarded && time >= timeline.PotentialStopsAt(awardedIndex);
                 lockedSlots[index].enabled = !existing && !opened;
                 finalSymbols[index + 1].enabled = existing || opened;
-                potentialLabels[index].gameObject.SetActive(existing || opened);
+                potentialLabels[index].gameObject.SetActive(existing || opened || time >= timeline.ReadStartsAt);
                 if (opened)
                     VisiblePotentialCount++;
                 var slotState = WeaponAppraisalPresentation.ResolveSlot(
@@ -350,17 +370,10 @@ namespace JoseonHunter.Presentation.UI
             }
 
             UpdateStopFlash(0, time, timeline.AffixStopsAt, IsFinalAffixVisible);
-            var jackpotReady = activeResult.NewPotentials.Count > 0 &&
-                VisiblePotentialCount == activeResult.NewPotentials.Count;
-            burst.enabled = jackpotReady;
-            rareStamp.enabled = activeResult.General.Tier != WeaponAffixTier.Standard &&
-                time >= timeline.AffixStopsAt;
-            if (jackpotReady)
-            {
-                var pulse = 1f + Mathf.Sin((time - timeline.ReadStartsAt) * 18f) *
-                    Mathf.Clamp01((timeline.ReadStartsAt + .24f - time) / .24f) * .08f;
-                burst.rectTransform.localScale = Vector3.one * pulse;
-            }
+            // The imported ritual seal includes an opaque white square and the
+            // decorative stamp reads as a detached slot symbol at portrait scale.
+            burst.enabled = false;
+            rareStamp.enabled = false;
 
             var canConfirm = Phase == RevealPhase.Reading;
             confirmButton.gameObject.SetActive(canConfirm);
@@ -448,11 +461,11 @@ namespace JoseonHunter.Presentation.UI
 
         private void BindSprites()
         {
-            shell.sprite = activeCatalog.AppraisalScroll;
+            BindAppraisalScroll(activeCatalog.AppraisalScroll);
             topRoller.sprite = activeCatalog.AppraisalRoller;
             bottomRoller.sprite = activeCatalog.AppraisalRoller;
-            topRoller.enabled = topRoller.sprite != null;
-            bottomRoller.enabled = bottomRoller.sprite != null;
+            topRoller.enabled = false;
+            bottomRoller.enabled = false;
             rareStamp.sprite = activeCatalog.RareAppraisalStamp;
             confirmButton.image.sprite = activeCatalog.ReelWindow;
             rarityFrame.sprite = activeCatalog.SpriteForAffix(activeResult.General.Tier);
@@ -462,7 +475,7 @@ namespace JoseonHunter.Presentation.UI
             for (var reel = 0; reel < ReelCount; reel++)
             {
                 reelWindows[reel].sprite = activeCatalog.ReelWindow;
-                reelWindows[reel].enabled = false;
+                reelWindows[reel].enabled = reelWindows[reel].sprite != null;
                 stopFlashes[reel].sprite = activeCatalog.ReelStopFlash;
                 var spinSprite = reel == 0
                     ? activeResult.General.Tier == WeaponAffixTier.Standard
@@ -487,7 +500,7 @@ namespace JoseonHunter.Presentation.UI
                     : null;
                 potentialLabels[index].text = hasPotential
                     ? PotentialName(potential) + "\n" + PotentialDescription(potential)
-                    : string.Empty;
+                    : $"잠재 능력 슬롯 {index + 1} · 잠김";
             }
 
             burst.sprite = activeResult.NewPotentials.Count > 0
@@ -589,18 +602,18 @@ namespace JoseonHunter.Presentation.UI
 
             weaponIcon = RuntimeUiFactory.Image("Weapon Icon", shell.transform, Color.white);
             weaponIcon.rectTransform.anchorMin = weaponIcon.rectTransform.anchorMax = new Vector2(.5f, .5f);
-            weaponIcon.rectTransform.anchoredPosition = new Vector2(-390f, 270f);
+            weaponIcon.rectTransform.anchoredPosition = new Vector2(-330f, 270f);
             weaponIcon.rectTransform.sizeDelta = new Vector2(132f, 132f);
             weaponIcon.preserveAspect = true;
-            weaponName = Label("Weapon Name", shell.transform, new Vector2(35f, 318f),
-                new Vector2(720f, 48f), 34f, TextAlignmentOptions.Left);
+            weaponName = Label("Weapon Name", shell.transform, new Vector2(80f, 318f),
+                new Vector2(620f, 48f), 34f, TextAlignmentOptions.Left);
             weaponName.fontStyle = FontStyles.Bold;
             weaponName.color = new Color(.08f, .15f, .18f);
-            weaponLevel = Label("Weapon Level", shell.transform, new Vector2(35f, 276f),
-                new Vector2(720f, 30f), 21f, TextAlignmentOptions.Left);
+            weaponLevel = Label("Weapon Level", shell.transform, new Vector2(80f, 276f),
+                new Vector2(620f, 30f), 21f, TextAlignmentOptions.Left);
             weaponLevel.color = new Color(.42f, .23f, .08f);
-            weaponBehavior = Label("Weapon Behavior", shell.transform, new Vector2(35f, 236f),
-                new Vector2(720f, 42f), 20f, TextAlignmentOptions.Left);
+            weaponBehavior = Label("Weapon Behavior", shell.transform, new Vector2(80f, 236f),
+                new Vector2(620f, 42f), 20f, TextAlignmentOptions.Left);
             weaponBehavior.color = new Color(.24f, .27f, .24f);
 
             burst = RuntimeUiFactory.Image("Jackpot Burst", shell.transform, Color.white);
@@ -616,21 +629,21 @@ namespace JoseonHunter.Presentation.UI
             rareStamp.rectTransform.sizeDelta = new Vector2(108f, 108f);
             rareStamp.preserveAspect = true;
 
-            title = Label("Affix Title", shell.transform, new Vector2(-170f, 158f),
-                new Vector2(560f, 36f), 24f, TextAlignmentOptions.Left);
+            title = Label("Affix Title", shell.transform, new Vector2(80f, 158f),
+                new Vector2(600f, 36f), 24f, TextAlignmentOptions.Left);
             title.fontStyle = FontStyles.Bold;
-            title.color = new Color(.38f, .20f, .07f);
-            detail = Label("Affix Detail", shell.transform, new Vector2(-170f, 105f),
-                new Vector2(560f, 62f), 42f, TextAlignmentOptions.Left);
+            title.color = JoseonUiPalette.Gold;
+            detail = Label("Affix Detail", shell.transform, new Vector2(80f, 105f),
+                new Vector2(600f, 62f), 42f, TextAlignmentOptions.Left);
             detail.fontStyle = FontStyles.Bold;
-            detail.color = new Color(.50f, .10f, .08f);
+            detail.color = JoseonUiPalette.Hanji;
             accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
                 new Vector2(-80f, 60f), new Vector2(740f, 28f), 18f,
                 TextAlignmentOptions.Left);
             accumulatedAffixSummary.fontStyle = FontStyles.Bold;
             accumulatedAffixSummary.color = new Color(.12f, .28f, .28f);
 
-            BuildReel(0, new Vector2(360f, 126f), new Vector2(170f, 112f), new Vector2(92f, 82f));
+            BuildReel(0, new Vector2(0f, 126f), new Vector2(820f, 128f), new Vector2(92f, 82f));
             rarityFrame = RuntimeUiFactory.Image("Affix Rarity Frame", finalSymbols[0].transform, Color.white);
             RuntimeUiFactory.Stretch(rarityFrame.rectTransform, -12f, -12f, -12f, -12f);
             rarityFrame.preserveAspect = true;
@@ -641,14 +654,14 @@ namespace JoseonHunter.Presentation.UI
                 var position = PotentialRowPosition(index);
                 BuildReel(index + 1, position, new Vector2(820f, 108f), new Vector2(92f, 72f));
                 lockedSlots[index] = RuntimeUiFactory.Image("Locked Potential " + index,
-                    reelWindows[index + 1].transform, Color.white);
-                RuntimeUiFactory.Stretch(lockedSlots[index].rectTransform, 12f, 10f, 12f, 10f);
+                    finalSymbols[index + 1].transform.parent, Color.white);
+                RuntimeUiFactory.Stretch(lockedSlots[index].rectTransform, 8f, 6f, 8f, 6f);
                 lockedSlots[index].preserveAspect = false;
                 potentialLabels[index] = Label("Potential Label " + index, shell.transform,
                     position + new Vector2(80f, 0f), new Vector2(600f, 48f), 23f,
                     TextAlignmentOptions.Left);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
-                potentialLabels[index].color = new Color(.10f, .16f, .22f);
+                potentialLabels[index].color = JoseonUiPalette.Hanji;
             }
 
             confirmButton = RuntimeUiFactory.Button("Confirm Result", shell.transform, Color.white);
@@ -663,6 +676,13 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 12f, 5f, 12f, 5f);
             confirmLabel.fontStyle = FontStyles.Bold;
             confirmLabel.color = new Color(1f, .91f, .58f);
+
+            title.transform.SetAsLastSibling();
+            detail.transform.SetAsLastSibling();
+            accumulatedAffixSummary.transform.SetAsLastSibling();
+            for (var index = 0; index < potentialLabels.Length; index++)
+                potentialLabels[index].transform.SetAsLastSibling();
+            confirmButton.transform.SetAsLastSibling();
 
             ApplyPortraitLayout();
             root.SetActive(false);
@@ -704,12 +724,14 @@ namespace JoseonHunter.Presentation.UI
             window.rectTransform.anchorMin = window.rectTransform.anchorMax = new Vector2(.5f, .5f);
             window.rectTransform.anchoredPosition = position;
             window.rectTransform.sizeDelta = windowSize;
-            window.preserveAspect = true;
+            window.preserveAspect = false;
             reelWindows[index] = window;
 
             var viewport = RuntimeUiFactory.Image("Reel Viewport " + index, window.transform,
                 new Color(1f, 1f, 1f, .001f));
-            RuntimeUiFactory.Stretch(viewport.rectTransform, 13f, 10f, 13f, 10f);
+            viewport.rectTransform.anchorMin = viewport.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            viewport.rectTransform.anchoredPosition = new Vector2(-windowSize.x * .5f + 72f, 0f);
+            viewport.rectTransform.sizeDelta = new Vector2(112f, Mathf.Min(windowSize.y - 20f, 92f));
             viewport.gameObject.AddComponent<RectMask2D>();
 
             for (var symbolIndex = 0; symbolIndex < 2; symbolIndex++)
@@ -733,6 +755,52 @@ namespace JoseonHunter.Presentation.UI
             flash.rectTransform.sizeDelta = windowSize + new Vector2(26f, 26f);
             flash.preserveAspect = true;
             stopFlashes[index] = flash;
+        }
+
+        private void BindAppraisalScroll(Sprite source)
+        {
+            if (source == null)
+            {
+                ReleaseCroppedAppraisalScroll();
+                shell.sprite = null;
+                return;
+            }
+
+            if (croppedAppraisalSource == source && croppedAppraisalScroll != null)
+            {
+                shell.sprite = croppedAppraisalScroll;
+                return;
+            }
+
+            ReleaseCroppedAppraisalScroll();
+            croppedAppraisalSource = source;
+            var sourceRect = source.textureRect;
+            if (sourceRect.width < 64f || sourceRect.height < 64f)
+            {
+                shell.sprite = source;
+                return;
+            }
+
+            var contentRect = new Rect(
+                sourceRect.x + sourceRect.width * AppraisalScrollContentUv.x,
+                sourceRect.y + sourceRect.height * AppraisalScrollContentUv.y,
+                sourceRect.width * AppraisalScrollContentUv.width,
+                sourceRect.height * AppraisalScrollContentUv.height);
+            croppedAppraisalScroll = Sprite.Create(source.texture, contentRect, new Vector2(.5f, .5f),
+                source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            croppedAppraisalScroll.name = source.name + " Content";
+            shell.sprite = croppedAppraisalScroll;
+        }
+
+        private void ReleaseCroppedAppraisalScroll()
+        {
+            croppedAppraisalSource = null;
+            if (croppedAppraisalScroll == null) return;
+            if (Application.isPlaying)
+                Destroy(croppedAppraisalScroll);
+            else
+                DestroyImmediate(croppedAppraisalScroll);
+            croppedAppraisalScroll = null;
         }
 
         private static TextMeshProUGUI Label(string name, Transform parent, Vector2 position,
