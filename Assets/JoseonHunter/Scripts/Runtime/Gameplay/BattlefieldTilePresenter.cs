@@ -5,7 +5,28 @@ namespace JoseonHunter.Runtime.Gameplay
 {
     public sealed class BattlefieldTilePresenter : MonoBehaviour
     {
-        private static readonly Vector2 FieldSize = new Vector2(72f, 48f);
+        private readonly BattlefieldChunkView[] chunks =
+            new BattlefieldChunkView[BattlefieldChunkLayout.ActiveChunkCount];
+        private readonly Vector2Int[] coordinates =
+            new Vector2Int[BattlefieldChunkLayout.ActiveChunkCount];
+        private readonly Vector2Int[] required =
+            new Vector2Int[BattlefieldChunkLayout.ActiveChunkCount];
+        private readonly bool[] retainedChunks =
+            new bool[BattlefieldChunkLayout.ActiveChunkCount];
+        private readonly bool[] assignedRequirements =
+            new bool[BattlefieldChunkLayout.ActiveChunkCount];
+
+        private Sprite primaryTile;
+        private Sprite alternateTile;
+        private IReadOnlyList<Sprite> decals;
+        private Sprite fallbackSprite;
+        private int battlefieldSeed;
+        private Vector2Int centerCoordinate;
+        private bool built;
+
+        public int ActiveChunkCount => built ? chunks.Length : 0;
+        public IReadOnlyList<Vector2Int> ChunkCoordinates => coordinates;
+        public int RebuildCount { get; private set; }
 
         public void Build(
             Sprite primaryTile,
@@ -13,65 +34,98 @@ namespace JoseonHunter.Runtime.Gameplay
             IReadOnlyList<Sprite> decals,
             Sprite fallbackSprite)
         {
+            BuildInfinite(primaryTile, alternateTile, decals, fallbackSprite, 0x4A4F5345);
+        }
+
+        public void BuildInfinite(
+            Sprite primaryTile,
+            Sprite alternateTile,
+            IReadOnlyList<Sprite> decals,
+            Sprite fallbackSprite,
+            int battlefieldSeed)
+        {
             for (var index = transform.childCount - 1; index >= 0; index--)
             {
                 Destroy(transform.GetChild(index).gameObject);
             }
 
-            if (primaryTile == null)
+            this.primaryTile = primaryTile;
+            this.alternateTile = alternateTile;
+            this.decals = decals;
+            this.fallbackSprite = fallbackSprite;
+            this.battlefieldSeed = battlefieldSeed;
+            RebuildCount = 0;
+            centerCoordinate = Vector2Int.zero;
+            BattlefieldChunkLayout.FillRequired(centerCoordinate, required);
+
+            for (var index = 0; index < chunks.Length; index++)
             {
-                var fallback = CreateRenderer("Quiet Ground", fallbackSprite, -20);
-                fallback.transform.localScale = new Vector3(FieldSize.x, FieldSize.y, 1f);
-                fallback.color = new Color(0.19f, 0.22f, 0.20f);
-                return;
+                var chunkObject = new GameObject("Battlefield Chunk");
+                chunkObject.transform.SetParent(transform, false);
+                chunks[index] = chunkObject.AddComponent<BattlefieldChunkView>();
+                Assign(index, required[index]);
             }
 
-            var ground = CreateRenderer("Quiet Battlefield Ground", primaryTile, -20);
-            if (primaryTile.rect.width >= 128f || primaryTile.rect.height >= 128f)
-            {
-                ground.drawMode = SpriteDrawMode.Simple;
-                var spriteSize = primaryTile.bounds.size;
-                ground.transform.localScale = new Vector3(
-                    FieldSize.x / spriteSize.x,
-                    FieldSize.y / spriteSize.y,
-                    1f);
-            }
-            else
-            {
-                ground.drawMode = SpriteDrawMode.Tiled;
-                ground.size = FieldSize;
-            }
-            ground.color = new Color(0.72f, 0.74f, 0.70f);
+            built = true;
+        }
 
-            if (decals == null || decals.Count == 0)
+        public void Track(Vector2 playerPosition)
+        {
+            if (!built) return;
+            var nextCenter = BattlefieldChunkLayout.CoordinateAt(playerPosition);
+            if (nextCenter == centerCoordinate) return;
+
+            centerCoordinate = nextCenter;
+            BattlefieldChunkLayout.FillRequired(centerCoordinate, required);
+            System.Array.Clear(retainedChunks, 0, retainedChunks.Length);
+            System.Array.Clear(assignedRequirements, 0, assignedRequirements.Length);
+
+            for (var requirementIndex = 0; requirementIndex < required.Length; requirementIndex++)
             {
-                return;
+                for (var chunkIndex = 0; chunkIndex < chunks.Length; chunkIndex++)
+                {
+                    if (retainedChunks[chunkIndex] || coordinates[chunkIndex] != required[requirementIndex])
+                        continue;
+                    retainedChunks[chunkIndex] = true;
+                    assignedRequirements[requirementIndex] = true;
+                    break;
+                }
             }
 
-            var random = new System.Random(0x4A4F5345);
-            for (var index = 0; index < 4; index++)
+            var reusableIndex = 0;
+            for (var requirementIndex = 0; requirementIndex < required.Length; requirementIndex++)
             {
-                var sprite = decals[index % decals.Count];
-                if (sprite == null) continue;
-                var renderer = CreateRenderer("Battlefield Decal", sprite, -18);
-                renderer.transform.localPosition = new Vector3(
-                    Mathf.Lerp(-32f, 32f, (float)random.NextDouble()),
-                    Mathf.Lerp(-20f, 20f, (float)random.NextDouble()),
-                    0f);
-                renderer.transform.localRotation = Quaternion.Euler(0f, 0f, random.Next(0, 4) * 90f);
-                renderer.flipX = random.Next(0, 2) == 0;
-                renderer.color = new Color(0.52f, 0.55f, 0.49f, 0.12f);
+                if (assignedRequirements[requirementIndex]) continue;
+                while (reusableIndex < chunks.Length && retainedChunks[reusableIndex]) reusableIndex++;
+                if (reusableIndex >= chunks.Length) break;
+                Assign(reusableIndex, required[requirementIndex]);
+                retainedChunks[reusableIndex] = true;
+                reusableIndex++;
             }
         }
 
-        private SpriteRenderer CreateRenderer(string objectName, Sprite sprite, int sortingOrder)
+        public int DecorationSignature(Vector2Int coordinate)
         {
-            var result = new GameObject(objectName);
-            result.transform.SetParent(transform, false);
-            var renderer = result.AddComponent<SpriteRenderer>();
-            renderer.sprite = sprite;
-            renderer.sortingOrder = sortingOrder;
-            return renderer;
+            for (var index = 0; index < chunks.Length; index++)
+            {
+                if (coordinates[index] == coordinate && chunks[index] != null)
+                    return chunks[index].DecorationSignature;
+            }
+
+            return int.MinValue;
+        }
+
+        private void Assign(int index, Vector2Int coordinate)
+        {
+            coordinates[index] = coordinate;
+            chunks[index].Assign(
+                coordinate,
+                primaryTile,
+                alternateTile,
+                decals,
+                fallbackSprite,
+                battlefieldSeed);
+            RebuildCount++;
         }
     }
 }
