@@ -21,11 +21,13 @@ namespace JoseonHunter.Domain.Runs
             if (float.IsNaN(deltaSeconds) || float.IsInfinity(deltaSeconds))
                 throw new ArgumentOutOfRangeException(nameof(deltaSeconds), "Run clock delta must be finite.");
             elapsedSeconds = Math.Min(MaximumSeconds, Math.Max(0f, elapsedSeconds + deltaSeconds));
-            return ToPhase(elapsedSeconds);
+            return PhaseAt(elapsedSeconds);
         }
 
-        private static RunPhase ToPhase(float seconds)
+        public static RunPhase PhaseAt(float seconds)
         {
+            if (float.IsNaN(seconds) || float.IsInfinity(seconds) || seconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(seconds), "Run time must be finite and non-negative.");
             if (seconds >= 240f) return RunPhase.Expired;
             if (seconds >= 180f) return RunPhase.Boss;
             if (seconds >= 165f) return RunPhase.BossWarning;

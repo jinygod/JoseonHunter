@@ -39,14 +39,24 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(clock.ElapsedSeconds, Is.EqualTo(45f));
         }
 
-        [TestCase(RunPhase.WaveOne, 28)]
-        [TestCase(RunPhase.WaveTwo, 36)]
-        [TestCase(RunPhase.WaveThree, 48)]
-        [TestCase(RunPhase.Peak, 64)]
+        [TestCase(RunPhase.WaveOne, 72)]
+        [TestCase(RunPhase.WaveTwo, 104)]
+        [TestCase(RunPhase.WaveThree, 128)]
+        [TestCase(RunPhase.Peak, 140)]
         [TestCase(RunPhase.Boss, 36)]
         public void WaveScheduleUsesApprovedActiveCaps(RunPhase phase, int expected)
         {
             Assert.That(WaveSchedule.For(phase).ActiveCap, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void OpeningWaveContainsOnlyPlagueRats()
+        {
+            var wave = WaveSchedule.For(RunPhase.WaveOne);
+
+            Assert.That(wave.WeightedContent, Has.Count.EqualTo(1));
+            Assert.That(wave.WeightedContent[0].ContentId, Is.EqualTo("plague_rat"));
+            Assert.That(wave.WeightedContent[0].Weight, Is.EqualTo(100));
         }
 
         [Test]
