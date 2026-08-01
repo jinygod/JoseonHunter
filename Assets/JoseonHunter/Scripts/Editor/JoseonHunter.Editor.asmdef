@@ -6,7 +6,8 @@
     "JoseonHunter.Content",
     "JoseonHunter.Runtime",
     "JoseonHunter.Presentation",
-    "JoseonHunter.Infrastructure"
+    "JoseonHunter.Infrastructure",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": ["Editor"],
   "autoReferenced": false

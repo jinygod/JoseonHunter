@@ -8,7 +8,8 @@
     "JoseonHunter.Runtime",
     "JoseonHunter.Presentation",
     "JoseonHunter.Infrastructure",
-    "JoseonHunter.Editor"
+    "JoseonHunter.Editor",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"],
