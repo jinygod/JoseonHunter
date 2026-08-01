@@ -31,6 +31,12 @@ namespace JoseonHunter.Runtime.Combat
         {
             if (attack == null) throw new ArgumentNullException(nameof(attack));
             if (enemy == null) throw new ArgumentNullException(nameof(enemy));
+            if (!attack.HasActivePixels || !enemy.HasActivePixels ||
+                !ActiveBoundsOverlap(attack, attackTransform, enemy, enemyTransform))
+            {
+                point = default;
+                return false;
+            }
             for (var y = 0; y < attack.Height; y++)
             for (var x = 0; x < attack.Width; x++)
             {
@@ -42,6 +48,67 @@ namespace JoseonHunter.Runtime.Combat
             }
             point = default;
             return false;
+        }
+
+        private static bool ActiveBoundsOverlap(
+            PixelHitMask first,
+            PixelMaskTransform firstTransform,
+            PixelHitMask second,
+            PixelMaskTransform secondTransform)
+        {
+            var firstBounds = WorldBounds(first, firstTransform);
+            var secondBounds = WorldBounds(second, secondTransform);
+            return firstBounds.Overlaps(secondBounds);
+        }
+
+        internal static bool ActiveBoundsOverlapSwept(
+            PixelHitMask moving,
+            PixelMaskTransform from,
+            PixelMaskTransform to,
+            PixelHitMask target,
+            PixelMaskTransform targetTransform)
+        {
+            if (moving == null) throw new ArgumentNullException(nameof(moving));
+            if (target == null) throw new ArgumentNullException(nameof(target));
+            if (!moving.HasActivePixels || !target.HasActivePixels) return false;
+            var sweptBounds = WorldBounds(moving, from);
+            sweptBounds.Include(WorldBounds(moving, to));
+            return sweptBounds.Overlaps(WorldBounds(target, targetTransform));
+        }
+
+        private static MaskWorldBounds WorldBounds(PixelHitMask mask, PixelMaskTransform transform)
+        {
+            var minimumLocalX = (mask.ActiveMinimumX - mask.PivotPixel.x - .5f) *
+                                transform.Scale.x / mask.PixelsPerUnit;
+            var maximumLocalX = (mask.ActiveMaximumX - mask.PivotPixel.x + .5f) *
+                                transform.Scale.x / mask.PixelsPerUnit;
+            var minimumLocalY = (mask.ActiveMinimumY - mask.PivotPixel.y - .5f) *
+                                transform.Scale.y / mask.PixelsPerUnit;
+            var maximumLocalY = (mask.ActiveMaximumY - mask.PivotPixel.y + .5f) *
+                                transform.Scale.y / mask.PixelsPerUnit;
+            if (transform.FlipX)
+            {
+                var flippedMinimum = -maximumLocalX;
+                maximumLocalX = -minimumLocalX;
+                minimumLocalX = flippedMinimum;
+            }
+
+            var result = MaskWorldBounds.Empty;
+            IncludeCorner(ref result, transform, minimumLocalX, minimumLocalY);
+            IncludeCorner(ref result, transform, minimumLocalX, maximumLocalY);
+            IncludeCorner(ref result, transform, maximumLocalX, minimumLocalY);
+            IncludeCorner(ref result, transform, maximumLocalX, maximumLocalY);
+            return result;
+        }
+
+        private static void IncludeCorner(
+            ref MaskWorldBounds bounds,
+            PixelMaskTransform transform,
+            float localX,
+            float localY)
+        {
+            Rotate(localX, localY, transform.RotationDegrees, out var rotatedX, out var rotatedY);
+            bounds.Include(transform.Position.X + rotatedX, transform.Position.Y + rotatedY);
         }
 
         private static Float2 ToWorld(PixelHitMask mask, PixelMaskTransform transform, int x, int y)
@@ -80,6 +147,42 @@ namespace JoseonHunter.Runtime.Combat
                     var cosine = (float)Math.Cos(radians); var sine = (float)Math.Sin(radians);
                     rotatedX = x * cosine - y * sine; rotatedY = x * sine + y * cosine; return;
             }
+        }
+
+        private struct MaskWorldBounds
+        {
+            public float MinimumX;
+            public float MinimumY;
+            public float MaximumX;
+            public float MaximumY;
+
+            public static MaskWorldBounds Empty => new MaskWorldBounds
+            {
+                MinimumX = float.PositiveInfinity,
+                MinimumY = float.PositiveInfinity,
+                MaximumX = float.NegativeInfinity,
+                MaximumY = float.NegativeInfinity
+            };
+
+            public void Include(float x, float y)
+            {
+                MinimumX = Math.Min(MinimumX, x);
+                MinimumY = Math.Min(MinimumY, y);
+                MaximumX = Math.Max(MaximumX, x);
+                MaximumY = Math.Max(MaximumY, y);
+            }
+
+            public void Include(MaskWorldBounds other)
+            {
+                MinimumX = Math.Min(MinimumX, other.MinimumX);
+                MinimumY = Math.Min(MinimumY, other.MinimumY);
+                MaximumX = Math.Max(MaximumX, other.MaximumX);
+                MaximumY = Math.Max(MaximumY, other.MaximumY);
+            }
+
+            public bool Overlaps(MaskWorldBounds other) =>
+                MinimumX <= other.MaximumX && MaximumX >= other.MinimumX &&
+                MinimumY <= other.MaximumY && MaximumY >= other.MinimumY;
         }
     }
 }

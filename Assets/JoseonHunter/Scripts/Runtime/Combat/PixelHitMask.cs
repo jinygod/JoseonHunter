@@ -21,12 +21,37 @@ namespace JoseonHunter.Runtime.Combat
             PivotPixel = pivotPixel;
             PixelsPerUnit = pixelsPerUnit;
             bits = (uint[])packedBits.Clone();
+            var minimumX = width;
+            var minimumY = height;
+            var maximumX = -1;
+            var maximumY = -1;
+            for (var index = 0; index < width * height; index++)
+            {
+                if ((bits[index >> 5] & (1u << (index & 31))) == 0) continue;
+                var x = index % width;
+                var y = index / width;
+                minimumX = Math.Min(minimumX, x);
+                minimumY = Math.Min(minimumY, y);
+                maximumX = Math.Max(maximumX, x);
+                maximumY = Math.Max(maximumY, y);
+            }
+
+            HasActivePixels = maximumX >= minimumX && maximumY >= minimumY;
+            ActiveMinimumX = minimumX;
+            ActiveMinimumY = minimumY;
+            ActiveMaximumX = maximumX;
+            ActiveMaximumY = maximumY;
         }
 
         public int Width { get; }
         public int Height { get; }
         public Vector2 PivotPixel { get; }
         public float PixelsPerUnit { get; }
+        internal bool HasActivePixels { get; }
+        internal int ActiveMinimumX { get; }
+        internal int ActiveMinimumY { get; }
+        internal int ActiveMaximumX { get; }
+        internal int ActiveMaximumY { get; }
 
         public bool IsActive(int x, int y)
         {

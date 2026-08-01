@@ -18,6 +18,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly WeaponRuntimeController runtime;
         private readonly List<Projectile> active = new List<Projectile>();
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
+        private readonly List<ICombatTarget> sweptCandidates = new List<ICombatTarget>();
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
         public event Action<LinearProjectileTravel> ProjectileTravelled;
@@ -150,14 +151,28 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var pixelWorldSize = 1f / projectile.Mask.PixelsPerUnit;
             var stepSize = Mathf.Max(0.01f, pixelWorldSize * 0.5f);
             var steps = Mathf.Clamp(Mathf.CeilToInt(distance / stepSize), 1, MaxSweepSamples - 1);
+            var previousTransform = TransformFor(renderer, previousPosition);
+            var currentTransform = TransformFor(renderer, projectile.Position);
+            sweptCandidates.Clear();
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive || target.HurtMask == null) continue;
+                if (PixelMaskContactService.ActiveBoundsOverlapSwept(
+                        projectile.Mask,
+                        previousTransform,
+                        currentTransform,
+                        target.HurtMask,
+                        target.HurtMaskTransform))
+                    sweptCandidates.Add(target);
+            }
             for (var step = 0; step <= steps; step++)
             {
                 var fraction = step / (float)steps;
                 var sample = new Float2(previousPosition.X + deltaX * fraction, previousPosition.Y + deltaY * fraction);
                 var attackTransform = TransformFor(renderer, sample);
-                foreach (var target in targets)
+                foreach (var target in sweptCandidates)
                 {
-                    if (target == null || !target.IsAlive || target.HurtMask == null) continue;
+                    if (!target.IsAlive || target.HurtMask == null) continue;
                     if (!PixelMaskContactService.TryFindContact(projectile.Mask, attackTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
                     var damage = projectile.Damage;
                     var potentialContact = projectile.FullDraw && PotentialMaskOverlaps(projectile, target, contact);
