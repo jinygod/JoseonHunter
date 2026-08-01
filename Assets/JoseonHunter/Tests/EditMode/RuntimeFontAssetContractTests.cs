@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using JoseonHunter.Presentation.UI;
 
 namespace JoseonHunter.Tests.EditMode
 {
@@ -19,6 +20,15 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(font.name, Is.EqualTo(expectedName));
             Assert.That(font.atlasPopulationMode, Is.EqualTo(AtlasPopulationMode.Dynamic));
             Assert.That(font.fallbackFontAssetTable, Does.Contain(fallback));
+        }
+
+        [TestCase(RuntimeFontRole.Body, "MaruBuri-Regular-Dynamic SDF")]
+        [TestCase(RuntimeFontRole.BodyEmphasis, "MaruBuri-SemiBold-Dynamic SDF")]
+        [TestCase(RuntimeFontRole.Title, "ChosunGs-Dynamic SDF")]
+        [TestCase(RuntimeFontRole.Damage, "BlackAndWhitePicture-Dynamic SDF")]
+        public void RuntimeFontCatalogMapsSemanticRole(RuntimeFontRole role, string expectedName)
+        {
+            Assert.That(RuntimeFontCatalog.For(role).name, Is.EqualTo(expectedName));
         }
     }
 }

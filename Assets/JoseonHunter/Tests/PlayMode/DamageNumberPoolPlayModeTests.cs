@@ -23,6 +23,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             Assert.That(presenter.DisplayFontSize, Is.InRange(2f, 4f));
+            Assert.That(presenter.DisplayFontName, Is.EqualTo("BlackAndWhitePicture-Dynamic SDF"));
             Assert.That(presenter.transform.position.y, Is.InRange(3.15f, 3.7f));
             Assert.That(presenter.transform.localScale.x, Is.LessThanOrEqualTo(1f));
             Object.Destroy(root);

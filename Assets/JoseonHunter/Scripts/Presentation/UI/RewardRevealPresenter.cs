@@ -106,9 +106,11 @@ namespace JoseonHunter.Presentation.UI
             icon = RuntimeUiFactory.Image("Icon", panel.transform, Color.white);
             Position(icon.rectTransform, new Vector2(0f, .5f), new Vector2(42f, 0f), new Vector2(128f, 128f), new Vector2(0f, .5f));
             icon.preserveAspect = true;
-            glyph = RuntimeUiFactory.Text("Glyph", panel.transform, string.Empty, 78f, TextAlignmentOptions.Center);
+            glyph = RuntimeUiFactory.Text("Glyph", panel.transform, string.Empty, 78f,
+                TextAlignmentOptions.Center, RuntimeFontRole.Title);
             Position(glyph.rectTransform, new Vector2(0f, .5f), new Vector2(42f, 0f), new Vector2(128f, 128f), new Vector2(0f, .5f));
-            title = RuntimeUiFactory.Text("Title", panel.transform, string.Empty, 36f, TextAlignmentOptions.Left);
+            title = RuntimeUiFactory.Text("Title", panel.transform, string.Empty, 36f,
+                TextAlignmentOptions.Left, RuntimeFontRole.Title);
             Position(title.rectTransform, new Vector2(0f, .5f), new Vector2(206f, 34f), new Vector2(470f, 54f), new Vector2(0f, .5f));
             detail = RuntimeUiFactory.Text("Detail", panel.transform, string.Empty, 24f, TextAlignmentOptions.Left);
             Position(detail.rectTransform, new Vector2(0f, .5f), new Vector2(206f, -34f), new Vector2(470f, 42f), new Vector2(0f, .5f));
@@ -117,7 +119,7 @@ namespace JoseonHunter.Presentation.UI
                 new Vector2(152f, 42f), new Vector2(1f, 0f));
             confirmButton.onClick.AddListener(Confirm);
             var confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "CONFIRM", 18f,
-                TextAlignmentOptions.Center);
+                TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 6f, 4f, 6f, 4f);
             root.SetActive(false);
         }

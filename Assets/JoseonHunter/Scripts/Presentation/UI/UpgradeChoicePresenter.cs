@@ -55,7 +55,8 @@ namespace JoseonHunter.Presentation.UI
             cardsRoot = RuntimeUiFactory.Rect("Upgrade Cards", root.transform).gameObject;
             RuntimeUiFactory.Stretch(cardsRoot.GetComponent<RectTransform>(), PortraitUiMetrics.SideMargin,
                 PortraitUiMetrics.BottomMargin, PortraitUiMetrics.SideMargin, PortraitUiMetrics.TopMargin);
-            heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "강화를 선택하세요", 34f, TextAlignmentOptions.Center);
+            heading = RuntimeUiFactory.Text("Heading", cardsRoot.transform, "강화를 선택하세요", 34f,
+                TextAlignmentOptions.Center, RuntimeFontRole.Title);
             Position(heading.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -8f), new Vector2(920f, 58f), new Vector2(.5f, 1f));
 
             for (var index = 0; index < cards.Length; index++) cards[index] = CreateCard(index);
@@ -204,20 +205,21 @@ namespace JoseonHunter.Presentation.UI
             Position(card.Icon.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
                 new Vector2(104f, 104f), new Vector2(0f, .5f));
             card.Icon.preserveAspect = true;
-            card.Glyph = RuntimeUiFactory.Text("Glyph", card.Button.transform, string.Empty, 72f, TextAlignmentOptions.Center);
+            card.Glyph = RuntimeUiFactory.Text("Glyph", card.Button.transform, string.Empty, 72f,
+                TextAlignmentOptions.Center, RuntimeFontRole.Title);
             Position(card.Glyph.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
                 new Vector2(104f, 104f), new Vector2(0f, .5f));
             card.Category = Label("Category", card.Button.transform, new Vector2(220f, -30f),
-                new Vector2(620f, 26f), 17f, TextAlignmentOptions.Left);
+                new Vector2(620f, 26f), 17f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             card.Name = Label("Name", card.Button.transform, new Vector2(220f, -66f),
-                new Vector2(620f, 38f), 27f, TextAlignmentOptions.Left);
+                new Vector2(620f, 38f), 27f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             card.Name.color = JoseonUiPalette.Ink;
             card.Behavior = Label("Behavior", card.Button.transform, new Vector2(220f, -114f),
                 new Vector2(620f, 48f), 18f, TextAlignmentOptions.Left);
             card.Behavior.color = JoseonUiPalette.Ink;
             card.Behavior.enableWordWrapping = true;
             card.Delta = Label("Delta", card.Button.transform, new Vector2(220f, -190f),
-                new Vector2(620f, 28f), 20f, TextAlignmentOptions.Left);
+                new Vector2(620f, 28f), 20f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             card.Glyph.color = JoseonUiPalette.Ink;
             card.Button.onClick.AddListener(() => Choose(choiceIndex));
             return card;
@@ -249,9 +251,9 @@ namespace JoseonHunter.Presentation.UI
             kind == UpgradeKind.Weapon ? "弓" : "福";
 
         private static TextMeshProUGUI Label(string name, Transform parent, Vector2 position, Vector2 size,
-            float fontSize, TextAlignmentOptions alignment)
+            float fontSize, TextAlignmentOptions alignment, RuntimeFontRole role = RuntimeFontRole.Body)
         {
-            var label = RuntimeUiFactory.Text(name, parent, string.Empty, fontSize, alignment);
+            var label = RuntimeUiFactory.Text(name, parent, string.Empty, fontSize, alignment, role);
             Position(label.rectTransform, new Vector2(0f, 1f), position, size, new Vector2(0f, 1f));
             return label;
         }

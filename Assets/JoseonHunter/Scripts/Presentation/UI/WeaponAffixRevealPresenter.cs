@@ -606,7 +606,7 @@ namespace JoseonHunter.Presentation.UI
             weaponIcon.rectTransform.sizeDelta = new Vector2(132f, 132f);
             weaponIcon.preserveAspect = true;
             weaponName = Label("Weapon Name", shell.transform, new Vector2(80f, 318f),
-                new Vector2(620f, 48f), 34f, TextAlignmentOptions.Left);
+                new Vector2(620f, 48f), 34f, TextAlignmentOptions.Left, RuntimeFontRole.Title);
             weaponName.fontStyle = FontStyles.Bold;
             weaponName.color = new Color(.08f, .15f, .18f);
             weaponLevel = Label("Weapon Level", shell.transform, new Vector2(80f, 276f),
@@ -630,18 +630,18 @@ namespace JoseonHunter.Presentation.UI
             rareStamp.preserveAspect = true;
 
             title = Label("Affix Title", shell.transform, new Vector2(80f, 158f),
-                new Vector2(600f, 36f), 24f, TextAlignmentOptions.Left);
+                new Vector2(600f, 36f), 24f, TextAlignmentOptions.Left, RuntimeFontRole.Title);
             title.fontStyle = FontStyles.Bold;
-            title.color = JoseonUiPalette.Gold;
+            title.color = JoseonUiPalette.SealCrimson;
             detail = Label("Affix Detail", shell.transform, new Vector2(80f, 105f),
-                new Vector2(600f, 62f), 42f, TextAlignmentOptions.Left);
+                new Vector2(600f, 62f), 42f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             detail.fontStyle = FontStyles.Bold;
-            detail.color = JoseonUiPalette.Hanji;
+            detail.color = JoseonUiPalette.HanjiInk;
             accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
                 new Vector2(-80f, 60f), new Vector2(740f, 28f), 18f,
                 TextAlignmentOptions.Left);
             accumulatedAffixSummary.fontStyle = FontStyles.Bold;
-            accumulatedAffixSummary.color = new Color(.12f, .28f, .28f);
+            accumulatedAffixSummary.color = JoseonUiPalette.HanjiMutedInk;
 
             BuildReel(0, new Vector2(0f, 126f), new Vector2(820f, 128f), new Vector2(92f, 82f));
             rarityFrame = RuntimeUiFactory.Image("Affix Rarity Frame", finalSymbols[0].transform, Color.white);
@@ -659,7 +659,7 @@ namespace JoseonHunter.Presentation.UI
                 lockedSlots[index].preserveAspect = false;
                 potentialLabels[index] = Label("Potential Label " + index, shell.transform,
                     position + new Vector2(80f, 0f), new Vector2(600f, 48f), 23f,
-                    TextAlignmentOptions.Left);
+                    TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
                 potentialLabels[index].color = JoseonUiPalette.Hanji;
             }
@@ -672,7 +672,7 @@ namespace JoseonHunter.Presentation.UI
             confirmButton.image.preserveAspect = false;
             confirmButton.onClick.AddListener(OnConfirmButton);
             confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "확인  ·  계속", 21f,
-                TextAlignmentOptions.Center);
+                TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 12f, 5f, 12f, 5f);
             confirmLabel.fontStyle = FontStyles.Bold;
             confirmLabel.color = new Color(1f, .91f, .58f);
@@ -804,9 +804,10 @@ namespace JoseonHunter.Presentation.UI
         }
 
         private static TextMeshProUGUI Label(string name, Transform parent, Vector2 position,
-            Vector2 size, float fontSize, TextAlignmentOptions alignment)
+            Vector2 size, float fontSize, TextAlignmentOptions alignment,
+            RuntimeFontRole role = RuntimeFontRole.Body)
         {
-            var label = RuntimeUiFactory.Text(name, parent, string.Empty, fontSize, alignment);
+            var label = RuntimeUiFactory.Text(name, parent, string.Empty, fontSize, alignment, role);
             label.rectTransform.anchorMin = label.rectTransform.anchorMax = new Vector2(.5f, .5f);
             label.rectTransform.anchoredPosition = position;
             label.rectTransform.sizeDelta = size;

@@ -2,6 +2,7 @@ using System;
 using JoseonHunter.Domain.Combat;
 using TMPro;
 using UnityEngine;
+using JoseonHunter.Presentation.UI;
 
 namespace JoseonHunter.Presentation.Combat
 {
@@ -31,10 +32,12 @@ namespace JoseonHunter.Presentation.Combat
         public string DisplayText => textMesh == null ? string.Empty : textMesh.text;
         public Color DisplayColor => textMesh == null ? Color.clear : textMesh.color;
         public float DisplayFontSize => textMesh == null ? 0f : textMesh.fontSize;
+        public string DisplayFontName => textMesh == null || textMesh.font == null ? string.Empty : textMesh.font.name;
 
         private void Awake()
         {
             textMesh = GetComponent<TextMeshPro>();
+            textMesh.font = RuntimeFontCatalog.For(RuntimeFontRole.Damage);
             textMesh.alignment = TextAlignmentOptions.Center;
             textMesh.enableWordWrapping = false;
             textMesh.fontSize = NormalFontSize;

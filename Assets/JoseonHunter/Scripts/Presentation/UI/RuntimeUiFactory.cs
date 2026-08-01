@@ -6,18 +6,6 @@ namespace JoseonHunter.Presentation.UI
 {
     public static class RuntimeUiFactory
     {
-        private const string KoreanFontPath = "Fonts/NotoSansKR-Dynamic SDF";
-        private static TMP_FontAsset koreanFont;
-
-        private static TMP_FontAsset KoreanFont
-        {
-            get
-            {
-                if (koreanFont == null) koreanFont = Resources.Load<TMP_FontAsset>(KoreanFontPath);
-                return koreanFont;
-            }
-        }
-
         public static RectTransform Rect(string name, Transform parent)
         {
             var result = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
@@ -33,18 +21,16 @@ namespace JoseonHunter.Presentation.UI
         }
 
         public static TextMeshProUGUI Text(string name, Transform parent, string value, float size,
-            TextAlignmentOptions alignment)
+            TextAlignmentOptions alignment, RuntimeFontRole role = RuntimeFontRole.Body)
         {
             var result = Rect(name, parent).gameObject.AddComponent<TextMeshProUGUI>();
-            var font = KoreanFont;
-            if (font == null)
-                Debug.LogError($"Missing runtime UI font at Resources/{KoreanFontPath}.");
-            else
+            var font = RuntimeFontCatalog.For(role);
+            if (font != null)
                 result.font = font;
             result.text = value;
             result.fontSize = size;
             result.alignment = alignment;
-            result.color = JoseonUiPalette.Hanji;
+            result.color = JoseonUiPalette.DarkPanelText;
             result.raycastTarget = false;
             return result;
         }

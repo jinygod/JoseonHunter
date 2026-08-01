@@ -103,7 +103,14 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 if (text.GetType().Name != "TextMeshProUGUI") continue;
                 var font = text.GetType().GetProperty("font").GetValue(text) as Object;
-                Assert.That(font.name, Is.EqualTo("NotoSansKR-Dynamic SDF"), text.name);
+                CollectionAssert.Contains(new[]
+                {
+                    "MaruBuri-Regular-Dynamic SDF",
+                    "MaruBuri-SemiBold-Dynamic SDF",
+                    "ChosunGs-Dynamic SDF"
+                }, font.name, text.name);
+                if (text.name == "Heading")
+                    Assert.That(font.name, Is.EqualTo("ChosunGs-Dynamic SDF"), text.name);
             }
         }
 

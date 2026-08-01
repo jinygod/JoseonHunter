@@ -41,6 +41,23 @@ namespace JoseonHunter.Editor.AssetProduction
             Debug.Log($"Generated {Definitions.Length} licensed dynamic TMP font assets.");
         }
 
+        [MenuItem("JoseonHunter/Assets/Clear Runtime Font Dynamic Data")]
+        public static void ClearGeneratedDynamicData()
+        {
+            foreach (var definition in Definitions)
+            {
+                var asset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                    $"{ResourceDirectory}/{definition.AssetName}.asset");
+                if (asset == null)
+                    continue;
+                asset.ClearFontAssetData();
+                EditorUtility.SetDirty(asset);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Cleared dynamic atlas data for {Definitions.Length} runtime font assets.");
+        }
+
         private static void Generate(FontDefinition definition, TMP_FontAsset fallback)
         {
             var outputPath = $"{ResourceDirectory}/{definition.AssetName}.asset";
