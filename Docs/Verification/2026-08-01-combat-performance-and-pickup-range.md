@@ -52,7 +52,7 @@ The existing rendered 100-enemy load test remained green: 120 sampled frames pro
 | Existing eight-weapon combat PlayMode | 9/9 passed. |
 | Android development build | Passed; APK SHA-256 `ab713615da27169c06d2fa9708cd54469bac6e54e11e5a38166020d81c613396`. |
 
-The APK file is 172,148,490 bytes. ZIP entry compressed payload is about 110.16 MB; the remaining file size is Android package alignment/signing space, not 62 MB of newly added game assets.
+The APK file is 172,148,490 bytes, while its ZIP entries total about 110.16 MB of compressed payload. No additional 62 MB game-asset entry was found; the difference is outside the summed ZIP-entry payload and was not attributed further without an APK-specific packaging analysis.
 
 ## Limitations
 
