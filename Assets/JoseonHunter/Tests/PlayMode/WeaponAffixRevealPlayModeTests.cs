@@ -169,11 +169,14 @@ namespace JoseonHunter.Tests.PlayMode
             var name = RectNamed(presenter, "Weapon Name");
             var generalWindow = RectNamed(presenter, "Reel Window 0");
             var generalTitle = RectNamed(presenter, "Affix Title");
+            var generalDetail = RectNamed(presenter, "Affix Detail");
             Assert.That(icon.anchoredPosition.x, Is.GreaterThanOrEqualTo(-350f));
             Assert.That(name.anchoredPosition.x - name.sizeDelta.x * .5f,
                 Is.GreaterThanOrEqualTo(icon.anchoredPosition.x + icon.sizeDelta.x * .5f + 24f));
             Assert.That(generalTitle.GetSiblingIndex(), Is.GreaterThan(generalWindow.GetSiblingIndex()),
                 "The general-affix text must render above its row frame.");
+            Assert.That(TextColor(generalTitle).grayscale, Is.GreaterThan(.45f));
+            Assert.That(TextColor(generalDetail).grayscale, Is.GreaterThan(.65f));
             Assert.That(ImageNamed(presenter, "Confirm Result").sprite, Is.Not.Null,
                 "Detail mode must bind the framed confirm button instead of showing a white rectangle.");
 

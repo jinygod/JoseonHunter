@@ -207,7 +207,7 @@ namespace JoseonHunter.Presentation.UI
                 ? "추가옵션 없음"
                 : weapon.GeneralAffixSummary;
             detail.rectTransform.localScale = Vector3.one;
-            detail.color = JoseonUiPalette.HanjiInk;
+            detail.color = JoseonUiPalette.DarkPanelText;
             accumulatedAffixSummary.text = string.Empty;
             rarityFrame.enabled = false;
             finalSymbols[0].enabled = false;
@@ -344,7 +344,7 @@ namespace JoseonHunter.Presentation.UI
                 activeResult.General,
                 WeaponAppraisalPresentation.DisplayValueAt(activeResult.General.Value, countProgress));
             detail.rectTransform.localScale = Vector3.one * CountPulseScaleAt(time, countProgress);
-            detail.color = Color.Lerp(JoseonUiPalette.HanjiInk, JoseonUiPalette.SealCrimson,
+            detail.color = Color.Lerp(JoseonUiPalette.DarkPanelText, JoseonUiPalette.Gold,
                 countProgress * countProgress);
             VisiblePotentialCount = 0;
             for (var index = 0; index < 3; index++)
@@ -553,7 +553,7 @@ namespace JoseonHunter.Presentation.UI
             title.gameObject.SetActive(true);
             detail.gameObject.SetActive(true);
             detail.rectTransform.localScale = Vector3.one;
-            detail.color = JoseonUiPalette.HanjiInk;
+            detail.color = JoseonUiPalette.DarkPanelText;
             confirmButton.gameObject.SetActive(false);
             confirmButton.interactable = false;
             for (var reel = 0; reel < ReelCount; reel++)
@@ -656,11 +656,11 @@ namespace JoseonHunter.Presentation.UI
             title = Label("Affix Title", shell.transform, new Vector2(80f, 158f),
                 new Vector2(600f, 36f), 24f, TextAlignmentOptions.Left, RuntimeFontRole.Title);
             title.fontStyle = FontStyles.Bold;
-            title.color = JoseonUiPalette.SealCrimson;
+            title.color = JoseonUiPalette.Gold;
             detail = Label("Affix Detail", shell.transform, new Vector2(80f, 105f),
                 new Vector2(600f, 62f), 42f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             detail.fontStyle = FontStyles.Bold;
-            detail.color = JoseonUiPalette.HanjiInk;
+            detail.color = JoseonUiPalette.DarkPanelText;
             accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
                 new Vector2(-80f, 60f), new Vector2(740f, 28f), 18f,
                 TextAlignmentOptions.Left);
