@@ -26,7 +26,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator PrototypeDurationAndInitialEnemiesRespectPortraitViewport()
+        public IEnumerator PrototypeDurationAndInitialEnemiesUseIndependentPortraitEngagementBounds()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -37,6 +37,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             var camera = Camera.main;
             Assert.That(camera, Is.Not.Null);
+            Assert.That(camera.orthographicSize, Is.EqualTo(18f));
             var originalAspect = camera.aspect;
             var randomState = Random.state;
             try
@@ -45,7 +46,10 @@ namespace JoseonHunter.Tests.PlayMode
                 {
                     camera.aspect = aspect;
                     controller.SpawnEnemyAtCurrentViewportForTests();
-                    Assert.That(ViewportBounds(camera).Contains(controller.LastSpawnPositionForTests), Is.False);
+                    var engagement = CombatVisualScaleProfile.MobilePortrait.SpawnBounds(
+                        camera.transform.position, aspect);
+                    Assert.That(engagement.Contains(controller.LastSpawnPositionForTests), Is.False);
+                    Assert.That(ViewportBounds(camera).Contains(controller.LastSpawnPositionForTests), Is.True);
                 }
             }
             finally
@@ -56,7 +60,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator SpawnedRendererBoundsStayOutsideViewportForEverySideAndRank()
+        public IEnumerator SpawnedRendererBoundsStayOutsideEngagementBoundsForEverySideAndRank()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -82,7 +86,8 @@ namespace JoseonHunter.Tests.PlayMode
                         controller.ConfigureViewportSpawnForTests(side, .5f, scenario.Margin, scenario.ForceElite);
                         controller.SpawnEnemyForViewportClearanceTests(scenario.IsBoss, scenario.MidBossTier);
 
-                        var view = ViewportBounds(camera);
+                        var view = CombatVisualScaleProfile.MobilePortrait.SpawnBounds(
+                            camera.transform.position, camera.aspect);
                         AssertRendererIsOutside(view, side, controller.LastSpawnRendererBoundsForTests);
                         AssertRootRemainsOutside(view, side, scenario.Margin, controller.LastSpawnRootPositionForTests);
                     }

@@ -790,20 +790,12 @@ namespace JoseonHunter.Runtime.Gameplay
             }
         }
 
-        private Rect CurrentViewportBounds()
+        private Rect CurrentSpawnBounds()
         {
-            if (gameplayCamera == null)
-            {
-                var center = player != null ? (Vector2)player.transform.position : Vector2.zero;
-                return new Rect(center - Vector2.one, Vector2.one * 2f);
-            }
-
-            var gameplayDepth = player != null
-                ? Mathf.Abs(player.transform.position.z - gameplayCamera.transform.position.z)
-                : Mathf.Abs(gameplayCamera.transform.position.z);
-            var bottomLeft = gameplayCamera.ViewportToWorldPoint(new Vector3(0f, 0f, gameplayDepth));
-            var topRight = gameplayCamera.ViewportToWorldPoint(new Vector3(1f, 1f, gameplayDepth));
-            return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+            var center = player != null ? (Vector2)player.transform.position :
+                gameplayCamera != null ? (Vector2)gameplayCamera.transform.position : Vector2.zero;
+            var aspect = gameplayCamera != null ? gameplayCamera.aspect : 9f / 16f;
+            return VisualScale.SpawnBounds(center, aspect);
         }
 
         private void SpawnEnemy(bool isBoss, int midBossTier = 0)
@@ -817,8 +809,8 @@ namespace JoseonHunter.Runtime.Gameplay
             t = spawnTForTests ?? t;
             margin = spawnMarginForTests ?? margin;
 #endif
-            var viewportBounds = CurrentViewportBounds();
-            var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(viewportBounds, side, t, margin);
+            var spawnBounds = CurrentSpawnBounds();
+            var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(spawnBounds, side, t, margin);
 #if UNITY_INCLUDE_TESTS
             LastSpawnPositionForTests = position;
 #endif
@@ -871,11 +863,11 @@ namespace JoseonHunter.Runtime.Gameplay
                     : VisualScale.ScaleFor(rank);
             enemyObject.transform.localScale = Vector3.one * displayScale;
 #if UNITY_INCLUDE_TESTS
-            var finalRendererBounds = MoveRendererOutsideViewport(enemyObject.transform, renderer, viewportBounds, side);
+            var finalRendererBounds = MoveRendererOutsideViewport(enemyObject.transform, renderer, spawnBounds, side);
             LastSpawnRootPositionForTests = enemyObject.transform.position;
             LastSpawnRendererBoundsForTests = finalRendererBounds;
 #else
-            MoveRendererOutsideViewport(enemyObject.transform, renderer, viewportBounds, side);
+            MoveRendererOutsideViewport(enemyObject.transform, renderer, spawnBounds, side);
 #endif
             if (chosenSprite == null)
             {

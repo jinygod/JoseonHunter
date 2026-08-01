@@ -11,6 +11,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private CombatVisualScaleProfile(
             float baselineCameraOrthographicSize,
             float cameraOrthographicSize,
+            float spawnOrthographicSize,
             float playerScale,
             float normalEnemyScale,
             float eliteEnemyScale,
@@ -23,6 +24,7 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             BaselineCameraOrthographicSize = baselineCameraOrthographicSize;
             CameraOrthographicSize = cameraOrthographicSize;
+            SpawnOrthographicSize = spawnOrthographicSize;
             PlayerScale = playerScale;
             NormalEnemyScale = normalEnemyScale;
             EliteEnemyScale = eliteEnemyScale;
@@ -38,6 +40,7 @@ namespace JoseonHunter.Runtime.Gameplay
             new CombatVisualScaleProfile(
                 6.25f,
                 10.5f,
+                10.5f,
                 0.62f,
                 0.62f,
                 0.775f,
@@ -51,7 +54,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public static CombatVisualScaleProfile MobilePortrait { get; } =
             new CombatVisualScaleProfile(
                 baselineCameraOrthographicSize: 6.25f,
-                cameraOrthographicSize: 7.25f,
+                cameraOrthographicSize: 18f,
+                spawnOrthographicSize: 8.5f,
                 playerScale: .82f,
                 normalEnemyScale: .78f,
                 eliteEnemyScale: 1f,
@@ -64,6 +68,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         public float BaselineCameraOrthographicSize { get; }
         public float CameraOrthographicSize { get; }
+        public float SpawnOrthographicSize { get; }
         public float PlayerScale { get; }
         public float NormalEnemyScale { get; }
         public float EliteEnemyScale { get; }
@@ -79,6 +84,14 @@ namespace JoseonHunter.Runtime.Gameplay
 
         public float PlayerScreenHeightRatio =>
             PlayerScale * BaselineCameraOrthographicSize / CameraOrthographicSize;
+
+        public Rect SpawnBounds(Vector2 center, float aspect)
+        {
+            var halfHeight = Mathf.Max(.01f, SpawnOrthographicSize);
+            var halfWidth = halfHeight * Mathf.Max(.01f, aspect);
+            return Rect.MinMaxRect(center.x - halfWidth, center.y - halfHeight,
+                center.x + halfWidth, center.y + halfHeight);
+        }
 
         public float ScaleFor(EnemyRankProfile rank) =>
             rank.IsBoss ? BossEnemyScale : rank.IsElite ? EliteEnemyScale : NormalEnemyScale;
