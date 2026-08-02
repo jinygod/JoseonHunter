@@ -194,7 +194,6 @@ namespace JoseonHunter.Presentation.UI
             topRoller.enabled = false;
             bottomRoller.enabled = false;
             rareStamp.enabled = false;
-            confirmButton.image.sprite = activeCatalog.ReelWindow;
             confirmButton.image.preserveAspect = false;
             SetScrollOpen(1f);
             weaponIcon.sprite = weapon.Icon != null ? weapon.Icon : activeCatalog.ReelSymbolStat;
@@ -215,8 +214,6 @@ namespace JoseonHunter.Presentation.UI
             burst.enabled = false;
             for (var reel = 0; reel < ReelCount; reel++)
             {
-                reelWindows[reel].sprite = activeCatalog.ReelWindow;
-                reelWindows[reel].enabled = reelWindows[reel].sprite != null;
                 stopFlashes[reel].enabled = false;
                 for (var symbol = 0; symbol < 2; symbol++)
                     spinningSymbols[reel, symbol].enabled = false;
@@ -225,7 +222,6 @@ namespace JoseonHunter.Presentation.UI
             {
                 var hasPotential = index < weapon.PotentialIds.Count;
                 var potential = hasPotential ? weapon.PotentialIds[index] : default;
-                lockedSlots[index].sprite = activeCatalog.LockedPotentialSlot;
                 lockedSlots[index].enabled = !hasPotential;
                 finalSymbols[index + 1].sprite = hasPotential
                     ? activeCatalog.SpriteForPotential(potential)
@@ -237,6 +233,8 @@ namespace JoseonHunter.Presentation.UI
                 potentialLabels[index].gameObject.SetActive(true);
                 reelWindows[index + 1].rectTransform.anchoredPosition = PotentialRowPosition(index);
             }
+
+            ApplyFlatAppraisalStyle();
 
             group.alpha = 1f;
             panelRect.anchoredPosition = Vector2.zero;
@@ -417,13 +415,10 @@ namespace JoseonHunter.Presentation.UI
 
             var age = time - stopAt;
             var visible = age >= 0f && age <= .14f;
-            stopFlashes[reelIndex].enabled = visible;
+            stopFlashes[reelIndex].enabled = false;
             if (!visible)
                 return;
             var progress = Mathf.Clamp01(age / .14f);
-            stopFlashes[reelIndex].color = new Color(1f, 1f, 1f, 1f - progress);
-            stopFlashes[reelIndex].rectTransform.localScale =
-                Vector3.one * Mathf.Lerp(.65f, 1.25f, EaseOutCubic(progress));
             finalSymbols[reelIndex].rectTransform.localScale =
                 Vector3.one * (progress < .55f
                     ? Mathf.Lerp(.92f, 1.08f, progress / .55f)
@@ -487,16 +482,12 @@ namespace JoseonHunter.Presentation.UI
             topRoller.enabled = false;
             bottomRoller.enabled = false;
             rareStamp.sprite = activeCatalog.RareAppraisalStamp;
-            confirmButton.image.sprite = activeCatalog.ReelWindow;
             rarityFrame.sprite = null;
             finalSymbols[0].sprite = null;
             finalSymbols[0].color = SealColor(activeResult.General.Tier);
             raritySealLabel.text = SealLabel(activeResult.General.Tier);
             for (var reel = 0; reel < ReelCount; reel++)
             {
-                reelWindows[reel].sprite = activeCatalog.ReelWindow;
-                reelWindows[reel].enabled = reelWindows[reel].sprite != null;
-                stopFlashes[reel].sprite = activeCatalog.ReelStopFlash;
                 var spinSprite = reel == 0
                     ? activeResult.General.Tier == WeaponAffixTier.Standard
                         ? activeCatalog.ReelSymbolStat
@@ -510,7 +501,6 @@ namespace JoseonHunter.Presentation.UI
 
             for (var index = 0; index < 3; index++)
             {
-                lockedSlots[index].sprite = activeCatalog.LockedPotentialSlot;
                 var potential = index < activeModel.CurrentPotentials.Count
                     ? activeModel.CurrentPotentials[index]
                     : default;
@@ -538,6 +528,32 @@ namespace JoseonHunter.Presentation.UI
                 : "누적  " + activeModel.AccumulatedAffixSummary;
             weaponIcon.sprite = activeModel.Icon != null ? activeModel.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
+            ApplyFlatAppraisalStyle();
+        }
+
+        private void ApplyFlatAppraisalStyle()
+        {
+            confirmButton.image.sprite = null;
+            confirmButton.image.color = JoseonUiPalette.AppraisalResult;
+            confirmLabel.color = JoseonUiPalette.DarkPanelText;
+
+            for (var reel = 0; reel < ReelCount; reel++)
+            {
+                reelWindows[reel].sprite = null;
+                reelWindows[reel].color = reel == 0
+                    ? JoseonUiPalette.AppraisalResult
+                    : JoseonUiPalette.AppraisalInset;
+                reelWindows[reel].enabled = true;
+                stopFlashes[reel].sprite = null;
+                stopFlashes[reel].enabled = false;
+            }
+
+            for (var index = 0; index < lockedSlots.Length; index++)
+            {
+                lockedSlots[index].sprite = null;
+                lockedSlots[index].color = Color.clear;
+                potentialLabels[index].color = JoseonUiPalette.AppraisalBorder;
+            }
         }
 
         private void ResetVisuals()
@@ -689,10 +705,11 @@ namespace JoseonHunter.Presentation.UI
                     position + new Vector2(80f, 0f), new Vector2(600f, 48f), 23f,
                     TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
-                potentialLabels[index].color = JoseonUiPalette.Hanji;
+                potentialLabels[index].color = JoseonUiPalette.AppraisalBorder;
             }
 
-            confirmButton = RuntimeUiFactory.Button("Confirm Result", shell.transform, Color.white);
+            confirmButton = RuntimeUiFactory.Button("Confirm Result", shell.transform,
+                JoseonUiPalette.AppraisalResult);
             var confirmRect = confirmButton.GetComponent<RectTransform>();
             confirmRect.anchorMin = confirmRect.anchorMax = new Vector2(.5f, .5f);
             confirmRect.anchoredPosition = new Vector2(0f, -345f);
@@ -703,7 +720,7 @@ namespace JoseonHunter.Presentation.UI
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 12f, 5f, 12f, 5f);
             confirmLabel.fontStyle = FontStyles.Bold;
-            confirmLabel.color = new Color(1f, .91f, .58f);
+            confirmLabel.color = JoseonUiPalette.DarkPanelText;
 
             title.transform.SetAsLastSibling();
             detail.transform.SetAsLastSibling();

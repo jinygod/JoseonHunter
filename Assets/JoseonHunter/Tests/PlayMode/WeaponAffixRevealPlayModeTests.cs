@@ -57,7 +57,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [Test]
-        public void Appraisal_uses_complete_scroll_and_visible_reel_rows_without_floating_decorations()
+        public void Appraisal_uses_warm_flat_rows_without_ornate_slot_sprites()
         {
             var presenter = new GameObject("Appraisal Composition Test")
                 .AddComponent<WeaponAffixRevealPresenter>();
@@ -73,13 +73,19 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 var window = ImageNamed(presenter, "Reel Window " + index);
                 Assert.That(window.enabled, Is.True, "Reel " + index);
-                Assert.That(window.sprite, Is.Not.Null, "Reel " + index);
-                Assert.That(window.preserveAspect, Is.False,
-                    "The frame must fill its row so the icon well stays inside it.");
+                Assert.That(window.sprite, Is.Null, "Reel " + index);
+                var expected = index == 0
+                    ? new Color(.22f, .14f, .09f, 1f)
+                    : new Color(.82f, .74f, .57f, 1f);
+                Assert.That(window.color, Is.EqualTo(expected), "Reel " + index);
             }
+            Assert.That(ImageNamed(presenter, "Locked Potential 1").sprite, Is.Null);
+            Assert.That(ImageNamed(presenter, "Stop Flash 0").sprite, Is.Null);
+            Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
             var lockedLabel = RectNamed(presenter, "Potential Label 1");
             Assert.That(lockedLabel.gameObject.activeSelf, Is.True);
             Assert.That(TextValue(lockedLabel), Does.Contain("잠김"));
+            Assert.That(TextColor(lockedLabel).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -177,15 +183,17 @@ namespace JoseonHunter.Tests.PlayMode
                 "The general-affix text must render above its row frame.");
             Assert.That(TextColor(generalTitle).grayscale, Is.GreaterThan(.45f));
             Assert.That(TextColor(generalDetail).grayscale, Is.GreaterThan(.65f));
-            Assert.That(ImageNamed(presenter, "Confirm Result").sprite, Is.Not.Null,
-                "Detail mode must bind the framed confirm button instead of showing a white rectangle.");
+            Assert.That(ImageNamed(presenter, "Confirm Result").sprite, Is.Null);
+            Assert.That(ImageNamed(presenter, "Confirm Result").color,
+                Is.EqualTo(new Color(.22f, .14f, .09f, 1f)));
 
             for (var index = 1; index < 4; index++)
             {
                 var window = ImageNamed(presenter, "Reel Window " + index);
                 var viewport = RectNamed(presenter, "Reel Viewport " + index);
                 Assert.That(window.enabled, Is.True, "Reel " + index);
-                Assert.That(window.sprite, Is.Not.Null, "Reel " + index);
+                Assert.That(window.sprite, Is.Null, "Reel " + index);
+                Assert.That(window.color, Is.EqualTo(new Color(.82f, .74f, .57f, 1f)));
                 Assert.That(viewport.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)));
                 Assert.That(viewport.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
                 Assert.That(viewport.anchoredPosition.x, Is.LessThanOrEqualTo(-280f));
@@ -201,7 +209,7 @@ namespace JoseonHunter.Tests.PlayMode
             var emptyPotential = RectNamed(presenter, "Potential Label 1");
             Assert.That(emptyPotential.gameObject.activeSelf, Is.True);
             Assert.That(TextValue(emptyPotential), Does.Contain("잠김"));
-            Assert.That(TextColor(emptyPotential).grayscale, Is.GreaterThan(.5f));
+            Assert.That(TextColor(emptyPotential).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }

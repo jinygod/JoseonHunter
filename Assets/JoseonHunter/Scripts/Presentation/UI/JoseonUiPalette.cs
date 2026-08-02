@@ -14,6 +14,10 @@ namespace JoseonHunter.Presentation.UI
         public static readonly Color HanjiMutedInk = new(0.35f, 0.30f, 0.22f, 1f);
         public static readonly Color DarkPanelText = new(0.95f, 0.91f, 0.80f, 1f);
         public static readonly Color SealCrimson = new(0.58f, 0.08f, 0.09f, 1f);
+        public static readonly Color AppraisalResult = new(0.22f, 0.14f, 0.09f, 1f);
+        public static readonly Color AppraisalInset = new(0.82f, 0.74f, 0.57f, 1f);
+        public static readonly Color AppraisalBorder = new(0.18f, 0.12f, 0.08f, 1f);
+        public static readonly Color AppraisalAccent = new(0.72f, 0.25f, 0.12f, 1f);
 
         public static Color WeaponAccent(WeaponId id)
         {
