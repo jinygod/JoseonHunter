@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using JoseonHunter.Domain.Runs;
+using JoseonHunter.Runtime.Combat.Weapons.Presentation;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -12,6 +13,37 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class FirstPlayablePresentationPlayModeTests
     {
+        [Test]
+        public void GuardianDescentUsesOneCoherentSpriteAndReusesItsPooledVisuals()
+        {
+            var root = new GameObject("Guardian Descent Test");
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            texture.SetPixels(new[] { Color.white, Color.white, Color.white, Color.white });
+            texture.Apply();
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 2f, 2f), new Vector2(.5f, 0f), 2f);
+            var presenter = new JangseungGuardianDescentPresenter(root.transform);
+            try
+            {
+                presenter.Play(7, sprite, Vector2.zero, 12);
+                Assert.That(root.GetComponentsInChildren<SpriteRenderer>(), Has.Length.EqualTo(1));
+                var createdChildren = root.transform.childCount;
+
+                presenter.Tick(.60f);
+                Assert.That(root.GetComponentsInChildren<SpriteRenderer>(), Is.Empty);
+
+                presenter.Play(8, sprite, Vector2.one, 12);
+                Assert.That(root.transform.childCount, Is.EqualTo(createdChildren));
+                Assert.That(root.GetComponentsInChildren<SpriteRenderer>(), Has.Length.EqualTo(1));
+            }
+            finally
+            {
+                presenter.Dispose();
+                Object.DestroyImmediate(sprite);
+                Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [UnityTest]
         public IEnumerator Paused_flow_freezes_elapsed_enemy_and_camera_follow()
         {

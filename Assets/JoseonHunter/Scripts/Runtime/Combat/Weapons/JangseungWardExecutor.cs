@@ -35,6 +35,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private Transform transientVisualRoot;
         private JangseungWardPresenter wardPresenter;
         private Transform wardPresenterRoot;
+        private JangseungGuardianDescentPresenter guardianDescentPresenter;
+        private Transform guardianDescentRoot;
         private float cooldown;
         private float elapsedSeconds;
 #if UNITY_INCLUDE_TESTS
@@ -97,6 +99,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             transientVisuals?.Tick(step);
             EnsureWardPresenter(context);
             wardPresenter?.Tick(step);
+            EnsureGuardianDescentPresenter(context);
+            guardianDescentPresenter?.Tick(step);
             var frameStartElapsed = elapsedSeconds;
             elapsedSeconds += step;
             cooldown -= step;
@@ -124,6 +128,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
             wardPresenter?.Dispose(); wardPresenter = null; wardPresenterRoot = null;
+            guardianDescentPresenter?.Dispose(); guardianDescentPresenter = null; guardianDescentRoot = null;
 #if UNITY_INCLUDE_TESTS
             firstPostRiseFrameSequenceForTests.Clear(); visibleBoundaryDirectionsForTests.Clear();
             FirstPostRiseFramesPlayedThisTickForTests = 0;
@@ -180,11 +185,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (Potentials.HasPotential(WeaponPotentialId.JangseungGuardianDescent) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGuardianDescent, out _, out var guardian))
                 {
                     set.GuardianMask = guardian; set.GuardianRemaining = 1.2f; set.GuardianAttack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
-                    WeaponPotentialVisuals.TryGet(WeaponPotentialId.JangseungGuardianDescent, out var guardianSprite, out _);
-                    set.GuardianVisual = new GameObject("Jangseung Guardian"); set.GuardianVisual.transform.SetParent(context.PresentationRoot, false); set.GuardianVisual.transform.position = new Vector3(set.DesiredCenter.X, set.DesiredCenter.Y, 0f); var renderer = set.GuardianVisual.AddComponent<SpriteRenderer>(); renderer.sprite = guardianSprite; renderer.sortingOrder = context.SortingOrder + 1;
-#if UNITY_INCLUDE_TESTS
-                    GuardianSpawnsForTests++;
-#endif
                 }
             }
             foreach (var set in sets)
@@ -216,7 +216,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 set.GuardianRemaining -= potentialStep; if (!set.GuardianResolved) ResolveGuardian(set, set.GuardianMask, context);
                 if (set.GuardianRemaining > 0f) continue;
                 runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId); set.GuardianMask = null;
-                if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual); set.GuardianVisual = null;
             }
             foreach (var set in sets) { if (!set.PotentialStartedThisTick) set.PotentialTickStep = 0f; set.PotentialCreatedThisTick = false; }
         }
@@ -235,7 +234,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.GuardianAttack, WeaponId.JangseungWard, best, Mathf.CeilToInt(BaseDamage * 1.1f), false, contact, ContactPhase.PotentialChain, context.SimulationTick, elapsedSeconds), out _))
                 {
                     set.GuardianResolved = true;
-                    PlayGuardianStrike(context, contact);
+                    PlayGuardianStrike(set.Attack.InstanceId, context, contact);
                 }
             }
             // Keep the authored guardian visible for the full lifetime after its one confirmed strike.
@@ -475,26 +474,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return elapsedSeconds - set.CreatedAt - delay;
         }
 
-        private void PlayGuardianStrike(in WeaponExecutionContext context, Float2 contact)
+        private void PlayGuardianStrike(int ownerId, in WeaponExecutionContext context, Float2 contact)
         {
 #if UNITY_INCLUDE_TESTS
             GuardianStrikePresentationCountForTests++;
             GuardianStrikeAfterBoundaryChecksForTests &= boundaryChecksResolvedThisTickForTests;
+            GuardianSpawnsForTests++;
 #endif
-            transientVisuals?.Play(
-                context.PresentationSpriteFor(
-                    WeaponId.JangseungWard,
-                    WeaponVisualPartIndex.Jangseung.Impact + WeaponVisualPartIndex.Jangseung.ImpactFrameCount - 1),
-                new Vector3(contact.X, contact.Y, 0f),
-                Quaternion.identity,
-                Vector3.one * WeaponPresentationScale.For(
-                    WeaponId.JangseungWard,
-                    WeaponVisualStage.Impact,
-                    1.15f,
-                    Level,
-                    IsEvolved),
-                Color.white,
-                .14f,
+            guardianDescentPresenter?.Play(ownerId,
+                context.JangseungGeumjulVisualLibrary?.GuardianDescentSprite,
+                new Vector2(contact.X, contact.Y),
                 context.SortingOrder + 3);
         }
 
@@ -516,6 +505,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var set in sets) wardPresenter.ShowSet(set.Attack.InstanceId, set.Posts, null);
         }
 
+        private void EnsureGuardianDescentPresenter(in WeaponExecutionContext context)
+        {
+            if (context.PresentationRoot == guardianDescentRoot && guardianDescentPresenter != null) return;
+            guardianDescentPresenter?.Dispose();
+            guardianDescentPresenter = null;
+            guardianDescentRoot = null;
+            if (context.PresentationRoot == null ||
+                context.JangseungGeumjulVisualLibrary?.GuardianDescentSprite == null) return;
+            guardianDescentRoot = context.PresentationRoot;
+            guardianDescentPresenter = new JangseungGuardianDescentPresenter(guardianDescentRoot);
+        }
+
         private void RememberCurrentTargetPositions()
         {
             previousPositions.Clear();
@@ -530,7 +531,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             runtime.DamageService.RetireAttack(set.Attack.InstanceId);
             if (set.RotatingAttack != null) runtime.DamageService.RetireAttack(set.RotatingAttack.InstanceId);
             if (set.GuardianAttack != null) runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId);
-            if (set.GuardianVisual != null) UnityEngine.Object.Destroy(set.GuardianVisual);
+            guardianDescentPresenter?.Cancel(set.Attack.InstanceId);
             if (set.EvolvedCompletionVisual != null) UnityEngine.Object.Destroy(set.EvolvedCompletionVisual);
             wardPresenter?.RetireSet(set.Attack.InstanceId);
             set.Retired = true;
@@ -634,7 +635,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float GuardianRemaining { get; set; }
             public bool GuardianResolved { get; set; }
             public bool PotentialStartedThisTick { get; set; }
-            public GameObject GuardianVisual { get; set; }
             public float CompletionResidual { get; set; }
             public float PotentialTickStep { get; set; }
             public bool PotentialCreatedThisTick { get; set; }
