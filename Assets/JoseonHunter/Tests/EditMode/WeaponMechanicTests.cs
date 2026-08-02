@@ -1151,13 +1151,39 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(presenter.IsSegmentFlashingForTests(1, 0), Is.True);
             Assert.That(Enumerable.Range(1, 3).All(index => !presenter.IsSegmentFlashingForTests(1, index)), Is.True);
             Assert.That(ward.HasExactlyOneFlashingBoundaryForCapture, Is.True);
-            for (var index = 0; index < 4; index++) presenter.Tick(.04f);
-            CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, presenter.CrossingFrameIndicesForTests.Distinct());
-            CollectionAssert.AreEquivalent(new[] { 0, 1, 2, 3 }, presenter.DustFrameIndicesForTests.Distinct());
-            Assert.That(presenter.ActiveCrossingVisualCountForTests, Is.Zero);
-            Assert.That(presenter.ActiveDustVisualCountForTests, Is.Zero);
-            Assert.That(presenter.ActiveKnotVariantCountForTests, Is.EqualTo(2));
+            Assert.That(presenter.UsesTexturedBoundariesForTests, Is.False);
+            Assert.That(presenter.ActiveDecorativeSpriteCountForTests, Is.Zero);
+            Assert.That(presenter.ActiveCrossingSparkCountForTests, Is.EqualTo(3));
             ward.Dispose(); runtime.Dispose(); DestroyVisualAssets(library, visualAssets);
+        }
+
+        [Test]
+        public void JangseungPresenterDimsOlderSetsAndKeepsNewestSetReadable()
+        {
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var presenter = new JangseungWardPresenter(library, root.transform, 0);
+            try
+            {
+                presenter.ShowSet(1, new[]
+                {
+                    new Float2(-1f, -1f), new Float2(1f, -1f),
+                    new Float2(1f, 1f), new Float2(-1f, 1f)
+                }, null);
+                presenter.ShowSet(2, new[]
+                {
+                    new Float2(2f, -1f), new Float2(4f, -1f),
+                    new Float2(4f, 1f), new Float2(2f, 1f)
+                }, null);
+
+                Assert.That(presenter.NewestSetHasFullEmphasisForTests, Is.True);
+                Assert.That(presenter.SetMainAlphaForTests(1), Is.LessThan(presenter.SetMainAlphaForTests(2)));
+                Assert.That(presenter.ActiveDecorativeSpriteCountForTests, Is.Zero);
+            }
+            finally
+            {
+                presenter.Dispose();
+                Object.DestroyImmediate(library);
+            }
         }
 
         [Test]
@@ -1180,7 +1206,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void JangseungRetirementCancelsPendingDustAndCrossingFrames()
+        public void JangseungRetirementCancelsPendingCrossingSparks()
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
@@ -1197,10 +1223,8 @@ namespace JoseonHunter.Tests.EditMode
             ward.Reset();
             presenter.Tick(.2f);
 
-            Assert.That(presenter.ActiveDustVisualCountForTests, Is.Zero);
-            Assert.That(presenter.ActiveCrossingVisualCountForTests, Is.Zero);
-            Assert.That(presenter.DustFrameIndicesForTests, Is.Empty);
-            Assert.That(presenter.CrossingFrameIndicesForTests, Is.Empty);
+            Assert.That(presenter.ActiveCrossingSparkCountForTests, Is.Zero);
+            Assert.That(presenter.ActiveDecorativeSpriteCountForTests, Is.Zero);
             runtime.Dispose(); DestroyVisualAssets(library, visualAssets);
         }
 

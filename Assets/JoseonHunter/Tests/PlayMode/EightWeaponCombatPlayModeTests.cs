@@ -145,7 +145,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator JangseungRiseAndBoundaryPresentationUsesOnlyCanonicalFrames()
+        public IEnumerator JangseungRiseAndBoundaryPresentationDoesNotRequestLegacyPngFrames()
         {
             var root = new GameObject("Jangseung presentation root");
             var texture = new Texture2D(1, 1);
@@ -163,24 +163,28 @@ namespace JoseonHunter.Tests.PlayMode
             var damageEvents = new List<ConfirmedDamageEvent>();
             damage.DamageConfirmed += damageEvents.Add;
             var ward = new JangseungWardExecutor(runtime, 10f, 10f, 1f, 3, 1, 0f, 3);
-            var context = new WeaponExecutionContext(default, root.transform, sprite, null, Resolve, null, 0, 1);
+            var library = ScriptableObject.CreateInstance<JangseungGeumjulVisualLibrary>();
+            var context = new WeaponExecutionContext(default, root.transform, sprite, null, Resolve, null, library, 0, 1);
 
             ward.Tick(.04f, context);
             ward.Tick(.10f, context);
             yield return null;
 
             Assert.That(ward.FirstWardVisualRiseForTests, Is.InRange(0f, 1f));
-            Assert.That(requestedParts, Has.Some.InRange(
+            Assert.That(requestedParts, Has.None.InRange(
                 WeaponVisualPartIndex.Jangseung.Windup,
                 WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1));
-            Assert.That(requestedParts, Has.Some.InRange(
+            Assert.That(requestedParts, Has.None.InRange(
                 WeaponVisualPartIndex.Jangseung.Field,
                 WeaponVisualPartIndex.Jangseung.Field + WeaponVisualPartIndex.Jangseung.FieldFrameCount - 1));
+            Assert.That(ward.WardPresenterForTests.ActiveDecorativeSpriteCountForTests, Is.Zero);
+            Assert.That(ward.WardPresenterForTests.UsesTexturedBoundariesForTests, Is.False);
             Assert.That(damageEvents, Is.Empty);
 
             ward.Dispose();
             runtime.Dispose();
             Object.Destroy(root);
+            Object.Destroy(library);
             Object.Destroy(sprite);
             Object.Destroy(texture);
         }

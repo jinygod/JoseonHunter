@@ -144,7 +144,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var count = Level == 5 ? 4 : PostCount;
             var set = new WardSet(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.BoundaryReentry, ReentryInterval), center, Radius, count, IsEvolved, createdAt, Level == 5);
             sets.Add(set);
-            wardPresenter?.ShowSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
+            wardPresenter?.ShowSet(set.Attack.InstanceId, set.Posts, null);
         }
 
         private void AdvanceEvolvedPostActivation(float step, in WeaponExecutionContext context)
@@ -157,7 +157,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     set.ActivationElapsed -= EvolvedPostActivationInterval;
                     set.ActivateNextPost();
-                    wardPresenter?.UpdateSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
+                    wardPresenter?.UpdateSet(set.Attack.InstanceId, set.Posts, null);
                 }
                 if (set.IsCompleted && !set.MarkResolved) { set.CompletionResidual = set.ActivationElapsed; MarkEnclosedTargets(set); }
             }
@@ -278,7 +278,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var desired = CardinalPost(center, Radius, index);
                     set.Posts[index] = MoveTowards(set.Posts[index], desired, MaximumMobileStep);
                 }
-                wardPresenter?.UpdateSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
+                wardPresenter?.UpdateSet(set.Attack.InstanceId, set.Posts, null);
             }
         }
 
@@ -398,9 +398,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 for (var postIndex = 0; postIndex < set.Posts.Count; postIndex++)
                 {
                     var localElapsed = PostVisualElapsed(set, postIndex);
+                    var rise = localElapsed < 0f ? 0f : Mathf.Clamp01(localElapsed / PostRiseDuration);
+                    wardPresenter?.SetPostRise(set.Attack.InstanceId, postIndex, rise);
                     if (localElapsed < 0f) continue;
-
-                    var rise = Mathf.Clamp01(localElapsed / PostRiseDuration);
                     if (postIndex == 0) set.FirstPostRise = rise;
                     var currentFrame = Mathf.Min(
                         WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1,
@@ -408,21 +408,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     var previousFrame = set.LastRiseFramePlayed[postIndex];
                     if (previousFrame != currentFrame)
                     {
-                        transientVisuals?.Play(
-                            context.PresentationSpriteFor(
-                                WeaponId.JangseungWard,
-                                WeaponVisualPartIndex.Jangseung.Windup + currentFrame),
-                            new Vector3(set.Posts[postIndex].X, set.Posts[postIndex].Y, 0f),
-                            Quaternion.identity,
-                            ScaleSpriteToWorldSize(
-                                context.PresentationSpriteFor(
-                                    WeaponId.JangseungWard,
-                                    WeaponVisualPartIndex.Jangseung.Windup + currentFrame),
-                                .72f,
-                                .72f),
-                            Color.white,
-                            PostRiseDuration / WeaponVisualPartIndex.Jangseung.WindupFrameCount,
-                            context.SortingOrder + 1);
 #if UNITY_INCLUDE_TESTS
                         if (postIndex == 0)
                         {
@@ -432,59 +417,20 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #endif
                     }
                     set.LastRiseFramePlayed[postIndex] = currentFrame;
-                    if (rise >= 1f && previousFrame == currentFrame)
-                    {
-                        transientVisuals?.Play(
-                            context.PresentationSpriteFor(
-                                WeaponId.JangseungWard,
-                                WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1),
-                            new Vector3(set.Posts[postIndex].X, set.Posts[postIndex].Y, 0f),
-                            Quaternion.identity,
-                            ScaleSpriteToWorldSize(
-                                context.PresentationSpriteFor(
-                                    WeaponId.JangseungWard,
-                                    WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1),
-                                .72f,
-                                .72f),
-                            Color.white,
-                            .06f,
-                            context.SortingOrder + 1);
-                    }
                 }
 
                 var boundaryStart = 2f / WeaponVisualPartIndex.Jangseung.WindupFrameCount;
                 if (set.Posts.Count < 2) continue;
-                var fieldFrame = WeaponVisualPartIndex.Jangseung.Field +
-                    Mathf.FloorToInt(elapsedSeconds / .05f) % WeaponVisualPartIndex.Jangseung.FieldFrameCount;
-                for (var directionIndex = 0; directionIndex < set.Posts.Count; directionIndex++)
+                var segmentCount = set.Posts.Count == 2 ? 1 : set.Posts.Count;
+                for (var directionIndex = 0; directionIndex < segmentCount; directionIndex++)
                 {
-                    if (set.Posts.Count == 2 && directionIndex == 1) break;
                     var localElapsed = PostVisualElapsed(set, directionIndex);
-                    if (localElapsed < 0f) continue;
-                    var boundaryRise = Mathf.Clamp01(localElapsed / PostRiseDuration);
-                    if (boundaryRise <= boundaryStart) continue;
-                    var alpha = Mathf.InverseLerp(boundaryStart, 1f, boundaryRise);
-                    var segment = new Segment(
-                        set.Posts[directionIndex],
-                        set.Posts[(directionIndex + 1) % set.Posts.Count]);
+                    var boundaryRise = localElapsed < 0f ? 0f : Mathf.Clamp01(localElapsed / PostRiseDuration);
+                    var alpha = boundaryRise <= boundaryStart ? 0f : Mathf.InverseLerp(boundaryStart, 1f, boundaryRise);
+                    wardPresenter?.SetBoundaryAlpha(set.Attack.InstanceId, directionIndex, alpha);
 #if UNITY_INCLUDE_TESTS
-                    visibleBoundaryDirectionsForTests.Add(directionIndex);
+                    if (alpha > 0f) visibleBoundaryDirectionsForTests.Add(directionIndex);
 #endif
-                    var x = segment.End.X - segment.Start.X;
-                    var y = segment.End.Y - segment.Start.Y;
-                    var midpoint = new Vector3(
-                        (segment.Start.X + segment.End.X) * .5f,
-                        (segment.Start.Y + segment.End.Y) * .5f,
-                        0f);
-                    var fieldSprite = context.PresentationSpriteFor(WeaponId.JangseungWard, fieldFrame);
-                    transientVisuals?.Play(
-                        fieldSprite,
-                        midpoint,
-                        Quaternion.Euler(0f, 0f, Mathf.Atan2(y, x) * Mathf.Rad2Deg),
-                        ScaleSpriteToWorldSize(fieldSprite, Mathf.Sqrt(x * x + y * y), .22f),
-                        new Color(1f, .86f, .48f, .42f * alpha),
-                        .06f,
-                        context.SortingOrder);
                 }
             }
         }
@@ -567,12 +513,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (context.PresentationRoot == null || context.JangseungGeumjulVisualLibrary == null) return;
             wardPresenterRoot = context.PresentationRoot;
             wardPresenter = new JangseungWardPresenter(context.JangseungGeumjulVisualLibrary, wardPresenterRoot, context.SortingOrder);
-            foreach (var set in sets) wardPresenter.ShowSet(set.Attack.InstanceId, set.Posts, PostSprite(context));
+            foreach (var set in sets) wardPresenter.ShowSet(set.Attack.InstanceId, set.Posts, null);
         }
-
-        private static Sprite PostSprite(in WeaponExecutionContext context) => context.PresentationSpriteFor(
-            WeaponId.JangseungWard,
-            WeaponVisualPartIndex.Jangseung.Windup + WeaponVisualPartIndex.Jangseung.WindupFrameCount - 1);
 
         private void RememberCurrentTargetPositions()
         {
