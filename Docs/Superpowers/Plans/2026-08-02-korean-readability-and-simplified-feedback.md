@@ -43,16 +43,22 @@
 
 - [ ] **Step 1: Write failing asset-contract tests**
 
+Use SerializedObject so the red test compiles before the new typed properties exist:
+
 ~~~csharp
 var gakgung = LoadDefinition(WeaponId.GakgungShot);
-Assert.That(gakgung.UiIcon, Is.Not.Null);
-Assert.That(gakgung.UiIcon, Is.Not.SameAs(gakgung.PresentationSprites[0]));
-Assert.That(AssetDatabase.GetAssetPath(gakgung.UiIcon), Does.EndWith("gakgung_shot/ui-icon.png"));
+var uiIconProperty = new SerializedObject(gakgung).FindProperty("uiIcon");
+Assert.That(uiIconProperty, Is.Not.Null);
+Assert.That(uiIconProperty.objectReferenceValue, Is.Not.Null);
+Assert.That(uiIconProperty.objectReferenceValue, Is.Not.SameAs(gakgung.PresentationSprites[0]));
+Assert.That(AssetDatabase.GetAssetPath(uiIconProperty.objectReferenceValue),
+    Does.EndWith("gakgung_shot/ui-icon.png"));
 
 var library = AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(
     JangseungGeumjulAssetImporter.LibraryPath);
-Assert.That(library.GuardianDescentSprite, Is.Not.Null);
-Assert.That(AssetDatabase.GetAssetPath(library.GuardianDescentSprite),
+var guardianProperty = new SerializedObject(library).FindProperty("guardianDescentSprite");
+Assert.That(guardianProperty, Is.Not.Null);
+Assert.That(AssetDatabase.GetAssetPath(guardianProperty.objectReferenceValue),
     Does.EndWith("jangseung_guardian_descent.png"));
 ~~~
 
@@ -137,17 +143,17 @@ git push origin master
 - Test: Assets/JoseonHunter/Tests/PlayMode/CombatHudPlayModeTests.cs
 
 **Interfaces:**
-- Adds test-readable UsesOrnateReelSpritesForTests, ResultRowColorForTests, PotentialRowColorForTests, SealTextForTests.
+- Tests observe named Image and TextMeshProUGUI children in the real presenter hierarchy; no test-only production API is added.
 - Preserves reveal/count-up timing, slot state, confirmation behavior, ShowDetails, and Play.
 
 - [ ] **Step 1: Write failing presentation tests**
 
 ~~~csharp
 presenter.PreviewAtForEditor(result, WeaponAffixRevealTimeline.For(result).ReadStartsAt + .1f);
-Assert.That(presenter.UsesOrnateReelSpritesForTests, Is.False);
-Assert.That(presenter.ResultRowColorForTests, Is.EqualTo(JoseonUiPalette.AppraisalResult));
-Assert.That(presenter.PotentialRowColorForTests, Is.EqualTo(JoseonUiPalette.AppraisalInset));
-Assert.That(presenter.SealTextForTests, Is.EqualTo("일반"));
+Assert.That(ImageNamed(presenter, "Reel Window 0").sprite, Is.Null);
+Assert.That(ImageNamed(presenter, "Reel Window 0").color, Is.EqualTo(JoseonUiPalette.AppraisalResult));
+Assert.That(ImageNamed(presenter, "Reel Window 1").color, Is.EqualTo(JoseonUiPalette.AppraisalInset));
+Assert.That(TextNamed(presenter, "Rarity Seal Label").text, Is.EqualTo("일반"));
 ~~~
 
 Also assert that locked labels are dark ink on a light inset and the confirmation label equals 확인.
@@ -188,25 +194,35 @@ git push origin master
 **Files:**
 - Modify: Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs
 - Modify: Assets/JoseonHunter/Scripts/Presentation/Combat/DamageNumberPresenter.cs
-- Test: Assets/JoseonHunter/Tests/PlayMode/FirstPlayablePresentationPlayModeTests.cs
+- Test: Assets/JoseonHunter/Tests/PlayMode/FirstPlayablePickupRangePlayModeTests.cs
 - Test: Assets/JoseonHunter/Tests/PlayMode/DamageNumberPoolPlayModeTests.cs
 
 **Interfaces:**
-- Adds test-only SpawnExperiencePickupForTests(Vector2 position).
+- Tests create a real experience pickup by killing SpawnEnemyForTests output, matching the existing pickup-range fixture.
 - Keeps StartingPickupRadius 0.58 and collection distance 0.42.
 - Sets normal damage size 4.9, boss size 5.9, normal lifetime 0.62, boss bonus 0.14.
 
 - [ ] **Step 1: Write failing size and range tests**
 
 ~~~csharp
-var pickup = controller.SpawnExperiencePickupForTests(Vector2.zero);
-Assert.That(pickup.transform.localScale.x, Is.EqualTo(.30f).Within(.001f));
-Assert.That(controller.PickupRadiusForTests, Is.EqualTo(.58f).Within(.001f));
+var setup = LoadPickupAt(new Vector2(1f, 0f));
+while (setup.MoveNext()) yield return setup.Current;
+var pickup = GameObject.Find("Experience Flame");
+Assert.That(pickup.transform.localScale.x, Is.InRange(.289f, .311f));
+var before = pickup.transform.position;
+controller.TickGameplayIfRunningForTests(.05f);
+Assert.That(pickup.transform.position, Is.EqualTo(before));
 
 presenter.Play(display, false, Color.white, _ => { });
-Assert.That(presenter.DisplayFontSize, Is.EqualTo(4.9f).Within(.01f));
-Assert.That(presenter.UsesLightOutlineForTests, Is.False);
-Assert.That(presenter.DisplayLifetimeForTests, Is.EqualTo(.62f).Within(.01f));
+var text = presenter.GetComponent<TextMeshPro>();
+Assert.That(text.fontSize, Is.EqualTo(4.9f).Within(.01f));
+Assert.That(text.outlineColor.r, Is.LessThan(.8f));
+Assert.That(text.outlineColor.g, Is.LessThan(.8f));
+Assert.That(text.outlineColor.b, Is.LessThan(.8f));
+yield return new WaitForSeconds(.50f);
+Assert.That(presenter.IsActive, Is.True);
+yield return new WaitForSeconds(.15f);
+Assert.That(presenter.IsActive, Is.False);
 ~~~
 
 - [ ] **Step 2: Run tests and verify failure**
@@ -237,7 +253,7 @@ Expected: PASS; the existing 120-hit bounded-pool test returns every presenter w
 - [ ] **Step 6: Commit and push**
 
 ~~~powershell
-git add -- Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs Assets/JoseonHunter/Scripts/Presentation/Combat/DamageNumberPresenter.cs Assets/JoseonHunter/Tests/PlayMode/FirstPlayablePresentationPlayModeTests.cs Assets/JoseonHunter/Tests/PlayMode/DamageNumberPoolPlayModeTests.cs
+git add -- Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs Assets/JoseonHunter/Scripts/Presentation/Combat/DamageNumberPresenter.cs Assets/JoseonHunter/Tests/PlayMode/FirstPlayablePickupRangePlayModeTests.cs Assets/JoseonHunter/Tests/PlayMode/DamageNumberPoolPlayModeTests.cs
 git commit -m "feat: improve pickup and damage readability"
 git push origin master
 ~~~
@@ -254,17 +270,18 @@ git push origin master
 **Interfaces:**
 - Produces Play(int ownerId, Sprite sprite, Vector2 contact, int sortingOrder).
 - Produces Tick(float deltaTime), Cancel(int ownerId), Clear(), Dispose().
-- Exposes ActiveCountForTests, BodyRendererCountForTests, CreatedCountForTests.
+- Tests observe the real child renderers and stable root child count; no test-only lifecycle API is added.
 
 - [ ] **Step 1: Write failing presentation tests**
 
 ~~~csharp
 presenter.Play(7, guardianSprite, Vector2.zero, 12);
-Assert.That(presenter.ActiveCountForTests, Is.EqualTo(1));
-Assert.That(presenter.BodyRendererCountForTests, Is.EqualTo(1));
+Assert.That(root.GetComponentsInChildren<SpriteRenderer>(), Has.Length.EqualTo(1));
+var createdChildren = root.childCount;
 presenter.Tick(.60f);
-Assert.That(presenter.ActiveCountForTests, Is.Zero);
-Assert.That(presenter.CreatedCountForTests, Is.EqualTo(1));
+Assert.That(root.GetComponentsInChildren<SpriteRenderer>(), Is.Empty);
+presenter.Play(8, guardianSprite, Vector2.one, 12);
+Assert.That(root.childCount, Is.EqualTo(createdChildren));
 ~~~
 
 Also retain the existing single guardian-damage assertion.
@@ -324,7 +341,7 @@ git push origin master
 
 - [ ] **Step 1: Write failing Korean-copy and modal tests**
 
-Assert exact prefixes 체력, 경험치, 엽전, 처치, 우두머리. Render a failed result and assert title 전투 종료, summary labels 생존 시간/처치/도달 레벨/획득 엽전, button 다시 시작, and opaque panel alpha 1. Also reject HP, XP, COIN, KILLS, BOSS, Run, Restart, Survived, and Try again.
+Assert exact prefixes 체력, 경험치, 엽전, 처치, 우두머리. Render a failed result and inspect named real children: Result Title equals 전투 종료, Result Summary contains 생존 시간/처치/도달 레벨/획득 엽전, Restart Label equals 다시 시작, and Result Panel Image alpha equals 1. Also reject HP, XP, COIN, KILLS, BOSS, Run, Restart, Survived, and Try again. Do not add test-only getters to RunResultPresenter.
 
 - [ ] **Step 2: Run UI fixtures and verify failure**
 
