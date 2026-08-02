@@ -21,7 +21,7 @@ MonoBehaviour:
   levels:
   - weaponId: thunder_crash_bomb
     level: 1
-    baseDamage: 18
+    baseDamage: 12
     cooldownSeconds: 1.1
     range: 6
     projectileCount: 1
@@ -34,7 +34,7 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: thunder_crash_bomb
     level: 2
-    baseDamage: 22
+    baseDamage: 15
     cooldownSeconds: 1.02
     range: 6.4
     projectileCount: 1
@@ -47,7 +47,7 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: thunder_crash_bomb
     level: 3
-    baseDamage: 26
+    baseDamage: 18
     cooldownSeconds: 0.94
     range: 6.8
     projectileCount: 1
@@ -60,7 +60,7 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: thunder_crash_bomb
     level: 4
-    baseDamage: 30
+    baseDamage: 21
     cooldownSeconds: 0.86
     range: 7.2
     projectileCount: 1
@@ -73,7 +73,7 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: thunder_crash_bomb
     level: 5
-    baseDamage: 34
+    baseDamage: 24
     cooldownSeconds: 0.78
     range: 7.6
     projectileCount: 2

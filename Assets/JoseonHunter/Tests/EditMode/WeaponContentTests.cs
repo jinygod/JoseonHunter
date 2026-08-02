@@ -174,6 +174,16 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ThunderCrashBombUsesApprovedAreaDamageCurve()
+        {
+            var definition = LoadDefinition(WeaponId.ThunderCrashBomb);
+
+            CollectionAssert.AreEqual(
+                new[] { 12f, 15f, 18f, 21f, 24f },
+                definition.Levels.Select(level => level.BaseDamage).ToArray());
+        }
+
+        [Test]
         public void ResolveWeaponPresentationSprite_ValidCanonicalIndexReturnsExactFrame()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(
