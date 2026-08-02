@@ -19,6 +19,83 @@ namespace JoseonHunter.Tests.PlayMode
             Time.timeScale = 1f;
         }
 
+        [Test]
+        public void CombatHudUsesOnlyKoreanLabelsForPlayerFacingStats()
+        {
+            var root = new GameObject("Korean HUD Test");
+            var presenter = root.AddComponent<CombatHudPresenter>();
+            presenter.Render(new FirstPlayableUiState(3, 4, 12, 7, 21,
+                10f, 180f, 85f, 100f, true, true, 90f, 120f,
+                System.Array.Empty<WeaponSlotView>()));
+
+            Assert.That(TextNamed(root, "Level"), Is.EqualTo("레벨 3"));
+            Assert.That(TextNamed(root, "Health"), Does.StartWith("체력 "));
+            Assert.That(TextNamed(root, "Experience"), Does.StartWith("경험치 "));
+            Assert.That(TextNamed(root, "Experience"), Does.Contain("엽전 7"));
+            Assert.That(TextNamed(root, "Kills"), Is.EqualTo("처치 21"));
+            Assert.That(TextNamed(root, "Boss Warning"), Is.EqualTo("강한 기운이 다가옵니다"));
+            Assert.That(TextNamed(root, "Boss Label"), Does.StartWith("우두머리 "));
+            Assert.That(AllText(root), Does.Not.Match("HP|XP|COIN|KILLS|BOSS|DREADFUL"));
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RunResultIsOpaqueKoreanCanvasAndRequestsRestart()
+        {
+            var root = new GameObject("Korean Result Test");
+            var presenter = root.AddComponent<RunResultPresenter>();
+            var restarts = 0;
+            presenter.RestartRequested += () => restarts++;
+            presenter.Render(new FirstPlayableUiState(6, 0, 10, 13, 42,
+                83.4f, 180f, 0f, 100f, false, false, 0f, 0f,
+                System.Array.Empty<WeaponSlotView>(), runEnded: true, victory: false));
+
+            Assert.That(TextNamed(root, "Result Title"), Is.EqualTo("전투 종료"));
+            var summary = TextNamed(root, "Result Summary");
+            Assert.That(summary, Does.Contain("생존 시간"));
+            Assert.That(summary, Does.Contain("처치"));
+            Assert.That(summary, Does.Contain("도달 레벨"));
+            Assert.That(summary, Does.Contain("획득 엽전"));
+            Assert.That(TextNamed(root, "Restart Label"), Is.EqualTo("다시 시작"));
+            Assert.That(ImageNamed(root, "Result Panel").color.a, Is.EqualTo(1f));
+            Assert.That(AllText(root), Does.Not.Match("Run|Restart|Survived|Try again"));
+
+            var button = System.Array.Find(root.GetComponentsInChildren<Button>(true),
+                candidate => candidate.name == "Restart Button");
+            Assert.That(button, Is.Not.Null);
+            button.onClick.Invoke();
+            Assert.That(restarts, Is.EqualTo(1));
+            Object.DestroyImmediate(root);
+        }
+
+        [UnityTest]
+        public IEnumerator GameplayRunResultButtonRestartsAndRestoresBackgroundRaycasts()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var presenter = Object.FindFirstObjectByType<RunResultPresenter>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(presenter, Is.Not.Null);
+
+            controller.EndRunForTests(false);
+            yield return new WaitForSecondsRealtime(.15f);
+            var root = System.Array.Find(presenter.GetComponentsInChildren<RectTransform>(true),
+                candidate => candidate.name == "Run Result Root");
+            Assert.That(root.gameObject.activeSelf, Is.True);
+            var button = System.Array.Find(presenter.GetComponentsInChildren<Button>(true),
+                candidate => candidate.name == "Restart Button");
+            button.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.15f);
+
+            Assert.That(controller.UiState.RunEnded, Is.False);
+            Assert.That(root.gameObject.activeSelf, Is.False);
+            foreach (var group in Object.FindObjectsByType<CanvasGroup>(FindObjectsInactive.Include,
+                         FindObjectsSortMode.None))
+                Assert.That(group.blocksRaycasts, Is.True, group.name);
+        }
+
         [UnityTest]
         public IEnumerator Level_up_keeps_combat_paused_until_reward_confirmation_then_sequences_the_queue()
         {
@@ -187,6 +264,39 @@ namespace JoseonHunter.Tests.PlayMode
                 Object.Destroy(bootstrap.gameObject);
             yield return null;
         }
+
+        private static string TextNamed(GameObject root, string name)
+        {
+            var target = System.Array.Find(root.GetComponentsInChildren<RectTransform>(true),
+                candidate => candidate.name == name);
+            Assert.That(target, Is.Not.Null, name);
+            foreach (var component in target.GetComponents<Component>())
+            {
+                var property = component.GetType().GetProperty("text");
+                if (property != null && property.PropertyType == typeof(string))
+                    return (string)property.GetValue(component);
+            }
+            Assert.Fail("No text component on " + name);
+            return string.Empty;
+        }
+
+        private static string AllText(GameObject root)
+        {
+            var values = new System.Collections.Generic.List<string>();
+            foreach (var rect in root.GetComponentsInChildren<RectTransform>(true))
+            {
+                foreach (var component in rect.GetComponents<Component>())
+                {
+                    var property = component.GetType().GetProperty("text");
+                    if (property == null || property.PropertyType != typeof(string)) continue;
+                    values.Add((string)property.GetValue(component));
+                }
+            }
+            return string.Join(" ", values);
+        }
+
+        private static Image ImageNamed(GameObject root, string name) =>
+            System.Array.Find(root.GetComponentsInChildren<Image>(true), image => image.name == name);
 
         private static JoseonHunter.Content.Weapons.WeaponAffixPresentationCatalogAsset TestCatalog()
         {

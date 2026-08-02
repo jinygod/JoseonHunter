@@ -88,14 +88,14 @@ namespace JoseonHunter.Presentation.UI
         {
             Build();
             levelText.text = $"레벨 {state.Level}";
-            healthText.text = $"HP {Mathf.CeilToInt(state.Health)} / {Mathf.CeilToInt(state.MaximumHealth)}";
-            experienceText.text = $"XP {state.Experience} / {state.ExperienceToNext}    COIN {state.Coins}";
+            healthText.text = $"체력 {Mathf.CeilToInt(state.Health)} / {Mathf.CeilToInt(state.MaximumHealth)}";
+            experienceText.text = $"경험치 {state.Experience} / {state.ExperienceToNext}    엽전 {state.Coins}";
             timerText.text = Mathf.CeilToInt(Mathf.Max(0f, state.Duration - state.Elapsed)).ToString("00");
-            killsText.text = $"KILLS {state.Kills}";
+            killsText.text = $"처치 {state.Kills}";
             SetFill(healthFill, state.Health, state.MaximumHealth);
             SetFill(experienceFill, state.Experience, state.ExperienceToNext);
             bossWarningText.gameObject.SetActive(state.BossWarning);
-            bossWarningText.text = "A DREADFUL PRESENCE APPROACHES";
+            bossWarningText.text = "강한 기운이 다가옵니다";
             var showWave = state.WaveAnnouncementRemaining > 0f &&
                            !string.IsNullOrWhiteSpace(state.WaveAnnouncement);
             waveAnnouncementText.gameObject.SetActive(showWave);
@@ -114,7 +114,7 @@ namespace JoseonHunter.Presentation.UI
             bossRoot.SetActive(state.BossAlive);
             if (state.BossAlive)
             {
-                bossText.text = $"BOSS  {Mathf.CeilToInt(state.BossHealth)} / {Mathf.CeilToInt(state.BossMaximumHealth)}";
+                bossText.text = $"우두머리  {Mathf.CeilToInt(state.BossHealth)} / {Mathf.CeilToInt(state.BossMaximumHealth)}";
                 SetFill(bossFill, state.BossHealth, state.BossMaximumHealth);
             }
         }

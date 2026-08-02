@@ -20,6 +20,7 @@ namespace JoseonHunter.Presentation.UI
         private RewardRevealPresenter rewardReveal;
         private WeaponAffixRevealPresenter affixReveal;
         private UpgradeChoicePresenter upgradeChoice;
+        private RunResultPresenter runResult;
         private CanvasGroup combatHudGroup;
         private CanvasGroup weaponRackGroup;
         private RectTransform safeAreaContainer;
@@ -33,6 +34,7 @@ namespace JoseonHunter.Presentation.UI
         private bool waitingForChoiceClose;
         private ProgressionRewardEvent pendingReward;
         private bool hasPendingReward;
+        private bool resultWasOpen;
 
         public FirstPlayableController BoundController => boundController;
         public RectTransform SafeAreaContainer => safeAreaContainer;
@@ -97,6 +99,10 @@ namespace JoseonHunter.Presentation.UI
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
             upgradeChoice.Build();
             upgradeChoice.PresentationClosed += NotifyUpgradePresentationClosed;
+            var resultRoot = RuntimeUiFactory.Rect("Run Result", modalSafeAreaContainer);
+            RuntimeUiFactory.Stretch(resultRoot, 0f, 0f, 0f, 0f);
+            runResult = resultRoot.gameObject.AddComponent<RunResultPresenter>();
+            runResult.RestartRequested += OnRestartRequested;
         }
 
         private void OnDestroy()
@@ -107,6 +113,7 @@ namespace JoseonHunter.Presentation.UI
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
             if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
+            if (runResult != null) runResult.RestartRequested -= OnRestartRequested;
             if (instance == this) instance = null;
         }
 
@@ -141,6 +148,13 @@ namespace JoseonHunter.Presentation.UI
             {
                 var state = boundController.UiState;
                 combatHud.Render(state);
+                runResult.Render(state);
+                if (state.RunEnded != resultWasOpen)
+                {
+                    resultWasOpen = state.RunEnded;
+                    SetBackgroundRaycastsEnabled(!resultWasOpen);
+                    if (resultWasOpen) SetModalScrimVisible(false);
+                }
                 var signature = WeaponSignature(state);
                 if (signature == weaponSignature) return;
                 weaponSignature = signature;
@@ -297,6 +311,11 @@ namespace JoseonHunter.Presentation.UI
             SetModalScrimVisible(false);
         }
 
+        private void OnRestartRequested()
+        {
+            boundController?.RestartRun();
+        }
+
         private void SetBackgroundRaycastsEnabled(bool enabled)
         {
             if (combatHudGroup != null) combatHudGroup.blocksRaycasts = enabled;
@@ -323,6 +342,7 @@ namespace JoseonHunter.Presentation.UI
             weaponRack?.ApplyPortraitLayout();
             upgradeChoice?.ApplyPortraitLayout();
             affixReveal?.ApplyPortraitLayout();
+            runResult?.ApplyPortraitLayout();
         }
 
         private static void ApplyNormalizedSafeArea(RectTransform container, Vector2 min, Vector2 max)

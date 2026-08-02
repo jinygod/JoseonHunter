@@ -10,6 +10,23 @@ namespace JoseonHunter.Tests.PlayMode
     public sealed class FirstPlayableUiStatePlayModeTests
     {
         [UnityTest]
+        public IEnumerator EndedRunStateCanOnlyRestartThroughThePublicEntryPoint()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            Assert.That(controller, Is.Not.Null);
+
+            controller.EndRunForTests(false);
+            Assert.That(controller.UiState.RunEnded, Is.True);
+            Assert.That(controller.UiState.Victory, Is.False);
+
+            controller.RestartRun();
+            Assert.That(controller.UiState.RunEnded, Is.False);
+            Assert.That(controller.RunEndedForTests, Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator Upgrade_presentation_contract_guards_choices_and_queues_rewards()
         {
             SceneManager.LoadScene("Gameplay");
