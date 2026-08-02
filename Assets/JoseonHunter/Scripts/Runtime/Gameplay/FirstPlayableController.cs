@@ -1529,8 +1529,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 experienceSprite != null ? experienceSprite : solidSprite,
                 player.transform.position,
                 14,
-                player.transform);
-            flashObject.transform.localPosition = Vector3.zero;
+                runtimeObjects);
             experienceAbsorbFlash = flashObject.GetComponent<SpriteRenderer>();
             experienceAbsorbFlash.enabled = false;
             experienceAbsorbFlashTimer = 0f;
@@ -1549,6 +1548,7 @@ namespace JoseonHunter.Runtime.Gameplay
             const float duration = .14f;
             var progress = 1f - experienceAbsorbFlashTimer / duration;
             experienceAbsorbFlash.enabled = true;
+            experienceAbsorbFlash.transform.position = player.transform.position;
             experienceAbsorbFlash.transform.localScale = Vector3.one * Mathf.Lerp(.18f, .46f, progress);
             experienceAbsorbFlash.color = new Color(.34f, 1f, .94f, 1f - progress);
         }
@@ -1615,12 +1615,17 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
                 if (pickup.ForceCollect || distance <= pickupRadius)
                 {
-                    pickup.Object.transform.position = ExperiencePickupMotion.Step(
-                        pickup.Object.transform.position,
-                        playerPosition,
-                        pickup.AttractionAge,
-                        delta,
-                        pickup.ForceCollect);
+                    pickup.Object.transform.position = pickup.Kind == PickupKind.Experience
+                        ? ExperiencePickupMotion.Step(
+                            pickup.Object.transform.position,
+                            playerPosition,
+                            pickup.AttractionAge,
+                            delta,
+                            pickup.ForceCollect)
+                        : Vector2.MoveTowards(
+                            pickup.Object.transform.position,
+                            playerPosition,
+                            Mathf.Lerp(4f, 12f, 1f - distance / pickupRadius) * delta);
                 }
 
                 if (distance > 0.42f)
