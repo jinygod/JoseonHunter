@@ -50,7 +50,7 @@ namespace JoseonHunter.Presentation.UI
                 return default;
 
             var count = Mathf.Clamp(result.NewPotentials.Count, 0, 3);
-            var countDuration = result.General.Tier == WeaponAffixTier.Standard ? .75f : .90f;
+            var countDuration = CountDurationFor(result.General.Tier);
             if (count > 0)
             {
                 const float affixStop = .78f;
@@ -65,18 +65,15 @@ namespace JoseonHunter.Presentation.UI
                     float.PositiveInfinity);
             }
 
-            if (result.General.Tier == WeaponAffixTier.Perfect)
-                return new WeaponAffixRevealTimeline(0, 2.08f, .48f, .86f, .86f, 1.76f,
-                    float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 1.88f,
-                    float.PositiveInfinity);
-            if (result.General.Tier == WeaponAffixTier.High)
-                return new WeaponAffixRevealTimeline(0, 2.03f, .46f, .82f, .82f, 1.72f,
-                    float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 1.84f,
-                    float.PositiveInfinity);
-
-            return new WeaponAffixRevealTimeline(0, 1.82f, .42f, .76f, .76f, 1.51f,
-                float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 1.63f,
-                float.PositiveInfinity);
+            var baseAffixStop = result.General.Tier == WeaponAffixTier.Perfect ? .86f :
+                result.General.Tier == WeaponAffixTier.High ? .82f : .76f;
+            var spinEnd = result.General.Tier == WeaponAffixTier.Perfect ? .48f :
+                result.General.Tier == WeaponAffixTier.High ? .46f : .42f;
+            var countEndAt = baseAffixStop + countDuration;
+            var readStartAt = countEndAt + .12f;
+            return new WeaponAffixRevealTimeline(0, readStartAt + .19f, spinEnd, baseAffixStop,
+                baseAffixStop, countEndAt, float.PositiveInfinity, float.PositiveInfinity,
+                float.PositiveInfinity, readStartAt, float.PositiveInfinity);
         }
 
         public static WeaponAffixRevealTimeline For(WeaponAppraisalViewModel model)
@@ -88,17 +85,22 @@ namespace JoseonHunter.Presentation.UI
             var profile = WeaponAppraisalPresentation.ProfileFor(model);
             if (profile == WeaponAppraisalRevealProfile.FirstAcquisition)
             {
-                var countEnd = .78f + (model.Result.General.Tier == WeaponAffixTier.Standard ? .75f : .90f);
+                var countEnd = .78f + CountDurationFor(model.Result.General.Tier);
                 return new WeaponAffixRevealTimeline(0, countEnd + .31f, .42f, .78f, .78f,
                     countEnd, float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity,
                     countEnd + .12f, float.PositiveInfinity);
             }
             if (profile != WeaponAppraisalRevealProfile.RepeatStandard)
                 return For(model.Result);
-            return new WeaponAffixRevealTimeline(0, 1.58f, .24f, .52f, .52f, 1.27f,
-                float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity, 1.39f,
+            const float repeatCountEnd = .52f + 1.40f;
+            return new WeaponAffixRevealTimeline(0, repeatCountEnd + .31f, .24f, .52f, .52f,
+                repeatCountEnd, float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity,
+                repeatCountEnd + .12f,
                 float.PositiveInfinity);
         }
+
+        private static float CountDurationFor(WeaponAffixTier tier) =>
+            tier == WeaponAffixTier.Standard ? 1.40f : 1.60f;
 
         public float PotentialStopsAt(int index)
         {

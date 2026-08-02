@@ -29,6 +29,16 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void CountUpRunsFastThenReservesDistinctFinalValues()
+        {
+            Assert.That(WeaponAppraisalPresentation.DisplayValueAt(20d, .25f), Is.GreaterThanOrEqualTo(12));
+            Assert.That(WeaponAppraisalPresentation.DisplayValueAt(20d, .78f), Is.EqualTo(18));
+            Assert.That(WeaponAppraisalPresentation.DisplayValueAt(20d, .90f), Is.EqualTo(19));
+            Assert.That(WeaponAppraisalPresentation.DisplayValueAt(20d, 1f), Is.EqualTo(20));
+            Assert.That(WeaponAppraisalPresentation.DisplayValueAt(-8d, 1f), Is.EqualTo(-8));
+        }
+
+        [Test]
         public void ExistingPotentialStaysRevealed()
         {
             var timeline = WeaponAffixRevealTimeline.For(Result());
@@ -65,13 +75,13 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void AutomaticDurationsReserveTheCountUpAndRemainUnderThreeSeconds()
         {
-            Assert.That(WeaponAffixRevealTimeline.For(Result()).Duration, Is.InRange(1.8f, 2.1f));
+            Assert.That(WeaponAffixRevealTimeline.For(Result()).Duration, Is.InRange(2.4f, 2.5f));
             Assert.That(WeaponAffixRevealTimeline.For(Result(WeaponPotentialId.HwandoVenomFang)).Duration,
-                Is.LessThanOrEqualTo(2.3f));
+                Is.LessThanOrEqualTo(3f));
             Assert.That(WeaponAffixRevealTimeline.For(Result(
                 WeaponPotentialId.HwandoVenomFang,
                 WeaponPotentialId.HwandoReturningAfterimage,
-                WeaponPotentialId.HwandoFlyingBladeDance)).Duration, Is.LessThanOrEqualTo(2.7f));
+                WeaponPotentialId.HwandoFlyingBladeDance)).Duration, Is.LessThanOrEqualTo(3.3f));
         }
 
         [Test]
@@ -85,7 +95,7 @@ namespace JoseonHunter.Tests.EditMode
                 WeaponAppraisalRevealProfile.FirstAcquisition, 0f), Is.LessThan(.15f));
             Assert.That(WeaponAppraisalPresentation.ScrollOpenAt(
                 WeaponAppraisalRevealProfile.FirstAcquisition, .4f), Is.EqualTo(1f));
-            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(1.84f).Within(.001f));
+            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(2.49f).Within(.001f));
         }
 
         [Test]
@@ -97,7 +107,7 @@ namespace JoseonHunter.Tests.EditMode
                 Is.EqualTo(WeaponAppraisalRevealProfile.RepeatStandard));
             Assert.That(WeaponAppraisalPresentation.ScrollOpenAt(
                 WeaponAppraisalRevealProfile.RepeatStandard, 0f), Is.GreaterThan(.5f));
-            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(1.58f).Within(.001f));
+            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(2.23f).Within(.001f));
         }
 
         [Test]
@@ -107,7 +117,7 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(WeaponAppraisalPresentation.ProfileFor(model),
                 Is.EqualTo(WeaponAppraisalRevealProfile.Ceremonial));
-            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(2.03f).Within(.001f));
+            Assert.That(WeaponAffixRevealTimeline.For(model).Duration, Is.EqualTo(2.73f).Within(.001f));
         }
 
         private static WeaponAffixRollResult Result(params WeaponPotentialId[] potentials) =>

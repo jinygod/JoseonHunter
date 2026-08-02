@@ -47,10 +47,23 @@ namespace JoseonHunter.Presentation.UI
 
         public static int DisplayValueAt(double target, float progress)
         {
-            var clamped = Mathf.Clamp01(progress);
-            var inverse = 1f - clamped;
-            var eased = 1f - inverse * inverse * inverse;
-            return Mathf.RoundToInt((float)target * eased);
+            return Mathf.RoundToInt((float)target * CountFractionAt(progress));
+        }
+
+        public static float CountFractionAt(float progress)
+        {
+            var value = Mathf.Clamp01(progress);
+            if (value <= .45f)
+                return Mathf.Lerp(0f, .70f, EaseOutCubic(value / .45f));
+            if (value <= .78f)
+                return Mathf.Lerp(.70f, .90f, Mathf.SmoothStep(0f, 1f, (value - .45f) / .33f));
+            return Mathf.Lerp(.90f, 1f, Mathf.SmoothStep(0f, 1f, (value - .78f) / .22f));
+        }
+
+        private static float EaseOutCubic(float value)
+        {
+            var inverse = 1f - Mathf.Clamp01(value);
+            return 1f - inverse * inverse * inverse;
         }
 
         public static WeaponPotentialSlotKind ResolveSlot(

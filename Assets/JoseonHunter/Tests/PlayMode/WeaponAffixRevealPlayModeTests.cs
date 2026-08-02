@@ -16,12 +16,12 @@ namespace JoseonHunter.Tests.PlayMode
     {
         [TearDown]
         public void RestoreTimeScale() => Time.timeScale = 1f;
-        [TestCase(WeaponAffixTier.Standard, 0, 1.82f)]
-        [TestCase(WeaponAffixTier.High, 0, 2.03f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 2.08f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.25f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 2.43f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 2.61f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 2.47f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.73f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.77f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.90f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 3.08f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 3.26f)]
         public void Duration_uses_the_exact_affix_and_jackpot_caps(WeaponAffixTier tier, int potentialCount, float expected)
         {
             Assert.That(WeaponAffixRevealPresenter.DurationFor(Result(tier, potentialCount)),
@@ -86,6 +86,29 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(lockedLabel.gameObject.activeSelf, Is.True);
             Assert.That(TextValue(lockedLabel), Does.Contain("잠김"));
             Assert.That(TextColor(lockedLabel).grayscale, Is.LessThan(.5f));
+
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void Accumulated_summary_and_rows_have_dedicated_vertical_space()
+        {
+            var presenter = new GameObject("Appraisal Spacing Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.ShowDetails(new WeaponSlotView(
+                WeaponId.HwandoFlyingBlade.Value, "Hwando Flying Blade", 2, null,
+                "재사용 대기시간 -8%", behavior: "Returning blade"));
+
+            var main = RectNamed(presenter, "Reel Window 0");
+            var summary = RectNamed(presenter, "Accumulated Affix Summary");
+            var firstPotential = RectNamed(presenter, "Reel Window 1");
+            var lastPotential = RectNamed(presenter, "Reel Window 3");
+            var confirm = RectNamed(presenter, "Confirm Result");
+
+            Assert.That(Bottom(main) - Top(summary), Is.GreaterThanOrEqualTo(6f));
+            Assert.That(Bottom(summary) - Top(firstPotential), Is.GreaterThanOrEqualTo(6f));
+            Assert.That(Bottom(lastPotential) - Top(confirm), Is.GreaterThanOrEqualTo(6f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -479,6 +502,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(text, Is.Not.Null, rect.name);
             return (Color)text.GetType().GetProperty("color").GetValue(text);
         }
+
+        private static float Top(RectTransform rect) =>
+            rect.anchoredPosition.y + rect.sizeDelta.y * .5f;
+
+        private static float Bottom(RectTransform rect) =>
+            rect.anchoredPosition.y - rect.sizeDelta.y * .5f;
 
         private static WeaponAppraisalViewModel Model(
             int level,

@@ -678,7 +678,7 @@ namespace JoseonHunter.Presentation.UI
             detail.fontStyle = FontStyles.Bold;
             detail.color = JoseonUiPalette.DarkPanelText;
             accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
-                new Vector2(-80f, 60f), new Vector2(740f, 28f), 18f,
+                new Vector2(-80f, 44f), new Vector2(740f, 24f), 18f,
                 TextAlignmentOptions.Left);
             accumulatedAffixSummary.fontStyle = FontStyles.Bold;
             accumulatedAffixSummary.color = JoseonUiPalette.HanjiMutedInk;
@@ -712,7 +712,7 @@ namespace JoseonHunter.Presentation.UI
                 JoseonUiPalette.AppraisalResult);
             var confirmRect = confirmButton.GetComponent<RectTransform>();
             confirmRect.anchorMin = confirmRect.anchorMax = new Vector2(.5f, .5f);
-            confirmRect.anchoredPosition = new Vector2(0f, -345f);
+            confirmRect.anchoredPosition = new Vector2(0f, -385f);
             confirmRect.sizeDelta = new Vector2(310f, 62f);
             confirmButton.image.preserveAspect = false;
             confirmButton.onClick.AddListener(OnConfirmButton);
@@ -761,7 +761,7 @@ namespace JoseonHunter.Presentation.UI
         }
 
         private static Vector2 PotentialRowPosition(int index) =>
-            new Vector2(0f, -20f - Mathf.Clamp(index, 0, 2) * 128f);
+            new Vector2(0f, -32f - Mathf.Clamp(index, 0, 2) * 128f);
 
         private void BuildReel(int index, Vector2 position, Vector2 windowSize, Vector2 symbolSize)
         {

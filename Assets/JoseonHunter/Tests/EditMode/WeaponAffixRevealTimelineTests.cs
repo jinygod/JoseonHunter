@@ -6,12 +6,12 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WeaponAffixRevealTimelineTests
     {
-        [TestCase(WeaponAffixTier.Standard, 0, 1.82f)]
-        [TestCase(WeaponAffixTier.High, 0, 2.03f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 2.08f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.25f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 2.43f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 2.61f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 2.47f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.73f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.77f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.90f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 3.08f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 3.26f)]
         public void Duration_matches_the_pacing_contract(WeaponAffixTier tier, int potentialCount, float expected)
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(tier, potentialCount));
@@ -38,9 +38,9 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(timeline.Duration, Is.GreaterThanOrEqualTo(1.2f));
         }
 
-        [TestCase(WeaponAffixTier.Standard, .75f)]
-        [TestCase(WeaponAffixTier.High, .90f)]
-        [TestCase(WeaponAffixTier.Perfect, .90f)]
+        [TestCase(WeaponAffixTier.Standard, 1.40f)]
+        [TestCase(WeaponAffixTier.High, 1.60f)]
+        [TestCase(WeaponAffixTier.Perfect, 1.60f)]
         public void Count_up_begins_only_after_the_reel_stops_and_gets_its_full_window(
             WeaponAffixTier tier, float expectedDuration)
         {
@@ -77,7 +77,7 @@ namespace JoseonHunter.Tests.EditMode
             var timeline = WeaponAffixRevealTimeline.For(Result(WeaponAffixTier.Perfect, 3));
             Assert.That(timeline.SkipFinishAt(0f), Is.GreaterThanOrEqualTo(1.1f));
             Assert.That(timeline.SkipFinishAt(0f), Is.LessThan(timeline.Duration));
-            Assert.That(timeline.SkipFinishAt(3.3f), Is.EqualTo(timeline.Duration));
+            Assert.That(timeline.SkipFinishAt(timeline.Duration), Is.EqualTo(timeline.Duration));
         }
 
         private static WeaponAffixRollResult Result(WeaponAffixTier tier, int potentialCount)
