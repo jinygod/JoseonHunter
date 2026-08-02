@@ -12,7 +12,7 @@ namespace JoseonHunter.Tests.PlayMode
     public sealed class DamageNumberPoolPlayModeTests
     {
         [UnityTest]
-        public IEnumerator NormalDamageNumberIsSmallAndAnchoredJustAboveTheContact()
+        public IEnumerator NormalDamageNumberIsLargeOutlinedAndAnchoredJustAboveTheContact()
         {
             var root = new GameObject("Damage Number Readability");
             var presenter = root.AddComponent<DamageNumberPresenter>();
@@ -22,10 +22,16 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Play(display, false, Color.white, _ => { });
             yield return null;
 
-            Assert.That(presenter.DisplayFontSize, Is.InRange(2f, 4f));
+            Assert.That(presenter.DisplayFontSize, Is.GreaterThanOrEqualTo(4.9f));
             Assert.That(presenter.DisplayFontName, Is.EqualTo("BlackAndWhitePicture-Dynamic SDF"));
             Assert.That(presenter.transform.position.y, Is.InRange(3.15f, 3.7f));
             Assert.That(presenter.transform.localScale.x, Is.LessThanOrEqualTo(1f));
+            Assert.That(presenter.DisplayOutlineWidth, Is.GreaterThanOrEqualTo(.18f));
+            Assert.That(presenter.DisplayOutlineColor.grayscale, Is.LessThan(.2f));
+            yield return new WaitForSeconds(.5f);
+            Assert.That(presenter.IsActive, Is.True, "The larger value needs a short readable hold.");
+            yield return new WaitForSeconds(.15f);
+            Assert.That(presenter.IsActive, Is.False);
             Object.Destroy(root);
         }
 

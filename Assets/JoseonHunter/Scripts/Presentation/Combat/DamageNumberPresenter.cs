@@ -9,15 +9,15 @@ namespace JoseonHunter.Presentation.Combat
     [RequireComponent(typeof(TextMeshPro))]
     public sealed class DamageNumberPresenter : MonoBehaviour
     {
-        private const float NormalLifetime = 0.48f;
+        private const float NormalLifetime = 0.62f;
         private const float BossLifetimeBonus = 0.12f;
         private const float VerticalAnchorOffset = 0.20f;
         private const float RiseDistance = 0.22f;
         private const float NormalRiseDuration = 0.30f;
         private const float CriticalPunchDuration = 0.12f;
         private const float CriticalPunchScale = 1.16f;
-        private const float NormalFontSize = 2.7f;
-        private const float BossFontSize = 3.15f;
+        private const float NormalFontSize = 5.0f;
+        private const float BossFontSize = 5.65f;
 
         private TextMeshPro textMesh;
         private Action<DamageNumberPresenter> completed;
@@ -33,6 +33,8 @@ namespace JoseonHunter.Presentation.Combat
         public Color DisplayColor => textMesh == null ? Color.clear : textMesh.color;
         public float DisplayFontSize => textMesh == null ? 0f : textMesh.fontSize;
         public string DisplayFontName => textMesh == null || textMesh.font == null ? string.Empty : textMesh.font.name;
+        public float DisplayOutlineWidth => textMesh == null ? 0f : textMesh.outlineWidth;
+        public Color DisplayOutlineColor => textMesh == null ? Color.clear : textMesh.outlineColor;
 
         private void Awake()
         {
@@ -42,6 +44,8 @@ namespace JoseonHunter.Presentation.Combat
             textMesh.enableWordWrapping = false;
             textMesh.fontSize = NormalFontSize;
             textMesh.sortingOrder = 30;
+            textMesh.outlineWidth = .20f;
+            textMesh.outlineColor = new Color32(22, 14, 10, 230);
             ResetState();
         }
 
@@ -82,7 +86,7 @@ namespace JoseonHunter.Presentation.Combat
             textMesh.text = display.DisplayedDamage.ToString();
             textMesh.fontSize = isBoss ? BossFontSize : NormalFontSize;
             textMesh.color = display.IsCritical ? new Color(1f, 0.79f, 0.24f, 1f) : accent;
-            textMesh.fontStyle = isBoss ? FontStyles.Bold : FontStyles.Normal;
+            textMesh.fontStyle = FontStyles.Bold;
             transform.localScale = Vector3.one * (display.IsCritical ? CriticalPunchScale : 1f);
             gameObject.SetActive(true);
         }

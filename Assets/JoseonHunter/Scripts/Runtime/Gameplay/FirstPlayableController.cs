@@ -1484,7 +1484,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 6,
                 runtimeObjects);
             pickupObject.transform.localScale = Vector3.one *
-                                                (kind == PickupKind.Yeopjeon ? 0.18f : 0.14f);
+                                                (kind == PickupKind.Experience ? 0.30f : 0.18f);
             var renderer = pickupObject.GetComponent<SpriteRenderer>();
             if (kind == PickupKind.Magnet)
             {
@@ -1513,6 +1513,11 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
 
                 var distance = Vector2.Distance(pickup.Object.transform.position, playerPosition);
+                if (pickup.Kind == PickupKind.Experience)
+                {
+                    var pulse = .30f + Mathf.Sin(Time.time * 4.5f + index * .73f) * .025f;
+                    pickup.Object.transform.localScale = Vector3.one * pulse;
+                }
                 if (pickup.ForceCollect || distance <= pickupRadius)
                 {
                     pickup.Object.transform.position = Vector2.MoveTowards(
