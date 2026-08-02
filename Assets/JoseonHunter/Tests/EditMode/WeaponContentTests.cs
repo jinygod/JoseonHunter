@@ -254,6 +254,39 @@ namespace JoseonHunter.Tests.EditMode
             }
         }
 
+        [Test]
+        public void RebuildWeaponExecutors_FrostUsesAuthoredSlowFraction()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(
+                "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset");
+            var owner = new GameObject("frost-slow-forwarding-test");
+            try
+            {
+                var controller = owner.AddComponent<FirstPlayableController>();
+                var registry = new CombatTargetRegistry();
+                var damage = new CombatDamageService(registry);
+                var mask = new PixelHitMask(1, 1, Vector2.zero, 1f, new[] { 1u });
+                var runtime = new WeaponRuntimeController(registry, damage, mask);
+                SetPrivateField(controller, "weaponCatalog", catalog);
+                SetPrivateField(controller, "combatTargets", registry);
+                SetPrivateField(controller, "combatDamageService", damage);
+                SetPrivateField(controller, "weaponRuntime", runtime);
+
+                controller.SetWeaponLevelForTests(WeaponId.FrostFlask, 1);
+
+                var executor = (FrostFlaskExecutor)typeof(WeaponRuntimeController)
+                    .GetMethod("ExecutorForTests", BindingFlags.Instance | BindingFlags.NonPublic)
+                    ?.Invoke(controller.WeaponRuntime, new object[] { WeaponId.FrostFlask });
+                var slowProperty = typeof(FrostFlaskExecutor).GetProperty("SlowFraction");
+                Assert.That(slowProperty, Is.Not.Null);
+                Assert.That((float)slowProperty.GetValue(executor), Is.EqualTo(.35f).Within(.001f));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(owner);
+            }
+        }
+
         private static IEnumerable<WeaponId> AllWeaponIds() => WeaponRoster.All;
 
         private static WeaponDefinitionAsset LoadDefinition(WeaponId id) =>

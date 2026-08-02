@@ -1354,7 +1354,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers, slowFraction: data.SlowFraction);
                 else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved, modifiers);
                 else throw new InvalidOperationException($"No executor is available for '{id}'.");
                 weaponRuntime.Register(id, executor);
@@ -1952,7 +1952,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (id == WeaponId.ThunderCrashBomb.Value) return "범위 폭발 공격";
             if (id == WeaponId.JangseungWard.Value) return "주변을 지키는 장승";
             if (id == WeaponId.SingijeonVolley.Value) return "다발 화살 일제사격";
-            if (id == WeaponId.FrostFlask.Value) return "빙결 지대 생성";
+            if (id == WeaponId.FrostFlask.Value) return "착지 폭발 후 서리 지대: 지속 피해·둔화·빙결";
             if (id == WeaponId.WindThunderFan.Value) return "부채 바람으로 밀쳐냄";
             return "무기 효과 강화";
         }

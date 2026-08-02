@@ -1011,6 +1011,36 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void FrostLandingBurstsBeforeHalfDamageFieldTicksAndUsesAuthoredSlow()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var damage = new CombatDamageService(registry);
+            var runtime = new WeaponRuntimeController(registry, damage, mask);
+            var frost = new FrostFlaskExecutor(
+                runtime, 10f, 10f, 2f, .1f, 2f, 1f, 1, 1,
+                slowFraction: .35f);
+            var target = new TestTarget(1, new Float2(.4f, 0f), mask);
+            registry.Register(target);
+            var events = new List<ConfirmedDamageEvent>();
+            damage.DamageConfirmed += events.Add;
+
+            frost.Tick(.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            var landing = events.Single(confirmed => confirmed.Phase == ContactPhase.Blast);
+            Assert.That(landing.FinalDamage, Is.EqualTo(10));
+
+            frost.Tick(.25f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+
+            var fieldTick = events.Single(confirmed => confirmed.Phase == ContactPhase.Tick);
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(fieldTick.FinalDamage, Is.EqualTo(5));
+                Assert.That(target.LastSlowStrength, Is.EqualTo(.35f).Within(.001f));
+            });
+        }
+
+        [Test]
         public void FrostStatusSourcesRetainTheStrongestOverlapUntilTheirOwnFieldExits()
         {
             var target = new TestTarget(1, default, PixelHitMask.FromRows("1"));

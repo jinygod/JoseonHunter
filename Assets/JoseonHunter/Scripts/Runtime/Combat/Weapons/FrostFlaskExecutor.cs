@@ -33,11 +33,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private Transform transientVisualRoot;
         private float cooldown;
 
-        public FrostFlaskExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float duration, float radius, int fieldCapacity, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
+        public FrostFlaskExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float duration, float radius, int fieldCapacity, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default, float slowFraction = .5f)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range));
             LobDuration = Mathf.Max(0.01f, modifiers.ScaleDuration(lobDuration)); Duration = Mathf.Max(0.01f, modifiers.ScaleDuration(duration)); Radius = Mathf.Max(0.01f, modifiers.ScaleArea(radius)); FieldCapacity = Mathf.Clamp(fieldCapacity, 1, MaximumFields); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
+            SlowFraction = Mathf.Clamp01(slowFraction);
             IsEvolved = evolved;
         }
 
@@ -48,6 +49,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float Duration { get; }
         public float Radius { get; }
         public int FieldCapacity { get; }
+        public float SlowFraction { get; }
         public int Level { get; }
         public bool IsEvolved { get; }
         public WeaponRuntimeModifiers Potentials { get; }
@@ -130,6 +132,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     field.Active = true; field.Age = 0f;
                     LastFieldVisualScale = .65f;
                     UpdateFieldVisual(field, context, .65f);
+                    ResolveLandingBurst(field, context);
                     PlayLandingFragments(field, context);
                 }
                 return;
@@ -165,7 +168,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
                 if (target is IFrostStatusTarget status)
                 {
-                    status.ApplyFrostSlow(field.Attack.InstanceId, 0.5f);
+                    status.ApplyFrostSlow(field.Attack.InstanceId, SlowFraction);
                     if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId))
                     {
                         status.ApplyFreeze(field.Attack.InstanceId, 0.2f);
@@ -173,7 +176,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     }
                 }
                 if (field.ActiveAge + 0.0001f >= field.NextDamageAge)
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Tick, context.SimulationTick), out _);
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage * .5f), false, contact, ContactPhase.Tick, context.SimulationTick), out _);
             }
             foreach (var previous in field.Inside)
                 if (!inside.Contains(previous) && runtime.Targets.TryGet(previous, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
@@ -222,6 +225,42 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             if (hitConfirmed) PlayConfirmedShatter(field, context);
             runtime.DamageService.RetireAttack(spike.InstanceId);
+        }
+
+        private void ResolveLandingBurst(Field field, in WeaponExecutionContext context)
+        {
+            var burst = new AttackInstance(
+                runtime.AllocateAttackInstanceId(),
+                RepeatHitPolicy.OncePerInstance,
+                0f);
+            runtime.Targets.CopyTo(targets);
+            var transform = new PixelMaskTransform(
+                field.Landing,
+                0,
+                false,
+                new Vector2(Radius * 2f, Radius * 2f));
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive || target.HurtMask == null) continue;
+                if (!PixelMaskContactService.TryFindContact(
+                        diskMask,
+                        transform,
+                        target.HurtMask,
+                        target.HurtMaskTransform,
+                        out var contact)) continue;
+                runtime.DamageService.TryApply(
+                    WeaponDamageRequest.Create(
+                        burst,
+                        WeaponId.FrostFlask,
+                        target,
+                        Mathf.CeilToInt(BaseDamage),
+                        false,
+                        contact,
+                        ContactPhase.Blast,
+                        context.SimulationTick),
+                    out _);
+            }
+            runtime.DamageService.RetireAttack(burst.InstanceId);
         }
 
         private bool TryFindCrowd(Float2 origin, out Float2 landing)
@@ -350,19 +389,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             renderer.sprite = context.PresentationSpriteFor(WeaponId.FrostFlask, field.VisualPartIndex);
             field.Visual.transform.position = new Vector3(field.Landing.X, field.Landing.Y, 0f);
             field.Visual.transform.localScale = ScaleSpriteToWorldDiameter(renderer.sprite, Radius * 2f * radiusScale);
-            renderer.color = new Color(1f, 1f, 1f, .58f);
+            renderer.color = new Color(.62f, .92f, 1f, .82f);
         }
 
         private void PlayLandingFragments(Field field, in WeaponExecutionContext context)
         {
             var cue = new WeaponVisualCue(WeaponId.FrostFlask, WeaponVisualStage.Impact, Level, IsEvolved, .72f, .12f);
+            var impactSprite = context.PresentationSpriteFor(
+                WeaponId.FrostFlask,
+                WeaponVisualPartIndex.FrostFlask.Impact);
+            var impactScale = ScaleSpriteToWorldDiameter(impactSprite, cue.ResolvedScale);
             transientVisuals?.Play(
-                context.PresentationSpriteFor(WeaponId.FrostFlask, WeaponVisualPartIndex.FrostFlask.Impact),
+                impactSprite,
                 new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
-                ScaleSpriteToWorldDiameter(
-                    context.PresentationSpriteFor(WeaponId.FrostFlask, WeaponVisualPartIndex.FrostFlask.Impact),
-                    cue.ResolvedScale),
-                new Color(1f, 1f, 1f, .82f), cue.ResolvedLifetime, context.SortingOrder + 2);
+                impactScale,
+                new Color(.72f, 1f, 1f, .94f), cue.ResolvedLifetime, context.SortingOrder + 2);
+            transientVisuals?.Play(
+                impactSprite,
+                new Vector3(field.Landing.X - Radius * .28f, field.Landing.Y + Radius * .12f, 0f),
+                Quaternion.Euler(0f, 0f, -28f),
+                impactScale * .48f,
+                new Color(.34f, .88f, 1f, .78f), cue.ResolvedLifetime, context.SortingOrder + 3);
+            transientVisuals?.Play(
+                impactSprite,
+                new Vector3(field.Landing.X + Radius * .26f, field.Landing.Y + Radius * .16f, 0f),
+                Quaternion.Euler(0f, 0f, 34f),
+                impactScale * .44f,
+                new Color(.34f, .88f, 1f, .74f), cue.ResolvedLifetime, context.SortingOrder + 3);
         }
 
         private void PlayConfirmedShatter(Field field, in WeaponExecutionContext context)
