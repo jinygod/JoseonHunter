@@ -46,7 +46,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ClosureAnimationReturnsAllTemporarySpritesToPool()
+        public IEnumerator ClosureAnimationReturnsFillAndSparksToPool()
         {
             var presenter = CreatePresenter();
             try
@@ -54,6 +54,8 @@ namespace JoseonHunter.Tests.PlayMode
                 presenter.PlayClosure(UnitSquare());
                 yield return new WaitForSeconds(.8f);
                 Assert.That(presenter.ActiveClosureVisualCountForTests, Is.Zero);
+                Assert.That(presenter.ClosureSparkCountForTests, Is.Zero);
+                Assert.That(presenter.ClosureMeshVertexCountForTests, Is.Zero);
             }
             finally
             {

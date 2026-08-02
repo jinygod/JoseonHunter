@@ -8,7 +8,7 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class GeumjulTrailPresenterTests
     {
         [Test]
-        public void PresenterCapsPooledKnotsAndMarksClosureReadiness()
+        public void PresenterUsesContinuousTwoColorLinesWithoutKnotsOrTexture()
         {
             var owner = new GameObject("Geumjul");
             var presenter = owner.AddComponent<GeumjulTrailPresenter>();
@@ -17,11 +17,12 @@ namespace JoseonHunter.Tests.EditMode
                 presenter.Configure(CreateVisualLibrary(), presenter.transform, 4);
                 presenter.SetTrail(BuildTrail(90, .14f), .48f);
 
-                Assert.That(presenter.ActiveKnotCountForTests, Is.LessThanOrEqualTo(10));
+                Assert.That(presenter.UsesTexturedRopeForTests, Is.False);
+                Assert.That(presenter.ActiveDecorativeKnotCountForTests, Is.Zero);
                 Assert.That(presenter.HasAnchorForTests, Is.True);
                 Assert.That(presenter.IsClosureReadyForTests, Is.True);
                 Assert.That(presenter.AnchorWorldSizeForTests, Is.LessThanOrEqualTo(.42f));
-                Assert.That(presenter.LargestActiveKnotWorldSizeForTests, Is.LessThanOrEqualTo(.28f));
+                Assert.That(presenter.UsesOnlyApprovedLineColorsForTests, Is.True);
             }
             finally
             {
@@ -30,7 +31,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void ClosureScaleIsDerivedFromThePolygonBounds()
+        public void ClosureUsesPolygonFillAndEightOchreSparksInsteadOfStampSprites()
         {
             var owner = new GameObject("Geumjul closure");
             var presenter = owner.AddComponent<GeumjulTrailPresenter>();
@@ -43,8 +44,10 @@ namespace JoseonHunter.Tests.EditMode
                     new Vector2(2f, 1.5f), new Vector2(-2f, 1.5f)
                 });
 
-                Assert.That(presenter.ClosureTargetWorldSizeForTests, Is.EqualTo(2.88f).Within(.001f));
-                Assert.That(presenter.ActiveClosureWorldSizeForTests, Is.EqualTo(2.88f).Within(.001f));
+                Assert.That(presenter.ClosureMeshVertexCountForTests, Is.EqualTo(4));
+                Assert.That(presenter.ClosureSparkCountForTests, Is.EqualTo(8));
+                Assert.That(presenter.UsesLegacyClosureSpritesForTests, Is.False);
+                Assert.That(presenter.ActiveClosureVisualCountForTests, Is.EqualTo(1));
             }
             finally
             {
