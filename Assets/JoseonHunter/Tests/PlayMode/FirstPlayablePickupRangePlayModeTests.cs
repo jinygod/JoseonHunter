@@ -24,6 +24,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(pickup.transform.position, Is.EqualTo(before),
                 "Starting pickup attraction must require near-contact distance.");
+            Assert.That(pickup.GetComponent<TrailRenderer>(), Is.Null);
         }
 
         [UnityTest]
@@ -58,6 +59,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.TickGameplayIfRunningForTests(.02f), Is.True);
 
             Assert.That(pickup.transform.position.magnitude, Is.LessThan(beforeDistance));
+        }
+
+        [UnityTest]
+        public IEnumerator AttractedExperienceAcceleratesAndEmitsAShortTrail()
+        {
+            var setup = LoadPickupAt(new Vector2(.57f, 0f));
+            while (setup.MoveNext()) yield return setup.Current;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var pickup = GameObject.Find("Experience Flame");
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(pickup, Is.Not.Null);
+
+            var start = pickup.transform.position.x;
+            Assert.That(controller.TickGameplayIfRunningForTests(.01f), Is.True);
+            var afterFirst = pickup.transform.position.x;
+            Assert.That(controller.TickGameplayIfRunningForTests(.01f), Is.True);
+            var afterSecond = pickup.transform.position.x;
+
+            Assert.That(start - afterFirst, Is.GreaterThan(0f));
+            Assert.That(afterFirst - afterSecond, Is.GreaterThan(start - afterFirst));
+            Assert.That(pickup.GetComponent<TrailRenderer>(), Is.Not.Null);
+            Assert.That(pickup.GetComponent<TrailRenderer>().emitting, Is.True);
         }
 
         private static IEnumerator LoadPickupAt(Vector2 position)

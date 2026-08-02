@@ -79,6 +79,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private WaveSpawnDirector waveSpawnDirector;
         private Texture2D solidTexture;
         private Sprite solidSprite;
+        private Material pickupTrailMaterial;
+        private SpriteRenderer experienceAbsorbFlash;
+        private float experienceAbsorbFlashTimer;
         private Vector2 touchStart;
         private Vector2 movement;
         private Vector3 cameraFollowVelocity;
@@ -494,6 +497,9 @@ namespace JoseonHunter.Runtime.Gameplay
             public PickupKind Kind;
             public int Value;
             public bool ForceCollect;
+            public bool Attracting;
+            public float AttractionAge;
+            public TrailRenderer Trail;
         }
 
         private void Awake()
@@ -521,6 +527,11 @@ namespace JoseonHunter.Runtime.Gameplay
             if (solidTexture != null)
             {
                 Destroy(solidTexture);
+            }
+
+            if (pickupTrailMaterial != null)
+            {
+                Destroy(pickupTrailMaterial);
             }
         }
 
@@ -573,6 +584,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
             UpdateEnemies(delta);
             using (FirstPlayableProfilerMarkers.Weapon.Auto()) UpdateAttack(delta);
+            UpdateExperienceAbsorbFlash(delta);
             using (FirstPlayableProfilerMarkers.Pickup.Auto()) UpdatePickups(delta);
             UpdateGeumjul(delta);
             UpdateField();
@@ -616,6 +628,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 new Vector2(0.5f, 0.5f),
                 1f);
             solidSprite.name = "FirstPlayableSolidSprite";
+            var spriteShader = Shader.Find("Sprites/Default");
+            if (spriteShader != null)
+            {
+                pickupTrailMaterial = new Material(spriteShader)
+                {
+                    name = "ExperiencePickupTrailMaterial"
+                };
+            }
         }
 
         private void CreateField()
@@ -741,6 +761,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 playerRenderer.color = new Color(0.18f, 0.38f, 0.72f);
             }
+            CreateExperienceAbsorbFlash();
 
             geumjulPresenter = new GameObject("Geumjul Presentation")
                 .AddComponent<GeumjulTrailPresenter>();
@@ -1501,6 +1522,62 @@ namespace JoseonHunter.Runtime.Gameplay
             pickups.Add(new PickupState { Object = pickupObject, Kind = kind, Value = value });
         }
 
+        private void CreateExperienceAbsorbFlash()
+        {
+            var flashObject = CreateSpriteObject(
+                "Experience Absorb Flash",
+                experienceSprite != null ? experienceSprite : solidSprite,
+                player.transform.position,
+                14,
+                player.transform);
+            flashObject.transform.localPosition = Vector3.zero;
+            experienceAbsorbFlash = flashObject.GetComponent<SpriteRenderer>();
+            experienceAbsorbFlash.enabled = false;
+            experienceAbsorbFlashTimer = 0f;
+        }
+
+        private void UpdateExperienceAbsorbFlash(float delta)
+        {
+            if (experienceAbsorbFlash == null) return;
+            experienceAbsorbFlashTimer = Mathf.Max(0f, experienceAbsorbFlashTimer - Mathf.Max(0f, delta));
+            if (experienceAbsorbFlashTimer <= 0f)
+            {
+                experienceAbsorbFlash.enabled = false;
+                return;
+            }
+
+            const float duration = .14f;
+            var progress = 1f - experienceAbsorbFlashTimer / duration;
+            experienceAbsorbFlash.enabled = true;
+            experienceAbsorbFlash.transform.localScale = Vector3.one * Mathf.Lerp(.18f, .46f, progress);
+            experienceAbsorbFlash.color = new Color(.34f, 1f, .94f, 1f - progress);
+        }
+
+        private void TriggerExperienceAbsorbFlash()
+        {
+            experienceAbsorbFlashTimer = .14f;
+            UpdateExperienceAbsorbFlash(0f);
+        }
+
+        private void BeginExperienceAttraction(PickupState pickup)
+        {
+            if (pickup.Attracting || pickup.Object == null) return;
+            pickup.Attracting = true;
+            pickup.AttractionAge = 0f;
+            var spriteRenderer = pickup.Object.GetComponent<SpriteRenderer>();
+            var trailRenderer = pickup.Object.AddComponent<TrailRenderer>();
+            trailRenderer.time = .14f;
+            trailRenderer.minVertexDistance = .035f;
+            trailRenderer.startWidth = .12f;
+            trailRenderer.endWidth = 0f;
+            trailRenderer.startColor = new Color(.30f, 1f, .92f, .78f);
+            trailRenderer.endColor = new Color(.20f, .86f, 1f, 0f);
+            trailRenderer.sortingOrder = spriteRenderer == null ? 5 : spriteRenderer.sortingOrder - 1;
+            trailRenderer.sharedMaterial = pickupTrailMaterial;
+            trailRenderer.emitting = true;
+            pickup.Trail = trailRenderer;
+        }
+
         private void UpdatePickups(float delta)
         {
             var playerPosition = (Vector2)player.transform.position;
@@ -1517,16 +1594,33 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (pickup.Kind == PickupKind.Experience)
                 {
                     var pulse = .30f + Mathf.Sin(Time.time * 4.5f + index * .73f) * .025f;
-                    pickup.Object.transform.localScale = Vector3.one * pulse;
+                    if (pickup.ForceCollect || distance <= pickupRadius)
+                    {
+                        BeginExperienceAttraction(pickup);
+                        pickup.AttractionAge += Mathf.Max(0f, delta);
+                        var direction = playerPosition - (Vector2)pickup.Object.transform.position;
+                        pickup.Object.transform.localScale = Vector3.Scale(
+                            Vector3.one * pulse,
+                            ExperiencePickupMotion.StretchAt(direction, pickup.AttractionAge));
+                        if (direction.sqrMagnitude > .0001f)
+                        {
+                            var angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                            pickup.Object.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                        }
+                    }
+                    else
+                    {
+                        pickup.Object.transform.localScale = Vector3.one * pulse;
+                    }
                 }
                 if (pickup.ForceCollect || distance <= pickupRadius)
                 {
-                    pickup.Object.transform.position = Vector2.MoveTowards(
+                    pickup.Object.transform.position = ExperiencePickupMotion.Step(
                         pickup.Object.transform.position,
                         playerPosition,
-                        pickup.ForceCollect
-                            ? 24f * delta
-                            : Mathf.Lerp(4f, 12f, 1f - distance / pickupRadius) * delta);
+                        pickup.AttractionAge,
+                        delta,
+                        pickup.ForceCollect);
                 }
 
                 if (distance > 0.42f)
@@ -1541,6 +1635,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 else if (pickup.Kind == PickupKind.Experience)
                 {
                     AddExperience(pickup.Value);
+                    TriggerExperienceAbsorbFlash();
                 }
                 else
                 {
