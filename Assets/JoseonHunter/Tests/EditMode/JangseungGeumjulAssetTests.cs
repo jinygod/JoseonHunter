@@ -20,6 +20,11 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(library.GeumjulClosureFrames.Length, Is.EqualTo(6));
             Assert.That(library.JangseungDustFrames.Length, Is.EqualTo(4));
             Assert.That(library.JangseungCrossingFrames.Length, Is.EqualTo(4));
+            var guardian = new SerializedObject(library).FindProperty("guardianDescentSprite");
+            Assert.That(guardian, Is.Not.Null);
+            Assert.That(guardian.objectReferenceValue, Is.Not.Null);
+            Assert.That(AssetDatabase.GetAssetPath(guardian.objectReferenceValue),
+                Does.EndWith("jangseung_guardian_descent.png"));
 
             var path = AssetDatabase.GetAssetPath(library.GeumjulRopeTexture);
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -33,6 +38,7 @@ namespace JoseonHunter.Tests.EditMode
             AssertSpriteCollectionUsesCanonicalPaths(library.GeumjulClosureFrames);
             AssertSpriteCollectionUsesCanonicalPaths(library.JangseungDustFrames);
             AssertSpriteCollectionUsesCanonicalPaths(library.JangseungCrossingFrames);
+            AssertSpriteUsesCanonicalPath((Sprite)guardian.objectReferenceValue);
         }
 
         [Test]

@@ -22,6 +22,7 @@ namespace JoseonHunter.Content.Weapons
         [SerializeField] private DamageElement element;
         [SerializeField] private RepeatHitPolicy repeatHitPolicy;
         [SerializeField] private WeaponLevelData[] levels;
+        [SerializeField] private Sprite uiIcon;
         [SerializeField] private Sprite[] presentationSprites;
         [SerializeField] private Texture2D[] binaryMaskSourceReferences;
         [SerializeField] private ActiveFrameWindow[] activeFrameWindows;
@@ -34,6 +35,7 @@ namespace JoseonHunter.Content.Weapons
         public DamageElement Element => element;
         public RepeatHitPolicy RepeatHitPolicy => repeatHitPolicy;
         public IReadOnlyList<WeaponLevelData> Levels => levels ?? Array.Empty<WeaponLevelData>();
+        public Sprite UiIcon => uiIcon;
         public IReadOnlyList<Sprite> PresentationSprites => presentationSprites ?? Array.Empty<Sprite>();
         public IReadOnlyList<Texture2D> BinaryMaskSourceReferences => binaryMaskSourceReferences ?? Array.Empty<Texture2D>();
         public IReadOnlyList<ActiveFrameWindow> ActiveFrameWindows => activeFrameWindows ?? Array.Empty<ActiveFrameWindow>();

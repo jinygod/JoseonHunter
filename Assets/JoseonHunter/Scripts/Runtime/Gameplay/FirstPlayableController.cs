@@ -1342,9 +1342,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private Sprite ResolveWeaponSprite(WeaponId id)
         {
-            return weaponCatalog != null && weaponCatalog.TryGet(id, out var definition) && definition.PresentationSprites.Count > 0
-                ? definition.PresentationSprites[0]
-                : solidSprite;
+            if (weaponCatalog == null || !weaponCatalog.TryGet(id, out var definition)) return solidSprite;
+            if (definition.UiIcon != null) return definition.UiIcon;
+            return definition.PresentationSprites.Count > 0 ? definition.PresentationSprites[0] : solidSprite;
         }
 
         private Sprite ResolveWeaponPresentationSprite(WeaponId id, int partIndex)

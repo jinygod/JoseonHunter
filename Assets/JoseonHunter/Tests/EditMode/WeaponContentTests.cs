@@ -161,6 +161,19 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GakgungUiUsesDedicatedSimplifiedIconInsteadOfCombatAimFrame()
+        {
+            var definition = LoadDefinition(WeaponId.GakgungShot);
+            var uiIcon = new SerializedObject(definition).FindProperty("uiIcon");
+
+            Assert.That(uiIcon, Is.Not.Null);
+            Assert.That(uiIcon.objectReferenceValue, Is.Not.Null);
+            Assert.That(uiIcon.objectReferenceValue, Is.Not.SameAs(definition.PresentationSprites[0]));
+            Assert.That(AssetDatabase.GetAssetPath(uiIcon.objectReferenceValue),
+                Does.EndWith("gakgung_shot/ui-icon.png"));
+        }
+
+        [Test]
         public void ResolveWeaponPresentationSprite_ValidCanonicalIndexReturnsExactFrame()
         {
             var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(

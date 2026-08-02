@@ -84,6 +84,7 @@ MonoBehaviour:
     knockback: 0
     slowFraction: 0
     criticalChance: 0
+  uiIcon: {fileID: 21300000, guid: 90181219cf4d4cb4aac39b2e741c24d8, type: 3}
   presentationSprites:
   - {fileID: 21300000, guid: e78ec5bb79d392647be66e47f75dbd0e, type: 3}
   - {fileID: 21300000, guid: 71cc763300862a64a9e7834a161bdcf8, type: 3}

@@ -12,6 +12,7 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private Sprite[] geumjulClosureFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] jangseungDustFrames = Array.Empty<Sprite>();
         [SerializeField] private Sprite[] jangseungCrossingFrames = Array.Empty<Sprite>();
+        [SerializeField] private Sprite guardianDescentSprite;
 
         public Texture2D GeumjulRopeTexture => geumjulRopeTexture;
         public Sprite GeumjulAnchor => geumjulAnchor;
@@ -19,6 +20,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public Sprite[] GeumjulClosureFrames => geumjulClosureFrames;
         public Sprite[] JangseungDustFrames => jangseungDustFrames;
         public Sprite[] JangseungCrossingFrames => jangseungCrossingFrames;
+        public Sprite GuardianDescentSprite => guardianDescentSprite;
 
 #if UNITY_EDITOR
         public void ConfigureForImport(
@@ -27,7 +29,8 @@ namespace JoseonHunter.Runtime.Gameplay
             Sprite[] knotVariants,
             Sprite[] closureFrames,
             Sprite[] dustFrames,
-            Sprite[] crossingFrames)
+            Sprite[] crossingFrames,
+            Sprite guardianDescent = null)
         {
             geumjulRopeTexture = ropeTexture;
             geumjulAnchor = anchor;
@@ -35,6 +38,7 @@ namespace JoseonHunter.Runtime.Gameplay
             geumjulClosureFrames = closureFrames ?? Array.Empty<Sprite>();
             jangseungDustFrames = dustFrames ?? Array.Empty<Sprite>();
             jangseungCrossingFrames = crossingFrames ?? Array.Empty<Sprite>();
+            guardianDescentSprite = guardianDescent;
         }
 #endif
     }

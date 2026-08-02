@@ -21,6 +21,7 @@ namespace JoseonHunter.Editor.AssetProduction
         private static readonly string[] ClosurePaths = FramePaths("geumjul_closure", 6);
         private static readonly string[] DustPaths = FramePaths("jangseung_dust", 4);
         private static readonly string[] CrossingPaths = FramePaths("jangseung_crossing", 4);
+        private const string GuardianDescentPath = ArtRoot + "/jangseung_guardian_descent.png";
 
         [MenuItem("JoseonHunter/Assets/Rebuild Jangseung Geumjul Visual Library")]
         public static void Rebuild()
@@ -31,6 +32,7 @@ namespace JoseonHunter.Editor.AssetProduction
             ConfigureAll(ClosurePaths);
             ConfigureAll(DustPaths);
             ConfigureAll(CrossingPaths);
+            Configure(GuardianDescentPath, TextureWrapMode.Clamp);
 
             EnsureFolder("Assets/JoseonHunter/Resources");
             EnsureFolder("Assets/JoseonHunter/Resources/Presentation");
@@ -47,7 +49,8 @@ namespace JoseonHunter.Editor.AssetProduction
                 SpritesAt(KnotPaths),
                 SpritesAt(ClosurePaths),
                 SpritesAt(DustPaths),
-                SpritesAt(CrossingPaths));
+                SpritesAt(CrossingPaths),
+                SpriteAt(GuardianDescentPath));
             EditorUtility.SetDirty(library);
             AssetDatabase.SaveAssets();
         }
