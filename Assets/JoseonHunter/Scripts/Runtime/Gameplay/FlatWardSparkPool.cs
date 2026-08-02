@@ -38,7 +38,6 @@ namespace JoseonHunter.Runtime.Gameplay
         }
 
         public int CreatedCountForTests => sparks.Count;
-
         public bool UsesOnlyApprovedColorsForTests
         {
             get
@@ -73,7 +72,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (spark == null) break;
                 var angle = (index + .5f) * Mathf.PI * 2f / Mathf.Max(1, requested);
                 var direction = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-                spark.GameObject.transform.position = origin;
+                spark.GameObject.transform.position = origin + direction * (Mathf.Max(0f, radius) * .55f);
                 spark.GameObject.transform.localScale = Vector3.one * DiamondWorldSize;
                 spark.Velocity = direction * Mathf.Max(.01f, radius) / Lifetime;
                 spark.Remaining = Lifetime;

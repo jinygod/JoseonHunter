@@ -91,7 +91,7 @@ namespace JoseonHunter.Runtime.Gameplay
             closureFill.gameObject.SetActive(closureMesh.vertexCount >= 3);
             ApplyClosureFillColor(WithAlpha(FlatWardVisualPalette.Main, .12f));
             closureSparks.Clear();
-            closureSparks.PlayBurst(Centroid(polygon), ClosureSparkCapacity, .32f);
+            closureSparks.PlayBurst(Centroid(polygon), ClosureSparkCapacity, .9f);
             ActiveClosureVisualCountForTests = 1;
             closureAnimation = StartCoroutine(PlayClosurePulse());
         }

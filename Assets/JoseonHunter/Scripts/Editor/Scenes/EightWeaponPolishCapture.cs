@@ -75,6 +75,13 @@ namespace JoseonHunter.Editor.Scenes
                 renderer.gameObject.name == "Weapon Transient Visual" &&
                 renderer.enabled && renderer.gameObject.activeInHierarchy && renderer.sprite != null);
         }
+
+        public static LineRenderer SelectJangseungBoundary(IEnumerable<LineRenderer> renderers)
+        {
+            return renderers?.FirstOrDefault(line => line != null &&
+                line.gameObject.name == "Boundary Main" &&
+                line.enabled && line.gameObject.activeInHierarchy && line.positionCount >= 2);
+        }
     }
 
     internal static class CaptureSessionState
@@ -611,9 +618,9 @@ namespace JoseonHunter.Editor.Scenes
         private static void AdvanceJangseungCrossingScenario()
         {
             if (stage != CaptureStage.MeaningfulPhase) return;
-            var boundary = Object.FindObjectsByType<LineRenderer>(FindObjectsSortMode.None)
-                .FirstOrDefault(line => line.gameObject.name == "Jangseung Ward Boundary" && line.gameObject.activeInHierarchy);
-            if (boundary == null || boundary.positionCount < 2 || readabilityStep >= 2) return;
+            var boundary = CapturePhasePolicy.SelectJangseungBoundary(
+                Object.FindObjectsByType<LineRenderer>(FindObjectsSortMode.None));
+            if (boundary == null || readabilityStep >= 2) return;
             var enemy = ((IEnumerable)EnemiesField.GetValue(controller)).Cast<object>().FirstOrDefault();
             var enemyObject = enemy?.GetType().GetField("Object", BindingFlags.Instance | BindingFlags.Public)?.GetValue(enemy) as GameObject;
             if (enemyObject == null) return;

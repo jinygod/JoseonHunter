@@ -1,3 +1,4 @@
+using System.Linq;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -20,6 +21,10 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(pool.CreatedCountForTests, Is.EqualTo(8));
                 Assert.That(pool.UsesOnlyApprovedColorsForTests, Is.True);
                 Assert.That(pool.HasWhiteContourForTests, Is.False);
+                Assert.That(
+                    root.GetComponentsInChildren<MeshRenderer>()
+                        .Max(renderer => Vector2.Distance(Vector2.zero, renderer.transform.position)),
+                    Is.GreaterThan(.1f));
             }
             finally
             {

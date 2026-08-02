@@ -62,6 +62,27 @@ namespace JoseonHunter.Tests.EditMode
                 Is.EqualTo(CapturePhaseAction.Capture));
         }
 
+        [Test]
+        public void JangseungCaptureSelectsFlatMainBoundaryInsteadOfLegacyPngBoundary()
+        {
+            var outline = new GameObject("Boundary Outline").AddComponent<LineRenderer>();
+            var main = new GameObject("Boundary Main").AddComponent<LineRenderer>();
+            var inactive = new GameObject("Boundary Main").AddComponent<LineRenderer>();
+            inactive.gameObject.SetActive(false);
+            try
+            {
+                Assert.That(
+                    CapturePhasePolicy.SelectJangseungBoundary(new[] { outline, inactive, main }),
+                    Is.SameAs(main));
+            }
+            finally
+            {
+                Object.DestroyImmediate(outline.gameObject);
+                Object.DestroyImmediate(main.gameObject);
+                Object.DestroyImmediate(inactive.gameObject);
+            }
+        }
+
         [TestCase("frost_flask", true, "SpecialEvolved")]
         [TestCase("jangseung_ward", true, "SpecialEvolved")]
         [TestCase("singijeon_volley", true, "SpecialEvolved")]
