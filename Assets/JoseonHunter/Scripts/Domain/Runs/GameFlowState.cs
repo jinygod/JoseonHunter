@@ -4,6 +4,8 @@ namespace JoseonHunter.Domain.Runs
     {
         Playing,
         LevelUpSelection,
+        WeaponReplacement,
+        WeaponLegacySelection,
         AugmentResult,
         Paused,
         GameOver
@@ -18,6 +20,12 @@ namespace JoseonHunter.Domain.Runs
             return (from, to) switch
             {
                 (GameFlowState.Playing, GameFlowState.LevelUpSelection) => true,
+                (GameFlowState.LevelUpSelection, GameFlowState.WeaponReplacement) => true,
+                (GameFlowState.WeaponReplacement, GameFlowState.LevelUpSelection) => true,
+                (GameFlowState.LevelUpSelection, GameFlowState.WeaponLegacySelection) => true,
+                (GameFlowState.WeaponReplacement, GameFlowState.WeaponLegacySelection) => true,
+                (GameFlowState.WeaponReplacement, GameFlowState.AugmentResult) => true,
+                (GameFlowState.WeaponLegacySelection, GameFlowState.AugmentResult) => true,
                 (GameFlowState.LevelUpSelection, GameFlowState.AugmentResult) => true,
                 (GameFlowState.AugmentResult, GameFlowState.LevelUpSelection) => true,
                 (GameFlowState.AugmentResult, GameFlowState.Playing) => true,

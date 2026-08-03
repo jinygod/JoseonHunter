@@ -1,6 +1,7 @@
 using System.Collections;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
@@ -34,6 +35,11 @@ namespace JoseonHunter.Tests.PlayMode
                 var rebuilds = controller.WeaponRebuildCountForTests;
                 controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, weaponLevel));
                 Assert.That(controller.TryChooseUpgrade(0), Is.True);
+                if (weaponLevel == 3)
+                {
+                    Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.WeaponLegacySelection));
+                    Assert.That(controller.TryChooseWeaponLegacy(WeaponLegacyPathId.GakgungSunPiercer), Is.True);
+                }
                 Assert.That(controller.AffixProfileForTests(WeaponId.GakgungShot).GeneralRolls.Count, Is.EqualTo(weaponLevel));
                 Assert.That(controller.WeaponRebuildCountForTests, Is.EqualTo(rebuilds + 1));
                 Assert.That(oldRuntime.IsDisposedForTests, Is.True);

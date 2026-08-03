@@ -13,6 +13,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly HashSet<string> evolvedWeaponIds = new HashSet<string>();
 
         public void SetEvolved(WeaponId weaponId) => evolvedWeaponIds.Add(weaponId.Value);
+        public void Remove(WeaponId weaponId) => evolvedWeaponIds.Remove(weaponId.Value);
         public bool IsEvolved(WeaponId weaponId) => evolvedWeaponIds.Contains(weaponId.Value);
         public void Clear() => evolvedWeaponIds.Clear();
     }

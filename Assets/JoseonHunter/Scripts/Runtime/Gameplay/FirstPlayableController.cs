@@ -47,8 +47,11 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly Dictionary<string, int> supportLevels = new Dictionary<string, int>();
         private readonly HashSet<string> unlockedUpgradeIds = new HashSet<string>();
         private readonly HashSet<string> acquiredEvolutionIds = new HashSet<string>();
+        private readonly HashSet<string> discardedWeaponIds = new HashSet<string>();
         private readonly WeaponEvolutionState evolutionState = new WeaponEvolutionState();
         private readonly WeaponRunAffixState weaponAffixes = new WeaponRunAffixState();
+        private readonly WeaponLegacyState weaponLegacyState = new WeaponLegacyState();
+        private PendingWeaponChoice pendingWeaponChoice;
         private int affixRollOrdinal;
 #if UNITY_INCLUDE_TESTS
         private Func<WeaponId, int, int, int, IAffixRandom> affixRandomFactoryForTests;
@@ -132,6 +135,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public bool IsUpgradeOpen => upgradeOpen;
         public IReadOnlyCollection<string> AcquiredEvolutionIds => acquiredEvolutionIds;
         public event Action<UpgradeChoiceState> UpgradeOpened;
+        public event Action<WeaponReplacementState> WeaponReplacementOpened;
+        public event Action<WeaponLegacyChoiceState> WeaponLegacyOpened;
         public event Action<ProgressionRewardEvent> UpgradeChosen;
         public event Action RunReset;
 
@@ -166,6 +171,7 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             if (!upgradeOpen && !flow.TryTransition(GameFlowState.LevelUpSelection)) return;
             upgradeOpen = true;
+            pendingWeaponChoice = null;
             upgradeOfferData.Clear();
             upgradeOffers.Clear();
             if (offers != null) upgradeOfferData.AddRange(offers);
@@ -182,6 +188,7 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             if (!flow.TryTransition(GameFlowState.LevelUpSelection)) return;
             upgradeOpen = true;
+            pendingWeaponChoice = null;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
             if (offers != null) upgradeOfferData.AddRange(offers);
@@ -203,6 +210,11 @@ namespace JoseonHunter.Runtime.Gameplay
             RebuildWeaponExecutorsForLevel();
         }
         public int WeaponLevelForTests(WeaponId weaponId) => weaponLevels[weaponId.Value];
+        public bool HasWeaponForTests(WeaponId weaponId) => weaponLevels.ContainsKey(weaponId.Value);
+        public bool IsWeaponDiscardedForTests(WeaponId weaponId) => discardedWeaponIds.Contains(weaponId.Value);
+        public WeaponLegacySnapshot LegacySnapshotForTests(WeaponId weaponId) =>
+            weaponLegacyState.SnapshotFor(weaponId,
+                weaponLevels.TryGetValue(weaponId.Value, out var weaponLevel) ? weaponLevel : 0);
         public void SetAffixRandomFactoryForTests(Func<WeaponId, int, int, int, IAffixRandom> factory) => affixRandomFactoryForTests = factory;
         public WeaponRunAffixProfile AffixProfileForTests(WeaponId weaponId) => weaponAffixes.TryProfileFor(weaponId, out var profile) ? new WeaponRunAffixProfile(profile.GeneralRolls, profile.PotentialIds) : null;
         public WeaponAffixRollResult RollWeaponAffixForTests(WeaponId weaponId) => RollWeaponAffix(weaponId);
@@ -340,6 +352,19 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             var enemy = enemies.Find(candidate => candidate.CombatTarget != null && candidate.CombatTarget.RuntimeId == runtimeId);
             return enemy != null && enemy.HasJangseungWard;
+        }
+
+        private sealed class PendingWeaponChoice
+        {
+            public PendingWeaponChoice(UpgradeOffer offer)
+            {
+                Offer = offer;
+                ResolvedLevel = offer.NextLevel;
+            }
+
+            public UpgradeOffer Offer { get; }
+            public string DiscardedWeaponId { get; set; }
+            public int ResolvedLevel { get; set; }
         }
 
         private sealed class EnemyState
@@ -690,12 +715,15 @@ namespace JoseonHunter.Runtime.Gameplay
             trail.Clear();
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
+            pendingWeaponChoice = null;
             weaponLevels.Clear();
             weaponLevels.Add(WeaponId.HwandoFlyingBlade.Value, 1);
             supportLevels.Clear();
             unlockedUpgradeIds.Clear();
             acquiredEvolutionIds.Clear();
+            discardedWeaponIds.Clear();
             weaponAffixes.Clear();
+            weaponLegacyState.Clear();
             affixRollOrdinal = 0;
             evolutionState.Clear();
             foreach (var evolution in WeaponEvolutionCatalog.All) unlockedUpgradeIds.Add(evolution.Id);
@@ -1711,9 +1739,11 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             if (!flow.TryTransition(GameFlowState.LevelUpSelection)) return;
             upgradeOpen = true;
+            pendingWeaponChoice = null;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
-            var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds, acquiredEvolutionIds);
+            var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds,
+                acquiredEvolutionIds, discardedWeaponIds);
             var selected = UpgradeSelector.Select(state, level * 397 ^ kills);
             foreach (var offer in selected)
             {
@@ -1732,18 +1762,144 @@ namespace JoseonHunter.Runtime.Gameplay
                 return false;
             }
 
+            var offer = upgradeOfferData[index];
+            if (offer.Kind == UpgradeKind.Weapon && offer.RequiresReplacement)
+            {
+                if (!flow.TryTransition(GameFlowState.WeaponReplacement)) return false;
+                pendingWeaponChoice = new PendingWeaponChoice(offer);
+                PublishWeaponReplacement(pendingWeaponChoice);
+                return true;
+            }
+
+            if (offer.Kind == UpgradeKind.Weapon && NeedsLegacyChoice(offer.Id, offer.NextLevel))
+            {
+                if (!flow.TryTransition(GameFlowState.WeaponLegacySelection)) return false;
+                pendingWeaponChoice = new PendingWeaponChoice(offer);
+                PublishWeaponLegacy(pendingWeaponChoice);
+                return true;
+            }
+
+            return CompleteUpgrade(offer);
+        }
+
+        public bool CancelWeaponReplacement()
+        {
+            if (flow == null || flow.State != GameFlowState.WeaponReplacement || pendingWeaponChoice == null)
+                return false;
+            if (!flow.TryTransition(GameFlowState.LevelUpSelection)) return false;
+
+            pendingWeaponChoice = null;
+            var choices = new List<UpgradeChoiceView>(upgradeOfferData.Count);
+            foreach (var offer in upgradeOfferData) choices.Add(BuildUpgradeChoiceView(offer));
+            UpgradeOpened?.Invoke(new UpgradeChoiceState(level, choices));
+            return true;
+        }
+
+        public bool TryChooseWeaponReplacement(string discardedWeaponId)
+        {
+            if (flow == null || flow.State != GameFlowState.WeaponReplacement || pendingWeaponChoice == null ||
+                string.IsNullOrEmpty(discardedWeaponId) ||
+                !weaponLevels.TryGetValue(discardedWeaponId, out var discardedLevel) ||
+                discardedWeaponId == pendingWeaponChoice.Offer.Id)
+            {
+                return false;
+            }
+
+            var discardedId = new WeaponId(discardedWeaponId);
+            var newWeaponId = new WeaponId(pendingWeaponChoice.Offer.Id);
+            var replacementLevel = RunLoadoutRules.ReplacementLevel(discardedLevel);
+            weaponLevels.Remove(discardedWeaponId);
+            weaponLegacyState.Remove(discardedId);
+            weaponAffixes.Remove(discardedId);
+            evolutionState.Remove(discardedId);
+            acquiredEvolutionIds.RemoveWhere(evolutionId =>
+                WeaponEvolutionCatalog.TryGet(evolutionId, out var evolution) &&
+                evolution.RequiredWeaponId.Equals(discardedId));
+            discardedWeaponIds.Add(discardedWeaponId);
+            weaponLevels[newWeaponId.Value] = replacementLevel;
+            pendingWeaponChoice.DiscardedWeaponId = discardedWeaponId;
+            pendingWeaponChoice.ResolvedLevel = replacementLevel;
+
+            if (NeedsLegacyChoice(newWeaponId.Value, replacementLevel))
+            {
+                if (!flow.TryTransition(GameFlowState.WeaponLegacySelection)) return false;
+                PublishWeaponLegacy(pendingWeaponChoice);
+                return true;
+            }
+
+            return CompletePendingWeapon();
+        }
+
+        public bool TryChooseWeaponLegacy(WeaponLegacyPathId pathId)
+        {
+            if (flow == null || flow.State != GameFlowState.WeaponLegacySelection || pendingWeaponChoice == null)
+                return false;
+
+            var weaponId = new WeaponId(pendingWeaponChoice.Offer.Id);
+            if (!weaponLegacyState.TryChoose(weaponId, pathId)) return false;
+            return CompletePendingWeapon();
+        }
+
+        private bool CompletePendingWeapon()
+        {
+            if (pendingWeaponChoice == null) return false;
+            var resolved = new UpgradeOffer(pendingWeaponChoice.Offer.Id, UpgradeKind.Weapon,
+                pendingWeaponChoice.ResolvedLevel);
+            return CompleteUpgrade(resolved);
+        }
+
+        private bool CompleteUpgrade(UpgradeOffer offer)
+        {
             if (!flow.TryTransition(GameFlowState.AugmentResult)) return false;
 
-            var reward = ApplyUpgrade(upgradeOfferData[index]);
+            var reward = ApplyUpgrade(offer);
             upgradeOpen = false;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
+            pendingWeaponChoice = null;
 #if UNITY_INCLUDE_TESTS
             AppliedUpgradeCount++;
 #endif
             awaitingUpgradePresentationClose = true;
             UpgradeChosen?.Invoke(reward);
             return true;
+        }
+
+        private bool NeedsLegacyChoice(string weaponId, int resolvedLevel) =>
+            resolvedLevel == 3 &&
+            !weaponLegacyState.SnapshotFor(new WeaponId(weaponId), 3).HasPath;
+
+        private void PublishWeaponReplacement(PendingWeaponChoice pending)
+        {
+            var choices = new List<WeaponReplacementChoiceView>(weaponLevels.Count);
+            foreach (var weapon in weaponLevels)
+            {
+                var id = new WeaponId(weapon.Key);
+                var snapshot = weaponLegacyState.SnapshotFor(id, weapon.Value);
+                var legacyName = snapshot.HasPath && WeaponLegacyCatalog.TryGet(snapshot.PathId, out var definition)
+                    ? definition.DisplayName
+                    : string.Empty;
+                choices.Add(new WeaponReplacementChoiceView(weapon.Key, WeaponDisplayName(weapon.Key),
+                    weapon.Value, legacyName, ResolveWeaponSprite(id)));
+            }
+
+            WeaponReplacementOpened?.Invoke(new WeaponReplacementState(pending.Offer.Id,
+                WeaponDisplayName(pending.Offer.Id), choices));
+        }
+
+        private void PublishWeaponLegacy(PendingWeaponChoice pending)
+        {
+            var weaponId = new WeaponId(pending.Offer.Id);
+            var icon = ResolveWeaponSprite(weaponId);
+            var choices = new List<WeaponLegacyChoiceView>(2);
+            foreach (var definition in WeaponLegacyCatalog.PathsFor(weaponId))
+            {
+                choices.Add(new WeaponLegacyChoiceView(definition.Id, definition.DisplayName,
+                    definition.CombatStyle, definition.Benefit, definition.Cost, icon));
+            }
+
+            WeaponLegacyOpened?.Invoke(new WeaponLegacyChoiceState(weaponId.Value,
+                WeaponDisplayName(weaponId.Value), choices));
         }
 
         /// <summary>Signals that presentation has finished showing the selected reward.</summary>
@@ -1772,15 +1928,22 @@ namespace JoseonHunter.Runtime.Gameplay
         public void CancelUiModalPresentation()
         {
             if (flow == null) return;
-            if (flow.State == GameFlowState.LevelUpSelection || flow.State == GameFlowState.AugmentResult)
+            if (flow.State == GameFlowState.LevelUpSelection ||
+                flow.State == GameFlowState.WeaponReplacement ||
+                flow.State == GameFlowState.WeaponLegacySelection ||
+                flow.State == GameFlowState.AugmentResult)
             {
                 upgradeOpen = false;
                 awaitingUpgradePresentationClose = false;
+                pendingWeaponChoice = null;
                 upgradeOffers.Clear();
                 upgradeOfferData.Clear();
             }
 
-            if (flow.State == GameFlowState.LevelUpSelection || flow.State == GameFlowState.AugmentResult ||
+            if (flow.State == GameFlowState.LevelUpSelection ||
+                flow.State == GameFlowState.WeaponReplacement ||
+                flow.State == GameFlowState.WeaponLegacySelection ||
+                flow.State == GameFlowState.AugmentResult ||
                 flow.State == GameFlowState.Paused)
                 flow.ResetToPlaying();
         }

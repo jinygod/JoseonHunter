@@ -6,6 +6,12 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class GameFlowStateTests
     {
         [TestCase(GameFlowState.Playing, GameFlowState.LevelUpSelection, true)]
+        [TestCase(GameFlowState.LevelUpSelection, GameFlowState.WeaponReplacement, true)]
+        [TestCase(GameFlowState.WeaponReplacement, GameFlowState.LevelUpSelection, true)]
+        [TestCase(GameFlowState.LevelUpSelection, GameFlowState.WeaponLegacySelection, true)]
+        [TestCase(GameFlowState.WeaponReplacement, GameFlowState.WeaponLegacySelection, true)]
+        [TestCase(GameFlowState.WeaponReplacement, GameFlowState.AugmentResult, true)]
+        [TestCase(GameFlowState.WeaponLegacySelection, GameFlowState.AugmentResult, true)]
         [TestCase(GameFlowState.LevelUpSelection, GameFlowState.AugmentResult, true)]
         [TestCase(GameFlowState.AugmentResult, GameFlowState.LevelUpSelection, true)]
         [TestCase(GameFlowState.AugmentResult, GameFlowState.Playing, true)]
@@ -22,6 +28,8 @@ namespace JoseonHunter.Tests.EditMode
 
         [TestCase(GameFlowState.Playing)]
         [TestCase(GameFlowState.LevelUpSelection)]
+        [TestCase(GameFlowState.WeaponReplacement)]
+        [TestCase(GameFlowState.WeaponLegacySelection)]
         [TestCase(GameFlowState.AugmentResult)]
         [TestCase(GameFlowState.Paused)]
         [TestCase(GameFlowState.GameOver)]

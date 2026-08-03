@@ -100,6 +100,76 @@ namespace JoseonHunter.Runtime.Gameplay
         public IReadOnlyList<UpgradeChoiceView> Choices { get; }
     }
 
+    public readonly struct WeaponReplacementChoiceView
+    {
+        public WeaponReplacementChoiceView(string weaponId, string displayName, int level,
+            string legacyName, Sprite icon)
+        {
+            WeaponId = weaponId;
+            DisplayName = displayName ?? string.Empty;
+            Level = level;
+            LegacyName = legacyName ?? string.Empty;
+            Icon = icon;
+        }
+
+        public string WeaponId { get; }
+        public string DisplayName { get; }
+        public int Level { get; }
+        public string LegacyName { get; }
+        public Sprite Icon { get; }
+    }
+
+    public sealed class WeaponReplacementState
+    {
+        public WeaponReplacementState(string newWeaponId, string newWeaponName,
+            IEnumerable<WeaponReplacementChoiceView> choices)
+        {
+            NewWeaponId = newWeaponId ?? string.Empty;
+            NewWeaponName = newWeaponName ?? string.Empty;
+            Choices = Array.AsReadOnly((choices ?? Array.Empty<WeaponReplacementChoiceView>()).ToArray());
+        }
+
+        public string NewWeaponId { get; }
+        public string NewWeaponName { get; }
+        public IReadOnlyList<WeaponReplacementChoiceView> Choices { get; }
+    }
+
+    public readonly struct WeaponLegacyChoiceView
+    {
+        public WeaponLegacyChoiceView(WeaponLegacyPathId pathId, string displayName, string combatStyle,
+            string benefit, string cost, Sprite icon)
+        {
+            PathId = pathId;
+            DisplayName = displayName ?? string.Empty;
+            CombatStyle = combatStyle ?? string.Empty;
+            Benefit = benefit ?? string.Empty;
+            Cost = cost ?? string.Empty;
+            Icon = icon;
+        }
+
+        public WeaponLegacyPathId PathId { get; }
+        public string DisplayName { get; }
+        public string CombatStyle { get; }
+        public string Benefit { get; }
+        public string Cost { get; }
+        public Sprite Icon { get; }
+    }
+
+    public sealed class WeaponLegacyChoiceState
+    {
+        public WeaponLegacyChoiceState(string weaponId, string weaponName,
+            IEnumerable<WeaponLegacyChoiceView> choices)
+        {
+            WeaponId = weaponId ?? string.Empty;
+            WeaponName = weaponName ?? string.Empty;
+            Choices = Array.AsReadOnly((choices ?? Array.Empty<WeaponLegacyChoiceView>()).ToArray());
+        }
+
+        public string WeaponId { get; }
+        public string WeaponName { get; }
+        public IReadOnlyList<WeaponLegacyChoiceView> Choices { get; }
+    }
+
     public enum ProgressionRewardKind { Support, WeaponLevel, NewWeapon, Evolution }
 
     public readonly struct ProgressionRewardEvent
