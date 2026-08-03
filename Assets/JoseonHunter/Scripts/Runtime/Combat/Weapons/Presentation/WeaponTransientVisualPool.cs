@@ -11,10 +11,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         private readonly List<Entry> active = new List<Entry>();
         private readonly Stack<SpriteRenderer> pooled = new Stack<SpriteRenderer>();
         private bool disposed;
+#if UNITY_INCLUDE_TESTS
+        private static int activeAcrossPools;
+        private static int poolCount;
+        public static int ActiveCountForTests => activeAcrossPools;
+        public static int CapacityForTests => poolCount * MaximumPooledVisuals;
+#endif
 
         public WeaponTransientVisualPool(Transform root)
         {
             this.root = root ? root : throw new ArgumentNullException(nameof(root));
+#if UNITY_INCLUDE_TESTS
+            poolCount++;
+#endif
         }
 
         public int CreatedCount { get; private set; }
@@ -35,6 +44,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             renderer.sortingOrder = sortingOrder;
             renderer.gameObject.SetActive(true);
             active.Add(new Entry(renderer, Mathf.Max(0f, lifetime), ownerId));
+#if UNITY_INCLUDE_TESTS
+            activeAcrossPools++;
+#endif
         }
 
         public void Tick(float deltaTime)
@@ -52,7 +64,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
                     continue;
                 }
 
-                active.RemoveAt(index);
+                RemoveActiveAt(index);
                 Return(entry.Renderer);
             }
         }
@@ -61,6 +73,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         {
             if (disposed) return;
             disposed = true;
+#if UNITY_INCLUDE_TESTS
+            activeAcrossPools = Math.Max(0, activeAcrossPools - active.Count);
+            poolCount = Math.Max(0, poolCount - 1);
+#endif
 
             foreach (var entry in active) Destroy(entry.Renderer);
             active.Clear();
@@ -73,7 +89,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             for (var index = active.Count - 1; index >= 0; index--)
             {
                 if (active[index].OwnerId != ownerId) continue;
-                var entry = active[index]; active.RemoveAt(index); Return(entry.Renderer);
+                var entry = active[index]; RemoveActiveAt(index); Return(entry.Renderer);
             }
         }
 
@@ -82,7 +98,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             if (disposed) return;
             for (var index = active.Count - 1; index >= 0; index--)
             {
-                var entry = active[index]; active.RemoveAt(index); Return(entry.Renderer);
+                var entry = active[index]; RemoveActiveAt(index); Return(entry.Renderer);
             }
         }
 
@@ -93,6 +109,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             visual.SetActive(false);
             CreatedCount++;
             return visual.AddComponent<SpriteRenderer>();
+        }
+
+        private void RemoveActiveAt(int index)
+        {
+            active.RemoveAt(index);
+#if UNITY_INCLUDE_TESTS
+            activeAcrossPools = Math.Max(0, activeAcrossPools - 1);
+#endif
         }
 
         private void Return(SpriteRenderer renderer)

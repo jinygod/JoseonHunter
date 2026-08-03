@@ -221,6 +221,13 @@ namespace JoseonHunter.Runtime.Gameplay
         public WeaponLegacySnapshot LegacySnapshotForTests(WeaponId weaponId) =>
             weaponLegacyState.SnapshotFor(weaponId,
                 weaponLevels.TryGetValue(weaponId.Value, out var weaponLevel) ? weaponLevel : 0);
+        public bool ChooseWeaponLegacyForTests(WeaponId weaponId, WeaponLegacyPathId pathId)
+        {
+            weaponLegacyState.Remove(weaponId);
+            if (!weaponLegacyState.TryChoose(weaponId, pathId)) return false;
+            RebuildWeaponExecutorsForLevel();
+            return true;
+        }
         public void SetAffixRandomFactoryForTests(Func<WeaponId, int, int, int, IAffixRandom> factory) => affixRandomFactoryForTests = factory;
         public WeaponRunAffixProfile AffixProfileForTests(WeaponId weaponId) => weaponAffixes.TryProfileFor(weaponId, out var profile) ? new WeaponRunAffixProfile(profile.GeneralRolls, profile.PotentialIds) : null;
         public WeaponAffixRollResult RollWeaponAffixForTests(WeaponId weaponId) => RollWeaponAffix(weaponId);
