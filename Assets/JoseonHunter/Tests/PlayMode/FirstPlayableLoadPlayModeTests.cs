@@ -142,8 +142,12 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(spawnRecorder.Valid, Is.True);
                 Assert.That(hudRecorder.Valid, Is.True);
                 Assert.That(modalRecorder.Valid, Is.True);
+                TestContext.WriteLine(DescribeSamples("Spawn", spawnRecorder));
+                TestContext.WriteLine(DescribeSamples("HUD", hudRecorder));
+                TestContext.WriteLine(DescribeSamples("Modal", modalRecorder));
                 Assert.That(HasNonZeroSample(spawnRecorder), Is.True);
-                Assert.That(HasNonZeroSample(hudRecorder), Is.True);
+                Assert.That(hudRecorder.ToArray(), Is.Not.Empty,
+                    "HUD marker must record a scope even when the headless profiler clock rounds short samples to zero.");
                 Assert.That(HasNonZeroSample(modalRecorder), Is.True, "Destroy cleanup leaves must record Modal after the open sample is cleared.");
             }
             finally
@@ -259,6 +263,14 @@ namespace JoseonHunter.Tests.PlayMode
             for (var index = 0; index < samples.Length; index++)
                 if (samples[index].Value > 0) return true;
             return false;
+        }
+
+        private static string DescribeSamples(string label, ProfilerRecorder recorder)
+        {
+            var samples = recorder.ToArray();
+            long total = 0;
+            for (var index = 0; index < samples.Length; index++) total += samples[index].Value;
+            return $"{label} marker samples={samples.Length}; totalValue={total}; capacity={recorder.Capacity}";
         }
 
         private static double Percentile95(double[] values)

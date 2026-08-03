@@ -262,6 +262,8 @@ namespace JoseonHunter.Tests.PlayMode
         {
             foreach (var bootstrap in Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 Object.Destroy(bootstrap.gameObject);
+            foreach (var controller in Object.FindObjectsByType<FirstPlayableController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                Object.Destroy(controller.gameObject);
             yield return null;
         }
 
