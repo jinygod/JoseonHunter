@@ -587,8 +587,21 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var abX = b.X - a.X; var abY = b.Y - a.Y;
             var cdX = d.X - c.X; var cdY = d.Y - c.Y;
             var denominator = abX * cdY - abY * cdX;
-            if (Mathf.Abs(denominator) < 0.0001f) return false;
             var acX = c.X - a.X; var acY = c.Y - a.Y;
+            if (Mathf.Abs(denominator) < 0.0001f)
+            {
+                if (Mathf.Abs(acX * abY - acY * abX) >= 0.0001f) return false;
+                var lengthSquared = abX * abX + abY * abY;
+                if (lengthSquared < 0.000001f) return false;
+                var cParameter = (acX * abX + acY * abY) / lengthSquared;
+                var dParameter = ((d.X - a.X) * abX + (d.Y - a.Y) * abY) / lengthSquared;
+                var overlapStart = Mathf.Max(0f, Mathf.Min(cParameter, dParameter));
+                var overlapEnd = Mathf.Min(1f, Mathf.Max(cParameter, dParameter));
+                if (overlapEnd + 0.0001f < overlapStart) return false;
+                var overlapMiddle = Mathf.Clamp01((overlapStart + overlapEnd) * .5f);
+                crossing = new Float2(a.X + abX * overlapMiddle, a.Y + abY * overlapMiddle);
+                return true;
+            }
             var first = (acX * cdY - acY * cdX) / denominator;
             var second = (acX * abY - acY * abX) / denominator;
             const float segmentTolerance = 0.0001f;

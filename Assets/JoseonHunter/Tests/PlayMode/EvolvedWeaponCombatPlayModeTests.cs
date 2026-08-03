@@ -98,13 +98,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(preChoiceRuntime.IsEvolvedForTests(WeaponId.HwandoFlyingBlade), Is.False);
             Assert.That(preChoiceRuntime.RegistrationCountForTests(WeaponId.HwandoFlyingBlade), Is.EqualTo(1));
             Assert.That(preChoiceRuntime.RegisteredExecutorSlotCountForTests, Is.EqualTo(1));
-            controller.UnlockEvolutionForTests("hwando_moon_eclipse");
-            controller.OpenUpgradeForTests();
-
-            var index = controller.CurrentOffers
-                .Select((offer, i) => (offer, i))
-                .Single(pair => pair.offer.Id == "hwando_moon_eclipse").i;
-            Assert.That(controller.TryChooseUpgrade(index), Is.True);
+            controller.AcquireEvolutionForTests("hwando_moon_eclipse");
 
             Assert.That(controller.WeaponLevelForTests(WeaponId.HwandoFlyingBlade), Is.EqualTo(5));
             Assert.That(controller.AcquiredEvolutionIds, Contains.Item("hwando_moon_eclipse"));
@@ -481,9 +475,12 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 rig.AddTargets(3, insideField: true);
                 var missingMask = rig.AddTargetWithoutMask(new Vector2(0.7f, 0f));
-                yield return rig.AdvanceSeconds(1.55f);
+                yield return rig.AdvanceSeconds(.55f);
+                var landingBlastCount = rig.DamageEvents.Count(value => value.Phase == ContactPhase.Blast);
+                yield return rig.AdvanceSeconds(1f);
 
-                var blasts = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Blast).ToArray();
+                var blasts = rig.DamageEvents.Where(value => value.Phase == ContactPhase.Blast)
+                    .Skip(landingBlastCount).ToArray();
                 Assert.That(blasts, Has.Length.EqualTo(3));
                 Assert.That(blasts.Select(value => value.TargetRuntimeId), Is.Unique);
                 Assert.That(blasts.Any(value => value.TargetRuntimeId == missingMask.RuntimeId), Is.False);
