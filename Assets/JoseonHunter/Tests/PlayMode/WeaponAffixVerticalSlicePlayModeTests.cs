@@ -70,7 +70,11 @@ namespace JoseonHunter.Tests.PlayMode
             reveal.Confirm();
             yield return WaitUntil(() => !reveal.IsRevealing, "the confirmed jackpot reel to complete");
             Assert.That(reveal.LastCompletedResult.NewPotentials, Is.Empty);
-            Assert.That(controller.IsUpgradeOpen, Is.True, "queued upgrade opens only after the confirmed jackpot reel completes");
+            Assert.That(controller.IsUpgradeOpen, Is.False,
+                "queued upgrade must leave a playable combat beat after appraisal");
+            controller.TickGameplayIfRunningForTests(1.01f);
+            Assert.That(controller.IsUpgradeOpen, Is.True,
+                "queued upgrade opens after the post-appraisal combat beat");
 
             var potentialCells = rack.GetComponentsInChildren<Image>(true)
                 .Where(image => image.name.StartsWith("Potential Cell")).ToArray();

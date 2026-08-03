@@ -6,12 +6,12 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WeaponAffixRevealTimelineTests
     {
-        [TestCase(WeaponAffixTier.Standard, 0, 2.47f)]
-        [TestCase(WeaponAffixTier.High, 0, 2.73f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 2.77f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.90f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 3.08f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 3.26f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 2.55f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.81f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.85f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.91f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 3.09f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 3.27f)]
         public void Duration_matches_the_pacing_contract(WeaponAffixTier tier, int potentialCount, float expected)
         {
             var timeline = WeaponAffixRevealTimeline.For(Result(tier, potentialCount));

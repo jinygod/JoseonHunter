@@ -138,6 +138,9 @@ namespace JoseonHunter.Tests.PlayMode
             rewardReveal.Confirm();
             yield return new WaitForSecondsRealtime(.2f);
             Assert.That(rewardReveal.IsRevealing, Is.False);
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            controller.TickGameplayIfRunningForTests(1.01f);
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
 

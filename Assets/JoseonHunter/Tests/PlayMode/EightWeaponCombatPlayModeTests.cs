@@ -10,6 +10,7 @@ using UnityEngine.TestTools;
 using System.Collections;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Geumjul;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using JoseonHunter.Runtime.Combat.Weapons.Presentation;
@@ -54,15 +55,9 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.WeaponRuntime, Is.Not.Null);
             Assert.That(Object.FindFirstObjectByType<DamageNumberPool>(), Is.Not.Null);
 
-            var openUpgrade = typeof(FirstPlayableController).GetMethod("OpenUpgrade", BindingFlags.Instance | BindingFlags.NonPublic);
-            var chooseUpgrade = typeof(FirstPlayableController).GetMethod("ChooseUpgrade", BindingFlags.Instance | BindingFlags.NonPublic);
-            var offerField = typeof(FirstPlayableController).GetField("upgradeOffers", BindingFlags.Instance | BindingFlags.NonPublic);
-            openUpgrade.Invoke(controller, null);
-            var labels = (List<string>)offerField.GetValue(controller);
-            var newWeaponIndex = labels.FindIndex(label => label.StartsWith("[신규]"));
-
-            Assert.That(newWeaponIndex, Is.GreaterThanOrEqualTo(0));
-            chooseUpgrade.Invoke(controller, new object[] { newWeaponIndex });
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer(
+                WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
 
             Assert.That(controller.RegisteredWeaponIds.Distinct().Count(), Is.EqualTo(2));
         }
