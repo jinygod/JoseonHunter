@@ -331,11 +331,13 @@ namespace JoseonHunter.Presentation.UI
             panelRect.localScale = Vector3.one * (Phase == RevealPhase.Opening ? openingScale : TensionScale);
 
             UpdateSpinningSymbols(time);
-            SetFinalAffixVisible(time >= timeline.AffixStopsAt);
+            var verdictVisible = time >= timeline.TierRevealsAt;
+            SetFinalAffixVisible(verdictVisible);
             var countProgress = Mathf.InverseLerp(timeline.CountStartsAt, timeline.CountEndsAt, time);
             detail.text = WeaponAffixValueFormatter.Describe(
                 activeResult.General,
                 WeaponAppraisalPresentation.DisplayValueAt(activeResult.General.Value, countProgress));
+            title.text = verdictVisible ? TierName(activeResult.General.Tier) : "추가옵션 감정 중";
             detail.rectTransform.localScale = Vector3.one * CountPulseScaleAt(time, countProgress);
             detail.color = Color.Lerp(JoseonUiPalette.DarkPanelText, JoseonUiPalette.Gold,
                 countProgress * countProgress);
@@ -489,7 +491,7 @@ namespace JoseonHunter.Presentation.UI
             burst.sprite = activeResult.NewPotentials.Count > 0
                 ? activeCatalog.PotentialRitualSeal
                 : null;
-            title.text = TierName(activeResult.General.Tier);
+            title.text = "추가옵션 감정 중";
             detail.text = WeaponAffixValueFormatter.Describe(activeResult.General, 0);
             weaponName.text = activeModel.DisplayName;
             weaponLevel.text = activeModel.IsNewAcquisition
@@ -540,6 +542,7 @@ namespace JoseonHunter.Presentation.UI
             rareStamp.enabled = false;
             SetScrollOpen(WeaponAppraisalPresentation.ScrollOpenAt(revealProfile, 0f));
             title.gameObject.SetActive(true);
+            title.text = "추가옵션 감정 중";
             detail.gameObject.SetActive(true);
             detail.rectTransform.localScale = Vector3.one;
             detail.color = JoseonUiPalette.DarkPanelText;

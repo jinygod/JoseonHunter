@@ -17,6 +17,7 @@ namespace JoseonHunter.Presentation.UI
             float affixStopsAt,
             float countStartsAt,
             float countEndsAt,
+            float tierRevealsAt,
             float firstPotentialStopsAt,
             float secondPotentialStopsAt,
             float thirdPotentialStopsAt,
@@ -29,6 +30,7 @@ namespace JoseonHunter.Presentation.UI
             AffixStopsAt = affixStopsAt;
             CountStartsAt = countStartsAt;
             CountEndsAt = countEndsAt;
+            TierRevealsAt = tierRevealsAt;
             potential0StopsAt = firstPotentialStopsAt;
             potential1StopsAt = secondPotentialStopsAt;
             potential2StopsAt = thirdPotentialStopsAt;
@@ -41,6 +43,7 @@ namespace JoseonHunter.Presentation.UI
         public float AffixStopsAt { get; }
         public float CountStartsAt { get; }
         public float CountEndsAt { get; }
+        public float TierRevealsAt { get; }
         public float ReadStartsAt { get; }
         public float CloseStartsAt { get; }
 
@@ -55,13 +58,14 @@ namespace JoseonHunter.Presentation.UI
             {
                 const float affixStop = .78f;
                 var countEnd = affixStop + countDuration;
-                var firstStop = countEnd + .17f;
+                var tierReveal = countEnd + .08f;
+                var firstStop = tierReveal + .10f;
                 var secondStop = count > 1 ? firstStop + .18f : float.PositiveInfinity;
                 var thirdStop = count > 2 ? secondStop + .18f : float.PositiveInfinity;
                 var lastStop = count == 1 ? firstStop : count == 2 ? secondStop : thirdStop;
                 var readStart = lastStop + .18f;
                 return new WeaponAffixRevealTimeline(count, readStart + .37f, .52f, affixStop,
-                    affixStop, countEnd, firstStop, secondStop, thirdStop, readStart,
+                    affixStop, countEnd, tierReveal, firstStop, secondStop, thirdStop, readStart,
                     float.PositiveInfinity);
             }
 
@@ -70,9 +74,10 @@ namespace JoseonHunter.Presentation.UI
             var spinEnd = result.General.Tier == WeaponAffixTier.Perfect ? .48f :
                 result.General.Tier == WeaponAffixTier.High ? .46f : .42f;
             var countEndAt = baseAffixStop + countDuration;
-            var readStartAt = countEndAt + .12f;
+            var tierRevealAt = countEndAt + .08f;
+            var readStartAt = tierRevealAt + .12f;
             return new WeaponAffixRevealTimeline(0, readStartAt + .19f, spinEnd, baseAffixStop,
-                baseAffixStop, countEndAt, float.PositiveInfinity, float.PositiveInfinity,
+                baseAffixStop, countEndAt, tierRevealAt, float.PositiveInfinity, float.PositiveInfinity,
                 float.PositiveInfinity, readStartAt, float.PositiveInfinity);
         }
 
@@ -86,16 +91,20 @@ namespace JoseonHunter.Presentation.UI
             if (profile == WeaponAppraisalRevealProfile.FirstAcquisition)
             {
                 var countEnd = .78f + CountDurationFor(model.Result.General.Tier);
-                return new WeaponAffixRevealTimeline(0, countEnd + .31f, .42f, .78f, .78f,
-                    countEnd, float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity,
-                    countEnd + .12f, float.PositiveInfinity);
+                var tierReveal = countEnd + .08f;
+                var readStart = tierReveal + .12f;
+                return new WeaponAffixRevealTimeline(0, readStart + .19f, .42f, .78f, .78f,
+                    countEnd, tierReveal, float.PositiveInfinity, float.PositiveInfinity,
+                    float.PositiveInfinity, readStart, float.PositiveInfinity);
             }
             if (profile != WeaponAppraisalRevealProfile.RepeatStandard)
                 return For(model.Result);
             const float repeatCountEnd = .52f + 1.40f;
-            return new WeaponAffixRevealTimeline(0, repeatCountEnd + .31f, .24f, .52f, .52f,
-                repeatCountEnd, float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity,
-                repeatCountEnd + .12f,
+            const float repeatTierReveal = repeatCountEnd + .08f;
+            const float repeatReadStart = repeatTierReveal + .12f;
+            return new WeaponAffixRevealTimeline(0, repeatReadStart + .19f, .24f, .52f, .52f,
+                repeatCountEnd, repeatTierReveal, float.PositiveInfinity, float.PositiveInfinity,
+                float.PositiveInfinity, repeatReadStart,
                 float.PositiveInfinity);
         }
 

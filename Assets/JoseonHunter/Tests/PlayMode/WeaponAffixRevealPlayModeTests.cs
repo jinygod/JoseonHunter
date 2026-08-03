@@ -16,12 +16,12 @@ namespace JoseonHunter.Tests.PlayMode
     {
         [TearDown]
         public void RestoreTimeScale() => Time.timeScale = 1f;
-        [TestCase(WeaponAffixTier.Standard, 0, 2.47f)]
-        [TestCase(WeaponAffixTier.High, 0, 2.73f)]
-        [TestCase(WeaponAffixTier.Perfect, 0, 2.77f)]
-        [TestCase(WeaponAffixTier.Standard, 1, 2.90f)]
-        [TestCase(WeaponAffixTier.Standard, 2, 3.08f)]
-        [TestCase(WeaponAffixTier.Standard, 3, 3.26f)]
+        [TestCase(WeaponAffixTier.Standard, 0, 2.55f)]
+        [TestCase(WeaponAffixTier.High, 0, 2.81f)]
+        [TestCase(WeaponAffixTier.Perfect, 0, 2.85f)]
+        [TestCase(WeaponAffixTier.Standard, 1, 2.91f)]
+        [TestCase(WeaponAffixTier.Standard, 2, 3.09f)]
+        [TestCase(WeaponAffixTier.Standard, 3, 3.27f)]
         public void Duration_uses_the_exact_affix_and_jackpot_caps(WeaponAffixTier tier, int potentialCount, float expected)
         {
             Assert.That(WeaponAffixRevealPresenter.DurationFor(Result(tier, potentialCount)),
@@ -51,7 +51,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.PotentialRowY(0), Is.GreaterThan(presenter.PotentialRowY(1)));
             Assert.That(presenter.PotentialRowY(1), Is.GreaterThan(presenter.PotentialRowY(2)));
             Assert.That(presenter.DisplayedAffixText, Does.Contain("+0%"));
-            Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("높은 추가옵션"));
+            Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("추가옵션 감정 중"));
+            Assert.That(RectNamed(presenter, "Rarity Seal Label").gameObject.activeSelf, Is.False);
             Assert.That(TextValue(RectNamed(presenter, "Confirm Label")), Is.EqualTo("확인"));
             var growthGuide = RectNamed(presenter, "Growth Guide");
             Assert.That(growthGuide.anchoredPosition, Is.EqualTo(new Vector2(80f, 202f)));
@@ -175,6 +176,8 @@ namespace JoseonHunter.Tests.PlayMode
 
             presenter.PreviewAtForEditor(result, timeline.CountStartsAt - .01f);
             Assert.That(presenter.DisplayedAffixText, Is.EqualTo("공격 범위 +0%"));
+            Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("추가옵션 감정 중"));
+            Assert.That(RectNamed(presenter, "Rarity Seal Label").gameObject.activeSelf, Is.False);
             Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.False);
 
             presenter.PreviewAtForEditor(result, (timeline.CountStartsAt + timeline.CountEndsAt) * .5f);
@@ -184,7 +187,14 @@ namespace JoseonHunter.Tests.PlayMode
 
             presenter.PreviewAtForEditor(result, timeline.CountEndsAt);
             Assert.That(presenter.DisplayedAffixText, Is.EqualTo("공격 범위 +20%"));
+            Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("추가옵션 감정 중"));
+            Assert.That(RectNamed(presenter, "Rarity Seal Label").gameObject.activeSelf, Is.False);
             Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.False);
+
+            presenter.PreviewAtForEditor(result, timeline.TierRevealsAt);
+            Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("최대 추가옵션"));
+            Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
+            Assert.That(RectNamed(presenter, "Rarity Seal Label").gameObject.activeSelf, Is.True);
 
             presenter.PreviewAtForEditor(result, timeline.ReadStartsAt);
             Assert.That(RectNamed(presenter, "Confirm Result").gameObject.activeSelf, Is.True);
@@ -371,11 +381,13 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(affix.IsAwaitingConfirmation, Is.True);
             affix.Confirm();
             yield return new WaitForSecondsRealtime(.16f);
-            Assert.That(controller.IsUpgradeOpen, Is.True);
+            Assert.That(controller.IsUpgradeOpen, Is.False);
             Assert.That(completions, Is.EqualTo(1));
-            Assert.That(queuedOpens, Is.EqualTo(1));
+            Assert.That(queuedOpens, Is.EqualTo(0));
+            controller.TickGameplayIfRunningForTests(1.01f);
             yield return null;
             Assert.That(controller.IsUpgradeOpen, Is.True);
+            Assert.That(queuedOpens, Is.EqualTo(1));
         }
 
         [UnityTest]
@@ -466,11 +478,13 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var presenter = new GameObject("Slot Phase Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
-            presenter.Play(Result(WeaponAffixTier.Standard, 0));
+            var result = Result(WeaponAffixTier.Standard, 0);
+            var timeline = WeaponAffixRevealTimeline.For(result);
+            presenter.Play(result);
             yield return new WaitForSecondsRealtime(.3f);
             Assert.That(presenter.Phase, Is.EqualTo(WeaponAffixRevealPresenter.RevealPhase.Spinning));
             Assert.That(presenter.IsFinalAffixVisible, Is.False);
-            yield return new WaitForSecondsRealtime(.6f);
+            yield return new WaitForSecondsRealtime(timeline.TierRevealsAt - .3f + .04f);
             Assert.That(presenter.IsFinalAffixVisible, Is.True);
             Object.Destroy(presenter.gameObject);
         }
