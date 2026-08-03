@@ -6,6 +6,7 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Content.Weapons;
+using JoseonHunter.Content;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
 using UnityEngine;
@@ -410,6 +411,8 @@ namespace JoseonHunter.Runtime.Gameplay
             public Vector2 Facing = Vector2.left;
             public float AuraRemaining;
             public bool WasKnockedBack;
+            public IReadOnlyList<Sprite> SpecialFrames;
+            public float SpecialAnimationTime;
             public ICombatTarget CombatTarget;
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
@@ -806,7 +809,8 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponRuntime.SetJangseungGeumjulVisualLibrary(visualLibrary);
             elapsed = 0f;
             stageTimeline = StagePacingTimeline.ForDuration(PrototypeDurationSeconds);
-            enemySpriteRoster = new EnemySpriteRoster(enemySprite, enemySpriteAlt, enemySprites);
+            enemySpriteRoster = new EnemySpriteRoster(enemySprite, enemySpriteAlt, enemySprites,
+                CombatChoiceVisualCatalog.LoadDefault());
             waveSpawnDirector = new WaveSpawnDirector(RunSpawnSeed);
             processedStageMilestones = 0;
             finalBossWarning = false;
@@ -1082,6 +1086,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     : isElite && eliteSprite != null
                     ? eliteSprite
                     : enemySpriteRoster.Resolve(resolvedContentId));
+            var specialFrames = enemySpriteRoster.Frames(resolvedContentId);
             var enemyObject = CreateCombatantObject(
                 isBoss ? "Fallen General" :
                 isMidBoss ? (midBossTier >= 2 ? "Vengeful Field Commander" : "Dokkaebi Captain") :
@@ -1142,6 +1147,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue,
                 ContentId = resolvedContentId,
                 ArchetypeProfile = archetypeProfile,
+                SpecialFrames = specialFrames,
                 Facing = player == null ? Vector2.left : ((Vector2)player.transform.position - position).normalized
             };
             if (rank.IsElite || isMidBoss)
@@ -1433,6 +1439,8 @@ namespace JoseonHunter.Runtime.Gameplay
                         chase, enemy.IsControlled, enemy.WasKnockedBack, false, 0, 0);
                     enemy.WasKnockedBack = false;
                     if (specialMotion.AuraPulse) ApplyShamanAura(enemy);
+                    UpdateSpecialEnemyFrame(enemy, archetype, specialMotion, delta,
+                        Vector2.Distance(enemyPosition, playerPosition));
                     var velocity = archetype == EnemyArchetype.ChargingHornGhost
                         ? specialMotion.Velocity * enemy.MovementMultiplier
                         : direction * (enemy.Speed * enemy.MovementMultiplier * enemy.AuraMultiplier);
@@ -1474,6 +1482,23 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (((Vector2)target.Object.transform.position - center).sqrMagnitude > radiusSquared) continue;
                 target.AuraRemaining = Mathf.Max(target.AuraRemaining, .35f);
             }
+        }
+
+        private static void UpdateSpecialEnemyFrame(EnemyState enemy, EnemyArchetype archetype,
+            SpecialEnemyMotionResult motion, float delta, float playerDistance)
+        {
+            if (enemy.Renderer == null || enemy.SpecialFrames == null || enemy.SpecialFrames.Count < 3) return;
+            enemy.SpecialAnimationTime += Mathf.Max(0f, delta);
+            var animate = archetype switch
+            {
+                EnemyArchetype.ShieldDokkaebi => playerDistance <= 3f,
+                EnemyArchetype.SpiritShaman => true,
+                EnemyArchetype.ChargingHornGhost => motion.IsTelegraphing,
+                EnemyArchetype.SplittingRat => playerDistance <= 4f,
+                _ => false
+            };
+            var frame = animate ? 1 + Mathf.FloorToInt(enemy.SpecialAnimationTime / .14f) % 2 : 0;
+            if (enemy.SpecialFrames[frame] != null) enemy.Renderer.sprite = enemy.SpecialFrames[frame];
         }
 
         private System.Collections.IEnumerator FlashPlayer()

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JoseonHunter.Content;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
@@ -11,9 +12,12 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly HashSet<string> warnedMissingIds =
             new HashSet<string>(StringComparer.Ordinal);
         private readonly Sprite fallback;
+        private readonly CombatChoiceVisualCatalog combatChoiceVisuals;
 
-        public EnemySpriteRoster(Sprite plagueRat, Sprite legacyAlternate, IReadOnlyList<Sprite> orderedSprites)
+        public EnemySpriteRoster(Sprite plagueRat, Sprite legacyAlternate, IReadOnlyList<Sprite> orderedSprites,
+            CombatChoiceVisualCatalog combatChoiceVisuals = null)
         {
+            this.combatChoiceVisuals = combatChoiceVisuals;
             fallback = plagueRat != null ? plagueRat : legacyAlternate;
             Add("plague_rat", At(orderedSprites, 0) ?? plagueRat);
             Add("bandit", At(orderedSprites, 1) ?? legacyAlternate);
@@ -28,6 +32,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         public Sprite Resolve(string contentId)
         {
+            var specialFrames = combatChoiceVisuals == null ? null : combatChoiceVisuals.EnemyFrames(contentId);
+            if (specialFrames != null && specialFrames.Count > 0 && specialFrames[0] != null) return specialFrames[0];
             if (!string.IsNullOrEmpty(contentId) &&
                 sprites.TryGetValue(contentId, out var sprite) && sprite != null)
             {
@@ -41,6 +47,10 @@ namespace JoseonHunter.Runtime.Gameplay
 #endif
             return fallback;
         }
+
+        public IReadOnlyList<Sprite> Frames(string contentId) => combatChoiceVisuals == null
+            ? Array.Empty<Sprite>()
+            : combatChoiceVisuals.EnemyFrames(contentId);
 
         private void Add(string contentId, Sprite sprite)
         {

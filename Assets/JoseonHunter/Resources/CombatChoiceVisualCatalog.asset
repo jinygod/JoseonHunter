@@ -1,0 +1,77 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a75fac86d332374cb202eeee58b34f9, type: 3}
+  m_Name: CombatChoiceVisualCatalog
+  m_EditorClassIdentifier: JoseonHunter.Content::JoseonHunter.Content.CombatChoiceVisualCatalog
+  legacyEntries:
+  - PathId: hwando_venom
+    Icon: {fileID: 21300000, guid: b082f2fc2b00bac488219b5e6fb77e6e, type: 3}
+  - PathId: hwando_moon_eclipse
+    Icon: {fileID: 21300000, guid: 8421d609dd5e13c43bbda2dee3b778db, type: 3}
+  - PathId: gakgung_sun_piercer
+    Icon: {fileID: 21300000, guid: dd6ac4bac4e6dc241a842e9402034e94, type: 3}
+  - PathId: gakgung_split_fletching
+    Icon: {fileID: 21300000, guid: 4a57c7db7caefe64c8a2d5a2f8c7ce48, type: 3}
+  - PathId: talisman_heaven_seal
+    Icon: {fileID: 21300000, guid: 8ec7249bdb8029b4ead952d8b3bad66a, type: 3}
+  - PathId: talisman_ghost_burst
+    Icon: {fileID: 21300000, guid: f41ab20bab80ee0478c5649b2826d882, type: 3}
+  - PathId: thunder_prison
+    Icon: {fileID: 21300000, guid: 52d16b9961eeb0644ba6bb9e030ce9dd, type: 3}
+  - PathId: thunder_earth_current
+    Icon: {fileID: 21300000, guid: b5630392b71e5cc4a94cd982a16308cb, type: 3}
+  - PathId: jangseung_four_guardians
+    Icon: {fileID: 21300000, guid: 23a2ea3f217c57a4ca7e94e91aa2337b, type: 3}
+  - PathId: jangseung_guardian_descent
+    Icon: {fileID: 21300000, guid: cb865fa0304383a44bbc5bc3134f8d81, type: 3}
+  - PathId: singijeon_fire_dragon
+    Icon: {fileID: 21300000, guid: cc3123c1ad34bdd4e9a218e3b9a7b0f9, type: 3}
+  - PathId: singijeon_fire_net
+    Icon: {fileID: 21300000, guid: e18954eb9423e5a41bd06325d7d2562e, type: 3}
+  - PathId: frost_mist
+    Icon: {fileID: 21300000, guid: f48462e578cba994a8cb274eba997c6d, type: 3}
+  - PathId: frost_shatter
+    Icon: {fileID: 21300000, guid: c66288bcf2260194cbaab13369daad16, type: 3}
+  - PathId: fan_vacuum
+    Icon: {fileID: 21300000, guid: 201e0eb101a686848bf6131642c08501, type: 3}
+  - PathId: fan_heaven_thunder
+    Icon: {fileID: 21300000, guid: d5f9eb8d80364a648a4c1666e8c610d3, type: 3}
+  reactionEntries:
+  - Kind: 1
+    Icon: {fileID: 21300000, guid: 88bee4cbc3c6b8a4b851490a778fb55f, type: 3}
+  - Kind: 2
+    Icon: {fileID: 21300000, guid: 44f8caccc924de84fb3abaec4a65344e, type: 3}
+  - Kind: 3
+    Icon: {fileID: 21300000, guid: be966cb7111dd944b8e2a46e80b51400, type: 3}
+  - Kind: 4
+    Icon: {fileID: 21300000, guid: 45968db5848cc104da23db9840331b95, type: 3}
+  enemyEntries:
+  - ContentId: shield_dokkaebi
+    Frames:
+    - {fileID: 21300000, guid: e4231b3c588ec1b4e8b8ebc5e37e348f, type: 3}
+    - {fileID: 21300000, guid: eec347f1585ffc44bb71d40b17e590fb, type: 3}
+    - {fileID: 21300000, guid: cd708991de43ce442903f13e34ff208f, type: 3}
+  - ContentId: spirit_shaman
+    Frames:
+    - {fileID: 21300000, guid: f38fb0fcdbb8ee44982547b131dd54ec, type: 3}
+    - {fileID: 21300000, guid: b0559d6adbb0c5047979fe91834b61a8, type: 3}
+    - {fileID: 21300000, guid: aaf33e43cd100204cb7f842dfd9cc32e, type: 3}
+  - ContentId: charging_horn_ghost
+    Frames:
+    - {fileID: 21300000, guid: d13e23dff80c35c429ce8ad08f961e16, type: 3}
+    - {fileID: 21300000, guid: cd5ada84639280849890c7b1f97f7c07, type: 3}
+    - {fileID: 21300000, guid: 3d14bb26cef7f214db47e421e448a6e0, type: 3}
+  - ContentId: splitting_rat
+    Frames:
+    - {fileID: 21300000, guid: 72aada645dfb873429ba3ab414feae88, type: 3}
+    - {fileID: 21300000, guid: 14a84cd5e9fd6d544901fcba2d443e4e, type: 3}
+    - {fileID: 21300000, guid: f494eee7f66d9d444836bed08051b69d, type: 3}

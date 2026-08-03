@@ -1,4 +1,5 @@
 using System;
+using JoseonHunter.Content;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
@@ -26,6 +27,7 @@ namespace JoseonHunter.Presentation.UI
         private RectTransform panel;
         private Func<WeaponLegacyPathId, bool> choose;
         private bool locked;
+        private CombatChoiceVisualCatalog visualCatalog;
 
         public bool IsOpen { get; private set; }
         public event Action PresentationClosed;
@@ -33,6 +35,7 @@ namespace JoseonHunter.Presentation.UI
         public void Build()
         {
             if (root != null) return;
+            visualCatalog = CombatChoiceVisualCatalog.LoadDefault();
             root = RuntimeUiFactory.Image("Weapon Legacy Overlay", transform,
                 new Color(.008f, .012f, .022f, .9f)).gameObject;
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
@@ -115,11 +118,12 @@ namespace JoseonHunter.Presentation.UI
             return card;
         }
 
-        private static void Populate(Card card, WeaponLegacyChoiceView choice)
+        private void Populate(Card card, WeaponLegacyChoiceView choice)
         {
             card.PathId = choice.PathId;
-            card.Icon.sprite = choice.Icon;
-            card.Icon.enabled = choice.Icon != null;
+            var legacyIcon = visualCatalog == null ? null : visualCatalog.LegacyIcon(choice.PathId);
+            card.Icon.sprite = legacyIcon != null ? legacyIcon : choice.Icon;
+            card.Icon.enabled = card.Icon.sprite != null;
             card.Name.text = choice.DisplayName;
             card.CombatStyle.text = "전투 방식 · " + choice.CombatStyle;
             card.Benefit.text = "강점 · " + choice.Benefit;
