@@ -9,55 +9,71 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class UpgradeEvolutionTests
     {
         [Test]
-        public void Max_level_unlocked_weapon_offers_its_evolution()
-        {
-            var state = new UpgradeState(
-                new Dictionary<string, int> { [WeaponId.FrostFlask.Value] = 5 },
-                new Dictionary<string, int>(),
-                new HashSet<string> { "frost_bloom_evolution" },
-                new HashSet<string>());
-
-            var offers = UpgradeSelector.Select(state, 27);
-
-            Assert.That(offers, Has.Some.Matches<UpgradeOffer>(
-                offer => offer.Kind == UpgradeKind.Evolution && offer.Id == "frost_bloom_evolution"));
-        }
-
-        [Test]
-        public void Level_above_max_does_not_offer_its_evolution()
-        {
-            var state = new UpgradeState(
-                new Dictionary<string, int> { [WeaponId.FrostFlask.Value] = 6 },
-                new Dictionary<string, int>(),
-                new HashSet<string> { "frost_bloom_evolution" },
-                new HashSet<string>());
-
-            var offers = UpgradeSelector.Select(state, 27);
-
-            Assert.That(offers, Has.None.Matches<UpgradeOffer>(
-                offer => offer.Kind == UpgradeKind.Evolution && offer.Id == "frost_bloom_evolution"));
-        }
-
-        [Test]
-        public void Eligible_evolution_is_the_first_offer_without_breaking_weapon_guarantees()
+        public void Full_loadout_marks_new_weapon_for_replacement_and_never_offers_discarded_weapon()
         {
             var state = new UpgradeState(
                 new Dictionary<string, int>
                 {
-                    [WeaponId.FrostFlask.Value] = 5,
-                    [WeaponId.HwandoFlyingBlade.Value] = 2
+                    [WeaponId.HwandoFlyingBlade.Value] = 2,
+                    [WeaponId.GakgungShot.Value] = 2,
+                    [WeaponId.TalismanThrow.Value] = 2,
+                    [WeaponId.ThunderCrashBomb.Value] = 2
                 },
                 new Dictionary<string, int>(),
+                new HashSet<string>(WeaponRoster.All.Select(id => id.Value)),
                 new HashSet<string> { "frost_bloom_evolution" },
-                new HashSet<string>());
+                new HashSet<string> { WeaponId.FrostFlask.Value });
 
             var offers = UpgradeSelector.Select(state, 27);
 
             Assert.That(offers, Has.Count.EqualTo(3));
-            Assert.That(offers.Select(offer => offer.Id), Is.Unique);
-            Assert.That(offers[0], Is.EqualTo(new UpgradeOffer("frost_bloom_evolution", UpgradeKind.Evolution, 1)));
-            Assert.That(offers, Does.Contain(new UpgradeOffer(WeaponId.HwandoFlyingBlade.Value, UpgradeKind.Weapon, 3)));
-            Assert.That(offers.Any(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1), Is.True);
+            Assert.That(offers.Any(offer => offer.Kind == UpgradeKind.Evolution), Is.False);
+            Assert.That(offers.Any(offer => offer.Id == WeaponId.FrostFlask.Value), Is.False);
+            Assert.That(offers.Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1), Is.Not.Empty);
+            Assert.That(offers.Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1)
+                .All(offer => offer.RequiresReplacement), Is.True);
+        }
+
+        [Test]
+        public void New_weapon_does_not_require_replacement_while_a_weapon_slot_is_empty()
+        {
+            var state = new UpgradeState(
+                new Dictionary<string, int>
+                {
+                    [WeaponId.HwandoFlyingBlade.Value] = 2,
+                    [WeaponId.GakgungShot.Value] = 2,
+                    [WeaponId.TalismanThrow.Value] = 2
+                },
+                new Dictionary<string, int>(),
+                new HashSet<string>(WeaponRoster.All.Select(id => id.Value)),
+                new HashSet<string>(),
+                new HashSet<string>());
+
+            var offers = UpgradeSelector.Select(state, 27);
+
+            Assert.That(offers.Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1), Is.Not.Empty);
+            Assert.That(offers.Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1)
+                .All(offer => !offer.RequiresReplacement), Is.True);
+        }
+
+        [Test]
+        public void Owning_all_three_supports_never_creates_a_fourth_support_slot_offer()
+        {
+            var state = new UpgradeState(
+                new Dictionary<string, int> { [WeaponId.HwandoFlyingBlade.Value] = 2 },
+                new Dictionary<string, int>
+                {
+                    ["talisman"] = 5,
+                    ["boots"] = 5,
+                    ["warding_bell"] = 5
+                },
+                new HashSet<string>(WeaponRoster.All.Select(id => id.Value)),
+                new HashSet<string>(),
+                new HashSet<string>());
+
+            var offers = UpgradeSelector.Select(state, 31);
+
+            Assert.That(offers.Any(offer => offer.Kind == UpgradeKind.Support), Is.False);
         }
     }
 }

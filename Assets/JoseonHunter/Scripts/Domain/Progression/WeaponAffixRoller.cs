@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 
 namespace JoseonHunter.Domain.Progression
@@ -42,39 +41,7 @@ namespace JoseonHunter.Domain.Progression
             var valueUnit = random.NextUnit();
             var general = new WeaponAffixRoll(stat, TierFor(valueUnit), ValueFor(stat, valueUnit));
             profile.AddGeneral(general);
-
-            var newPotentials = new List<WeaponPotentialId>();
-            if (profile.PotentialIds.Count < 3 && random.NextUnit() < JackpotChance(profile.PotentialIds.Count))
-            {
-                AddPotential(profile, weaponId, random, newPotentials);
-                if (profile.PotentialIds.Count >= 3) return new WeaponAffixRollResult(general, newPotentials.AsReadOnly());
-
-                if (newPotentials.Count > 0 && random.NextUnit() < .08)
-                {
-                    AddPotential(profile, weaponId, random, newPotentials);
-                    if (profile.PotentialIds.Count >= 3) return new WeaponAffixRollResult(general, newPotentials.AsReadOnly());
-                }
-
-                if (newPotentials.Count > 1 && random.NextUnit() < .01) AddPotential(profile, weaponId, random, newPotentials);
-            }
-
-            return new WeaponAffixRollResult(general, newPotentials.AsReadOnly());
-        }
-
-        private static void AddPotential(WeaponRunAffixProfile profile, WeaponId weaponId, IAffixRandom random, List<WeaponPotentialId> added)
-        {
-            if (profile.PotentialIds.Count >= 3) return;
-            var potentials = WeaponAffixCatalog.CompatiblePotentials(weaponId);
-            var startIndex = random.NextIndex(potentials.Count);
-            for (var offset = 0; offset < potentials.Count; offset++)
-            {
-                var candidate = potentials[(startIndex + offset) % potentials.Count];
-                if (profile.AddPotential(candidate))
-                {
-                    added.Add(candidate);
-                    return;
-                }
-            }
+            return new WeaponAffixRollResult(general, Array.Empty<WeaponPotentialId>());
         }
 
         private static WeaponAffixTier TierFor(double valueUnit) =>
@@ -95,6 +62,5 @@ namespace JoseonHunter.Domain.Progression
         }
 
         private static double Interpolate(double min, double max, double unit) => min + ((max - min) * unit);
-        private static double JackpotChance(int potentialCount) => potentialCount == 0 ? .05 : potentialCount == 1 ? .02 : potentialCount == 2 ? .005 : 0d;
     }
 }

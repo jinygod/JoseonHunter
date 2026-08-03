@@ -114,6 +114,8 @@ namespace JoseonHunter.Domain.Progression
 
         public bool TryProfileFor(WeaponId id, out WeaponRunAffixProfile profile) => profiles.TryGetValue(id, out profile);
 
+        public bool Remove(WeaponId id) => profiles.Remove(id);
+
         public void Clear() => profiles.Clear();
     }
 }

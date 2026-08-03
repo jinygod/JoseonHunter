@@ -24,16 +24,9 @@ namespace JoseonHunter.Domain.Progression
 
             var random = new Random(seed);
             var offers = new List<UpgradeOffer>(3);
-            var evolutions = eligible.Where(offer => offer.Kind == UpgradeKind.Evolution).ToList();
-            if (evolutions.Count > 0)
-            {
-                offers.Add(evolutions[random.Next(evolutions.Count)]);
-                eligible.RemoveAll(offer => offers.Any(selected => selected.Id == offer.Id));
-            }
-
             var ownedWeapons = WeaponIds
                 .Where(id => state.WeaponLevels.TryGetValue(id, out var level) && level < MaxLevel)
-                .Select(id => WeaponOffer(id, state.WeaponLevels[id]))
+                .Select(id => WeaponOffer(id, state.WeaponLevels[id], false))
                 .ToList();
 
             if (ownedWeapons.Count > 0)
@@ -69,31 +62,27 @@ namespace JoseonHunter.Domain.Progression
 
         private static IEnumerable<UpgradeOffer> EligibleOffers(UpgradeState state)
         {
+            var ownedWeaponCount = state.WeaponLevels.Count(pair => pair.Value > 0);
             foreach (var id in WeaponIds)
             {
+                if (state.DiscardedWeaponIds.Contains(id)) continue;
                 var level = state.WeaponLevels.TryGetValue(id, out var currentLevel) ? currentLevel : 0;
-                if (level < MaxLevel) yield return WeaponOffer(id, level);
+                if (level < MaxLevel)
+                    yield return WeaponOffer(id, level,
+                        level == 0 && ownedWeaponCount >= RunLoadoutRules.WeaponSlotLimit);
             }
 
+            var ownedSupportCount = state.SupportLevels.Count(pair => pair.Value > 0);
             foreach (var id in SupportIds)
             {
                 var level = state.SupportLevels.TryGetValue(id, out var currentLevel) ? currentLevel : 0;
+                if (level == 0 && ownedSupportCount >= RunLoadoutRules.SupportSlotLimit) continue;
                 if (level < MaxLevel) yield return new UpgradeOffer(id, UpgradeKind.Support, level + 1);
-            }
-
-            foreach (var evolution in WeaponEvolutionCatalog.All)
-            {
-                if (state.UnlockedIds.Contains(evolution.Id) &&
-                    !state.AcquiredEvolutionIds.Contains(evolution.Id) &&
-                    state.WeaponLevels.TryGetValue(evolution.RequiredWeaponId.Value, out var level) && level == MaxLevel)
-                {
-                    yield return new UpgradeOffer(evolution.Id, UpgradeKind.Evolution, 1);
-                }
             }
         }
 
-        private static UpgradeOffer WeaponOffer(string id, int currentLevel) =>
-            new(id, UpgradeKind.Weapon, currentLevel + 1);
+        private static UpgradeOffer WeaponOffer(string id, int currentLevel, bool requiresReplacement) =>
+            new(id, UpgradeKind.Weapon, currentLevel + 1, requiresReplacement);
 
         private static void Shuffle<T>(IList<T> items, Random random)
         {

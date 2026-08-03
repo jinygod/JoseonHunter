@@ -6,19 +6,23 @@ namespace JoseonHunter.Domain.Progression
 {
     public readonly struct UpgradeOffer : IEquatable<UpgradeOffer>
     {
-        public UpgradeOffer(string id, UpgradeKind kind, int nextLevel)
+        public UpgradeOffer(string id, UpgradeKind kind, int nextLevel, bool requiresReplacement = false)
         {
             Id = id;
             Kind = kind;
             NextLevel = nextLevel;
+            RequiresReplacement = requiresReplacement;
         }
 
         public string Id { get; }
         public UpgradeKind Kind { get; }
         public int NextLevel { get; }
-        public bool Equals(UpgradeOffer other) => Id == other.Id && Kind == other.Kind && NextLevel == other.NextLevel;
+        public bool RequiresReplacement { get; }
+        public bool Equals(UpgradeOffer other) => Id == other.Id && Kind == other.Kind &&
+                                                  NextLevel == other.NextLevel &&
+                                                  RequiresReplacement == other.RequiresReplacement;
         public override bool Equals(object obj) => obj is UpgradeOffer other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(Id, Kind, NextLevel);
+        public override int GetHashCode() => HashCode.Combine(Id, Kind, NextLevel, RequiresReplacement);
     }
 
     public enum UpgradeKind { Weapon, Support, Evolution }
@@ -34,7 +38,8 @@ namespace JoseonHunter.Domain.Progression
             IReadOnlyDictionary<string, int> weaponLevels,
             IReadOnlyDictionary<string, int> supportLevels,
             IUpgradeIdSet unlockedIds)
-            : this(weaponLevels, supportLevels, unlockedIds, new SnapshotSet(Array.Empty<string>()))
+            : this(weaponLevels, supportLevels, unlockedIds, new SnapshotSet(Array.Empty<string>()),
+                new SnapshotSet(Array.Empty<string>()))
         {
         }
 
@@ -43,23 +48,37 @@ namespace JoseonHunter.Domain.Progression
             IReadOnlyDictionary<string, int> supportLevels,
             IUpgradeIdSet unlockedIds,
             IUpgradeIdSet acquiredEvolutionIds)
+            : this(weaponLevels, supportLevels, unlockedIds, acquiredEvolutionIds,
+                new SnapshotSet(Array.Empty<string>()))
+        {
+        }
+
+        public UpgradeState(
+            IReadOnlyDictionary<string, int> weaponLevels,
+            IReadOnlyDictionary<string, int> supportLevels,
+            IUpgradeIdSet unlockedIds,
+            IUpgradeIdSet acquiredEvolutionIds,
+            IUpgradeIdSet discardedWeaponIds)
         {
             if (weaponLevels == null) throw new ArgumentNullException(nameof(weaponLevels));
             if (supportLevels == null) throw new ArgumentNullException(nameof(supportLevels));
             if (unlockedIds == null) throw new ArgumentNullException(nameof(unlockedIds));
             if (acquiredEvolutionIds == null) throw new ArgumentNullException(nameof(acquiredEvolutionIds));
+            if (discardedWeaponIds == null) throw new ArgumentNullException(nameof(discardedWeaponIds));
 
             WeaponLevels = new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(weaponLevels));
             SupportLevels = new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(supportLevels));
             UnlockedIds = new SnapshotSet(unlockedIds);
             AcquiredEvolutionIds = new SnapshotSet(acquiredEvolutionIds);
+            DiscardedWeaponIds = new SnapshotSet(discardedWeaponIds);
         }
 
         public UpgradeState(
             IReadOnlyDictionary<string, int> weaponLevels,
             IReadOnlyDictionary<string, int> supportLevels,
             ISet<string> unlockedIds)
-            : this(weaponLevels, supportLevels, new SnapshotSet(unlockedIds), new SnapshotSet(Array.Empty<string>()))
+            : this(weaponLevels, supportLevels, new SnapshotSet(unlockedIds),
+                new SnapshotSet(Array.Empty<string>()), new SnapshotSet(Array.Empty<string>()))
         {
         }
 
@@ -68,7 +87,19 @@ namespace JoseonHunter.Domain.Progression
             IReadOnlyDictionary<string, int> supportLevels,
             ISet<string> unlockedIds,
             ISet<string> acquiredEvolutionIds)
-            : this(weaponLevels, supportLevels, new SnapshotSet(unlockedIds), new SnapshotSet(acquiredEvolutionIds))
+            : this(weaponLevels, supportLevels, new SnapshotSet(unlockedIds),
+                new SnapshotSet(acquiredEvolutionIds), new SnapshotSet(Array.Empty<string>()))
+        {
+        }
+
+        public UpgradeState(
+            IReadOnlyDictionary<string, int> weaponLevels,
+            IReadOnlyDictionary<string, int> supportLevels,
+            ISet<string> unlockedIds,
+            ISet<string> acquiredEvolutionIds,
+            ISet<string> discardedWeaponIds)
+            : this(weaponLevels, supportLevels, new SnapshotSet(unlockedIds),
+                new SnapshotSet(acquiredEvolutionIds), new SnapshotSet(discardedWeaponIds))
         {
         }
 
@@ -76,6 +107,7 @@ namespace JoseonHunter.Domain.Progression
         public IReadOnlyDictionary<string, int> SupportLevels { get; }
         public IUpgradeIdSet UnlockedIds { get; }
         public IUpgradeIdSet AcquiredEvolutionIds { get; }
+        public IUpgradeIdSet DiscardedWeaponIds { get; }
 
         private sealed class SnapshotSet : IUpgradeIdSet
         {
