@@ -16,14 +16,47 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void ShieldOnlyResistsFrontDirectHits()
+        public void ShieldBreaksAfterSixConfirmedFrontDirectHits()
         {
-            var shield = EnemyArchetypeProfile.ForContentId("shield_dokkaebi");
-            Assert.That(shield.IncomingDamageMultiplier(Vector2.right, Vector2.right, WeaponHitTrait.Slash), Is.EqualTo(.65f));
-            Assert.That(shield.IncomingDamageMultiplier(Vector2.right, Vector2.left, WeaponHitTrait.Slash), Is.EqualTo(1f));
-            Assert.That(shield.IncomingDamageMultiplier(Vector2.right, Vector2.right, WeaponHitTrait.Explosion), Is.EqualTo(1f));
-            Assert.That(shield.IncomingDamageMultiplier(Vector2.right, Vector2.right, WeaponHitTrait.Pull), Is.EqualTo(1f));
-            Assert.That(shield.IncomingDamageMultiplier(Vector2.right, Vector2.right, WeaponHitTrait.Reaction), Is.EqualTo(1f));
+            var remaining = ShieldDokkaebiGuard.MaximumCharges;
+            for (var hit = 1; hit <= ShieldDokkaebiGuard.MaximumCharges; hit++)
+            {
+                Assert.That(ShieldDokkaebiGuard.IncomingDamageMultiplier(remaining, Vector2.right,
+                    Vector2.right, WeaponHitTrait.Slash), Is.EqualTo(.15f));
+                var result = ShieldDokkaebiGuard.ConfirmHit(remaining, Vector2.right, Vector2.right,
+                    WeaponHitTrait.Slash);
+                Assert.That(result.Blocked, Is.True);
+                Assert.That(result.Broke, Is.EqualTo(hit == ShieldDokkaebiGuard.MaximumCharges));
+                remaining = result.RemainingCharges;
+            }
+
+            Assert.That(remaining, Is.Zero);
+            Assert.That(ShieldDokkaebiGuard.IncomingDamageMultiplier(remaining, Vector2.right,
+                Vector2.right, WeaponHitTrait.Slash), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ShieldBypassHitsAndRearHitsNeverConsumeACharge()
+        {
+            var bypassTraits = new[]
+            {
+                WeaponHitTrait.Explosion,
+                WeaponHitTrait.Pull,
+                WeaponHitTrait.Reaction
+            };
+
+            foreach (var traits in bypassTraits)
+            {
+                Assert.That(ShieldDokkaebiGuard.IncomingDamageMultiplier(6, Vector2.right,
+                    Vector2.right, traits), Is.EqualTo(1f));
+                Assert.That(ShieldDokkaebiGuard.ConfirmHit(6, Vector2.right, Vector2.right, traits)
+                    .RemainingCharges, Is.EqualTo(6));
+            }
+
+            Assert.That(ShieldDokkaebiGuard.IncomingDamageMultiplier(6, Vector2.right,
+                Vector2.left, WeaponHitTrait.Slash), Is.EqualTo(1f));
+            Assert.That(ShieldDokkaebiGuard.ConfirmHit(6, Vector2.right, Vector2.left,
+                WeaponHitTrait.Slash).RemainingCharges, Is.EqualTo(6));
         }
 
         [Test]

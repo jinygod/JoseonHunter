@@ -55,6 +55,24 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ResistanceConfirmationRunsOnceOnlyAfterTheAttackAcceptsTheHit()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new ConfirmedResistantTarget(27, 100);
+            registry.Register(target);
+            var service = new CombatDamageService(registry);
+            var attack = new AttackInstance(77, RepeatHitPolicy.OncePerInstance, 0f);
+            var request = WeaponDamageRequest.Create(attack, WeaponId.HwandoFlyingBlade, target, 20, false,
+                new Float2(2f, 0f), ContactPhase.Direct, 1, 1f, true, WeaponHitTrait.Slash,
+                new Float2(0f, 0f));
+
+            Assert.That(service.TryApply(request, out _), Is.True);
+            Assert.That(service.TryApply(request, out _), Is.False);
+            Assert.That(target.ConfirmationCount, Is.EqualTo(1));
+            Assert.That(target.Health, Is.EqualTo(90));
+        }
+
+        [Test]
         public void UnregisteredOrUnconfirmedRequestCannotMutateHealth()
         {
             var registry = new CombatTargetRegistry();
@@ -150,6 +168,30 @@ namespace JoseonHunter.Tests.EditMode
             public void ApplyKnockback(Float2 direction, float force) { }
             public float IncomingDamageMultiplier(Float2 attackOrigin, WeaponHitTrait traits) =>
                 (traits & WeaponHitTrait.Pierce) != 0 ? .65f : 1f;
+        }
+
+        private sealed class ConfirmedResistantTarget : ICombatTarget, IConfirmedDamageResistanceTarget
+        {
+            public ConfirmedResistantTarget(int runtimeId, int health)
+            {
+                RuntimeId = runtimeId;
+                Health = health;
+            }
+
+            public int RuntimeId { get; }
+            public bool IsAlive => Health > 0;
+            public int Health { get; private set; }
+            public bool IsBoss => false;
+            public bool IsElite => false;
+            public float ThreatScore => 0f;
+            public Float2 WorldPosition => new(2f, 0f);
+            public PixelHitMask HurtMask => null;
+            public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Identity;
+            public int ConfirmationCount { get; private set; }
+            public void ApplyResolvedDamage(int damage) => Health -= damage;
+            public void ApplyKnockback(Float2 direction, float force) { }
+            public float IncomingDamageMultiplier(Float2 attackOrigin, WeaponHitTrait traits) => .5f;
+            public void ConfirmIncomingHit(Float2 attackOrigin, WeaponHitTrait traits) => ConfirmationCount++;
         }
     }
 }

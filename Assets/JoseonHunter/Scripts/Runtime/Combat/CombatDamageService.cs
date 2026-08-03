@@ -88,9 +88,9 @@ namespace JoseonHunter.Runtime.Combat
             confirmed = default;
             if (!HasValidTarget(request.Target) || !request.HasConfirmedContact || !IsFinite(request.ContactPoint) || request.AttackInstance == null) return false;
             var incomingMultiplier = affixStatuses == null ? 1f : affixStatuses.IncomingDamageMultiplier(request.Target.RuntimeId, request.Phase);
+            var origin = request.AttackOrigin ?? request.ContactPoint;
             if (request.Target is IIncomingDamageResistanceTarget resistance)
             {
-                var origin = request.AttackOrigin ?? request.ContactPoint;
                 var resistanceMultiplier = resistance.IncomingDamageMultiplier(origin, request.Traits);
                 if (!IsFinite(resistanceMultiplier) || resistanceMultiplier < 0f) return false;
                 incomingMultiplier *= resistanceMultiplier;
@@ -102,6 +102,8 @@ namespace JoseonHunter.Runtime.Combat
             var attack = GetAttack(request.AttackInstance);
             if (!attack.TryRecordHit(request.Target.RuntimeId, request.Phase, request.HitTime)) return false;
 
+            if (request.Target is IConfirmedDamageResistanceTarget confirmedResistance)
+                confirmedResistance.ConfirmIncomingHit(origin, request.Traits);
             request.Target.ApplyResolvedDamage(result.FinalDamage);
             confirmed = new ConfirmedDamageEvent(attack.InstanceId, request.WeaponId, request.Target.RuntimeId, result, request.ContactPoint, request.Phase, request.SimulationTick, request.Target.IsBoss);
             DamageConfirmed?.Invoke(confirmed);

@@ -27,4 +27,9 @@ namespace JoseonHunter.Runtime.Combat
     {
         float IncomingDamageMultiplier(Float2 attackOrigin, WeaponHitTrait traits);
     }
+
+    public interface IConfirmedDamageResistanceTarget : IIncomingDamageResistanceTarget
+    {
+        void ConfirmIncomingHit(Float2 attackOrigin, WeaponHitTrait traits);
+    }
 }

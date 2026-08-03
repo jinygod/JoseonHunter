@@ -4,6 +4,49 @@ using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
 {
+    public readonly struct ShieldGuardHitResult
+    {
+        public ShieldGuardHitResult(int remainingCharges, bool blocked, bool broke)
+        {
+            RemainingCharges = Mathf.Clamp(remainingCharges, 0, ShieldDokkaebiGuard.MaximumCharges);
+            Blocked = blocked;
+            Broke = broke;
+        }
+
+        public int RemainingCharges { get; }
+        public bool Blocked { get; }
+        public bool Broke { get; }
+    }
+
+    public static class ShieldDokkaebiGuard
+    {
+        public const int MaximumCharges = 6;
+        public const float BlockedDamageMultiplier = .15f;
+        private const WeaponHitTrait BypassTraits = WeaponHitTrait.Explosion | WeaponHitTrait.Pull |
+                                                   WeaponHitTrait.Reaction;
+
+        public static float IncomingDamageMultiplier(int remainingCharges, Vector2 facing,
+            Vector2 attackDirection, WeaponHitTrait traits) =>
+            Blocks(remainingCharges, facing, attackDirection, traits) ? BlockedDamageMultiplier : 1f;
+
+        public static ShieldGuardHitResult ConfirmHit(int remainingCharges, Vector2 facing,
+            Vector2 attackDirection, WeaponHitTrait traits)
+        {
+            if (!Blocks(remainingCharges, facing, attackDirection, traits))
+                return new ShieldGuardHitResult(remainingCharges, false, false);
+            var next = Mathf.Max(0, remainingCharges - 1);
+            return new ShieldGuardHitResult(next, true, next == 0);
+        }
+
+        private static bool Blocks(int remainingCharges, Vector2 facing, Vector2 attackDirection,
+            WeaponHitTrait traits)
+        {
+            if (remainingCharges <= 0 || (traits & BypassTraits) != 0 ||
+                facing.sqrMagnitude < .0001f || attackDirection.sqrMagnitude < .0001f) return false;
+            return Vector2.Dot(facing.normalized, attackDirection.normalized) >= .5f;
+        }
+    }
+
     public enum EnemyArchetype
     {
         Normal,
@@ -46,11 +89,10 @@ namespace JoseonHunter.Runtime.Gameplay
 
         public float IncomingDamageMultiplier(Vector2 facing, Vector2 attackDirection, WeaponHitTrait traits)
         {
-            if (Archetype != EnemyArchetype.ShieldDokkaebi ||
-                (traits & (WeaponHitTrait.Explosion | WeaponHitTrait.Pull | WeaponHitTrait.Reaction)) != 0)
-                return 1f;
-            if (facing.sqrMagnitude < .0001f || attackDirection.sqrMagnitude < .0001f) return 1f;
-            return Vector2.Dot(facing.normalized, attackDirection.normalized) >= .5f ? .65f : 1f;
+            return Archetype == EnemyArchetype.ShieldDokkaebi
+                ? ShieldDokkaebiGuard.IncomingDamageMultiplier(ShieldDokkaebiGuard.MaximumCharges,
+                    facing, attackDirection, traits)
+                : 1f;
         }
     }
 }
