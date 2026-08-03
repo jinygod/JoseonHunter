@@ -2383,18 +2383,18 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private static string LegacyStageName(WeaponLegacyStage stage) => stage switch
         {
-            WeaponLegacyStage.Chosen => "선택",
-            WeaponLegacyStage.Reinforced => "강화",
-            WeaponLegacyStage.Completed => "완성",
-            _ => "미선택"
+            WeaponLegacyStage.Chosen => "성장 방향 선택 완료",
+            WeaponLegacyStage.Reinforced => "선택 효과 강화됨",
+            WeaponLegacyStage.Completed => "최종 효과 완성",
+            _ => "무기 3레벨에서 두 방식 중 하나 선택"
         };
 
         private static string NextLegacyMilestone(WeaponLegacyStage stage) => stage switch
         {
-            WeaponLegacyStage.Chosen => "4레벨 · 강화",
-            WeaponLegacyStage.Reinforced => "5레벨 · 완성",
-            WeaponLegacyStage.Completed => "완성됨",
-            _ => "3레벨 · 전승 선택"
+            WeaponLegacyStage.Chosen => "무기 4레벨 달성 시 효과 강화",
+            WeaponLegacyStage.Reinforced => "무기 5레벨 달성 시 최종 효과 완성",
+            WeaponLegacyStage.Completed => "최종 효과 적용 중",
+            _ => "무기 3레벨에서 두 방식 중 하나 선택"
         };
 
         public void RestartRun()

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
@@ -42,6 +43,19 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.WeaponLevelForTests(WeaponId.GakgungShot), Is.EqualTo(3));
             Assert.That(controller.LegacySnapshotForTests(WeaponId.GakgungShot).Stage,
                 Is.EqualTo(WeaponLegacyStage.Chosen));
+            var chosen = controller.UiState.Weapons.Single(weapon => weapon.Id == WeaponId.GakgungShot.Value);
+            Assert.That(chosen.LegacyStageName, Is.EqualTo("성장 방향 선택 완료"));
+            Assert.That(chosen.NextLegacyMilestone, Is.EqualTo("무기 4레벨 달성 시 효과 강화"));
+
+            controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 4);
+            var reinforced = controller.UiState.Weapons.Single(weapon => weapon.Id == WeaponId.GakgungShot.Value);
+            Assert.That(reinforced.LegacyStageName, Is.EqualTo("선택 효과 강화됨"));
+            Assert.That(reinforced.NextLegacyMilestone, Is.EqualTo("무기 5레벨 달성 시 최종 효과 완성"));
+
+            controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 5);
+            var completed = controller.UiState.Weapons.Single(weapon => weapon.Id == WeaponId.GakgungShot.Value);
+            Assert.That(completed.LegacyStageName, Is.EqualTo("최종 효과 완성"));
+            Assert.That(completed.NextLegacyMilestone, Is.EqualTo("최종 효과 적용 중"));
             Assert.That(controller.TryChooseWeaponLegacy(WeaponLegacyPathId.GakgungSplitFletching), Is.False);
             Assert.That(controller.AppliedUpgradeCount, Is.EqualTo(1));
         }

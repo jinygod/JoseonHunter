@@ -41,6 +41,7 @@ namespace JoseonHunter.Presentation.UI
         private TextMeshProUGUI weaponName;
         private TextMeshProUGUI weaponLevel;
         private TextMeshProUGUI weaponBehavior;
+        private TextMeshProUGUI growthGuide;
         private TextMeshProUGUI accumulatedAffixSummary;
         private Image weaponIcon;
         private Button confirmButton;
@@ -497,7 +498,7 @@ namespace JoseonHunter.Presentation.UI
             weaponBehavior.text = activeModel.Behavior;
             accumulatedAffixSummary.text = string.IsNullOrEmpty(activeModel.AccumulatedAffixSummary)
                 ? string.Empty
-                : "누적  " + activeModel.AccumulatedAffixSummary;
+                : "지금까지 적용된 효과 · " + activeModel.AccumulatedAffixSummary;
             weaponIcon.sprite = activeModel.Icon != null ? activeModel.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
             ApplyFlatAppraisalStyle();
@@ -627,6 +628,10 @@ namespace JoseonHunter.Presentation.UI
             weaponBehavior = Label("Weapon Behavior", shell.transform, new Vector2(80f, 236f),
                 new Vector2(620f, 42f), 20f, TextAlignmentOptions.Left);
             weaponBehavior.color = new Color(.24f, .27f, .24f);
+            growthGuide = Label("Growth Guide", shell.transform, new Vector2(80f, 202f),
+                new Vector2(620f, 20f), 17f, TextAlignmentOptions.Left);
+            growthGuide.text = "성장 방향은 무기 3레벨에서 선택하고 4·5레벨에서 강화됩니다";
+            growthGuide.color = JoseonUiPalette.HanjiMutedInk;
 
             burst = RuntimeUiFactory.Image("Jackpot Burst", shell.transform, Color.white);
             burst.rectTransform.anchorMin = burst.rectTransform.anchorMax = new Vector2(.5f, .5f);
@@ -650,7 +655,7 @@ namespace JoseonHunter.Presentation.UI
             detail.fontStyle = FontStyles.Bold;
             detail.color = JoseonUiPalette.DarkPanelText;
             accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
-                new Vector2(-80f, 44f), new Vector2(740f, 24f), 18f,
+                new Vector2(0f, 44f), new Vector2(740f, 24f), 18f,
                 TextAlignmentOptions.Left);
             accumulatedAffixSummary.fontStyle = FontStyles.Bold;
             accumulatedAffixSummary.color = JoseonUiPalette.HanjiMutedInk;
@@ -708,11 +713,16 @@ namespace JoseonHunter.Presentation.UI
 
         private void BindLegacyRows(string legacyName, string legacyStageName, string nextLegacyMilestone)
         {
-            potentialLabels[0].text = "전승 경로 · " + (string.IsNullOrEmpty(legacyName) ? "미선택" : legacyName);
-            potentialLabels[1].text = "현재 경지 · " + (string.IsNullOrEmpty(legacyStageName) ? "미선택" : legacyStageName);
-            potentialLabels[2].text = "다음 경지 · " + (string.IsNullOrEmpty(nextLegacyMilestone)
-                ? "3레벨 · 전승 선택"
-                : nextLegacyMilestone);
+            potentialLabels[0].text = "선택한 성장 · " + (string.IsNullOrEmpty(legacyName) ? "미선택" : legacyName);
+            potentialLabels[1].text = "현재 상태 · " + (string.IsNullOrEmpty(legacyStageName)
+                ? "무기 3레벨에서 두 방식 중 하나 선택"
+                : legacyStageName);
+            var next = string.IsNullOrEmpty(nextLegacyMilestone)
+                ? "무기 3레벨에서 두 방식 중 하나 선택"
+                : nextLegacyMilestone;
+            potentialLabels[2].text = next == "최종 효과 적용 중"
+                ? "성장 완료 · 최종 효과 적용 중"
+                : "다음 강화 · " + next;
         }
 
         public void ApplyPortraitLayout()

@@ -53,6 +53,16 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.DisplayedAffixText, Does.Contain("+0%"));
             Assert.That(TextValue(RectNamed(presenter, "Affix Title")), Is.EqualTo("높은 추가옵션"));
             Assert.That(TextValue(RectNamed(presenter, "Confirm Label")), Is.EqualTo("확인"));
+            var growthGuide = RectNamed(presenter, "Growth Guide");
+            Assert.That(growthGuide.anchoredPosition, Is.EqualTo(new Vector2(80f, 202f)));
+            Assert.That(growthGuide.sizeDelta, Is.EqualTo(new Vector2(620f, 20f)));
+            Assert.That(TextValue(growthGuide),
+                Is.EqualTo("성장 방향은 무기 3레벨에서 선택하고 4·5레벨에서 강화됩니다"));
+            Assert.That(RectNamed(presenter, "Reel Window 0").anchoredPosition.y, Is.EqualTo(126f));
+            Assert.That(presenter.PotentialRowY(0), Is.EqualTo(-32f));
+            Assert.That(presenter.PotentialRowY(1), Is.EqualTo(-160f));
+            Assert.That(presenter.PotentialRowY(2), Is.EqualTo(-288f));
+            Assert.That(RectNamed(presenter, "Confirm Result").anchoredPosition.y, Is.EqualTo(-385f));
             Object.DestroyImmediate(presenter.gameObject);
         }
 
@@ -84,7 +94,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
             var legacyStage = RectNamed(presenter, "Legacy Stage");
             Assert.That(legacyStage.gameObject.activeSelf, Is.True);
-            Assert.That(TextValue(legacyStage), Is.EqualTo("현재 경지 · 미선택"));
+            Assert.That(TextValue(legacyStage),
+                Is.EqualTo("현재 상태 · 무기 3레벨에서 두 방식 중 하나 선택"));
             Assert.That(TextColor(legacyStage).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
@@ -109,6 +120,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(Bottom(main) - Top(summary), Is.GreaterThanOrEqualTo(6f));
             Assert.That(Bottom(summary) - Top(firstPotential), Is.GreaterThanOrEqualTo(6f));
             Assert.That(Bottom(lastPotential) - Top(confirm), Is.GreaterThanOrEqualTo(6f));
+            Assert.That(summary.anchoredPosition, Is.EqualTo(new Vector2(0f, 44f)));
+            Assert.That(summary.sizeDelta, Is.EqualTo(new Vector2(740f, 24f)));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -232,11 +245,29 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-0").enabled, Is.False);
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-1").enabled, Is.False);
             }
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Path")), Is.EqualTo("전승 경로 · 빙무"));
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Stage")), Is.EqualTo("현재 경지 · 선택"));
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Next")), Does.StartWith("다음 경지 ·"));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Path")), Is.EqualTo("선택한 성장 · 빙무"));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Stage")), Is.EqualTo("현재 상태 · 선택"));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Next")), Is.EqualTo("다음 강화 · 4레벨 · 강화"));
             Assert.That(TextColor(RectNamed(presenter, "Legacy Stage")).grayscale, Is.LessThan(.5f));
 
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void Completed_growth_uses_a_final_state_row_instead_of_promising_another_upgrade()
+        {
+            var presenter = new GameObject("Completed Growth Detail Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.ShowDetails(new WeaponSlotView(
+                WeaponId.GakgungShot.Value, "각궁", 5, null,
+                legacyName: "관일", legacyStageName: "최종 효과 완성",
+                nextLegacyMilestone: "최종 효과 적용 중"));
+
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Stage")),
+                Is.EqualTo("현재 상태 · 최종 효과 완성"));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Next")),
+                Is.EqualTo("성장 완료 · 최종 효과 적용 중"));
             Object.DestroyImmediate(presenter.gameObject);
         }
 
@@ -248,7 +279,8 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Play(Model(2, ProgressionRewardKind.WeaponLevel, WeaponAffixTier.Standard));
 
             Assert.That(presenter.ScrollOpenFraction, Is.GreaterThan(.5f));
-            Assert.That(presenter.AccumulatedSummary, Does.Contain("Damage +24%"));
+            Assert.That(presenter.AccumulatedSummary,
+                Is.EqualTo("지금까지 적용된 효과 · Damage +24%"));
             yield return new WaitForSecondsRealtime(.14f);
             Assert.That(presenter.ScrollOpenFraction, Is.EqualTo(1f).Within(.01f));
             Object.Destroy(presenter.gameObject);

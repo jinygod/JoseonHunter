@@ -101,6 +101,12 @@ namespace JoseonHunter.Presentation.UI
             }
             Position(card.Button.GetComponent<RectTransform>(), new Vector2(.5f, .5f),
                 new Vector2(0f, 178f - index * 380f), new Vector2(860f, 344f), new Vector2(.5f, .5f));
+            var background = RuntimeUiFactory.Image("Legacy Card Background " + index,
+                card.Button.transform, JoseonUiPalette.Hanji);
+            background.sprite = null;
+            background.raycastTarget = false;
+            RuntimeUiFactory.Stretch(background.rectTransform, 12f, 12f, 12f, 12f);
+            background.transform.SetAsFirstSibling();
             card.Icon = RuntimeUiFactory.Image("Legacy Icon " + index, card.Button.transform, Color.white);
             Position(card.Icon.rectTransform, new Vector2(0f, .5f), new Vector2(38f, 0f),
                 new Vector2(112f, 112f), new Vector2(0f, .5f));
@@ -113,6 +119,9 @@ namespace JoseonHunter.Presentation.UI
                 new Vector2(620f, 48f), 21f);
             card.Cost = CardText("Cost", card.Button.transform, new Vector2(182f, -226f),
                 new Vector2(620f, 48f), 21f);
+            card.Name.color = JoseonUiPalette.HanjiInk;
+            card.CombatStyle.color = JoseonUiPalette.HanjiInk;
+            card.Benefit.color = JoseonUiPalette.HanjiInk;
             card.Cost.color = JoseonUiPalette.SealCrimson;
             card.Button.onClick.AddListener(() => Choose(card));
             return card;

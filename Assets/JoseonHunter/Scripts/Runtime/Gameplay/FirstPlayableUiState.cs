@@ -76,8 +76,8 @@ namespace JoseonHunter.Runtime.Gameplay
             GeneralAffixSummary = generalAffixSummary ?? string.Empty;
             Behavior = behavior ?? string.Empty;
             LegacyName = legacyName ?? string.Empty;
-            LegacyStageName = legacyStageName ?? "미선택";
-            NextLegacyMilestone = nextLegacyMilestone ?? "3레벨 · 전승 선택";
+            LegacyStageName = legacyStageName ?? "무기 3레벨에서 두 방식 중 하나 선택";
+            NextLegacyMilestone = nextLegacyMilestone ?? "무기 3레벨에서 두 방식 중 하나 선택";
             PotentialIds = Array.AsReadOnly((potentialIds ?? Array.Empty<WeaponPotentialId>()).ToArray());
             GeneralAffixTiers = Array.AsReadOnly((generalAffixTiers ?? Array.Empty<WeaponAffixTier>()).ToArray());
         }

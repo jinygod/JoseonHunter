@@ -37,8 +37,8 @@ namespace JoseonHunter.Presentation.UI
             AccumulatedAffixSummary = accumulatedAffixSummary ?? string.Empty;
             HasWeaponContext = hasWeaponContext;
             LegacyName = legacyName ?? "미선택";
-            LegacyStageName = legacyStageName ?? "미선택";
-            NextLegacyMilestone = nextLegacyMilestone ?? "3레벨 · 전승 선택";
+            LegacyStageName = legacyStageName ?? "무기 3레벨에서 두 방식 중 하나 선택";
+            NextLegacyMilestone = nextLegacyMilestone ?? "무기 3레벨에서 두 방식 중 하나 선택";
         }
 
         public string WeaponId { get; }

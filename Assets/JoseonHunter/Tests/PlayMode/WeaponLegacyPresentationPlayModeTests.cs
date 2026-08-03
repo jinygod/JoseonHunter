@@ -39,9 +39,17 @@ namespace JoseonHunter.Tests.PlayMode
                 for (var index = 0; index < 2; index++)
                 {
                     var card = root.Find("Weapon Legacy Overlay/Legacy Cards/Legacy Choice " + index);
+                    var background = card.Find("Legacy Card Background " + index).GetComponent<Image>();
+                    Assert.That(background.sprite, Is.Null);
+                    Assert.That(background.color.a, Is.EqualTo(1f));
+                    Assert.That(background.transform.GetSiblingIndex(), Is.Zero);
+                    Assert.That(background.rectTransform.offsetMin, Is.EqualTo(new Vector2(12f, 12f)));
+                    Assert.That(background.rectTransform.offsetMax, Is.EqualTo(new Vector2(-12f, -12f)));
                     Assert.That(TextValue(TextNamed(card, "Combat Style")), Does.StartWith("전투 방식 · "));
                     Assert.That(TextValue(TextNamed(card, "Benefit")), Does.StartWith("강점 · "));
                     Assert.That(TextValue(TextNamed(card, "Cost")), Does.StartWith("약점 · "));
+                    Assert.That(TextColor(TextNamed(card, "Combat Style")), Is.EqualTo(JoseonUiPalette.HanjiInk));
+                    Assert.That(TextColor(TextNamed(card, "Cost")), Is.EqualTo(JoseonUiPalette.SealCrimson));
                     Assert.That(IsContained(root, card.GetComponent<RectTransform>()), Is.True);
                 }
                 AssertVisibleCopyIsKorean(root);
@@ -142,6 +150,9 @@ namespace JoseonHunter.Tests.PlayMode
 
         private static string TextValue(Component text) =>
             (string)text.GetType().GetProperty("text").GetValue(text);
+
+        private static Color TextColor(Component text) =>
+            (Color)text.GetType().GetProperty("color").GetValue(text);
 
         private static System.Collections.Generic.IEnumerable<Button> ButtonsNamed(Transform root, string prefix) =>
             root.GetComponentsInChildren<Button>(true).Where(button => button.name.StartsWith(prefix));
