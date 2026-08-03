@@ -125,6 +125,7 @@ namespace JoseonHunter.Runtime.Gameplay
 #if UNITY_INCLUDE_TESTS
         public string LastSpecialEnemyGuideForTests { get; private set; } = string.Empty;
         public int SpecialEnemyGuideCountForTests { get; private set; }
+        private bool suppressAutomaticSpawningForTests;
 #endif
 
         private const float PrototypeDurationSeconds = 180f;
@@ -306,6 +307,7 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             spawnTimer = float.PositiveInfinity;
             chestSpawnTimer = float.PositiveInfinity;
+            suppressAutomaticSpawningForTests = true;
         }
         public bool TickGameplayIfRunningForTests(float delta) => TickGameplayIfRunning(delta);
         public void UpdateEnemiesForTests(float delta) => UpdateEnemies(delta);
@@ -947,6 +949,7 @@ namespace JoseonHunter.Runtime.Gameplay
             PackSpawnCountForTests = 0;
             LastSpecialEnemyGuideForTests = string.Empty;
             SpecialEnemyGuideCountForTests = 0;
+            suppressAutomaticSpawningForTests = false;
 #endif
             RunReset?.Invoke();
         }
@@ -1014,6 +1017,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void UpdateSpawning(float delta)
         {
+#if UNITY_INCLUDE_TESTS
+            if (suppressAutomaticSpawningForTests) return;
+#endif
             var phase = RunClock.PhaseAt(elapsed);
             var wave = WaveSchedule.For(phase);
             if (phase == RunPhase.BossWarning || phase == RunPhase.Boss || phase == RunPhase.Expired)
