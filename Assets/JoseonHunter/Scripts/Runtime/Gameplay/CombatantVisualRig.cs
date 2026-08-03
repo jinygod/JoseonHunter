@@ -29,6 +29,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly float auraBaseAlpha;
         private const float HitFlashDuration = .095f;
         private static readonly Color HitFlashColor = new Color(1f, .64f, .32f, 1f);
+        private static readonly Color HitOutlineFlashColor = new Color(1f, .88f, .52f, 1f);
+        private static readonly Color GuardFlashColor = new Color(.76f, .45f, .16f, 1f);
+        private static readonly Color GuardOutlineFlashColor = new Color(.55f, .32f, .12f, 1f);
 
         private float animationTime;
         private int frameIndex = -1;
@@ -37,6 +40,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool hitFlashActive;
         private Color hitBaseColor;
         private Color hitOutlineBaseColor;
+        private Color activeFlashColor = HitFlashColor;
+        private Color activeOutlineFlashColor = HitOutlineFlashColor;
+        private float activeFlashDuration = HitFlashDuration;
 
         private CombatantVisualRig(
             Transform logicalRoot,
@@ -165,6 +171,17 @@ namespace JoseonHunter.Runtime.Gameplay
         public void ShowHit(Vector2 incomingDirection, float strength)
         {
             motionState.Hit(incomingDirection, strength);
+            BeginHitFlash(HitFlashColor, HitOutlineFlashColor, HitFlashDuration);
+        }
+
+        public void ShowGuardHit(Vector2 incomingDirection)
+        {
+            motionState.Hit(incomingDirection, .055f);
+            BeginHitFlash(GuardFlashColor, GuardOutlineFlashColor, .08f);
+        }
+
+        private void BeginHitFlash(Color bodyColor, Color outlineColor, float duration)
+        {
             if (!hitFlashActive)
             {
                 hitBaseColor = renderer.color;
@@ -172,7 +189,10 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             hitFlashActive = true;
-            hitFlashRemaining = HitFlashDuration;
+            activeFlashColor = bodyColor;
+            activeOutlineFlashColor = outlineColor;
+            activeFlashDuration = Mathf.Max(.001f, duration);
+            hitFlashRemaining = activeFlashDuration;
         }
 
         public void PlayDeath() => motionState.Kill();
@@ -217,12 +237,12 @@ namespace JoseonHunter.Runtime.Gameplay
             if (hitFlashActive)
             {
                 hitFlashRemaining = Mathf.Max(0f, hitFlashRemaining - Mathf.Max(0f, deltaTime));
-                var flash = Mathf.Clamp01(hitFlashRemaining / HitFlashDuration);
-                var body = Color.Lerp(hitBaseColor, HitFlashColor, flash);
+                var flash = Mathf.Clamp01(hitFlashRemaining / activeFlashDuration);
+                var body = Color.Lerp(hitBaseColor, activeFlashColor, flash);
                 body.a = hitBaseColor.a * aliveAlpha;
                 renderer.color = body;
 
-                var outline = Color.Lerp(hitOutlineBaseColor, new Color(1f, .88f, .52f, 1f), flash * .7f);
+                var outline = Color.Lerp(hitOutlineBaseColor, activeOutlineFlashColor, flash * .7f);
                 outline.a = hitOutlineBaseColor.a * aliveAlpha;
                 outlineRenderer.color = outline;
                 if (hitFlashRemaining <= 0f) hitFlashActive = false;

@@ -136,5 +136,22 @@ namespace JoseonHunter.Tests.PlayMode
             Object.Destroy(root);
             yield return null;
         }
+
+        [UnityTest]
+        public IEnumerator GuardHitUsesARestrainedBronzeFlashWithoutMovingTheLogicalRoot()
+        {
+            var root = new GameObject("Guard Flash Enemy");
+            var rig = CombatantVisualRig.Create(root, null, 8, null, MotionWeight.Heavy);
+            rig.Renderer.color = new Color(.72f, .84f, .92f, 1f);
+
+            rig.ShowGuardHit(Vector2.left);
+            rig.Tick(Vector2.zero, 1f / 60f, MotionWeight.Heavy);
+
+            Assert.That(rig.Renderer.color.r, Is.GreaterThan(rig.Renderer.color.b));
+            Assert.That(rig.Renderer.color.g, Is.InRange(.3f, .8f));
+            Assert.That(root.transform.position, Is.EqualTo(Vector3.zero));
+            Object.Destroy(root);
+            yield return null;
+        }
     }
 }

@@ -14,8 +14,8 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator FirstWaveSpawnsOnlyRatsAndBuildsVisiblePressure()
         {
             var controller = LoadGameplay();
-            yield return null;
             controller.SetElapsedForTests(20f);
+            yield return null;
 
             TickSpawning(controller, 10f);
 
@@ -28,8 +28,8 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator SecondWaveContainsRatsSpiritsAndASpiritPack()
         {
             var controller = LoadGameplay();
-            yield return null;
             controller.SetElapsedForTests(60f);
+            yield return null;
 
             TickSpawning(controller, 20f);
 
@@ -43,14 +43,60 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator PeakContinuousAndPackSpawnsShareTheOneHundredFortyEnemyLimit()
         {
             var controller = LoadGameplay();
-            yield return null;
             controller.SetElapsedForTests(145f);
+            yield return null;
 
             TickSpawning(controller, 30f);
 
             Assert.That(controller.LivingNormalEnemyIdsForTests.Count, Is.InRange(130, 140));
             Assert.That(controller.LivingNormalEnemyIdsForTests.Count, Is.LessThanOrEqualTo(140));
             Assert.That(controller.LivingNormalEnemyIdsForTests.Distinct().Count(), Is.GreaterThanOrEqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator NormalRoleIntroductionsExplainSpiritAndDokkaebiAtTheirRosterWindows()
+        {
+            var controller = LoadGameplay();
+            controller.SetElapsedForTests(45f);
+            yield return null;
+            controller.TickSpawningForTests(.1f);
+            Assert.That(controller.UiState.WaveAnnouncement,
+                Is.EqualTo("원한 처녀귀신 출현 · 매우 빠르지만 약합니다"));
+
+            SceneManager.LoadScene("Gameplay");
+            controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            controller.SetElapsedForTests(90f);
+            yield return null;
+            controller.TickSpawningForTests(.1f);
+            Assert.That(controller.UiState.WaveAnnouncement,
+                Is.EqualTo("도깨비 출현 · 느리지만 매우 단단합니다"));
+        }
+
+        [UnityTest]
+        public IEnumerator AuthoredSpecialEnemiesEnterAtReadableTimesAndNormalRosterStaysClean()
+        {
+            var controller = LoadGameplay();
+            controller.SetElapsedForTests(101.9f);
+            yield return null;
+            Assert.That(controller.LivingSpecialEnemyIdsForTests, Is.Empty);
+
+            controller.RestoreElapsedForTests(102f);
+            controller.TickSpawningForTests(.1f);
+            Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("shield_dokkaebi"));
+
+            controller.RestoreElapsedForTests(120f);
+            controller.TickSpawningForTests(.1f);
+            Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("charging_horn_ghost"));
+
+            controller.RestoreElapsedForTests(138f);
+            controller.TickSpawningForTests(.1f);
+            Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("spirit_shaman"));
+
+            controller.RestoreElapsedForTests(150f);
+            controller.TickSpawningForTests(.1f);
+            Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("splitting_rat"));
+            Assert.That(controller.LivingNormalEnemyIdsForTests.Distinct().ToArray(),
+                Is.SubsetOf(new[] { "plague_rat", "vengeful_spirit", "dokkaebi" }));
         }
 
         private static FirstPlayableController LoadGameplay()

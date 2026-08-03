@@ -145,11 +145,6 @@ namespace JoseonHunter.Domain.Runs
             return true;
         }
 
-        [Obsolete("Use the elapsed-time overload after authored introductions are integrated.")]
-        public bool TrySelectSpecial(RunPhase phase, int livingNormalCount, int livingSpecialCount,
-            out string contentId) => TrySelectSpecial(PhaseStartSeconds(phase), livingNormalCount,
-            livingSpecialCount, out contentId);
-
         private float NextInterval(in WavePackDefinition pack) =>
             pack.MinimumIntervalSeconds +
             (float)random.NextDouble() * (pack.MaximumIntervalSeconds - pack.MinimumIntervalSeconds);
