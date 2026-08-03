@@ -36,7 +36,7 @@ namespace JoseonHunter.Tests.PlayMode
             var pickup = GameObject.Find("Experience Flame");
             Assert.That(controller, Is.Not.Null);
             Assert.That(pickup, Is.Not.Null);
-            Assert.That(pickup.transform.localScale.x, Is.InRange(.29f, .31f));
+            Assert.That(pickup.transform.localScale.x, Is.InRange(.47f, .49f));
             var before = pickup.transform.position;
 
             Assert.That(controller.TickGameplayIfRunningForTests(.05f), Is.True);

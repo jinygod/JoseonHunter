@@ -308,6 +308,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var sprite = context.PresentationSpriteFor(WeaponId.ThunderCrashBomb, partIndex);
             var renderer = bomb.Visual.GetComponent<SpriteRenderer>();
             renderer.sprite = sprite;
+            renderer.color = bomb.State == ThunderBombState.Blast ||
+                             bomb.State == ThunderBombState.SecondaryShockwave ||
+                             bomb.State == ThunderBombState.CompressedBlast
+                ? new Color(.72f, .92f, 1f, .92f)
+                : Color.white;
             bomb.Visual.transform.position = new Vector3(bomb.Position.X, bomb.Position.Y + bomb.Height, 0f);
             bomb.Visual.transform.localScale = ResolveVisualScale(bomb, sprite);
 
@@ -338,21 +343,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         Mathf.FloorToInt(bomb.Elapsed / .05f) % WeaponVisualPartIndex.ThunderCrash.WindupFrameCount;
                 case ThunderBombState.Blast:
                 case ThunderBombState.CompressedBlast:
-                    return WeaponVisualPartIndex.ThunderCrash.Detonation +
-                        Mathf.Min(WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount - 1,
+                    return WeaponVisualPartIndex.ThunderCrash.Field +
+                        Mathf.Min(WeaponVisualPartIndex.ThunderCrash.FieldFrameCount - 1,
                             Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / BlastDuration) *
-                                WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount));
+                                WeaponVisualPartIndex.ThunderCrash.FieldFrameCount));
                 case ThunderBombState.SecondaryShockwave:
-                    if (bomb.SecondaryPresentationPending)
-                        return WeaponVisualPartIndex.ThunderCrash.Detonation +
-                            WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount - 1;
                     return WeaponVisualPartIndex.ThunderCrash.Field +
                         Mathf.Min(WeaponVisualPartIndex.ThunderCrash.FieldFrameCount - 1,
                             Mathf.FloorToInt(Mathf.Clamp01(bomb.Elapsed / SecondaryDuration) *
                                 WeaponVisualPartIndex.ThunderCrash.FieldFrameCount));
                 default:
-                    return WeaponVisualPartIndex.ThunderCrash.Detonation +
-                        WeaponVisualPartIndex.ThunderCrash.DetonationFrameCount - 1;
+                    return WeaponVisualPartIndex.ThunderCrash.Field +
+                        WeaponVisualPartIndex.ThunderCrash.FieldFrameCount - 1;
             }
         }
 

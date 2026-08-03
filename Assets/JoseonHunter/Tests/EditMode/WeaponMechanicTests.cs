@@ -920,8 +920,8 @@ namespace JoseonHunter.Tests.EditMode
 
             NUnitMultipleCompat.Run(() =>
             {
-                Assert.That(primaryCompletionFrame, Is.EqualTo(15),
-                    "The primary ring's final render tick must remain in the detonation range.");
+                Assert.That(primaryCompletionFrame, Is.InRange(16, 20),
+                    "The primary blast must read as animated lightning, not an opaque geometric disc.");
                 Assert.That(bomb.FirstVisualPartIndexForTests, Is.InRange(16, 20),
                     "Ground current may begin only on a later presentation tick.");
             });
