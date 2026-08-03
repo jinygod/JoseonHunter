@@ -2299,7 +2299,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 supportLevels[offer.Id] = offer.NextLevel;
                 ApplySupportUpgrade(offer.Id);
                 return new ProgressionRewardEvent(offer.Id, null, offer.NextLevel, ProgressionRewardKind.Support,
-                    SupportDisplayName(offer.Id), SupportDelta(offer.Id), null);
+                    SupportDisplayName(offer.Id), SupportRewardSummary(offer.Id), null);
             }
             if (offer.Kind == UpgradeKind.Evolution && WeaponEvolutionCatalog.TryGet(offer.Id, out var evolution))
             {
@@ -2493,6 +2493,14 @@ namespace JoseonHunter.Runtime.Gameplay
             if (id == "boots") return "+12%";
             if (id == "warding_bell") return "+0.7";
             return "강화";
+        }
+
+        private static string SupportRewardSummary(string id)
+        {
+            if (id == "talisman") return "최대 체력 +20";
+            if (id == "boots") return "이동 속도 +12%";
+            if (id == "warding_bell") return "경험치 획득 범위 +0.7";
+            return "지원 능력 강화";
         }
 
         private void ApplySupportUpgrade(string id)

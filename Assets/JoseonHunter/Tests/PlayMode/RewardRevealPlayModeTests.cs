@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -40,6 +41,59 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Support_reward_finishes_on_an_opaque_readable_hanji_panel()
+        {
+            var presenter = new GameObject("Support Reward Test").AddComponent<RewardRevealPresenter>();
+            presenter.Play(new ProgressionRewardEvent("warding_bell", null, 1, ProgressionRewardKind.Support,
+                "수호 방울", "경험치 획득 범위 +0.7", null));
+
+            yield return new WaitForSecondsRealtime(.5f);
+
+            var reveal = presenter.transform.Find("Reward Reveal");
+            var panel = reveal.Find("Reward Panel").GetComponent<Image>();
+            var title = panel.transform.Find("Title").GetComponent("TextMeshProUGUI");
+            var detail = panel.transform.Find("Detail").GetComponent("TextMeshProUGUI");
+            var confirm = panel.transform.Find("Confirm Reward").GetComponent<Button>();
+            var confirmLabel = confirm.transform.Find("Confirm Label").GetComponent("TextMeshProUGUI");
+            Assert.That(reveal.GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f).Within(.001f));
+            Assert.That(panel.color.a, Is.EqualTo(1f).Within(.001f));
+            Assert.That(panel.color, Is.EqualTo(JoseonUiPalette.Hanji));
+            Assert.That(TextColor(title), Is.EqualTo(JoseonUiPalette.HanjiInk));
+            Assert.That(TextColor(detail), Is.EqualTo(JoseonUiPalette.HanjiMutedInk));
+            Assert.That(TextValue(detail), Is.EqualTo("경험치 획득 범위 +0.7"));
+            Assert.That(confirm.image.color, Is.EqualTo(JoseonUiPalette.AppraisalResult));
+            Assert.That(TextValue(confirmLabel), Is.EqualTo("확인"));
+            Assert.That(TextColor(confirmLabel), Is.EqualTo(JoseonUiPalette.DarkPanelText));
+            presenter.Confirm();
+            yield return null;
+            Object.Destroy(presenter.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Support_choice_reports_which_stat_changed_in_korean()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer("warding_bell", UpgradeKind.Support, 1));
+            Assert.That(controller.TryChooseUpgrade(0), Is.True);
+
+            yield return new WaitForSecondsRealtime(.55f);
+
+            var detail = reward.transform.Find("Reward Reveal/Reward Panel/Detail").GetComponent("TextMeshProUGUI");
+            Assert.That(TextValue(detail), Is.EqualTo("경험치 획득 범위 +0.7"));
+            reward.Confirm();
+        }
+
+        private static string TextValue(Component text) =>
+            (string)text.GetType().GetProperty("text").GetValue(text);
+
+        private static Color TextColor(Component text) =>
+            (Color)text.GetType().GetProperty("color").GetValue(text);
+
+        [UnityTest]
         public IEnumerator Pending_choice_waits_for_reward_reveal_before_opening()
         {
             SceneManager.LoadScene("Gameplay");
@@ -58,6 +112,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(reward.IsAwaitingConfirmation, Is.True);
             reward.Confirm();
             yield return new WaitForSecondsRealtime(.1f);
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            controller.TickGameplayIfRunningForTests(1.01f);
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
 

@@ -14,6 +14,7 @@ namespace JoseonHunter.Presentation.UI
 
         private GameObject root;
         private Image overlay;
+        private Image panel;
         private Image icon;
         private TextMeshProUGUI glyph;
         private TextMeshProUGUI title;
@@ -70,16 +71,22 @@ namespace JoseonHunter.Presentation.UI
             var intensity = IntensityFor(kind) / 100f;
             overlay.color = new Color(.025f, .03f, .045f, kind == ProgressionRewardKind.Evolution ? .72f : 0f);
             var canvasGroup = root.GetComponent<CanvasGroup>();
+            canvasGroup.alpha = 0f;
+            panel.rectTransform.localScale = Vector3.one * .92f;
             var elapsed = 0f;
             while (elapsed < duration)
             {
                 elapsed += Time.unscaledDeltaTime;
                 var progress = Mathf.Clamp01(elapsed / duration);
-                canvasGroup.alpha = Mathf.Sin(progress * Mathf.PI) * intensity;
+                var eased = 1f - Mathf.Pow(1f - progress, 3f);
+                canvasGroup.alpha = eased;
+                var pulse = Mathf.Sin(progress * Mathf.PI) * .035f * intensity;
+                panel.rectTransform.localScale = Vector3.one * (Mathf.Lerp(.92f, 1f, eased) + pulse);
                 yield return null;
             }
 
-            canvasGroup.alpha = intensity;
+            canvasGroup.alpha = 1f;
+            panel.rectTransform.localScale = Vector3.one;
             IsAwaitingConfirmation = true;
             while (IsAwaitingConfirmation)
                 yield return null;
@@ -99,29 +106,57 @@ namespace JoseonHunter.Presentation.UI
             canvasGroup.blocksRaycasts = true;
             overlay = RuntimeUiFactory.Image("Evolution Overlay", root.transform, Color.clear);
             RuntimeUiFactory.Stretch(overlay.rectTransform, 0f, 0f, 0f, 0f);
-            var panel = RuntimeUiFactory.Image("Reward Panel", root.transform, JoseonUiPalette.Ink);
+            panel = RuntimeUiFactory.Image("Reward Panel", root.transform, JoseonUiPalette.Hanji);
             var panelRect = panel.rectTransform;
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(.5f, .5f);
-            panelRect.sizeDelta = new Vector2(720f, 220f);
+            panelRect.sizeDelta = new Vector2(720f, 260f);
+            BuildHanjiBorder(panel.transform);
             icon = RuntimeUiFactory.Image("Icon", panel.transform, Color.white);
             Position(icon.rectTransform, new Vector2(0f, .5f), new Vector2(42f, 0f), new Vector2(128f, 128f), new Vector2(0f, .5f));
             icon.preserveAspect = true;
             glyph = RuntimeUiFactory.Text("Glyph", panel.transform, string.Empty, 78f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
+            glyph.color = JoseonUiPalette.SealCrimson;
             Position(glyph.rectTransform, new Vector2(0f, .5f), new Vector2(42f, 0f), new Vector2(128f, 128f), new Vector2(0f, .5f));
             title = RuntimeUiFactory.Text("Title", panel.transform, string.Empty, 36f,
                 TextAlignmentOptions.Left, RuntimeFontRole.Title);
+            title.color = JoseonUiPalette.HanjiInk;
             Position(title.rectTransform, new Vector2(0f, .5f), new Vector2(206f, 34f), new Vector2(470f, 54f), new Vector2(0f, .5f));
             detail = RuntimeUiFactory.Text("Detail", panel.transform, string.Empty, 24f, TextAlignmentOptions.Left);
+            detail.color = JoseonUiPalette.HanjiMutedInk;
             Position(detail.rectTransform, new Vector2(0f, .5f), new Vector2(206f, -34f), new Vector2(470f, 42f), new Vector2(0f, .5f));
-            confirmButton = RuntimeUiFactory.Button("Confirm Reward", panel.transform, Color.white);
+            confirmButton = RuntimeUiFactory.Button("Confirm Reward", panel.transform, JoseonUiPalette.AppraisalResult);
             Position(confirmButton.GetComponent<RectTransform>(), new Vector2(1f, 0f), new Vector2(-28f, 22f),
                 new Vector2(152f, 42f), new Vector2(1f, 0f));
             confirmButton.onClick.AddListener(Confirm);
             var confirmLabel = RuntimeUiFactory.Text("Confirm Label", confirmButton.transform, "확인", 18f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
+            confirmLabel.color = JoseonUiPalette.DarkPanelText;
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 6f, 4f, 6f, 4f);
             root.SetActive(false);
+        }
+
+        private static void BuildHanjiBorder(Transform parent)
+        {
+            BorderRail("Hanji Border Top", parent, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -4f), new Vector2(0f, 4f));
+            BorderRail("Hanji Border Bottom", parent, new Vector2(0f, 0f), new Vector2(1f, 0f),
+                new Vector2(0f, 4f), new Vector2(0f, 4f));
+            BorderRail("Hanji Border Left", parent, new Vector2(0f, 0f), new Vector2(0f, 1f),
+                new Vector2(4f, 0f), new Vector2(4f, 0f));
+            BorderRail("Hanji Border Right", parent, new Vector2(1f, 0f), new Vector2(1f, 1f),
+                new Vector2(-4f, 0f), new Vector2(4f, 0f));
+        }
+
+        private static void BorderRail(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax,
+            Vector2 position, Vector2 size)
+        {
+            var rail = RuntimeUiFactory.Image(name, parent, JoseonUiPalette.HanjiInk).rectTransform;
+            rail.anchorMin = anchorMin;
+            rail.anchorMax = anchorMax;
+            rail.pivot = new Vector2(.5f, .5f);
+            rail.anchoredPosition = position;
+            rail.sizeDelta = size;
         }
 
         private static string GlyphFor(ProgressionRewardKind kind) => kind == ProgressionRewardKind.Evolution ? "進" :
