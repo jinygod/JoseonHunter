@@ -95,6 +95,28 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(zeroMultiplier.FinalDamage, Is.EqualTo(1));
         }
 
+        [Test]
+        public void Status_vulnerability_and_directional_resistance_combine_once()
+        {
+            var registry = new CombatTargetRegistry();
+            var target = new ResistantTarget(17, 200);
+            registry.Register(target);
+            var damage = new CombatDamageService(registry);
+            var statuses = new WeaponAffixStatusService(registry, damage);
+            damage.AttachAffixStatuses(statuses);
+            Assert.That(statuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.ArmorBreak, 2f, 1,
+                WeaponId.GakgungShot), Is.True);
+            Assert.That(statuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.Seal, 2f, 1,
+                WeaponId.TalismanThrow), Is.True);
+            var request = WeaponDamageRequest.Create(new AttackInstance(91, RepeatHitPolicy.OncePerPhase, 0f),
+                WeaponId.GakgungShot, target, 100, false, new Float2(2f, 0f), ContactPhase.Direct, 1,
+                1f, true, WeaponHitTrait.Pierce, new Float2(0f, 0f));
+
+            Assert.That(damage.TryApply(request, out var confirmed), Is.True);
+            Assert.That(confirmed.FinalDamage, Is.EqualTo(81));
+            damage.DetachAffixStatuses(statuses);
+        }
+
         private sealed class FakeCombatTarget : ICombatTarget
         {
             private readonly bool isBoss;
@@ -110,6 +132,24 @@ namespace JoseonHunter.Tests.EditMode
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Identity;
             public void ApplyResolvedDamage(int damage) { Health -= damage; }
             public void ApplyKnockback(Float2 direction, float force) { }
+        }
+
+        private sealed class ResistantTarget : ICombatTarget, IIncomingDamageResistanceTarget
+        {
+            public ResistantTarget(int runtimeId, int health) { RuntimeId = runtimeId; Health = health; }
+            public int RuntimeId { get; }
+            public bool IsAlive => Health > 0;
+            public int Health { get; private set; }
+            public bool IsBoss => false;
+            public bool IsElite => false;
+            public float ThreatScore => 0f;
+            public Float2 WorldPosition => new(2f, 0f);
+            public PixelHitMask HurtMask => null;
+            public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Identity;
+            public void ApplyResolvedDamage(int damage) => Health -= damage;
+            public void ApplyKnockback(Float2 direction, float force) { }
+            public float IncomingDamageMultiplier(Float2 attackOrigin, WeaponHitTrait traits) =>
+                (traits & WeaponHitTrait.Pierce) != 0 ? .65f : 1f;
         }
     }
 }

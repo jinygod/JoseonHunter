@@ -7,7 +7,7 @@ namespace JoseonHunter.Runtime.Combat
 {
     public readonly struct WeaponDamageRequest
     {
-        private WeaponDamageRequest(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, DamageRequest damageRequest, Float2 contactPoint, bool hasConfirmedContact, ContactPhase phase, int simulationTick, float hitTime)
+        private WeaponDamageRequest(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, DamageRequest damageRequest, Float2 contactPoint, bool hasConfirmedContact, ContactPhase phase, int simulationTick, float hitTime, WeaponHitTrait traits, Float2? attackOrigin)
         {
             AttackInstance = attackInstance;
             WeaponId = weaponId;
@@ -18,6 +18,8 @@ namespace JoseonHunter.Runtime.Combat
             Phase = phase;
             SimulationTick = simulationTick;
             HitTime = hitTime;
+            Traits = traits;
+            AttackOrigin = attackOrigin;
         }
 
         public AttackInstance AttackInstance { get; }
@@ -31,15 +33,17 @@ namespace JoseonHunter.Runtime.Combat
         public int SimulationTick { get; }
         /// <summary>Monotonic attack timing. Existing callers use their simulation tick; real-time mechanics can supply seconds.</summary>
         public float HitTime { get; }
+        public WeaponHitTrait Traits { get; }
+        public Float2? AttackOrigin { get; }
 
         public static WeaponDamageRequest Create(int attackInstanceId, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick) =>
             Create(new AttackInstance(attackInstanceId, RepeatHitPolicy.OncePerPhase, 0f), weaponId, target, baseDamage, critical, contactPoint, phase, simulationTick);
 
-        public static WeaponDamageRequest Create(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick, bool hasConfirmedContact = true) =>
-            new WeaponDamageRequest(attackInstance, weaponId, target, new DamageRequest(baseDamage, 0, critical, 1f), contactPoint, hasConfirmedContact, phase, simulationTick, simulationTick);
+        public static WeaponDamageRequest Create(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick, bool hasConfirmedContact = true, WeaponHitTrait traits = WeaponHitTrait.None, Float2? attackOrigin = null) =>
+            new WeaponDamageRequest(attackInstance, weaponId, target, new DamageRequest(baseDamage, 0, critical, 1f), contactPoint, hasConfirmedContact, phase, simulationTick, simulationTick, traits, attackOrigin);
 
-        public static WeaponDamageRequest Create(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick, float hitTime, bool hasConfirmedContact = true) =>
-            new WeaponDamageRequest(attackInstance, weaponId, target, new DamageRequest(baseDamage, 0, critical, 1f), contactPoint, hasConfirmedContact, phase, simulationTick, hitTime);
+        public static WeaponDamageRequest Create(AttackInstance attackInstance, WeaponId weaponId, ICombatTarget target, int baseDamage, bool critical, Float2 contactPoint, ContactPhase phase, int simulationTick, float hitTime, bool hasConfirmedContact = true, WeaponHitTrait traits = WeaponHitTrait.None, Float2? attackOrigin = null) =>
+            new WeaponDamageRequest(attackInstance, weaponId, target, new DamageRequest(baseDamage, 0, critical, 1f), contactPoint, hasConfirmedContact, phase, simulationTick, hitTime, traits, attackOrigin);
     }
 
     public sealed class CombatDamageService
@@ -84,6 +88,13 @@ namespace JoseonHunter.Runtime.Combat
             confirmed = default;
             if (!HasValidTarget(request.Target) || !request.HasConfirmedContact || !IsFinite(request.ContactPoint) || request.AttackInstance == null) return false;
             var incomingMultiplier = affixStatuses == null ? 1f : affixStatuses.IncomingDamageMultiplier(request.Target.RuntimeId, request.Phase);
+            if (request.Target is IIncomingDamageResistanceTarget resistance)
+            {
+                var origin = request.AttackOrigin ?? request.ContactPoint;
+                var resistanceMultiplier = resistance.IncomingDamageMultiplier(origin, request.Traits);
+                if (!IsFinite(resistanceMultiplier) || resistanceMultiplier < 0f) return false;
+                incomingMultiplier *= resistanceMultiplier;
+            }
             var damageRequest = new DamageRequest(request.DamageRequest.BaseDamage, request.DamageRequest.FlatBonus,
                 request.DamageRequest.IsCritical, request.DamageRequest.Multiplier * incomingMultiplier);
             if (!DamageResolver.TryResolve(damageRequest, out var result)) return false;
@@ -94,6 +105,7 @@ namespace JoseonHunter.Runtime.Combat
             request.Target.ApplyResolvedDamage(result.FinalDamage);
             confirmed = new ConfirmedDamageEvent(attack.InstanceId, request.WeaponId, request.Target.RuntimeId, result, request.ContactPoint, request.Phase, request.SimulationTick, request.Target.IsBoss);
             DamageConfirmed?.Invoke(confirmed);
+            affixStatuses?.TryResolveReaction(request, confirmed);
             return true;
         }
 
@@ -109,5 +121,7 @@ namespace JoseonHunter.Runtime.Combat
 
         private static bool IsFinite(Float2 point) =>
             !float.IsNaN(point.X) && !float.IsInfinity(point.X) && !float.IsNaN(point.Y) && !float.IsInfinity(point.Y);
+
+        private static bool IsFinite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

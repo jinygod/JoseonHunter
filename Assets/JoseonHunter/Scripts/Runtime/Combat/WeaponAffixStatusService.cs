@@ -40,11 +40,47 @@ namespace JoseonHunter.Runtime.Combat
         private readonly Dictionary<int, float> vulnerabilityRemaining = new Dictionary<int, float>();
         private readonly List<int> expiredVulnerabilityTargets = new List<int>();
         private readonly List<int> vulnerabilityTargets = new List<int>();
+        private readonly Dictionary<int, TargetStatusState> timedStatuses = new Dictionary<int, TargetStatusState>();
+        private readonly List<int> statusTargetIds = new List<int>();
+        private readonly List<ICombatTarget> targetBuffer = new List<ICombatTarget>();
+        private readonly List<ICombatTarget> reactionTargets = new List<ICombatTarget>(5);
+        private int nextReactionAttackId = 1500000000;
+
+        private sealed class TargetStatusState
+        {
+            public readonly float[] Remaining = new float[7];
+            public readonly byte[] Stacks = new byte[7];
+            public readonly WeaponId[] Sources = new WeaponId[7];
+            public float NextReactionTime;
+            public float ReactionCooldownRemaining;
+        }
 
         public WeaponAffixStatusService(CombatTargetRegistry targets, CombatDamageService damage)
         {
             this.targets = targets ?? throw new ArgumentNullException(nameof(targets));
             this.damage = damage ?? throw new ArgumentNullException(nameof(damage));
+        }
+
+        public event Action<StatusReactionEvent> ReactionTriggered;
+
+        public bool ApplyTimedStatus(int targetId, CombatStatusKind kind, float duration, int stacks, WeaponId source)
+        {
+            var statusIndex = (int)kind;
+            if (statusIndex < 0 || statusIndex >= 7 || !IsFinite(duration) || duration <= 0f ||
+                stacks <= 0 || !TryGetLiveTarget(targetId, out _)) return false;
+            if (!timedStatuses.TryGetValue(targetId, out var state))
+                timedStatuses.Add(targetId, state = new TargetStatusState());
+            state.Remaining[statusIndex] = Math.Max(state.Remaining[statusIndex], duration);
+            state.Stacks[statusIndex] = (byte)Math.Min(byte.MaxValue, Math.Max(state.Stacks[statusIndex], stacks));
+            state.Sources[statusIndex] = source;
+            return true;
+        }
+
+        public bool HasStatus(int targetId, CombatStatusKind kind)
+        {
+            var statusIndex = (int)kind;
+            return statusIndex >= 0 && statusIndex < 7 && timedStatuses.TryGetValue(targetId, out var state) &&
+                   state.Remaining[statusIndex] > 0f && state.Stacks[statusIndex] > 0;
         }
 
         public bool ApplyPeriodic(in PeriodicEffectRequest request)
@@ -53,6 +89,7 @@ namespace JoseonHunter.Runtime.Combat
                 request.AttackInstance.RepeatHitPolicy != RepeatHitPolicy.TimedTicks || Math.Abs(request.AttackInstance.RepeatInterval - PeriodicInterval) > .0001f ||
                 !IsFinite(request.ConfirmedContactPoint) || !TryGetLiveTarget(request.TargetRuntimeId, out _)) return false;
             periodicEffects.Add(new PeriodicEffect(request));
+            SynchronizePeriodicStatus(request);
             return true;
         }
 
@@ -68,9 +105,11 @@ namespace JoseonHunter.Runtime.Combat
                 if (!effect.SourceWeapon.Equals(request.SourceWeapon) || effect.TargetRuntimeId != request.TargetRuntimeId || effect.Phase != request.Phase) continue;
                 Retire(effect);
                 periodicEffects[index] = new PeriodicEffect(request);
+                SynchronizePeriodicStatus(request);
                 return true;
             }
             periodicEffects.Add(new PeriodicEffect(request));
+            SynchronizePeriodicStatus(request);
             return true;
         }
 
@@ -85,6 +124,7 @@ namespace JoseonHunter.Runtime.Combat
         {
             if (deltaTime <= 0f || float.IsNaN(deltaTime) || float.IsInfinity(deltaTime)) return;
             TickVulnerability(deltaTime);
+            TickTimedStatuses(deltaTime);
             for (var index = periodicEffects.Count - 1; index >= 0; index--)
             {
                 var effect = periodicEffects[index];
@@ -105,6 +145,7 @@ namespace JoseonHunter.Runtime.Combat
         public void ClearTarget(int runtimeId)
         {
             vulnerabilityRemaining.Remove(runtimeId);
+            timedStatuses.Remove(runtimeId);
             for (var index = periodicEffects.Count - 1; index >= 0; index--)
                 if (periodicEffects[index].TargetRuntimeId == runtimeId) { Retire(periodicEffects[index]); periodicEffects.RemoveAt(index); }
         }
@@ -114,16 +155,226 @@ namespace JoseonHunter.Runtime.Combat
             foreach (var effect in periodicEffects) Retire(effect);
             periodicEffects.Clear();
             vulnerabilityRemaining.Clear();
+            timedStatuses.Clear();
+            statusTargetIds.Clear();
+            targetBuffer.Clear();
+            reactionTargets.Clear();
+            nextReactionAttackId = 1500000000;
         }
 
-        internal float IncomingDamageMultiplier(int targetRuntimeId, ContactPhase phase) =>
-            IsPeriodicPhase(phase) || !vulnerabilityRemaining.ContainsKey(targetRuntimeId) ? 1f : 1.2f;
+        internal float IncomingDamageMultiplier(int targetRuntimeId, ContactPhase phase)
+        {
+            if (IsPeriodicPhase(phase)) return 1f;
+            var multiplier = vulnerabilityRemaining.ContainsKey(targetRuntimeId) ? 1.2f : 1f;
+            if (!timedStatuses.TryGetValue(targetRuntimeId, out var state)) return multiplier;
+            if (Active(state, CombatStatusKind.ArmorBreak)) multiplier = Math.Max(multiplier, 1.25f);
+            if (Active(state, CombatStatusKind.Seal)) multiplier = Math.Max(multiplier, 1.15f);
+            return multiplier;
+        }
+
+        public StatusReactionResult TryResolveReaction(in WeaponDamageRequest hit,
+            in ConfirmedDamageEvent confirmed)
+        {
+            if ((hit.Traits & WeaponHitTrait.Reaction) != 0 || hit.Target == null ||
+                confirmed.TargetRuntimeId != hit.Target.RuntimeId ||
+                !timedStatuses.TryGetValue(hit.Target.RuntimeId, out var state) ||
+                hit.HitTime < state.NextReactionTime)
+                return default;
+
+            StatusReactionKind kind;
+            int affected;
+            if (Active(state, CombatStatusKind.Freeze) &&
+                HasAny(hit.Traits, WeaponHitTrait.Explosion | WeaponHitTrait.Heavy))
+            {
+                Consume(state, CombatStatusKind.Freeze);
+                affected = DamageNearest(hit, confirmed.ContactPoint, 1.4f, 5, 1.8f, ContactPhase.PotentialBlast);
+                kind = StatusReactionKind.IceShatter;
+            }
+            else if ((Active(state, CombatStatusKind.Burn) || Active(state, CombatStatusKind.Poison)) &&
+                     HasAny(hit.Traits, WeaponHitTrait.Wind | WeaponHitTrait.Pull))
+            {
+                affected = SpreadFireWind(hit.Target.RuntimeId, state, confirmed.ContactPoint);
+                kind = StatusReactionKind.FireWind;
+            }
+            else if ((Active(state, CombatStatusKind.Seal) || Active(state, CombatStatusKind.ArmorBreak)) &&
+                     HasAny(hit.Traits, WeaponHitTrait.Slash | WeaponHitTrait.Pierce))
+            {
+                if (Active(state, CombatStatusKind.Seal)) Consume(state, CombatStatusKind.Seal);
+                else Consume(state, CombatStatusKind.ArmorBreak);
+                affected = SubmitReactionDamage(hit.Target, hit, 1.5f, ContactPhase.PotentialBlast) ? 1 : 0;
+                kind = StatusReactionKind.FormationBreak;
+            }
+            else if (Active(state, CombatStatusKind.Shock) &&
+                     HasAny(hit.Traits, WeaponHitTrait.Barrier | WeaponHitTrait.Knockback | WeaponHitTrait.Pull))
+            {
+                Consume(state, CombatStatusKind.Shock);
+                affected = DamageNearest(hit, confirmed.ContactPoint, 6f, 3, .8f, ContactPhase.PotentialChain,
+                    applyStagger: true);
+                kind = StatusReactionKind.Overload;
+            }
+            else return default;
+
+            state.NextReactionTime = hit.HitTime + .6f;
+            state.ReactionCooldownRemaining = .6f;
+            var result = new StatusReactionResult(kind, confirmed.ContactPoint, affected);
+            ReactionTriggered?.Invoke(new StatusReactionEvent(kind, confirmed.ContactPoint, affected));
+            return result;
+        }
 
 #if UNITY_INCLUDE_TESTS
         public int PeriodicEffectCountForTests => periodicEffects.Count;
         public bool HasVulnerabilityForTests(int targetRuntimeId) => vulnerabilityRemaining.ContainsKey(targetRuntimeId);
         public float VulnerabilityRemainingForTests(int targetRuntimeId) => vulnerabilityRemaining.TryGetValue(targetRuntimeId, out var remaining) ? remaining : 0f;
 #endif
+
+        private int SpreadFireWind(int sourceTargetId, TargetStatusState state, Float2 center)
+        {
+            var kind = Active(state, CombatStatusKind.Burn) ? CombatStatusKind.Burn : CombatStatusKind.Poison;
+            var index = (int)kind;
+            var copiedDuration = state.Remaining[index] * .5f;
+            var stacks = state.Stacks[index];
+            var source = state.Sources[index];
+            state.Remaining[index] = copiedDuration;
+            var periodicIndex = FindPeriodicEffect(sourceTargetId, kind);
+            var hasPeriodic = periodicIndex >= 0;
+            var periodicTemplate = hasPeriodic ? periodicEffects[periodicIndex] : default;
+            if (hasPeriodic)
+            {
+                periodicTemplate.RemainingTicks = Math.Max(1,
+                    (int)Math.Ceiling(periodicTemplate.RemainingTicks * .5f));
+                periodicEffects[periodicIndex] = periodicTemplate;
+            }
+            SelectNearest(center, 6f, 4, sourceTargetId);
+            var affected = 0;
+            foreach (var target in reactionTargets)
+            {
+                if (hasPeriodic)
+                {
+                    var ticks = Math.Max(1, (int)Math.Ceiling(copiedDuration / PeriodicInterval));
+                    var request = new PeriodicEffectRequest(periodicTemplate.SourceWeapon, target.RuntimeId,
+                        target.WorldPosition, periodicTemplate.DamagePerTick, ticks,
+                        new AttackInstance(AllocateReactionAttackId(), RepeatHitPolicy.TimedTicks, PeriodicInterval),
+                        true, periodicTemplate.Phase);
+                    if (ApplyOrRefreshPeriodic(request)) affected++;
+                }
+                else if (ApplyTimedStatus(target.RuntimeId, kind, copiedDuration, stacks, source)) affected++;
+            }
+            return affected;
+        }
+
+        private int DamageNearest(in WeaponDamageRequest hit, Float2 center, float radius, int cap,
+            float multiplier, ContactPhase phase, bool applyStagger = false)
+        {
+            SelectNearest(center, radius, cap, 0);
+            var affected = 0;
+            foreach (var target in reactionTargets)
+            {
+                if (SubmitReactionDamage(target, hit, multiplier, phase)) affected++;
+                if (applyStagger && target is IControlStatusTarget control) control.ApplyStagger(.2f);
+            }
+            return affected;
+        }
+
+        private bool SubmitReactionDamage(ICombatTarget target, in WeaponDamageRequest sourceHit,
+            float multiplier, ContactPhase phase)
+        {
+            if (target == null || !target.IsAlive) return false;
+            var attackId = AllocateReactionAttackId();
+            var attack = new AttackInstance(attackId, RepeatHitPolicy.OncePerPhase, 0f);
+            var baseDamage = Math.Max(1, (int)Math.Round(sourceHit.DamageRequest.BaseDamage * multiplier,
+                MidpointRounding.AwayFromZero));
+            var applied = damage.TryApply(WeaponDamageRequest.Create(attack, sourceHit.WeaponId, target, baseDamage,
+                false, target.WorldPosition, phase, sourceHit.SimulationTick, sourceHit.HitTime, true,
+                WeaponHitTrait.Reaction, sourceHit.AttackOrigin ?? sourceHit.ContactPoint), out _);
+            damage.RetireAttack(attackId);
+            return applied;
+        }
+
+        private void SelectNearest(Float2 center, float radius, int cap, int excludedTargetId)
+        {
+            reactionTargets.Clear();
+            targets.CopyTo(targetBuffer);
+            var radiusSquared = radius * radius;
+            foreach (var target in targetBuffer)
+            {
+                if (target == null || !target.IsAlive || target.Health <= 0 || target.RuntimeId == excludedTargetId)
+                    continue;
+                var distance = DistanceSquared(target.WorldPosition, center);
+                if (distance > radiusSquared) continue;
+                var insertAt = reactionTargets.Count;
+                while (insertAt > 0 && DistanceSquared(reactionTargets[insertAt - 1].WorldPosition, center) > distance)
+                    insertAt--;
+                if (insertAt >= cap) continue;
+                reactionTargets.Insert(insertAt, target);
+                if (reactionTargets.Count > cap) reactionTargets.RemoveAt(cap);
+            }
+        }
+
+        private void TickTimedStatuses(float deltaTime)
+        {
+            statusTargetIds.Clear();
+            foreach (var pair in timedStatuses) statusTargetIds.Add(pair.Key);
+            foreach (var targetId in statusTargetIds)
+            {
+                var state = timedStatuses[targetId];
+                var any = false;
+                state.ReactionCooldownRemaining = Math.Max(0f, state.ReactionCooldownRemaining - deltaTime);
+                for (var index = 0; index < state.Remaining.Length; index++)
+                {
+                    if (state.Remaining[index] <= 0f) continue;
+                    state.Remaining[index] = Math.Max(0f, state.Remaining[index] - deltaTime);
+                    if (state.Remaining[index] <= 0f) state.Stacks[index] = 0;
+                    else any = true;
+                }
+                if (!any && state.ReactionCooldownRemaining <= 0f) timedStatuses.Remove(targetId);
+            }
+        }
+
+        private void SynchronizePeriodicStatus(in PeriodicEffectRequest request)
+        {
+            CombatStatusKind kind;
+            switch (request.Phase)
+            {
+                case ContactPhase.Poison: kind = CombatStatusKind.Poison; break;
+                case ContactPhase.Burn: kind = CombatStatusKind.Burn; break;
+                case ContactPhase.Bleed: kind = CombatStatusKind.Bleed; break;
+                default: return;
+            }
+            ApplyTimedStatus(request.TargetRuntimeId, kind,
+                request.RemainingTicks * PeriodicInterval, 1, request.SourceWeapon);
+        }
+
+        private int FindPeriodicEffect(int targetId, CombatStatusKind kind)
+        {
+            var phase = kind == CombatStatusKind.Burn ? ContactPhase.Burn : ContactPhase.Poison;
+            for (var index = periodicEffects.Count - 1; index >= 0; index--)
+                if (periodicEffects[index].TargetRuntimeId == targetId && periodicEffects[index].Phase == phase)
+                    return index;
+            return -1;
+        }
+
+        private int AllocateReactionAttackId()
+        {
+            if (nextReactionAttackId == int.MaxValue) nextReactionAttackId = 1500000000;
+            return nextReactionAttackId++;
+        }
+
+        private static bool Active(TargetStatusState state, CombatStatusKind kind) =>
+            state.Remaining[(int)kind] > 0f && state.Stacks[(int)kind] > 0;
+
+        private static void Consume(TargetStatusState state, CombatStatusKind kind)
+        {
+            state.Remaining[(int)kind] = 0f;
+            state.Stacks[(int)kind] = 0;
+        }
+
+        private static bool HasAny(WeaponHitTrait value, WeaponHitTrait flags) => (value & flags) != 0;
+        private static float DistanceSquared(Float2 left, Float2 right)
+        {
+            var x = left.X - right.X;
+            var y = left.Y - right.Y;
+            return x * x + y * y;
+        }
 
         private void TickVulnerability(float deltaTime)
         {

@@ -9,7 +9,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     {
         private readonly HashSet<WeaponPotentialId> potentialIds;
 
-        private WeaponRuntimeModifiers(float damageBonus, float cooldownReduction, float areaBonus, float speedBonus, float durationBonus, HashSet<WeaponPotentialId> potentialIds)
+        private WeaponRuntimeModifiers(float damageBonus, float cooldownReduction, float areaBonus, float speedBonus,
+            float durationBonus, HashSet<WeaponPotentialId> potentialIds, WeaponLegacySnapshot legacy)
         {
             DamageBonus = damageBonus;
             CooldownReduction = cooldownReduction;
@@ -17,6 +18,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             SpeedBonus = speedBonus;
             DurationBonus = durationBonus;
             this.potentialIds = potentialIds;
+            Legacy = legacy;
         }
 
         public float DamageBonus { get; }
@@ -24,31 +26,38 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public float AreaBonus { get; }
         public float SpeedBonus { get; }
         public float DurationBonus { get; }
+        public WeaponLegacySnapshot Legacy { get; }
 
-        public static WeaponRuntimeModifiers From(WeaponRunAffixProfile profile)
+        public static WeaponRuntimeModifiers From(WeaponRunAffixProfile profile) => From(profile, default);
+
+        public static WeaponRuntimeModifiers From(WeaponRunAffixProfile profile, WeaponLegacySnapshot legacy)
         {
-            if (profile == null) return default;
             var damage = 0f;
             var cooldown = 0f;
             var area = 0f;
             var speed = 0f;
             var duration = 0f;
-            foreach (var roll in profile.GeneralRolls)
+            if (profile != null)
             {
-                var value = (float)(roll.Value * .01d);
-                if (float.IsNaN(value) || float.IsInfinity(value)) continue;
-                switch (roll.Stat)
+                foreach (var roll in profile.GeneralRolls)
                 {
-                    case WeaponAffixStat.Damage: damage += value; break;
-                    case WeaponAffixStat.Cooldown: cooldown -= value; break;
-                    case WeaponAffixStat.Area: area += value; break;
-                    case WeaponAffixStat.ProjectileSpeed: speed += value; break;
-                    case WeaponAffixStat.Duration: duration += value; break;
+                    var value = (float)(roll.Value * .01d);
+                    if (float.IsNaN(value) || float.IsInfinity(value)) continue;
+                    switch (roll.Stat)
+                    {
+                        case WeaponAffixStat.Damage: damage += value; break;
+                        case WeaponAffixStat.Cooldown: cooldown -= value; break;
+                        case WeaponAffixStat.Area: area += value; break;
+                        case WeaponAffixStat.ProjectileSpeed: speed += value; break;
+                        case WeaponAffixStat.Duration: duration += value; break;
+                    }
                 }
             }
 
             return new WeaponRuntimeModifiers(damage, cooldown, area, speed, duration,
-                profile.PotentialIds.Count == 0 ? null : new HashSet<WeaponPotentialId>(profile.PotentialIds));
+                profile == null || profile.PotentialIds.Count == 0
+                    ? null
+                    : new HashSet<WeaponPotentialId>(profile.PotentialIds), legacy);
         }
 
         public float ScaleDamage(float value) => value * (1f + DamageBonus);

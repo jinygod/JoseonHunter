@@ -393,6 +393,7 @@ namespace JoseonHunter.Runtime.Gameplay
             private readonly List<int> statusSourceScratch = new List<int>();
             private float slowDecayRemaining;
             private float slowDecayStartMultiplier = 1f;
+            private float staggerRemaining;
 
             public void ApplyFrostSlow(int sourceId, float strength)
             {
@@ -414,6 +415,12 @@ namespace JoseonHunter.Runtime.Gameplay
 
             public void RemoveJangseungWard(int sourceId) => jangseungWardSources.Remove(sourceId);
 
+            public void ApplyStagger(float durationSeconds)
+            {
+                if (!float.IsNaN(durationSeconds) && !float.IsInfinity(durationSeconds) && durationSeconds > 0f)
+                    staggerRemaining = Mathf.Max(staggerRemaining, durationSeconds);
+            }
+
             public bool HasJangseungWard => jangseungWardSources.Count > 0;
 
             public void TickStatuses(float delta)
@@ -428,13 +435,14 @@ namespace JoseonHunter.Runtime.Gameplay
                     else freezeSources[sourceId] = remaining;
                 }
                 slowDecayRemaining = Mathf.Max(0f, slowDecayRemaining - delta);
+                staggerRemaining = Mathf.Max(0f, staggerRemaining - delta);
             }
 
             public float MovementMultiplier
             {
                 get
                 {
-                    if (freezeSources.Count > 0) return 0f;
+                    if (freezeSources.Count > 0 || staggerRemaining > 0f) return 0f;
                     if (frostSlowSources.Count > 0) return SlowMultiplier();
                     if (jangseungWardSources.Count > 0) return WardMultiplier();
                     return slowDecayRemaining <= 0f ? 1f : Mathf.Lerp(1f, slowDecayStartMultiplier, slowDecayRemaining / 0.35f);
@@ -456,7 +464,8 @@ namespace JoseonHunter.Runtime.Gameplay
             }
         }
 
-        private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget, IJangseungWardStatusTarget
+        private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget, IJangseungWardStatusTarget,
+            IControlStatusTarget
         {
             private readonly FirstPlayableController owner;
             private readonly EnemyState state;
@@ -507,6 +516,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public void ApplyFreeze(int sourceId, float durationSeconds) => state.ApplyFreeze(sourceId, durationSeconds);
             public void ApplyJangseungWard(int sourceId, float strength) => state.ApplyJangseungWard(sourceId, strength);
             public void RemoveJangseungWard(int sourceId) => state.RemoveJangseungWard(sourceId);
+            public void ApplyStagger(float durationSeconds) => state.ApplyStagger(durationSeconds);
         }
 
         private enum PickupKind
@@ -1375,7 +1385,9 @@ namespace JoseonHunter.Runtime.Gameplay
                 var data = definition.Levels[Mathf.Clamp(ownedLevel - 1, 0, 4)];
                 IWeaponExecutor executor;
                 var evolved = evolutionState.IsEvolved(id);
-                var modifiers = WeaponRuntimeModifiers.From(weaponAffixes.TryProfileFor(id, out var profile) ? profile : null);
+                var modifiers = WeaponRuntimeModifiers.From(
+                    weaponAffixes.TryProfileFor(id, out var profile) ? profile : null,
+                    weaponLegacyState.SnapshotFor(id, ownedLevel));
                 if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved, modifiers);
