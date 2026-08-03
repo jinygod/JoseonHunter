@@ -35,6 +35,7 @@ namespace JoseonHunter.Tests.PlayMode
                 Canvas.ForceUpdateCanvases();
 
                 Assert.That(TextValue(TextNamed(root, "Legacy Heading")), Is.EqualTo("전승 경로를 선택하세요"));
+                Assert.That(TextColor(TextNamed(root, "Legacy Heading")), Is.EqualTo(JoseonUiPalette.HanjiInk));
                 Assert.That(ButtonsNamed(root, "Legacy Choice").Count(), Is.EqualTo(2));
                 for (var index = 0; index < 2; index++)
                 {

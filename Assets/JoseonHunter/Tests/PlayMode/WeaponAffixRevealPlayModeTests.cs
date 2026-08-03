@@ -57,7 +57,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(growthGuide.anchoredPosition, Is.EqualTo(new Vector2(80f, 202f)));
             Assert.That(growthGuide.sizeDelta, Is.EqualTo(new Vector2(620f, 20f)));
             Assert.That(TextValue(growthGuide),
-                Is.EqualTo("성장 방향은 무기 3레벨에서 선택하고 4·5레벨에서 강화됩니다"));
+                Is.EqualTo("무기 3레벨에 성장 방식을 선택하고, 4·5레벨에 선택한 효과가 강화됩니다."));
             Assert.That(RectNamed(presenter, "Reel Window 0").anchoredPosition.y, Is.EqualTo(126f));
             Assert.That(presenter.PotentialRowY(0), Is.EqualTo(-32f));
             Assert.That(presenter.PotentialRowY(1), Is.EqualTo(-160f));

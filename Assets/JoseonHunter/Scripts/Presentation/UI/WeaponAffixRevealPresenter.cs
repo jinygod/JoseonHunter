@@ -630,7 +630,7 @@ namespace JoseonHunter.Presentation.UI
             weaponBehavior.color = new Color(.24f, .27f, .24f);
             growthGuide = Label("Growth Guide", shell.transform, new Vector2(80f, 202f),
                 new Vector2(620f, 20f), 17f, TextAlignmentOptions.Left);
-            growthGuide.text = "성장 방향은 무기 3레벨에서 선택하고 4·5레벨에서 강화됩니다";
+            growthGuide.text = "무기 3레벨에 성장 방식을 선택하고, 4·5레벨에 선택한 효과가 강화됩니다.";
             growthGuide.color = JoseonUiPalette.HanjiMutedInk;
 
             burst = RuntimeUiFactory.Image("Jackpot Burst", shell.transform, Color.white);

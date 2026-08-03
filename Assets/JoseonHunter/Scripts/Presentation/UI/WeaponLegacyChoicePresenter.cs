@@ -46,6 +46,7 @@ namespace JoseonHunter.Presentation.UI
 
             var heading = Text("Legacy Heading", panel, "전승 경로를 선택하세요", 40f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
+            heading.color = JoseonUiPalette.HanjiInk;
             Position(heading.rectTransform, new Vector2(.5f, 1f), new Vector2(0f, -42f),
                 new Vector2(820f, 64f), new Vector2(.5f, 1f));
             var guide = Text("Legacy Guide", panel, "한 번 선택한 전승은 이번 출정에서 바꿀 수 없습니다", 20f,

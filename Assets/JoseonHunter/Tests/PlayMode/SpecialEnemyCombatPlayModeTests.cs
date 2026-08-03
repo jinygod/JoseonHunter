@@ -24,7 +24,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(resistance.IncomingDamageMultiplier(new Float2(0f, 0f), WeaponHitTrait.Slash),
                 Is.EqualTo(.15f));
             Assert.That(controller.LastSpecialEnemyGuideForTests,
-                Is.EqualTo("방패 도깨비 · 정면 직접 공격 6회로 방패 파괴"));
+                Is.EqualTo("방패 도깨비 · 정면을 여러 번 치거나 뒤를 노리세요"));
             Assert.That(controller.ShieldChargesForTests(target), Is.EqualTo(6));
             Assert.That(controller.ShieldBarFillForTests(target), Is.EqualTo(1f).Within(.001f));
 

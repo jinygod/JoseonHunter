@@ -443,6 +443,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public Transform ShieldFill;
             public int ShieldCharges;
             public bool GuardHitPending;
+            public bool GuardBrokePending;
             public float NextContactTime;
             public bool IsBoss;
             public bool IsElite;
@@ -638,6 +639,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (!result.Blocked) return;
                 state.ShieldCharges = result.RemainingCharges;
                 state.GuardHitPending = true;
+                state.GuardBrokePending = result.Broke;
                 UpdateBarFill(state.ShieldFill,
                     state.ShieldCharges / (float)ShieldDokkaebiGuard.MaximumCharges, 2f, .10f);
                 if (!result.Broke || state.ShieldFill == null) return;
@@ -1252,6 +1254,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (archetypeProfile.Archetype == EnemyArchetype.ShieldDokkaebi)
             {
                 state.ShieldCharges = ShieldDokkaebiGuard.MaximumCharges;
+                if (state.HealthFill == null) state.HealthFill = CreateHealthBar(enemyObject.transform);
                 state.ShieldFill = CreateShieldBar(enemyObject.transform);
             }
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
@@ -1266,7 +1269,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (profile == null || !profile.IsSpecial || !seenSpecialEnemyGuides.Add(profile.ContentId)) return;
             var guide = profile.Archetype switch
             {
-                EnemyArchetype.ShieldDokkaebi => "방패 도깨비 · 정면 직접 공격 6회로 방패 파괴",
+                EnemyArchetype.ShieldDokkaebi => "방패 도깨비 · 정면을 여러 번 치거나 뒤를 노리세요",
                 EnemyArchetype.SpiritShaman => "원혼 무당 · 주변 적 강화, 먼저 처치",
                 EnemyArchetype.ChargingHornGhost => "돌진 쇠뿔귀 · 붉은 예고선에서 이탈",
                 EnemyArchetype.SplittingRat => "분열 쥐 · 처치 시 둘로 분열, 범위 공격 권장",
@@ -1696,7 +1699,8 @@ namespace JoseonHunter.Runtime.Gameplay
             if (enemy.GuardHitPending)
             {
                 enemy.GuardHitPending = false;
-                enemy.VisualRig?.ShowGuardHit(incomingDirection);
+                enemy.VisualRig?.ShowGuardHit(incomingDirection, enemy.GuardBrokePending);
+                enemy.GuardBrokePending = false;
             }
             else
             {

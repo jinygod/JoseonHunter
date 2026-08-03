@@ -174,9 +174,9 @@ namespace JoseonHunter.Runtime.Gameplay
             BeginHitFlash(HitFlashColor, HitOutlineFlashColor, HitFlashDuration);
         }
 
-        public void ShowGuardHit(Vector2 incomingDirection)
+        public void ShowGuardHit(Vector2 incomingDirection, bool broke = false)
         {
-            motionState.Hit(incomingDirection, .055f);
+            motionState.Hit(incomingDirection, broke ? .15f : .075f);
             BeginHitFlash(GuardFlashColor, GuardOutlineFlashColor, .08f);
         }
 
