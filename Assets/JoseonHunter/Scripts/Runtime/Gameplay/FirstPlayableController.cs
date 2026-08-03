@@ -2064,7 +2064,7 @@ namespace JoseonHunter.Runtime.Gameplay
             upgradeOfferData.Clear();
             var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds,
                 acquiredEvolutionIds, discardedWeaponIds);
-            var selected = UpgradeSelector.Select(state, level * 397 ^ kills);
+            var selected = UpgradeSelector.Select(state, level * 397 ^ kills, level);
             foreach (var offer in selected)
             {
                 upgradeOfferData.Add(offer);

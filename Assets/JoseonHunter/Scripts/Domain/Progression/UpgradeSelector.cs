@@ -12,9 +12,13 @@ namespace JoseonHunter.Domain.Progression
         private static readonly string[] WeaponIds = WeaponRoster.All.Select(id => id.Value).ToArray();
         private static readonly string[] SupportIds = { "talisman", "boots", "warding_bell" };
 
-        public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed)
+        public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed) =>
+            Select(state, seed, 1);
+
+        public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed, int playerLevel)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
+            if (playerLevel < 1) throw new ArgumentOutOfRangeException(nameof(playerLevel));
 
             var eligible = EligibleOffers(state).ToList();
             if (eligible.Count < 3)
@@ -24,36 +28,39 @@ namespace JoseonHunter.Domain.Progression
 
             var random = new Random(seed);
             var offers = new List<UpgradeOffer>(3);
-            var ownedWeapons = WeaponIds
-                .Where(id => state.WeaponLevels.TryGetValue(id, out var level) && level < MaxLevel)
-                .Select(id => WeaponOffer(id, state.WeaponLevels[id], false))
-                .ToList();
+            var supports = eligible.Where(offer => offer.Kind == UpgradeKind.Support).ToList();
+            var ownedWeapons = eligible.Where(offer =>
+                offer.Kind == UpgradeKind.Weapon && offer.NextLevel > 1).ToList();
+            var newWeapons = eligible.Where(offer =>
+                offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1).ToList();
+            Shuffle(supports, random);
+            Shuffle(ownedWeapons, random);
+            Shuffle(newWeapons, random);
 
-            if (ownedWeapons.Count > 0)
+            for (var index = 0; index < Math.Min(2, supports.Count); index++)
+                offers.Add(supports[index]);
+
+            var weaponDue = playerLevel % 4 == 0 || random.NextDouble() < .25d;
+            if (weaponDue)
             {
-                offers.Add(ownedWeapons[random.Next(ownedWeapons.Count)]);
+                var preferredWeapons = playerLevel % 2 == 0 ? newWeapons : ownedWeapons;
+                var fallbackWeapons = playerLevel % 2 == 0 ? ownedWeapons : newWeapons;
+                if (preferredWeapons.Count > 0) offers.Add(preferredWeapons[0]);
+                else if (fallbackWeapons.Count > 0) offers.Add(fallbackWeapons[0]);
             }
 
-            eligible = eligible
-                .Where(offer => !offers.Any(selected => selected.Id == offer.Id))
-                .ToList();
-
-            var unownedWeapons = eligible
-                .Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1)
-                .ToList();
-            if (unownedWeapons.Count > 0)
+            foreach (var support in supports)
             {
-                offers.Add(unownedWeapons[random.Next(unownedWeapons.Count)]);
-                eligible = eligible
-                    .Where(offer => !offers.Any(selected => selected.Id == offer.Id))
-                    .ToList();
+                if (offers.Count == 3) break;
+                if (offers.Any(selected => selected.Id == support.Id)) continue;
+                offers.Add(support);
             }
 
             Shuffle(eligible, random);
-
             foreach (var offer in eligible)
             {
                 if (offers.Count == 3) break;
+                if (offers.Any(selected => selected.Id == offer.Id)) continue;
                 offers.Add(offer);
             }
 

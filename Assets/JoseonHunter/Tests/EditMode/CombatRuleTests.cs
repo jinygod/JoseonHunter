@@ -49,30 +49,51 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void OwnedNonMaxWeaponAppearsInThreeOffers()
-        {
-            var state = State(weapons: new Dictionary<string, int> { ["hwando_flying_blade"] = 1 });
-
-            var offers = UpgradeSelector.Select(state, 17);
-
-            Assert.That(offers, Has.Count.EqualTo(3));
-            Assert.That(offers.Select(offer => offer.Id), Is.Unique);
-            Assert.That(offers, Does.Contain(new UpgradeOffer("hwando_flying_blade", UpgradeKind.Weapon, 2)));
-        }
-
-        [Test]
-        public void StartingLoadoutAlwaysReceivesAnUnownedWeaponOffer()
+        public void EligibleSupportsOccupyAtLeastTwoCardsAndWeaponsAtMostOne()
         {
             var state = State(weapons: new Dictionary<string, int> { ["hwando_flying_blade"] = 1 });
 
             for (var seed = 0; seed < 100; seed++)
             {
-                var offers = UpgradeSelector.Select(state, seed);
+                var offers = UpgradeSelector.Select(state, seed, playerLevel: 5);
 
-                Assert.That(
-                    offers.Any(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1),
-                    Is.True,
-                    $"Seed {seed} did not offer a new weapon.");
+                Assert.That(offers, Has.Count.EqualTo(3), $"Seed {seed}");
+                Assert.That(offers.Select(offer => offer.Id), Is.Unique, $"Seed {seed}");
+                Assert.That(offers.Count(offer => offer.Kind == UpgradeKind.Support),
+                    Is.GreaterThanOrEqualTo(2), $"Seed {seed}");
+                Assert.That(offers.Count(offer => offer.Kind == UpgradeKind.Weapon),
+                    Is.LessThanOrEqualTo(1), $"Seed {seed}");
+            }
+        }
+
+        [Test]
+        public void NonPityChoicesIncludeBothWeaponAndNoWeaponOutcomesAcrossSeeds()
+        {
+            var state = State(weapons: new Dictionary<string, int> { ["hwando_flying_blade"] = 1 });
+            var withWeapon = 0;
+            var withoutWeapon = 0;
+
+            for (var seed = 0; seed < 100; seed++)
+            {
+                var offers = UpgradeSelector.Select(state, seed, playerLevel: 5);
+                if (offers.Any(offer => offer.Kind == UpgradeKind.Weapon)) withWeapon++;
+                else withoutWeapon++;
+            }
+
+            Assert.That(withWeapon, Is.GreaterThan(0));
+            Assert.That(withoutWeapon, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void EveryFourthPlayerLevelGuaranteesExactlyOneWeaponCard()
+        {
+            var state = State(weapons: new Dictionary<string, int> { ["hwando_flying_blade"] = 1 });
+
+            for (var seed = 0; seed < 100; seed++)
+            {
+                var offers = UpgradeSelector.Select(state, seed, playerLevel: 8);
+                Assert.That(offers.Count(offer => offer.Kind == UpgradeKind.Weapon),
+                    Is.EqualTo(1), $"Seed {seed}");
             }
         }
 

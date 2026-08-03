@@ -24,7 +24,7 @@ namespace JoseonHunter.Tests.EditMode
                 new HashSet<string> { "frost_bloom_evolution" },
                 new HashSet<string> { WeaponId.FrostFlask.Value });
 
-            var offers = UpgradeSelector.Select(state, 27);
+            var offers = UpgradeSelector.Select(state, 27, playerLevel: 4);
 
             Assert.That(offers, Has.Count.EqualTo(3));
             Assert.That(offers.Any(offer => offer.Kind == UpgradeKind.Evolution), Is.False);
@@ -49,7 +49,7 @@ namespace JoseonHunter.Tests.EditMode
                 new HashSet<string>(),
                 new HashSet<string>());
 
-            var offers = UpgradeSelector.Select(state, 27);
+            var offers = UpgradeSelector.Select(state, 27, playerLevel: 4);
 
             Assert.That(offers.Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1), Is.Not.Empty);
             Assert.That(offers.Where(offer => offer.Kind == UpgradeKind.Weapon && offer.NextLevel == 1)

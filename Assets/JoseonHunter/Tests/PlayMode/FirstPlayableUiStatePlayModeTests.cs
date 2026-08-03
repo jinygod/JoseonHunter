@@ -70,6 +70,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(opened, Is.EqualTo(2));
 
             Assert.That(controller.NotifyUpgradePresentationClosed(), Is.True);
+            Assert.That(controller.Flow.State, Is.EqualTo(JoseonHunter.Domain.Runs.GameFlowState.Playing));
+            Assert.That(opened, Is.EqualTo(2));
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            controller.TickGameplayIfRunningForTests(.5f);
+            Assert.That(opened, Is.EqualTo(2));
+            controller.TickGameplayIfRunningForTests(.51f);
             Assert.That(opened, Is.EqualTo(3));
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
