@@ -22,17 +22,22 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private AttackInstance bindingAttack;
         private int elementCastOrdinal;
         private readonly List<GhostFlame> ghostFlames = new List<GhostFlame>();
+        private readonly List<LegacyGhostBurst> legacyGhostBursts = new List<LegacyGhostBurst>();
         private readonly List<IceSlow> iceSlows = new List<IceSlow>();
+        private bool resolvingHeavenChain;
+        private int legacyGhostChainsScheduled;
         private WeaponTransientVisualPool transientVisuals;
         private Transform transientVisualRoot;
 
         public TalismanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int hopCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
+            var legacyDamage = modifiers.Legacy.Is(WeaponLegacyPathId.TalismanHeavenSeal) ? .75f : 1f;
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage) * legacyDamage); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
             Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); Potentials = modifiers;
             HopCount = Mathf.Max(1, hopCount); Level = Mathf.Clamp(level, 1, 5);
             IsEvolved = evolved;
+            runtime.DamageService.DamageConfirmed += OnDamageConfirmed;
         }
 
         public float BaseDamage { get; }
@@ -99,10 +104,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     PixelMaskContactService.TryFindContact(ghostMask, PixelMaskTransform.Translation(ghostTarget.WorldPosition.X, ghostTarget.WorldPosition.Y), ghostTarget.HurtMask, ghostTarget.HurtMaskTransform, out var contact))
                 {
                     LastGhostSeekTargetRuntimeId = ghostTarget.RuntimeId;
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(flame.Attack, WeaponId.TalismanThrow, ghostTarget, Mathf.CeilToInt(BaseDamage * .75f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick), out _);
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(flame.Attack, WeaponId.TalismanThrow, ghostTarget, Mathf.CeilToInt(BaseDamage * .75f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick,
+                        true, WeaponHitTrait.Explosion, flame.Position), out _);
                 }
                 runtime.DamageService.RetireAttack(flame.Attack.InstanceId); ghostFlames.RemoveAt(index);
             }
+            TickLegacyGhostBursts(step: Mathf.Max(0f, deltaTime), context);
             if (!IsEvolved && Level == 5 && active.Count == 0)
             {
                 if (bindingTargets.Count > 0) ResolveBindingBurst(context);
@@ -127,19 +134,27 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             iceSlows.Clear();
             foreach (var flame in ghostFlames) runtime.DamageService.RetireAttack(flame.Attack.InstanceId);
             ghostFlames.Clear(); elementCastOrdinal = 0;
+            foreach (var burst in legacyGhostBursts) runtime.DamageService.RetireAttack(burst.Attack.InstanceId);
+            legacyGhostBursts.Clear();
+            legacyGhostChainsScheduled = 0;
             if (bindingAttack != null) runtime.DamageService.RetireAttack(bindingAttack.InstanceId);
             bindingAttack = null; cooldown = 0f; LastState = TalismanState.Complete; LastFinalBurstCount = 0;
             LastLaunchCount = 0; TotalLaunchedTalismanCount = 0; lastContactPhases.Clear(); TransferCount = 0; LastGhostSeekTargetRuntimeId = 0;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
         }
 
-        public void Dispose() => Reset();
+        public void Dispose()
+        {
+            runtime.DamageService.DamageConfirmed -= OnDamageConfirmed;
+            Reset();
+        }
 
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)
         {
             // Hop count is each talisman's sequential chain length; the master form always starts up to three independent seals.
             var simultaneous = !IsEvolved && Level == 5 ? 3 : 1;
             LastFinalBurstCount = 0; lastContactPhases.Clear();
+            if (active.Count == 0) legacyGhostChainsScheduled = 0;
             bindingTargets.Clear();
             bindingAttack = !IsEvolved && Level == 5 ? new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f) : null;
             var launchReservations = new HashSet<int>();
@@ -257,6 +272,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
             cast.CompletedHops++;
             cast.SealedConfirmed = true;
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.TalismanHeavenSeal))
+            {
+                runtime.AffixStatuses.ApplyTimedStatus(cast.Target.RuntimeId, CombatStatusKind.Seal,
+                    2f, 1, WeaponId.TalismanThrow);
+                if (Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced)
+                    runtime.AffixStatuses.ApplySealVulnerability(cast.Target.RuntimeId, 2f);
+            }
+            else if (Potentials.Legacy.Is(WeaponLegacyPathId.TalismanGhostBurst))
+                legacyGhostBursts.Add(new LegacyGhostBurst(
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
+                    cast.Target.WorldPosition));
             PlayConfirmedClosure(context, contact);
             ApplyElement(cast, contact, context);
             if (IsEvolved) cast.RecordLinkedTarget(cast.Target);
@@ -309,7 +335,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var target in cast.LinkedTargets)
             {
                 if (!IsCurrentTargetValid(target) || !TryContact(target, out var contact)) continue;
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(cast.BlastAttack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * 2, false, contact, ContactPhase.Blast, context.SimulationTick), out _))
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(cast.BlastAttack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * 2, false, contact, ContactPhase.Blast, context.SimulationTick,
+                    true, WeaponHitTrait.Explosion, contact), out _))
                 {
                     lastContactPhases.Add(ContactPhase.Blast);
                     resolved = true;
@@ -324,7 +351,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var target in bindingTargets)
             {
                 if (!IsCurrentTargetValid(target) || !TryContact(target, out var contact)) continue;
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(bindingAttack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * 2, false, contact, ContactPhase.Blast, context.SimulationTick), out _))
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(bindingAttack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * 2, false, contact, ContactPhase.Blast, context.SimulationTick,
+                    true, WeaponHitTrait.Explosion, contact), out _))
                 {
                     lastContactPhases.Add(ContactPhase.Blast); resolved = true;
                 }
@@ -357,9 +385,111 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private bool Apply(TalismanCast cast, ICombatTarget target, Float2 contact, ContactPhase phase, int tick, int multiplier = 1)
         {
-            var applied = runtime.DamageService.TryApply(WeaponDamageRequest.Create(cast.Attack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * multiplier, false, contact, phase, tick), out _);
+            var traits = phase == ContactPhase.Blast ? WeaponHitTrait.Explosion : WeaponHitTrait.None;
+            var applied = runtime.DamageService.TryApply(WeaponDamageRequest.Create(cast.Attack, WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage) * multiplier, false, contact, phase, tick,
+                true, traits, contact), out _);
             if (applied) lastContactPhases.Add(phase);
             return applied;
+        }
+
+        private void TickLegacyGhostBursts(float step, in WeaponExecutionContext context)
+        {
+            for (var index = legacyGhostBursts.Count - 1; index >= 0; index--)
+            {
+                var burst = legacyGhostBursts[index];
+                burst.Remaining -= step;
+                if (burst.Remaining > 0f)
+                {
+                    legacyGhostBursts[index] = burst;
+                    continue;
+                }
+
+                ResolveAreaDamage(burst.Attack, burst.Position,
+                    Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced ? Range * .455f : Range * .35f,
+                    burst.Phase == 0 ? 2f : burst.Phase == 1 ? 1f : 1.2f,
+                    burst.Phase == 0 ? ContactPhase.PotentialBlast : ContactPhase.PotentialChain,
+                    burst.Phase == 0 ? int.MaxValue : 1, context.SimulationTick);
+                runtime.DamageService.RetireAttack(burst.Attack.InstanceId);
+                legacyGhostBursts.RemoveAt(index);
+
+                if (burst.Phase == 0 && Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced)
+                    legacyGhostBursts.Add(new LegacyGhostBurst(
+                        new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
+                        burst.Position, .12f, 1));
+                if (burst.Phase == 0 && Potentials.Legacy.Stage == WeaponLegacyStage.Completed)
+                {
+                    var remainingChainBudget = Mathf.Max(0, 3 - legacyGhostChainsScheduled);
+                    SelectNearestTargets(burst.Position, Range, remainingChainBudget, 0);
+                    foreach (var target in targets)
+                    {
+                        legacyGhostBursts.Add(new LegacyGhostBurst(
+                            new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f),
+                            target.WorldPosition, .18f, 2));
+                        legacyGhostChainsScheduled++;
+                    }
+                }
+            }
+        }
+
+        private int ResolveAreaDamage(AttackInstance attack, Float2 center, float radius,
+            float multiplier, ContactPhase phase, int cap, int simulationTick)
+        {
+            SelectNearestTargets(center, radius, cap, 0);
+            var applied = 0;
+            foreach (var target in targets)
+            {
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack,
+                    WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage * multiplier), false,
+                    target.WorldPosition, phase, simulationTick, true, WeaponHitTrait.Explosion, center), out _))
+                    applied++;
+            }
+            return applied;
+        }
+
+        private void OnDamageConfirmed(ConfirmedDamageEvent damage)
+        {
+            if (resolvingHeavenChain || !Potentials.Legacy.Is(WeaponLegacyPathId.TalismanHeavenSeal) ||
+                Potentials.Legacy.Stage != WeaponLegacyStage.Completed ||
+                !runtime.Targets.TryGet(damage.TargetRuntimeId, out var killed) || killed == null || killed.IsAlive ||
+                !runtime.AffixStatuses.HasStatus(damage.TargetRuntimeId, CombatStatusKind.Seal)) return;
+
+            resolvingHeavenChain = true;
+            try
+            {
+                SelectNearestTargets(damage.ContactPoint, Range, 4, damage.TargetRuntimeId,
+                    requireSeal: true);
+                var attack = new AttackInstance(runtime.AllocateAttackInstanceId(),
+                    RepeatHitPolicy.OncePerPhase, 0f);
+                foreach (var target in targets)
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack,
+                        WeaponId.TalismanThrow, target, Mathf.CeilToInt(BaseDamage * 1.6f), false,
+                        target.WorldPosition, ContactPhase.PotentialChain, damage.SimulationTick, true,
+                        WeaponHitTrait.Explosion, damage.ContactPoint), out _);
+                runtime.DamageService.RetireAttack(attack.InstanceId);
+            }
+            finally { resolvingHeavenChain = false; }
+        }
+
+        private void SelectNearestTargets(Float2 center, float radius, int cap, int excludedId,
+            bool requireSeal = false)
+        {
+            targets.Clear();
+            runtime.Targets.CopyTo(targets);
+            for (var index = targets.Count - 1; index >= 0; index--)
+            {
+                var candidate = targets[index];
+                if (candidate == null || !candidate.IsAlive || candidate.RuntimeId == excludedId ||
+                    DistanceSquared(candidate.WorldPosition, center) > radius * radius ||
+                    requireSeal && !runtime.AffixStatuses.HasStatus(candidate.RuntimeId, CombatStatusKind.Seal))
+                    targets.RemoveAt(index);
+            }
+            targets.Sort((left, right) =>
+            {
+                var distance = DistanceSquared(left.WorldPosition, center)
+                    .CompareTo(DistanceSquared(right.WorldPosition, center));
+                return distance != 0 ? distance : left.RuntimeId.CompareTo(right.RuntimeId);
+            });
+            if (targets.Count > cap) targets.RemoveRange(cap, targets.Count - cap);
         }
 
         private void CreateVisual(TalismanCast cast, in WeaponExecutionContext context)
@@ -527,6 +657,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             public GhostFlame(AttackInstance attack, Float2 position) { Attack = attack; Position = position; Remaining = .6f; }
             public AttackInstance Attack; public Float2 Position; public float Remaining;
+        }
+
+        private struct LegacyGhostBurst
+        {
+            public LegacyGhostBurst(AttackInstance attack, Float2 position, float remaining = .6f,
+                int phase = 0)
+            { Attack = attack; Position = position; Remaining = remaining; Phase = phase; }
+            public AttackInstance Attack;
+            public Float2 Position;
+            public float Remaining;
+            public int Phase;
         }
     }
 }

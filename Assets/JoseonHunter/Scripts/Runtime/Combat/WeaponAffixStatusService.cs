@@ -53,6 +53,7 @@ namespace JoseonHunter.Runtime.Combat
             public readonly WeaponId[] Sources = new WeaponId[7];
             public float NextReactionTime;
             public float ReactionCooldownRemaining;
+            public float SealVulnerabilityRemaining;
         }
 
         public WeaponAffixStatusService(CombatTargetRegistry targets, CombatDamageService damage)
@@ -81,6 +82,16 @@ namespace JoseonHunter.Runtime.Combat
             var statusIndex = (int)kind;
             return statusIndex >= 0 && statusIndex < 7 && timedStatuses.TryGetValue(targetId, out var state) &&
                    state.Remaining[statusIndex] > 0f && state.Stacks[statusIndex] > 0;
+        }
+
+        public bool ApplySealVulnerability(int targetId, float duration)
+        {
+            if (!IsFinite(duration) || duration <= 0f || !TryGetLiveTarget(targetId, out _))
+                return false;
+            if (!timedStatuses.TryGetValue(targetId, out var state))
+                timedStatuses.Add(targetId, state = new TargetStatusState());
+            state.SealVulnerabilityRemaining = Math.Max(state.SealVulnerabilityRemaining, duration);
+            return true;
         }
 
         public bool ApplyPeriodic(in PeriodicEffectRequest request)
@@ -168,7 +179,7 @@ namespace JoseonHunter.Runtime.Combat
             var multiplier = vulnerabilityRemaining.ContainsKey(targetRuntimeId) ? 1.2f : 1f;
             if (!timedStatuses.TryGetValue(targetRuntimeId, out var state)) return multiplier;
             if (Active(state, CombatStatusKind.ArmorBreak)) multiplier = Math.Max(multiplier, 1.25f);
-            if (Active(state, CombatStatusKind.Seal)) multiplier = Math.Max(multiplier, 1.15f);
+            if (state.SealVulnerabilityRemaining > 0f) multiplier = Math.Max(multiplier, 1.15f);
             return multiplier;
         }
 
@@ -319,6 +330,9 @@ namespace JoseonHunter.Runtime.Combat
                 var state = timedStatuses[targetId];
                 var any = false;
                 state.ReactionCooldownRemaining = Math.Max(0f, state.ReactionCooldownRemaining - deltaTime);
+                state.SealVulnerabilityRemaining = Math.Max(0f,
+                    state.SealVulnerabilityRemaining - deltaTime);
+                if (state.SealVulnerabilityRemaining > 0f) any = true;
                 for (var index = 0; index < state.Remaining.Length; index++)
                 {
                     if (state.Remaining[index] <= 0f) continue;
