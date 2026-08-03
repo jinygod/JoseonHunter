@@ -58,9 +58,7 @@ namespace JoseonHunter.Domain.Runs
         public WaveDefinition(
             int activeCap,
             IReadOnlyList<WeightedEnemyEntry> weightedContent,
-            WavePackDefinition? pack = null,
-            IReadOnlyList<string> specialContentIds = null,
-            int maximumSpecialFamilies = 0)
+            WavePackDefinition? pack = null)
         {
             if (activeCap < 0) throw new ArgumentOutOfRangeException(nameof(activeCap));
             if (weightedContent == null) throw new ArgumentNullException(nameof(weightedContent));
@@ -71,16 +69,31 @@ namespace JoseonHunter.Domain.Runs
                 ids[index] = weightedContent[index].ContentId;
             ContentIds = Array.AsReadOnly(ids);
             Pack = pack;
-            SpecialContentIds = specialContentIds ?? Array.Empty<string>();
-            MaximumSpecialFamilies = Math.Max(0, Math.Min(maximumSpecialFamilies, SpecialContentIds.Count));
         }
 
         public int ActiveCap { get; }
         public IReadOnlyList<string> ContentIds { get; }
         public IReadOnlyList<WeightedEnemyEntry> WeightedContent { get; }
         public WavePackDefinition? Pack { get; }
-        public IReadOnlyList<string> SpecialContentIds { get; }
-        public int MaximumSpecialFamilies { get; }
+    }
+
+    public readonly struct EnemyIntroductionDefinition
+    {
+        public EnemyIntroductionDefinition(float atSeconds, string contentId, int spawnCount)
+        {
+            if (float.IsNaN(atSeconds) || float.IsInfinity(atSeconds) || atSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(atSeconds));
+            if (string.IsNullOrWhiteSpace(contentId))
+                throw new ArgumentException("Enemy content ID is required.", nameof(contentId));
+            if (spawnCount <= 0) throw new ArgumentOutOfRangeException(nameof(spawnCount));
+            AtSeconds = atSeconds;
+            ContentId = contentId;
+            SpawnCount = spawnCount;
+        }
+
+        public float AtSeconds { get; }
+        public string ContentId { get; }
+        public int SpawnCount { get; }
     }
 
     public static class WaveSchedule
@@ -105,15 +118,22 @@ namespace JoseonHunter.Domain.Runs
         private static readonly WaveDefinition WaveOneDefinition = Definition(72, RatOnlyEntries,
             Pack(new[] { "plague_rat" }, 8, 12, 7f, 11f));
         private static readonly WaveDefinition WaveTwoDefinition = Definition(104, RatSpiritEntries,
-            Pack(new[] { "vengeful_spirit" }, 10, 14, 10f, 14f),
-            new[] { "shield_dokkaebi", "spirit_shaman" }, 1);
+            Pack(new[] { "vengeful_spirit" }, 10, 14, 10f, 14f));
         private static readonly WaveDefinition WaveThreeDefinition = Definition(128, LearnedEntries,
-            Pack(new[] { "dokkaebi" }, 10, 16, 9f, 13f),
-            new[] { "charging_horn_ghost", "splitting_rat" }, 1);
+            Pack(new[] { "dokkaebi" }, 10, 16, 9f, 13f));
         private static readonly WaveDefinition PeakDefinition = Definition(140, PeakEntries,
-            Pack(new[] { "vengeful_spirit", "dokkaebi" }, 12, 18, 8f, 12f),
-            new[] { "shield_dokkaebi", "spirit_shaman", "charging_horn_ghost", "splitting_rat" }, 2);
+            Pack(new[] { "vengeful_spirit", "dokkaebi" }, 12, 18, 8f, 12f));
         private static readonly WaveDefinition BossDefinition = Definition(36, BossEntries);
+        private static readonly IReadOnlyList<EnemyIntroductionDefinition> EnemyIntroductions =
+            Array.AsReadOnly(new[]
+            {
+                new EnemyIntroductionDefinition(102f, "shield_dokkaebi", 1),
+                new EnemyIntroductionDefinition(120f, "charging_horn_ghost", 1),
+                new EnemyIntroductionDefinition(138f, "spirit_shaman", 1),
+                new EnemyIntroductionDefinition(150f, "splitting_rat", 1)
+            });
+
+        public static IReadOnlyList<EnemyIntroductionDefinition> Introductions => EnemyIntroductions;
 
         public static WaveDefinition For(RunPhase phase, bool normalWavesStopped) =>
             normalWavesStopped ? EmptyDefinition : For(phase);
@@ -148,9 +168,7 @@ namespace JoseonHunter.Domain.Runs
         private static WaveDefinition Definition(
             int activeCap,
             IReadOnlyList<WeightedEnemyEntry> entries,
-            WavePackDefinition? pack = null,
-            IReadOnlyList<string> specialContentIds = null,
-            int maximumSpecialFamilies = 0) => new(activeCap, entries, pack, specialContentIds, maximumSpecialFamilies);
+            WavePackDefinition? pack = null) => new(activeCap, entries, pack);
 
         private static IReadOnlyList<WeightedEnemyEntry> Entries(
             params (string ContentId, int Weight)[] entries)

@@ -16,6 +16,18 @@ namespace JoseonHunter.Domain.Runs
         public int Side { get; }
     }
 
+    public readonly struct EnemyIntroductionPlan
+    {
+        public EnemyIntroductionPlan(string contentId, int spawnCount)
+        {
+            ContentId = contentId;
+            SpawnCount = spawnCount;
+        }
+
+        public string ContentId { get; }
+        public int SpawnCount { get; }
+    }
+
     public sealed class WaveSpawnDirector
     {
         private readonly int seed;
@@ -23,9 +35,10 @@ namespace JoseonHunter.Domain.Runs
         private RunPhase? scheduledPhase;
         private float nextPackSeconds;
         private int packOrdinal;
-        private RunPhase? specialPhase;
-        private string[] specialFamilies = Array.Empty<string>();
+        private int nextIntroductionIndex;
+        private int introducedSpecialCount;
         private int specialOrdinal;
+        private float lastSpecialSpawnSeconds;
 
         public WaveSpawnDirector(int seed)
         {
@@ -39,9 +52,10 @@ namespace JoseonHunter.Domain.Runs
             scheduledPhase = null;
             nextPackSeconds = float.PositiveInfinity;
             packOrdinal = 0;
-            specialPhase = null;
-            specialFamilies = Array.Empty<string>();
+            nextIntroductionIndex = 0;
+            introducedSpecialCount = 0;
             specialOrdinal = 0;
+            lastSpecialSpawnSeconds = float.NegativeInfinity;
         }
 
         public string SelectNormal(RunPhase phase)
@@ -100,35 +114,41 @@ namespace JoseonHunter.Domain.Runs
             return true;
         }
 
-        public bool TrySelectSpecial(RunPhase phase, int livingNormalCount, int livingSpecialCount,
+        public bool TryCreateIntroduction(float elapsedSeconds, int availableSlots, out EnemyIntroductionPlan plan)
+        {
+            plan = default;
+            ValidateElapsed(elapsedSeconds);
+            if (nextIntroductionIndex >= WaveSchedule.Introductions.Count) return false;
+            var introduction = WaveSchedule.Introductions[nextIntroductionIndex];
+            if (elapsedSeconds < introduction.AtSeconds || availableSlots < introduction.SpawnCount) return false;
+
+            nextIntroductionIndex++;
+            introducedSpecialCount++;
+            lastSpecialSpawnSeconds = elapsedSeconds;
+            plan = new EnemyIntroductionPlan(introduction.ContentId, introduction.SpawnCount);
+            return true;
+        }
+
+        public bool TrySelectSpecial(float elapsedSeconds, int livingNormalCount, int livingSpecialCount,
             out string contentId)
         {
             contentId = string.Empty;
+            ValidateElapsed(elapsedSeconds);
             if (livingNormalCount < 0) throw new ArgumentOutOfRangeException(nameof(livingNormalCount));
             if (livingSpecialCount < 0) throw new ArgumentOutOfRangeException(nameof(livingSpecialCount));
-            var specialCap = (int)Math.Floor(livingNormalCount * .25f);
-            var definition = WaveSchedule.For(phase);
-            if (specialCap <= 0 || livingSpecialCount >= specialCap || definition.SpecialContentIds.Count == 0 ||
-                definition.MaximumSpecialFamilies == 0) return false;
+            var specialCap = livingNormalCount / 8;
+            if (introducedSpecialCount == 0 || specialCap <= 0 || livingSpecialCount >= specialCap ||
+                elapsedSeconds - lastSpecialSpawnSeconds < 8f) return false;
 
-            if (specialPhase != phase)
-            {
-                specialPhase = phase; specialOrdinal = 0;
-                if (definition.MaximumSpecialFamilies == 1)
-                {
-                    specialFamilies = new[] { definition.SpecialContentIds[random.Next(definition.SpecialContentIds.Count)] };
-                }
-                else
-                {
-                    var first = random.Next(definition.SpecialContentIds.Count);
-                    var second = (first + 1 + random.Next(definition.SpecialContentIds.Count - 1)) % definition.SpecialContentIds.Count;
-                    specialFamilies = new[] { definition.SpecialContentIds[first], definition.SpecialContentIds[second] };
-                }
-            }
-
-            contentId = specialFamilies[specialOrdinal++ % specialFamilies.Length];
+            contentId = WaveSchedule.Introductions[specialOrdinal++ % introducedSpecialCount].ContentId;
+            lastSpecialSpawnSeconds = elapsedSeconds;
             return true;
         }
+
+        [Obsolete("Use the elapsed-time overload after authored introductions are integrated.")]
+        public bool TrySelectSpecial(RunPhase phase, int livingNormalCount, int livingSpecialCount,
+            out string contentId) => TrySelectSpecial(PhaseStartSeconds(phase), livingNormalCount,
+            livingSpecialCount, out contentId);
 
         private float NextInterval(in WavePackDefinition pack) =>
             pack.MinimumIntervalSeconds +
@@ -145,5 +165,11 @@ namespace JoseonHunter.Domain.Runs
             RunPhase.Expired => 240f,
             _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null)
         };
+
+        private static void ValidateElapsed(float elapsedSeconds)
+        {
+            if (float.IsNaN(elapsedSeconds) || float.IsInfinity(elapsedSeconds) || elapsedSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+        }
     }
 }

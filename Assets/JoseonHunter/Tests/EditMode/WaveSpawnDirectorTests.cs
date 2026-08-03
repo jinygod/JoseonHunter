@@ -84,26 +84,39 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void SpecialFamiliesAreIntroducedByPhaseAndNeverExceedTheQuarterCap()
+        public void AuthoredIntroductionsAreEmittedOnceInChronologicalOrder()
         {
             var director = new WaveSpawnDirector(1701);
-            Assert.That(director.TrySelectSpecial(RunPhase.WaveOne, 100, 0, out _), Is.False);
-            Assert.That(director.TrySelectSpecial(RunPhase.WaveTwo, 20, 5, out _), Is.False);
-            Assert.That(director.TrySelectSpecial(RunPhase.WaveTwo, 20, 4, out var waveTwo), Is.True);
-            Assert.That(new[] { "shield_dokkaebi", "spirit_shaman" }, Does.Contain(waveTwo));
+            Assert.That(director.TryCreateIntroduction(102f, 10, out var shield), Is.True);
+            Assert.That((shield.ContentId, shield.SpawnCount), Is.EqualTo(("shield_dokkaebi", 1)));
+            Assert.That(director.TryCreateIntroduction(102f, 10, out _), Is.False);
+            Assert.That(director.TryCreateIntroduction(120f, 10, out var horn), Is.True);
+            Assert.That(horn.ContentId, Is.EqualTo("charging_horn_ghost"));
+            Assert.That(director.TryCreateIntroduction(138f, 10, out var shaman), Is.True);
+            Assert.That(shaman.ContentId, Is.EqualTo("spirit_shaman"));
+            Assert.That(director.TryCreateIntroduction(150f, 10, out var rat), Is.True);
+            Assert.That(rat.ContentId, Is.EqualTo("splitting_rat"));
+        }
 
-            director.Reset();
-            var waveThree = Enumerable.Range(0, 12)
-                .Select(_ => director.TrySelectSpecial(RunPhase.WaveThree, 100, 0, out var id) ? id : string.Empty)
-                .Where(id => id.Length > 0).Distinct().ToArray();
-            Assert.That(waveThree.Length, Is.EqualTo(1));
-            Assert.That(new[] { "charging_horn_ghost", "splitting_rat" }, Does.Contain(waveThree[0]));
+        [Test]
+        public void IntroductionWaitsForASpawnSlotWithoutAdvancing()
+        {
+            var director = new WaveSpawnDirector(1701);
+            Assert.That(director.TryCreateIntroduction(102f, 0, out _), Is.False);
+            Assert.That(director.TryCreateIntroduction(103f, 1, out var delayed), Is.True);
+            Assert.That(delayed.ContentId, Is.EqualTo("shield_dokkaebi"));
+        }
 
-            director.Reset();
-            var peak = Enumerable.Range(0, 24)
-                .Select(_ => director.TrySelectSpecial(RunPhase.Peak, 100, 0, out var id) ? id : string.Empty)
-                .Where(id => id.Length > 0).Distinct().ToArray();
-            Assert.That(peak.Length, Is.InRange(1, 2));
+        [Test]
+        public void SpecialsRequireIntroductionOneEighthCapacityAndEightSecondCooldown()
+        {
+            var director = new WaveSpawnDirector(1701);
+            Assert.That(director.TrySelectSpecial(101f, 80, 0, out _), Is.False);
+            Assert.That(director.TryCreateIntroduction(102f, 10, out _), Is.True);
+            Assert.That(director.TrySelectSpecial(109.9f, 80, 0, out _), Is.False);
+            Assert.That(director.TrySelectSpecial(110f, 80, 0, out var id), Is.True);
+            Assert.That(id, Is.EqualTo("shield_dokkaebi"));
+            Assert.That(director.TrySelectSpecial(118f, 80, 10, out _), Is.False);
         }
     }
 }
