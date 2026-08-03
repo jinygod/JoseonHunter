@@ -1,4 +1,5 @@
 using System.Collections;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
@@ -63,6 +64,22 @@ namespace JoseonHunter.Tests.PlayMode
             var appraisal = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             appraisal.ShowDetails(controller.UiState.Weapons[0]);
+            var legacy = Object.FindFirstObjectByType<WeaponLegacyChoicePresenter>();
+            legacy.Open(new WeaponLegacyChoiceState("frost_flask", "서리병", new[]
+            {
+                new WeaponLegacyChoiceView(WeaponLegacyPathId.FrostMist, "빙무", "서리 안개",
+                    "넓은 둔화", "직접 피해 감소", null),
+                new WeaponLegacyChoiceView(WeaponLegacyPathId.FrostShatter, "파쇄", "착지 폭발",
+                    "연쇄 파쇄", "지속시간 감소", null)
+            }), _ => true);
+            var replacement = Object.FindFirstObjectByType<WeaponReplacementPresenter>();
+            replacement.Open(new WeaponReplacementState("frost_flask", "서리병", new[]
+            {
+                new WeaponReplacementChoiceView("one", "환도 비검", 4, "월식", null),
+                new WeaponReplacementChoiceView("two", "각궁", 3, "관일", null),
+                new WeaponReplacementChoiceView("three", "주술 부적", 2, "", null),
+                new WeaponReplacementChoiceView("four", "벽력탄", 1, "", null)
+            }), _ => true, () => true);
             yield return null;
 
             try
@@ -91,12 +108,19 @@ namespace JoseonHunter.Tests.PlayMode
                     AssertBounds(bootstrap, "Upgrade Card 0", bootstrap.ModalSafeAreaContainer);
                     AssertBounds(bootstrap, "Confirm Reward", bootstrap.ModalSafeAreaContainer);
                     AssertBounds(bootstrap, "Weapon Appraisal Panel", bootstrap.ModalSafeAreaContainer);
+                    AssertBounds(bootstrap, "Legacy Choice 0", bootstrap.ModalSafeAreaContainer);
+                    AssertBounds(bootstrap, "Legacy Choice 1", bootstrap.ModalSafeAreaContainer);
+                    for (var index = 0; index < 4; index++)
+                        AssertBounds(bootstrap, "Replacement Choice " + index, bootstrap.ModalSafeAreaContainer);
+                    AssertBounds(bootstrap, "Cancel Replacement", bootstrap.ModalSafeAreaContainer);
                 }
             }
             finally
             {
                 appraisal.HideImmediately();
                 reward.HideImmediately();
+                legacy.CloseImmediately();
+                replacement.CloseImmediately();
             }
 
             foreach (var text in bootstrap.GetComponentsInChildren<Component>(true))

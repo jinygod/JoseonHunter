@@ -1,12 +1,8 @@
 using System.Collections;
 using System.Linq;
 using JoseonHunter.Domain.Combat;
-using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Progression;
-using JoseonHunter.Content.Weapons;
 using JoseonHunter.Presentation.UI;
-using JoseonHunter.Runtime.Combat;
-using JoseonHunter.Runtime.Combat.Weapons;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -28,7 +24,7 @@ namespace JoseonHunter.Tests.PlayMode
         public void RestoreTimeScale() => Time.timeScale = 1f;
 
         [UnityTest]
-        public IEnumerator Perfect_hwando_jackpot_flows_from_pointer_choice_to_evolution_and_run_reset()
+        public IEnumerator Perfect_general_affix_flows_from_pointer_choice_to_appraisal_and_run_reset()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -65,12 +61,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(profile.GeneralRolls, Has.Count.EqualTo(1));
             Assert.That(profile.GeneralRolls[0].Stat, Is.EqualTo(WeaponAffixStat.Damage));
             Assert.That(profile.GeneralRolls[0].Tier, Is.EqualTo(WeaponAffixTier.Perfect));
-            Assert.That(profile.PotentialIds, Is.EqualTo(new[]
-            {
-                WeaponPotentialId.HwandoVenomFang,
-                WeaponPotentialId.HwandoReturningAfterimage,
-                WeaponPotentialId.HwandoFlyingBladeDance
-            }));
+            Assert.That(profile.PotentialIds, Is.Empty);
             Assert.That(reveal.IsRevealing, Is.True);
             Assert.That(controller.IsUpgradeOpen, Is.False, "queued upgrade is gated by reveal completion");
 
@@ -78,92 +69,25 @@ namespace JoseonHunter.Tests.PlayMode
             yield return WaitUntil(() => reveal.IsAwaitingConfirmation, "the skipped jackpot reel to await explicit confirmation");
             reveal.Confirm();
             yield return WaitUntil(() => !reveal.IsRevealing, "the confirmed jackpot reel to complete");
-            Assert.That(reveal.LastCompletedResult.NewPotentials, Is.EqualTo(profile.PotentialIds));
+            Assert.That(reveal.LastCompletedResult.NewPotentials, Is.Empty);
             Assert.That(controller.IsUpgradeOpen, Is.True, "queued upgrade opens only after the confirmed jackpot reel completes");
 
             var potentialCells = rack.GetComponentsInChildren<Image>(true)
                 .Where(image => image.name.StartsWith("Potential Cell")).ToArray();
             Assert.That(potentialCells, Has.Length.EqualTo(3));
-            Assert.That(potentialCells.All(cell => cell.enabled && cell.sprite != null), Is.True, "the rack exposes all three committed potential cells");
+            Assert.That(potentialCells.All(cell => !cell.gameObject.activeSelf), Is.True,
+                "random potential cells are retired from the rack");
+            var legacyLabel = rack.GetComponentsInChildren<Component>(true).First(component =>
+                component.name == "Legacy Path" && component.GetType().Name == "TextMeshProUGUI");
+            Assert.That(legacyLabel.GetType().GetProperty("text").GetValue(legacyLabel), Is.EqualTo("전승 미선택"));
 
-            controller.SetWeaponLevelForTests(WeaponId.HwandoFlyingBlade, 5);
-            var beforeEvolution = controller.WeaponRuntime;
-            controller.OpenUpgradeOffersForTests(new UpgradeOffer("hwando_moon_eclipse", UpgradeKind.Evolution, 5));
-            Assert.That(controller.TryChooseUpgrade(0), Is.True);
-            Assert.That(beforeEvolution.IsDisposedForTests, Is.True);
-            Assert.That(controller.WeaponRuntime.IsEvolvedForTests(WeaponId.HwandoFlyingBlade), Is.True);
-            Assert.That(controller.WeaponRuntime.RegistrationCountForTests(WeaponId.HwandoFlyingBlade), Is.EqualTo(1));
-            Assert.That(controller.AffixProfileForTests(WeaponId.HwandoFlyingBlade).PotentialIds, Is.EqualTo(profile.PotentialIds));
-
-            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
-            var venomMask = MaskFor(catalog, WeaponPotentialId.HwandoVenomFang);
-            var shadowMask = MaskFor(catalog, WeaponPotentialId.HwandoReturningAfterimage);
-            var danceMask = MaskFor(catalog, WeaponPotentialId.HwandoFlyingBladeDance);
-            Assert.That(controller.RegisterCombatTargetForTests(new TestTarget(8101, new Float2(1f, 0f), venomMask)), Is.True);
-            Assert.That(controller.RegisterCombatTargetForTests(new TestTarget(8102, new Float2(1.04f, 0f), shadowMask)), Is.True);
-            for (var targetId = 8103; targetId < 8109; targetId++)
-                Assert.That(controller.RegisterCombatTargetForTests(new TestTarget(targetId, new Float2(1f + (targetId - 8103) * .05f, 0f), danceMask)), Is.True);
-
-            var combatEvents = new System.Collections.Generic.List<ConfirmedDamageEvent>();
-            controller.CombatDamageService.DamageConfirmed += combatEvents.Add;
-            var combatRoot = new GameObject("Task8 Hwando confirmed-contact root");
-            var hwando = (FlyingBladeExecutor)controller.WeaponRuntime.ExecutorForTests(WeaponId.HwandoFlyingBlade);
-            for (var tick = 0; tick < 120 && (!combatEvents.Any(e => e.Phase == ContactPhase.Poison) || !combatEvents.Any(e => e.Phase == ContactPhase.PotentialChain)); tick++)
-                controller.WeaponRuntime.Tick(.05f, Vector2.zero, combatRoot.transform, null, 0);
-
-            var poison = combatEvents.Where(e => e.Phase == ContactPhase.Poison).ToArray();
-            var shadow = combatEvents.Where(e => e.Phase == ContactPhase.PotentialChain).ToArray();
-            var direct = combatEvents.Where(e => e.Phase == ContactPhase.Outbound || e.Phase == ContactPhase.Inbound).ToArray();
-            Assert.That(poison, Is.Not.Empty, "Venom Fang uses the committed potential mask before creating poison ticks.");
-            Assert.That(shadow, Is.Not.Empty, "Returning Afterimage uses the committed potential mask before its delayed child hit.");
-            Assert.That(direct.Select(e => e.TargetRuntimeId).Distinct().Count(), Is.GreaterThanOrEqualTo(5));
-            Assert.That(direct.Max(e => e.FinalDamage), Is.EqualTo(Mathf.CeilToInt(hwando.BaseDamage * 1.6f)), "Blade Dance caps its distinct-target ramp at 60%.");
-            Assert.That(poison.Concat(shadow).Select(e => e.AttackInstanceId).Distinct().Count(), Is.EqualTo(poison.Concat(shadow).Count()));
-            var cappedRamp = direct.First(value => value.FinalDamage == Mathf.CeilToInt(hwando.BaseDamage * 1.6f));
-            Assert.That(poison.All(value => value.AttackInstanceId != cappedRamp.AttackInstanceId), Is.True, "poison owns a child attack identity, never the ramp parent.");
-            Assert.That(shadow.All(value => value.AttackInstanceId != cappedRamp.AttackInstanceId), Is.True, "afterimage owns a child attack identity, never the ramp parent.");
-
-            // Continue only until a new inbound shadow and an active poison stream coexist, then reset the real run.
-            for (var tick = 0; tick < 80 && (hwando.PendingAfterimageCountForTests == 0 || controller.WeaponRuntime.AffixStatuses.PeriodicEffectCountForTests == 0); tick++)
-                controller.WeaponRuntime.Tick(.01f, Vector2.zero, combatRoot.transform, null, 0);
-            Assert.That(hwando.PendingAfterimageCountForTests, Is.GreaterThan(0));
-            Assert.That(controller.WeaponRuntime.AffixStatuses.PeriodicEffectCountForTests, Is.GreaterThan(0));
-            Assert.That(controller.CombatDamageService.TrackedAttackCount, Is.GreaterThan(0));
-            rack.Pulse(WeaponId.HwandoFlyingBlade.Value, 5, 3);
+            rack.Pulse(WeaponId.HwandoFlyingBlade.Value, 2);
             yield return null;
-            var pulsingCell = rack.GetComponentsInChildren<Image>(true).First(image => image.name == "Potential Cell 2");
-            Assert.That(pulsingCell.transform.localScale, Is.Not.EqualTo(Vector3.one));
-            var liveRuntime = controller.WeaponRuntime;
-            var liveDamage = controller.CombatDamageService;
-            var liveStatuses = liveRuntime.AffixStatuses;
-            reveal.Play(new WeaponAffixRollResult(
-                new WeaponAffixRoll(WeaponAffixStat.Damage, WeaponAffixTier.Perfect, 30d), profile.PotentialIds));
-            Assert.That(reveal.IsRevealing, Is.True);
 
             controller.ResetRunForTests();
             yield return null;
             Assert.That(controller.AffixProfileForTests(WeaponId.HwandoFlyingBlade), Is.Null);
-            Assert.That(beforeEvolution.IsDisposedForTests, Is.True);
-            Assert.That(liveRuntime.IsDisposedForTests, Is.True);
-            Assert.That(liveDamage.TrackedAttackCount, Is.Zero);
-            Assert.That(liveStatuses.PeriodicEffectCountForTests, Is.Zero);
-            Assert.That(hwando.PendingAfterimageCountForTests, Is.Zero);
-            Assert.That(controller.CombatDamageService.TrackedAttackCount, Is.Zero);
-            Assert.That(controller.WeaponRuntime.AffixStatuses.PeriodicEffectCountForTests, Is.Zero);
             Assert.That(reveal.IsRevealing, Is.False);
-            Assert.That(pulsingCell.transform.localScale, Is.EqualTo(Vector3.one));
-            Assert.That(rack.GetComponentsInChildren<Image>(true).Where(image => image.name.StartsWith("Potential Cell")).All(cell => cell.transform.localScale == Vector3.one), Is.True);
-            Object.Destroy(combatRoot);
-        }
-
-        private static PixelHitMask MaskFor(WeaponAffixPresentationCatalogAsset catalog, WeaponPotentialId potential)
-        {
-            Assert.That(catalog, Is.Not.Null);
-            var sprite = catalog.SpriteForPotential(potential);
-            var texture = catalog.MaskForPotential(potential);
-            Assert.That(sprite, Is.Not.Null, potential.Value);
-            Assert.That(texture, Is.Not.Null, potential.Value);
-            return PixelHitMask.FromTexture(texture, sprite.pivot, sprite.pixelsPerUnit);
         }
 
         private static IEnumerator WaitUntil(System.Func<bool> predicate, string condition)

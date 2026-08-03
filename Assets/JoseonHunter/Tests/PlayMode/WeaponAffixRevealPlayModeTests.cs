@@ -82,10 +82,10 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(ImageNamed(presenter, "Locked Potential 1").sprite, Is.Null);
             Assert.That(ImageNamed(presenter, "Stop Flash 0").sprite, Is.Null);
             Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
-            var lockedLabel = RectNamed(presenter, "Potential Label 1");
-            Assert.That(lockedLabel.gameObject.activeSelf, Is.True);
-            Assert.That(TextValue(lockedLabel), Does.Contain("잠김"));
-            Assert.That(TextColor(lockedLabel).grayscale, Is.LessThan(.5f));
+            var legacyStage = RectNamed(presenter, "Legacy Stage");
+            Assert.That(legacyStage.gameObject.activeSelf, Is.True);
+            Assert.That(TextValue(legacyStage), Is.EqualTo("현재 경지 · 미선택"));
+            Assert.That(TextColor(legacyStage).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -192,7 +192,10 @@ namespace JoseonHunter.Tests.PlayMode
                 null,
                 "Damage +24%",
                 potentialIds: new[] { WeaponPotentialId.HwandoVenomFang },
-                behavior: "Returning blade"));
+                behavior: "Returning blade",
+                legacyName: "빙무",
+                legacyStageName: "선택",
+                nextLegacyMilestone: "4레벨 · 강화"));
 
             var icon = RectNamed(presenter, "Weapon Icon");
             var name = RectNamed(presenter, "Weapon Name");
@@ -229,10 +232,10 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-0").enabled, Is.False);
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-1").enabled, Is.False);
             }
-            var emptyPotential = RectNamed(presenter, "Potential Label 1");
-            Assert.That(emptyPotential.gameObject.activeSelf, Is.True);
-            Assert.That(TextValue(emptyPotential), Does.Contain("잠김"));
-            Assert.That(TextColor(emptyPotential).grayscale, Is.LessThan(.5f));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Path")), Is.EqualTo("전승 경로 · 빙무"));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Stage")), Is.EqualTo("현재 경지 · 선택"));
+            Assert.That(TextValue(RectNamed(presenter, "Legacy Next")), Does.StartWith("다음 경지 ·"));
+            Assert.That(TextColor(RectNamed(presenter, "Legacy Stage")).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -441,21 +444,18 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Jackpot_lines_unlock_in_order()
+        public IEnumerator Legacy_rows_appear_together_when_the_appraisal_can_be_read()
         {
             var presenter = new GameObject("Slot Lines Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
             var result = Result(WeaponAffixTier.Perfect, 3);
             var timeline = WeaponAffixRevealTimeline.For(result);
             presenter.Play(result);
-            yield return new WaitForSecondsRealtime(timeline.PotentialStopsAt(0) + .04f);
-            Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(1));
-            yield return new WaitForSecondsRealtime(
-                timeline.PotentialStopsAt(1) - timeline.PotentialStopsAt(0) + .02f);
-            Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(2));
-            yield return new WaitForSecondsRealtime(
-                timeline.PotentialStopsAt(2) - timeline.PotentialStopsAt(1) + .02f);
-            Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(3));
+            yield return new WaitForSecondsRealtime(timeline.ReadStartsAt + .04f);
+            Assert.That(RectNamed(presenter, "Legacy Path").gameObject.activeSelf, Is.True);
+            Assert.That(RectNamed(presenter, "Legacy Stage").gameObject.activeSelf, Is.True);
+            Assert.That(RectNamed(presenter, "Legacy Next").gameObject.activeSelf, Is.True);
+            Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(0));
             Object.Destroy(presenter.gameObject);
         }
 

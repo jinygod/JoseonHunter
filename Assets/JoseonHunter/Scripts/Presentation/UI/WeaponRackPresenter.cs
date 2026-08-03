@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections;
-using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
-using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
 using UnityEngine;
@@ -55,7 +53,7 @@ namespace JoseonHunter.Presentation.UI
             if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
             slot.Level.text = $"레벨 {newLevel}";
             StopPulse(slot);
-            slot.PulseRoutine = StartCoroutine(PulseRoutine(slot, newPotentialCount));
+            slot.PulseRoutine = StartCoroutine(PulseRoutine(slot));
         }
 
         public void ResetPulses()
@@ -99,7 +97,8 @@ namespace JoseonHunter.Presentation.UI
             slot.Level.rectTransform.pivot = new Vector2(0f, .5f);
             slot.Level.rectTransform.anchoredPosition = new Vector2(78f, -11f);
             slot.Level.rectTransform.sizeDelta = new Vector2(224f, 20f);
-            slot.Totals = RuntimeUiFactory.Text("Affix Totals", slot.Root.transform, string.Empty, 11f, TextAlignmentOptions.Left);
+            slot.Totals = RuntimeUiFactory.Text("Legacy Path", slot.Root.transform, string.Empty, 12f, TextAlignmentOptions.Left,
+                RuntimeFontRole.BodyEmphasis);
             slot.Totals.rectTransform.anchorMin = slot.Totals.rectTransform.anchorMax = new Vector2(0f, .5f);
             slot.Totals.rectTransform.pivot = new Vector2(0f, .5f);
             slot.Totals.rectTransform.anchoredPosition = new Vector2(78f, -30f);
@@ -113,6 +112,7 @@ namespace JoseonHunter.Presentation.UI
                 cell.rectTransform.anchoredPosition = new Vector2(-12f - potentialIndex * 27f, 0f);
                 cell.rectTransform.sizeDelta = new Vector2(15f, 15f);
                 cell.preserveAspect = true;
+                cell.gameObject.SetActive(false);
                 slot.PotentialCells[potentialIndex] = cell;
             }
             return slot;
@@ -150,24 +150,14 @@ namespace JoseonHunter.Presentation.UI
             slot.Icon.enabled = weapon.Icon != null;
             slot.Name.text = weapon.DisplayName;
             slot.Level.text = $"레벨 {weapon.Level}";
-            slot.Totals.text = weapon.GeneralAffixSummary;
-            var catalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
-            if (catalog == null || !catalog.HasRequiredUiSprites)
-            {
-                Debug.LogError("Weapon rack requires the imported PixelLab slot-kit catalog.", this);
-                return;
-            }
+            slot.Totals.text = string.IsNullOrEmpty(weapon.LegacyName) || weapon.LegacyName == "미선택"
+                ? "전승 미선택"
+                : "전승 · " + weapon.LegacyName;
             for (var index = 0; index < slot.PotentialCells.Length; index++)
-            {
-                var cell = slot.PotentialCells[index];
-                cell.sprite = index < weapon.PotentialIds.Count && catalog != null
-                    ? catalog.SpriteForPotential(weapon.PotentialIds[index])
-                    : catalog.EmptyLineFrame;
-                cell.enabled = true;
-            }
+                slot.PotentialCells[index].gameObject.SetActive(false);
         }
 
-        private IEnumerator PulseRoutine(Slot slot, int newPotentialCount)
+        private IEnumerator PulseRoutine(Slot slot)
         {
             var elapsed = 0f;
             while (elapsed < .24f)
@@ -175,9 +165,6 @@ namespace JoseonHunter.Presentation.UI
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
                 slot.Accent.transform.localScale = Vector3.one * pulse;
-                var potentialIndex = newPotentialCount - 1;
-                if (potentialIndex >= 0 && potentialIndex < slot.PotentialCells.Length)
-                    slot.PotentialCells[potentialIndex].transform.localScale = Vector3.one * pulse;
                 yield return null;
             }
 

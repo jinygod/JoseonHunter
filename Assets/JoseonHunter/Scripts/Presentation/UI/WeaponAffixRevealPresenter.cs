@@ -220,19 +220,13 @@ namespace JoseonHunter.Presentation.UI
             }
             for (var index = 0; index < 3; index++)
             {
-                var hasPotential = index < weapon.PotentialIds.Count;
-                var potential = hasPotential ? weapon.PotentialIds[index] : default;
-                lockedSlots[index].enabled = !hasPotential;
-                finalSymbols[index + 1].sprite = hasPotential
-                    ? activeCatalog.SpriteForPotential(potential)
-                    : null;
-                finalSymbols[index + 1].enabled = hasPotential;
-                potentialLabels[index].text = hasPotential
-                    ? PotentialName(potential) + "\n" + PotentialDescription(potential)
-                    : $"잠재 능력 슬롯 {index + 1} · 잠김";
+                lockedSlots[index].enabled = false;
+                finalSymbols[index + 1].sprite = null;
+                finalSymbols[index + 1].enabled = false;
                 potentialLabels[index].gameObject.SetActive(true);
                 reelWindows[index + 1].rectTransform.anchoredPosition = PotentialRowPosition(index);
             }
+            BindLegacyRows(weapon.LegacyName, weapon.LegacyStageName, weapon.NextLegacyMilestone);
 
             ApplyFlatAppraisalStyle();
 
@@ -347,26 +341,12 @@ namespace JoseonHunter.Presentation.UI
             VisiblePotentialCount = 0;
             for (var index = 0; index < 3; index++)
             {
-                var existingCount = activeModel?.ExistingPotentialCount ?? 0;
-                var awardedIndex = index - existingCount;
-                var existing = index < existingCount;
-                var awarded = awardedIndex >= 0 && awardedIndex < activeResult.NewPotentials.Count;
-                var opened = awarded && time >= timeline.PotentialStopsAt(awardedIndex);
-                lockedSlots[index].enabled = !existing && !opened;
-                finalSymbols[index + 1].enabled = existing || opened;
-                potentialLabels[index].gameObject.SetActive(existing || opened || time >= timeline.ReadStartsAt);
-                if (opened)
-                    VisiblePotentialCount++;
-                var slotState = WeaponAppraisalPresentation.ResolveSlot(
-                    index, existingCount, activeResult.NewPotentials.Count, time, timeline);
-                var rowShake = slotState == WeaponPotentialSlotKind.Shaking
-                    ? Mathf.Sin(time * 56f + index * 1.7f) *
-                      Mathf.Clamp01((timeline.ReadStartsAt - time) / .28f) * 6f
-                    : 0f;
+                lockedSlots[index].enabled = false;
+                finalSymbols[index + 1].enabled = false;
+                potentialLabels[index].gameObject.SetActive(time >= timeline.ReadStartsAt);
                 reelWindows[index + 1].rectTransform.anchoredPosition =
-                    PotentialRowPosition(index) + new Vector2(rowShake, 0f);
-                UpdateStopFlash(index + 1, time,
-                    awarded ? timeline.PotentialStopsAt(awardedIndex) : float.PositiveInfinity, opened);
+                    PotentialRowPosition(index);
+                UpdateStopFlash(index + 1, time, float.PositiveInfinity, false);
             }
 
             UpdateStopFlash(0, time, timeline.AffixStopsAt, IsFinalAffixVisible);
@@ -501,17 +481,9 @@ namespace JoseonHunter.Presentation.UI
 
             for (var index = 0; index < 3; index++)
             {
-                var potential = index < activeModel.CurrentPotentials.Count
-                    ? activeModel.CurrentPotentials[index]
-                    : default;
-                var hasPotential = !string.IsNullOrEmpty(potential.Value);
-                finalSymbols[index + 1].sprite = hasPotential
-                    ? activeCatalog.SpriteForPotential(potential)
-                    : null;
-                potentialLabels[index].text = hasPotential
-                    ? PotentialName(potential) + "\n" + PotentialDescription(potential)
-                    : $"잠재 능력 슬롯 {index + 1} · 잠김";
+                finalSymbols[index + 1].sprite = null;
             }
+            BindLegacyRows(activeModel.LegacyName, activeModel.LegacyStageName, activeModel.NextLegacyMilestone);
 
             burst.sprite = activeResult.NewPotentials.Count > 0
                 ? activeCatalog.PotentialRitualSeal
@@ -701,7 +673,8 @@ namespace JoseonHunter.Presentation.UI
                     finalSymbols[index + 1].transform.parent, Color.white);
                 RuntimeUiFactory.Stretch(lockedSlots[index].rectTransform, 8f, 6f, 8f, 6f);
                 lockedSlots[index].preserveAspect = false;
-                potentialLabels[index] = Label("Potential Label " + index, shell.transform,
+                var legacyLabelName = index == 0 ? "Legacy Path" : index == 1 ? "Legacy Stage" : "Legacy Next";
+                potentialLabels[index] = Label(legacyLabelName, shell.transform,
                     position + new Vector2(80f, 0f), new Vector2(600f, 48f), 23f,
                     TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
@@ -731,6 +704,15 @@ namespace JoseonHunter.Presentation.UI
 
             ApplyPortraitLayout();
             root.SetActive(false);
+        }
+
+        private void BindLegacyRows(string legacyName, string legacyStageName, string nextLegacyMilestone)
+        {
+            potentialLabels[0].text = "전승 경로 · " + (string.IsNullOrEmpty(legacyName) ? "미선택" : legacyName);
+            potentialLabels[1].text = "현재 경지 · " + (string.IsNullOrEmpty(legacyStageName) ? "미선택" : legacyStageName);
+            potentialLabels[2].text = "다음 경지 · " + (string.IsNullOrEmpty(nextLegacyMilestone)
+                ? "3레벨 · 전승 선택"
+                : nextLegacyMilestone);
         }
 
         public void ApplyPortraitLayout()

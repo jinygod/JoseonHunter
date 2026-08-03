@@ -20,6 +20,8 @@ namespace JoseonHunter.Presentation.UI
         private RewardRevealPresenter rewardReveal;
         private WeaponAffixRevealPresenter affixReveal;
         private UpgradeChoicePresenter upgradeChoice;
+        private WeaponReplacementPresenter weaponReplacement;
+        private WeaponLegacyChoicePresenter weaponLegacyChoice;
         private RunResultPresenter runResult;
         private CanvasGroup combatHudGroup;
         private CanvasGroup weaponRackGroup;
@@ -99,6 +101,16 @@ namespace JoseonHunter.Presentation.UI
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
             upgradeChoice.Build();
             upgradeChoice.PresentationClosed += NotifyUpgradePresentationClosed;
+            var replacementRoot = RuntimeUiFactory.Rect("Weapon Replacement", modalSafeAreaContainer);
+            RuntimeUiFactory.Stretch(replacementRoot, 0f, 0f, 0f, 0f);
+            weaponReplacement = replacementRoot.gameObject.AddComponent<WeaponReplacementPresenter>();
+            weaponReplacement.Build();
+            weaponReplacement.PresentationClosed += NotifyUpgradePresentationClosed;
+            var legacyRoot = RuntimeUiFactory.Rect("Weapon Legacy Choice", modalSafeAreaContainer);
+            RuntimeUiFactory.Stretch(legacyRoot, 0f, 0f, 0f, 0f);
+            weaponLegacyChoice = legacyRoot.gameObject.AddComponent<WeaponLegacyChoicePresenter>();
+            weaponLegacyChoice.Build();
+            weaponLegacyChoice.PresentationClosed += NotifyUpgradePresentationClosed;
             var resultRoot = RuntimeUiFactory.Rect("Run Result", modalSafeAreaContainer);
             RuntimeUiFactory.Stretch(resultRoot, 0f, 0f, 0f, 0f);
             runResult = resultRoot.gameObject.AddComponent<RunResultPresenter>();
@@ -110,6 +122,8 @@ namespace JoseonHunter.Presentation.UI
             CancelUiModalPresentation();
             UnbindController();
             if (upgradeChoice != null) upgradeChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
+            if (weaponReplacement != null) weaponReplacement.PresentationClosed -= NotifyUpgradePresentationClosed;
+            if (weaponLegacyChoice != null) weaponLegacyChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
             if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
@@ -169,6 +183,8 @@ namespace JoseonHunter.Presentation.UI
             boundController = controller;
             if (boundController == null) return;
             boundController.UpgradeOpened += OpenUpgradeChoice;
+            boundController.WeaponReplacementOpened += OpenWeaponReplacement;
+            boundController.WeaponLegacyOpened += OpenWeaponLegacyChoice;
             boundController.UpgradeChosen += OnUpgradeChosen;
             boundController.RunReset += CloseUpgradeChoice;
             boundController.RunReset += CloseRewardReveal;
@@ -178,6 +194,8 @@ namespace JoseonHunter.Presentation.UI
         {
             if (boundController == null) return;
             boundController.UpgradeOpened -= OpenUpgradeChoice;
+            boundController.WeaponReplacementOpened -= OpenWeaponReplacement;
+            boundController.WeaponLegacyOpened -= OpenWeaponLegacyChoice;
             boundController.UpgradeChosen -= OnUpgradeChosen;
             boundController.RunReset -= CloseUpgradeChoice;
             boundController.RunReset -= CloseRewardReveal;
@@ -190,20 +208,54 @@ namespace JoseonHunter.Presentation.UI
             {
                 SetBackgroundRaycastsEnabled(false);
                 SetModalScrimVisible(true);
+                weaponReplacement?.CloseImmediately();
+                weaponLegacyChoice?.CloseImmediately();
                 upgradeChoice?.Open(state, boundController.TryChooseUpgrade);
+            }
+        }
+
+        private void OpenWeaponReplacement(WeaponReplacementState state)
+        {
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                SetBackgroundRaycastsEnabled(false);
+                SetModalScrimVisible(true);
+                upgradeChoice?.CloseImmediately();
+                weaponLegacyChoice?.CloseImmediately();
+                weaponReplacement?.Open(state, boundController.TryChooseWeaponReplacement,
+                    boundController.CancelWeaponReplacement);
+            }
+        }
+
+        private void OpenWeaponLegacyChoice(WeaponLegacyChoiceState state)
+        {
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                SetBackgroundRaycastsEnabled(false);
+                SetModalScrimVisible(true);
+                upgradeChoice?.CloseImmediately();
+                weaponReplacement?.CloseImmediately();
+                weaponLegacyChoice?.Open(state, boundController.TryChooseWeaponLegacy);
             }
         }
 
         private void CloseUpgradeChoice()
         {
-            using (FirstPlayableProfilerMarkers.UiModal.Auto()) upgradeChoice?.CloseImmediately();
+            using (FirstPlayableProfilerMarkers.UiModal.Auto())
+            {
+                upgradeChoice?.CloseImmediately();
+                weaponReplacement?.CloseImmediately();
+                weaponLegacyChoice?.CloseImmediately();
+            }
         }
 
         private void OpenWeaponDetails(WeaponSlotView weapon)
         {
             using (FirstPlayableProfilerMarkers.UiModal.Auto())
             {
-                if (affixReveal == null || affixReveal.IsRevealing || upgradeChoice == null || upgradeChoice.IsOpen)
+                if (affixReveal == null || affixReveal.IsRevealing || upgradeChoice == null || upgradeChoice.IsOpen ||
+                    (weaponReplacement != null && weaponReplacement.IsOpen) ||
+                    (weaponLegacyChoice != null && weaponLegacyChoice.IsOpen))
                     return;
                 if (boundController == null || !boundController.Flow.TryTransition(GameFlowState.Paused)) return;
                 SetBackgroundRaycastsEnabled(false);
@@ -341,6 +393,8 @@ namespace JoseonHunter.Presentation.UI
             combatHud?.ApplyPortraitLayout();
             weaponRack?.ApplyPortraitLayout();
             upgradeChoice?.ApplyPortraitLayout();
+            weaponReplacement?.ApplyPortraitLayout();
+            weaponLegacyChoice?.ApplyPortraitLayout();
             affixReveal?.ApplyPortraitLayout();
             runResult?.ApplyPortraitLayout();
         }
@@ -364,6 +418,9 @@ namespace JoseonHunter.Presentation.UI
                     signature = signature * 31 + StableContentHash(weapon.Id);
                     signature = signature * 31 + weapon.Level;
                     signature = signature * 31 + StableContentHash(weapon.GeneralAffixSummary);
+                    signature = signature * 31 + StableContentHash(weapon.LegacyName);
+                    signature = signature * 31 + StableContentHash(weapon.LegacyStageName);
+                    signature = signature * 31 + StableContentHash(weapon.NextLegacyMilestone);
                     signature = signature * 31 + weapon.PotentialIds.Count;
                     for (var potentialIndex = 0; potentialIndex < weapon.PotentialIds.Count; potentialIndex++)
                         signature = signature * 31 + StableContentHash(weapon.PotentialIds[potentialIndex].Value);

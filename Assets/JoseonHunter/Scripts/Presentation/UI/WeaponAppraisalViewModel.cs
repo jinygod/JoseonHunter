@@ -20,7 +20,10 @@ namespace JoseonHunter.Presentation.UI
             int existingPotentialCount,
             bool isNewAcquisition = false,
             string accumulatedAffixSummary = null,
-            bool hasWeaponContext = false)
+            bool hasWeaponContext = false,
+            string legacyName = null,
+            string legacyStageName = null,
+            string nextLegacyMilestone = null)
         {
             WeaponId = weaponId ?? string.Empty;
             DisplayName = displayName ?? string.Empty;
@@ -33,6 +36,9 @@ namespace JoseonHunter.Presentation.UI
             IsNewAcquisition = isNewAcquisition;
             AccumulatedAffixSummary = accumulatedAffixSummary ?? string.Empty;
             HasWeaponContext = hasWeaponContext;
+            LegacyName = legacyName ?? "미선택";
+            LegacyStageName = legacyStageName ?? "미선택";
+            NextLegacyMilestone = nextLegacyMilestone ?? "3레벨 · 전승 선택";
         }
 
         public string WeaponId { get; }
@@ -46,6 +52,9 @@ namespace JoseonHunter.Presentation.UI
         public bool IsNewAcquisition { get; }
         public string AccumulatedAffixSummary { get; }
         public bool HasWeaponContext { get; }
+        public string LegacyName { get; }
+        public string LegacyStageName { get; }
+        public string NextLegacyMilestone { get; }
 
         public static WeaponAppraisalViewModel From(ProgressionRewardEvent reward, WeaponSlotView slot)
         {
@@ -63,7 +72,10 @@ namespace JoseonHunter.Presentation.UI
                 Mathf.Max(0, current.Count - awardedCount),
                 reward.Kind == ProgressionRewardKind.NewWeapon,
                 slot.GeneralAffixSummary,
-                true);
+                true,
+                slot.LegacyName,
+                slot.LegacyStageName,
+                slot.NextLegacyMilestone);
         }
 
         public static WeaponAppraisalViewModel ForResult(WeaponAffixRollResult result) =>

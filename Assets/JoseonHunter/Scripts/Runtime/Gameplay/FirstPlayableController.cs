@@ -2059,15 +2059,23 @@ namespace JoseonHunter.Runtime.Gameplay
             var weapons = new List<WeaponSlotView>(weaponLevels.Count);
             foreach (var weapon in weaponLevels)
             {
+                var weaponId = new WeaponId(weapon.Key);
+                var legacy = weaponLegacyState.SnapshotFor(weaponId, weapon.Value);
+                var legacyName = legacy.HasPath && WeaponLegacyCatalog.TryGet(legacy.PathId, out var definition)
+                    ? definition.DisplayName
+                    : "미선택";
                 weapons.Add(new WeaponSlotView(
                     weapon.Key,
                     WeaponDisplayName(weapon.Key),
                     weapon.Value,
-                    ResolveWeaponSprite(new WeaponId(weapon.Key)),
-                    GeneralAffixSummary(new WeaponId(weapon.Key)),
-                    weaponAffixes.TryProfileFor(new WeaponId(weapon.Key), out var profile) ? profile.PotentialIds : null,
+                    ResolveWeaponSprite(weaponId),
+                    GeneralAffixSummary(weaponId),
+                    weaponAffixes.TryProfileFor(weaponId, out var profile) ? profile.PotentialIds : null,
                     profile == null ? null : profile.GeneralRolls.Select(roll => roll.Tier),
-                    WeaponBehavior(weapon.Key)));
+                    WeaponBehavior(weapon.Key),
+                    legacyName,
+                    LegacyStageName(legacy.Stage),
+                    NextLegacyMilestone(legacy.Stage)));
             }
 
             // The final boss owns the featured health bar even if a midboss survived into
@@ -2080,6 +2088,22 @@ namespace JoseonHunter.Runtime.Gameplay
                 boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons,
                 waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity, runEnded, victory);
         }
+
+        private static string LegacyStageName(WeaponLegacyStage stage) => stage switch
+        {
+            WeaponLegacyStage.Chosen => "선택",
+            WeaponLegacyStage.Reinforced => "강화",
+            WeaponLegacyStage.Completed => "완성",
+            _ => "미선택"
+        };
+
+        private static string NextLegacyMilestone(WeaponLegacyStage stage) => stage switch
+        {
+            WeaponLegacyStage.Chosen => "4레벨 · 강화",
+            WeaponLegacyStage.Reinforced => "5레벨 · 완성",
+            WeaponLegacyStage.Completed => "완성됨",
+            _ => "3레벨 · 전승 선택"
+        };
 
         public void RestartRun()
         {
