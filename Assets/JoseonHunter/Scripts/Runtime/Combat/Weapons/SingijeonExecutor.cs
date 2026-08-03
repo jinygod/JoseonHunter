@@ -24,6 +24,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly HashSet<int> focusAttackIds = new HashSet<int>();
         private readonly HashSet<int> childAttackIds = new HashSet<int>();
         private readonly List<Trail> trails = new List<Trail>();
+        private readonly List<FocusedSalvo> focusedSalvos = new List<FocusedSalvo>();
+        private readonly List<FireNetField> fireNetFields = new List<FireNetField>();
+        private readonly Dictionary<int, FireNetField> fireNetFieldsByProjectile = new Dictionary<int, FireNetField>();
+        private readonly Dictionary<int, float> fireNetBurnRemaining = new Dictionary<int, float>();
+        private readonly List<ICombatTarget> ignitionTargets = new List<ICombatTarget>(3);
+        private readonly List<int> burnTargetIds = new List<int>();
+        private FireNetField currentFireNetField;
+        private bool resolvingFireNetIgnition;
         private readonly List<PendingLaunch> pendingLaunches = new List<PendingLaunch>();
         private WeaponExecutionContext latestContext;
         private readonly Dictionary<int, Float2> focusDirections = new Dictionary<int, Float2>();
@@ -39,14 +47,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             projectiles = new LinearProjectileExecutor(runtime);
-            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
-            Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); LaneCount = Mathf.Clamp(laneCount, 1, MaxLaneCount); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
+            LegacySourceDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage));
+            var legacyDamage = modifiers.Legacy.Is(WeaponLegacyPathId.SingijeonFireNet) ? .7f : 1f;
+            var legacyRange = modifiers.Legacy.Is(WeaponLegacyPathId.SingijeonFireDragon) ? .65f : 1f;
+            BaseDamage = LegacySourceDamage * legacyDamage; CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
+            Range = Mathf.Max(0.01f, modifiers.ScaleArea(range) * legacyRange); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); LaneCount = Mathf.Clamp(laneCount, 1, MaxLaneCount); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
             runtime.DamageService.DamageConfirmed += OnDamageConfirmed;
             projectiles.ProjectileTravelled += OnProjectileTravelled;
         }
 
         public float BaseDamage { get; }
+        private float LegacySourceDamage { get; }
         public float CooldownSeconds { get; }
         public float Range { get; }
         public float Speed { get; }
@@ -63,7 +75,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int FocusProjectileCount { get; private set; }
         public Float2 RecordedFocusPosition => focusPosition;
 #if UNITY_INCLUDE_TESTS
-        public int ActiveTrailCountForTests => trails.Count;
+        public int ActiveTrailCountForTests => trails.Count + fireNetFields.Count;
         public bool FocusRetargetedForTests => focusRetargeted;
         public int UnlaunchedFocusCountForTests => Mathf.Max(0, FocusProjectileCount - focusLaunchIndex);
         public int FocusRetargetCountForTests { get; private set; }
@@ -71,6 +83,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIds;
         public Func<ICombatTarget, bool> BeforeFocusPotentialCheckForTests { get; set; }
         public bool SuppressNewCastsForTests { get; set; }
+        public int LastFocusedTargetRuntimeIdForTests { get; private set; }
+        public int LastFocusedSalvoCountForTests { get; private set; }
+        public int MaximumConnectedTrailEndpointsForTests { get; private set; }
+        public int LastFireNetIgnitionCountForTests { get; private set; }
+        public int LastFireNetBurnTargetRuntimeIdForTests { get; private set; }
 #endif
         private readonly List<int> splitChildAttackIds = new List<int>();
 
@@ -80,9 +97,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             EnsureTransientVisuals(context.PresentationRoot);
             transientVisuals?.Tick(deltaTime);
             AdvanceTrails(Mathf.Max(0f, deltaTime), context);
+            AdvanceFireNetFields(Mathf.Max(0f, deltaTime), context);
+            TickBurnTracking(Mathf.Max(0f, deltaTime));
 #if UNITY_INCLUDE_TESTS
             if (SuppressNewCastsForTests) { RememberTargetTransforms(); return; }
 #endif
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.SingijeonFireDragon))
+            {
+                TickFireDragon(Mathf.Max(0f, deltaTime), context);
+                RememberTargetTransforms();
+                return;
+            }
             if (!IsEvolved)
             {
                 TickNormal(deltaTime, context);
@@ -150,15 +175,87 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public void Reset()
         {
             foreach (var trail in trails) runtime.DamageService.RetireAttack(trail.Attack.InstanceId);
+            foreach (var salvo in focusedSalvos) runtime.DamageService.RetireAttack(salvo.Attack.InstanceId);
+            foreach (var field in fireNetFields)
+            {
+                runtime.DamageService.RetireAttack(field.Attack.InstanceId);
+                runtime.DamageService.RetireAttack(field.DetonationAttack.InstanceId);
+            }
             cooldown = 0f; focusDelay = 0f; awaitingFocus = false; focusPosition = default; LastLaunchCount = 0; LastDirection = default; LastDirectionBucket = -1; ScoutProjectileCount = 0; FocusProjectileCount = 0; volleyKinds.Clear(); focusAttackIds.Clear(); focusDirections.Clear(); childAttackIds.Clear(); splitChildAttackIds.Clear(); trails.Clear(); pendingLaunches.Clear(); priorTargetTransforms.Clear(); focusLaunchIndex = 0; nextFocusLaunch = 0f; focusSequenceActive = false; focusRetargeted = false;
+            focusedSalvos.Clear(); fireNetFields.Clear(); fireNetFieldsByProjectile.Clear();
+            fireNetBurnRemaining.Clear(); ignitionTargets.Clear(); burnTargetIds.Clear();
+            currentFireNetField = null; resolvingFireNetIgnition = false;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
 #if UNITY_INCLUDE_TESTS
             FocusRetargetCountForTests = 0;
+            LastFocusedTargetRuntimeIdForTests = 0; LastFocusedSalvoCountForTests = 0;
+            MaximumConnectedTrailEndpointsForTests = 0;
+            LastFireNetIgnitionCountForTests = 0;
+            LastFireNetBurnTargetRuntimeIdForTests = 0;
 #endif
             projectiles.Reset();
         }
 
         public void Dispose() { Reset(); runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; projectiles.ProjectileTravelled -= OnProjectileTravelled; projectiles.Dispose(); }
+
+        private void TickFireDragon(float step, in WeaponExecutionContext context)
+        {
+            cooldown -= step;
+            if (cooldown <= 0f && TryFindStrongestTarget(context.OwnerPosition, out var target))
+            {
+                cooldown = CooldownSeconds;
+                var count = Potentials.Legacy.Stage == WeaponLegacyStage.Completed ? 5 :
+                    Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced ? 4 : 1;
+                var multiplier = count == 5 ? .32f : count == 4 ? .4f : 1f;
+#if UNITY_INCLUDE_TESTS
+                LastFocusedTargetRuntimeIdForTests = target.RuntimeId;
+                LastFocusedSalvoCountForTests = count;
+#endif
+                for (var index = 0; index < count; index++)
+                    focusedSalvos.Add(new FocusedSalvo(
+                        new AttackInstance(runtime.AllocateAttackInstanceId(),
+                            RepeatHitPolicy.OncePerPhase, 0f), target.RuntimeId,
+                        .05f + index * .10f, multiplier));
+            }
+
+            for (var index = focusedSalvos.Count - 1; index >= 0; index--)
+            {
+                var salvo = focusedSalvos[index]; salvo.Remaining -= step;
+                if (salvo.Remaining > 0f) { focusedSalvos[index] = salvo; continue; }
+                if (runtime.Targets.TryGet(salvo.TargetRuntimeId, out var salvoTarget) &&
+                    salvoTarget != null && salvoTarget.IsAlive)
+                {
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(salvo.Attack,
+                        WeaponId.SingijeonVolley, salvoTarget,
+                        Mathf.CeilToInt(LegacySourceDamage * salvo.Multiplier), false,
+                        salvoTarget.WorldPosition, ContactPhase.PotentialChain, context.SimulationTick,
+                        true, WeaponHitTrait.Explosion, context.OwnerPosition), out _);
+                    transientVisuals?.Play(context.PresentationSpriteFor(WeaponId.SingijeonVolley,
+                            WeaponVisualPartIndex.Singijeon.Detonation),
+                        new Vector3(salvoTarget.WorldPosition.X, salvoTarget.WorldPosition.Y, 0f),
+                        Quaternion.identity, Vector3.one * .72f,
+                        new Color(.86f, .45f, .12f, .9f), .12f, context.SortingOrder + 2);
+                }
+                runtime.DamageService.RetireAttack(salvo.Attack.InstanceId);
+                focusedSalvos.RemoveAt(index);
+            }
+        }
+
+        private bool TryFindStrongestTarget(Float2 origin, out ICombatTarget selected)
+        {
+            selected = null;
+            runtime.Targets.CopyTo(targets);
+            var rangeSquared = Range * Range;
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive ||
+                    DistanceSquared(target.WorldPosition, origin) > rangeSquared) continue;
+                if (selected == null || target.ThreatScore > selected.ThreatScore ||
+                    Mathf.Approximately(target.ThreatScore, selected.ThreatScore) &&
+                    target.RuntimeId < selected.RuntimeId) selected = target;
+            }
+            return selected != null;
+        }
 
         private bool TryFindDensestDirection(Float2 origin, out Float2 direction, out Float2 densePosition)
         {
@@ -248,6 +345,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void LaunchRocket(in WeaponExecutionContext context, Float2 position, Float2 direction, string name, bool focus, bool child)
         {
             var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.SingijeonFireNet) && currentFireNetField != null)
+            {
+                fireNetFieldsByProjectile[attack.InstanceId] = currentFireNetField;
+                currentFireNetField.ProjectileAttackIds.Add(attack.InstanceId);
+            }
             if (focus) { focusAttackIds.Add(attack.InstanceId); focusDirections[attack.InstanceId] = direction; } if (child) { childAttackIds.Add(attack.InstanceId); splitChildAttackIds.Add(attack.InstanceId); }
             var lifetime = (child ? Range * .55f : Range) / Speed;
             projectiles.Launch(context, new LinearProjectileSpec(
@@ -262,7 +364,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 name,
                 visualPartStart: WeaponVisualPartIndex.Singijeon.Projectile,
                 visualFrameCount: WeaponVisualPartIndex.Singijeon.ProjectileFrameCount,
-                visualFrameSeconds: .05f));
+                visualFrameSeconds: .05f,
+                traits: Potentials.Legacy.Is(WeaponLegacyPathId.SingijeonFireNet)
+                    ? WeaponHitTrait.Explosion : WeaponHitTrait.None));
         }
 
         private static Float2 Normalize(Float2 value)
@@ -274,6 +378,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Launch(in WeaponExecutionContext context, Float2 direction)
         {
             LastDirection = direction;
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.SingijeonFireNet))
+            {
+                currentFireNetField = new FireNetField(
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f),
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f));
+                currentFireNetField.AddEndpoint(context.OwnerPosition);
+                fireNetFields.Add(currentFireNetField);
+            }
             var rows = Level == 5 ? 3 : 1;
             LastLaunchCount = rows * LaneCount;
             for (var row = 0; row < rows; row++)
@@ -354,7 +466,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void OnDamageConfirmed(ConfirmedDamageEvent damage)
         {
-            if (!damage.WeaponId.Equals(WeaponId.SingijeonVolley) || damage.Phase != ContactPhase.Direct || !focusAttackIds.Contains(damage.AttackInstanceId) || childAttackIds.Contains(damage.AttackInstanceId)) return;
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.SingijeonFireNet))
+            {
+                if (damage.WeaponId.Equals(WeaponId.SingijeonVolley) &&
+                    damage.Phase == ContactPhase.Direct &&
+                    fireNetFieldsByProjectile.TryGetValue(damage.AttackInstanceId, out var field))
+                    field.AddEndpoint(damage.ContactPoint);
+                TryPropagateFireNetOnDeath(damage);
+            }
+            if (!damage.WeaponId.Equals(WeaponId.SingijeonVolley)) return;
+            if (damage.Phase != ContactPhase.Direct || !focusAttackIds.Contains(damage.AttackInstanceId) ||
+                childAttackIds.Contains(damage.AttackInstanceId)) return;
             if (!runtime.Targets.TryGet(damage.TargetRuntimeId, out var target) || target == null || target.HurtMask == null) return;
 #if UNITY_INCLUDE_TESTS
             BeforeFocusPotentialCheckForTests?.Invoke(target);
@@ -395,8 +517,122 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (trail.Remaining <= 0f) { runtime.DamageService.RetireAttack(trail.Attack.InstanceId); trails.RemoveAt(index); } else trails[index] = trail;
             }
         }
+
+        private void AdvanceFireNetFields(float step, in WeaponExecutionContext context)
+        {
+            for (var index = fireNetFields.Count - 1; index >= 0; index--)
+            {
+                var field = fireNetFields[index];
+                field.Remaining -= step;
+                field.Elapsed += step;
+                field.TickElapsed += step;
+                while (field.TickElapsed + .0001f >= .5f && field.Remaining >= -.0001f)
+                {
+                    field.TickElapsed -= .5f;
+                    runtime.Targets.CopyTo(targets);
+                    foreach (var target in targets)
+                    {
+                        if (target == null || !target.IsAlive || !field.IsNearTrail(target.WorldPosition, .34f))
+                            continue;
+                        fireNetBurnRemaining[target.RuntimeId] = Mathf.Max(0f, field.Remaining);
+                        if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack,
+                            WeaponId.SingijeonVolley, target,
+                            Mathf.RoundToInt(LegacySourceDamage * .3f), false, target.WorldPosition,
+                            ContactPhase.Burn, context.SimulationTick, field.Elapsed, true,
+                            WeaponHitTrait.Explosion, field.FirstEndpoint), out _)) continue;
+                        runtime.AffixStatuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.Burn,
+                            Mathf.Max(.5f, field.Remaining), 1, WeaponId.SingijeonVolley);
+#if UNITY_INCLUDE_TESTS
+                        LastFireNetBurnTargetRuntimeIdForTests = target.RuntimeId;
+#endif
+                    }
+                }
+
+#if UNITY_INCLUDE_TESTS
+                MaximumConnectedTrailEndpointsForTests = Mathf.Max(
+                    MaximumConnectedTrailEndpointsForTests, field.Endpoints.Count);
+#endif
+                if (field.Remaining > 0f) continue;
+                if (Potentials.Legacy.Stage == WeaponLegacyStage.Completed)
+                    ResolveConnectedTrailDetonation(field, context);
+                runtime.DamageService.RetireAttack(field.Attack.InstanceId);
+                runtime.DamageService.RetireAttack(field.DetonationAttack.InstanceId);
+                foreach (var attackId in field.ProjectileAttackIds)
+                    fireNetFieldsByProjectile.Remove(attackId);
+                fireNetFields.RemoveAt(index);
+                if (ReferenceEquals(currentFireNetField, field)) currentFireNetField = null;
+            }
+        }
+
+        private void ResolveConnectedTrailDetonation(FireNetField field,
+            in WeaponExecutionContext context)
+        {
+            runtime.Targets.CopyTo(targets);
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive || !field.IsNearTrail(target.WorldPosition, .60f))
+                    continue;
+                runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.DetonationAttack,
+                    WeaponId.SingijeonVolley, target, Mathf.CeilToInt(LegacySourceDamage * 2f),
+                    false, target.WorldPosition, ContactPhase.Blast, context.SimulationTick,
+                    true, WeaponHitTrait.Explosion, field.FirstEndpoint), out _);
+            }
+        }
+
+        private void TryPropagateFireNetOnDeath(ConfirmedDamageEvent damage)
+        {
+            if (resolvingFireNetIgnition || Potentials.Legacy.Stage < WeaponLegacyStage.Reinforced ||
+                !fireNetBurnRemaining.TryGetValue(damage.TargetRuntimeId, out var remaining) ||
+                remaining <= 0f || !runtime.Targets.TryGet(damage.TargetRuntimeId, out var killed) ||
+                killed == null || killed.IsAlive) return;
+            fireNetBurnRemaining.Remove(damage.TargetRuntimeId);
+            ignitionTargets.Clear(); runtime.Targets.CopyTo(ignitionTargets);
+            ignitionTargets.RemoveAll(target => target == null || !target.IsAlive ||
+                target.RuntimeId == damage.TargetRuntimeId ||
+                DistanceSquared(target.WorldPosition, damage.ContactPoint) > Range * Range);
+            ignitionTargets.Sort((left, right) =>
+            {
+                var distance = DistanceSquared(left.WorldPosition, damage.ContactPoint)
+                    .CompareTo(DistanceSquared(right.WorldPosition, damage.ContactPoint));
+                return distance != 0 ? distance : left.RuntimeId.CompareTo(right.RuntimeId);
+            });
+            if (ignitionTargets.Count > 3) ignitionTargets.RemoveRange(3, ignitionTargets.Count - 3);
+#if UNITY_INCLUDE_TESTS
+            LastFireNetIgnitionCountForTests = ignitionTargets.Count;
+#endif
+            resolvingFireNetIgnition = true;
+            try
+            {
+                foreach (var target in ignitionTargets)
+                {
+                    var ticks = Mathf.Max(1, Mathf.CeilToInt(remaining / .5f));
+                    if (runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(
+                        WeaponId.SingijeonVolley, target.RuntimeId, target.WorldPosition,
+                        Mathf.RoundToInt(LegacySourceDamage * .3f), ticks,
+                        new AttackInstance(runtime.AllocateAttackInstanceId(),
+                            RepeatHitPolicy.TimedTicks, .5f), true, ContactPhase.Burn)))
+                        fireNetBurnRemaining[target.RuntimeId] = remaining;
+                }
+            }
+            finally { resolvingFireNetIgnition = false; }
+        }
+
+        private void TickBurnTracking(float step)
+        {
+            burnTargetIds.Clear();
+            foreach (var pair in fireNetBurnRemaining) burnTargetIds.Add(pair.Key);
+            foreach (var targetId in burnTargetIds)
+            {
+                var remaining = fireNetBurnRemaining[targetId] - step;
+                if (remaining <= 0f) fireNetBurnRemaining.Remove(targetId);
+                else fireNetBurnRemaining[targetId] = remaining;
+            }
+        }
+
         private void OnProjectileTravelled(LinearProjectileTravel travel)
         {
+            if (fireNetFieldsByProjectile.TryGetValue(travel.AttackInstanceId, out var fireNet))
+                fireNet.AddEndpoint(travel.Current, travel.AttackInstanceId);
             if (!Potentials.HasPotential(WeaponPotentialId.SingijeonPowderTrail) || !WeaponPotentialVisuals.TryGet(WeaponPotentialId.SingijeonPowderTrail, out _, out var mask)) return;
             var dx = travel.Current.X - travel.Previous.X; var dy = travel.Current.Y - travel.Previous.Y; var distance = Mathf.Sqrt(dx * dx + dy * dy); var count = Mathf.Max(1, Mathf.CeilToInt(distance / .35f));
             for (var index = 1; index <= count; index++)
@@ -414,6 +650,50 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             }
         }
         private void RememberTargetTransforms() { runtime.Targets.CopyTo(targets); priorTargetTransforms.Clear(); foreach (var target in targets) if (target != null && target.IsAlive && target.HurtMask != null) priorTargetTransforms[target.RuntimeId] = target.HurtMaskTransform; }
+        private static float DistanceSquared(Float2 left, Float2 right) { var x = left.X - right.X; var y = left.Y - right.Y; return x * x + y * y; }
+
+        private struct FocusedSalvo
+        {
+            public FocusedSalvo(AttackInstance attack, int targetRuntimeId, float remaining,
+                float multiplier)
+            { Attack = attack; TargetRuntimeId = targetRuntimeId; Remaining = remaining;
+                Multiplier = multiplier; }
+            public AttackInstance Attack; public int TargetRuntimeId; public float Remaining;
+            public float Multiplier;
+        }
+
+        private sealed class FireNetField
+        {
+            private const int EndpointCapacity = 24;
+            public FireNetField(AttackInstance attack, AttackInstance detonationAttack)
+            { Attack = attack; DetonationAttack = detonationAttack; }
+            public AttackInstance Attack { get; }
+            public AttackInstance DetonationAttack { get; }
+            public List<Float2> Endpoints { get; } = new List<Float2>(EndpointCapacity);
+            public HashSet<int> ProjectileAttackIds { get; } = new HashSet<int>();
+            public float Remaining { get; set; } = 3f;
+            public float TickElapsed { get; set; }
+            public float Elapsed { get; set; }
+            public Float2 FirstEndpoint => Endpoints.Count > 0 ? Endpoints[0] : default;
+
+            public void AddEndpoint(Float2 point, int projectileAttackId = 0)
+            {
+                if (projectileAttackId != 0) ProjectileAttackIds.Add(projectileAttackId);
+                if (Endpoints.Count >= EndpointCapacity) return;
+                if (Endpoints.Count > 0 && DistanceSquared(Endpoints[Endpoints.Count - 1], point) < .10f * .10f)
+                    return;
+                Endpoints.Add(point);
+            }
+
+            public bool IsNearTrail(Float2 point, float radius)
+            {
+                var radiusSquared = radius * radius;
+                foreach (var endpoint in Endpoints)
+                    if (DistanceSquared(endpoint, point) <= radiusSquared) return true;
+                return false;
+            }
+        }
+
         private struct PendingLaunch
         {
             public PendingLaunch(Float2 position, Float2 direction, string name, bool focus, bool child, float remaining)

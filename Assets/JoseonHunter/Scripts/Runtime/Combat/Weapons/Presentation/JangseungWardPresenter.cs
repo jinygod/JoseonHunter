@@ -39,6 +39,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
         public int ActiveCrossingSparkCountForTests => crossingSparks.ActiveCountForTests;
         public bool UsesTexturedBoundariesForTests => false;
         public int ActiveDecorativeSpriteCountForTests => 0;
+        public int ActivePaletteColorCountForTests => activeSets.Count == 0 ? 0 : 3;
+        public bool UsesWhiteOutlineForTests => false;
         public bool NewestSetHasFullEmphasisForTests => activeOrder.Count == 0 ||
             Mathf.Approximately(SetMainAlphaForTests(activeOrder[activeOrder.Count - 1]), NewestSetAlpha);
         public float SetMainAlphaForTests(int setId) => activeSets.TryGetValue(setId, out var set) ? set.EmphasisAlpha : 0f;

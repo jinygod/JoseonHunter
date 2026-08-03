@@ -16,6 +16,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         void RemoveJangseungWard(int sourceId);
     }
 
+    public interface IJangseungContactDamageTarget
+    {
+        void ApplyJangseungContactProtection(int sourceId, float reduction);
+        void RemoveJangseungContactProtection(int sourceId);
+    }
+
     /// <summary>Finite cardinal ward boundaries. Damage is only produced by a target movement segment crossing a visible segment.</summary>
     public sealed class JangseungWardExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
@@ -30,6 +36,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly Dictionary<int, PixelHitMask> stretchedSegmentMasks = new Dictionary<int, PixelHitMask>();
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private readonly List<WardSet> sets = new List<WardSet>();
+        private readonly List<LegacyPulse> legacyPulses = new List<LegacyPulse>();
+        private readonly List<LegacySlam> legacySlams = new List<LegacySlam>();
         private readonly Dictionary<int, Float2> previousPositions = new Dictionary<int, Float2>();
         private WeaponTransientVisualPool transientVisuals;
         private Transform transientVisualRoot;
@@ -49,8 +57,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             segmentMask = wardSegmentMask ?? throw new ArgumentNullException(nameof(wardSegmentMask));
-            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Radius = Mathf.Max(0.05f, modifiers.ScaleArea(radius)); Potentials = modifiers;
-            PostCount = Mathf.Clamp(postCount, 2, 4); SetCapacity = Mathf.Clamp(setCapacity, 1, MaximumWardSets);
+            LegacySourceDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage));
+            var legacyDamage = modifiers.Legacy.Is(WeaponLegacyPathId.JangseungFourGuardians) ? .7f : 1f;
+            BaseDamage = LegacySourceDamage * legacyDamage; CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Radius = Mathf.Max(0.05f, modifiers.ScaleArea(radius)); Potentials = modifiers;
+            PostCount = modifiers.Legacy.Is(WeaponLegacyPathId.JangseungFourGuardians)
+                ? 4 : Mathf.Clamp(postCount, 2, 4); SetCapacity = Mathf.Clamp(setCapacity, 1, MaximumWardSets);
             ReentryInterval = Mathf.Max(0f, reentryInterval); Level = Mathf.Clamp(level, 1, 5);
             IsEvolved = evolved;
         }
@@ -59,6 +70,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             : this(runtime, PixelHitMask.FromRows("111", "111", "111"), baseDamage, cooldownSeconds, radius, postCount, setCapacity, reentryInterval, level, evolved, modifiers) { }
 
         public float BaseDamage { get; }
+        private float LegacySourceDamage { get; }
         public float CooldownSeconds { get; }
         public float Radius { get; }
         public int PostCount { get; }
@@ -85,6 +97,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int GhostFaceApplicationsForTests { get; private set; }
         public int GuardianSpawnsForTests { get; private set; }
         public JangseungWardPresenter WardPresenterForTests => wardPresenter;
+        public float LegacyWardLifetimeForTests => Potentials.Legacy.Is(
+            WeaponLegacyPathId.JangseungGuardianDescent) ? CooldownSeconds * .6f : 0f;
+        public int CompletedPulseCountForTests { get; private set; }
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -119,12 +134,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 #endif
             PresentEvolvedCompletions(context);
             AdvancePotentialCompletions(step, context);
+            AdvanceLegacyCompletions(step, context);
+            RetireExpiredLegacySets();
             RememberCurrentTargetPositions();
         }
 
         public void Reset()
         {
             foreach (var set in sets) Retire(set);
+            foreach (var pulse in legacyPulses) runtime.DamageService.RetireAttack(pulse.Attack.InstanceId);
+            foreach (var slam in legacySlams) runtime.DamageService.RetireAttack(slam.Attack.InstanceId);
+            legacyPulses.Clear(); legacySlams.Clear();
             sets.Clear(); previousPositions.Clear(); stretchedSegmentMasks.Clear(); cooldown = 0f; elapsedSeconds = 0f; EvictedWardSetCount = 0;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
             wardPresenter?.Dispose(); wardPresenter = null; wardPresenterRoot = null;
@@ -135,6 +155,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             GhostFaceApplicationsForTests = 0; GuardianSpawnsForTests = 0; GuardianStrikePresentationCountForTests = 0;
             GuardianStrikeAfterBoundaryChecksForTests = true; EvolvedCompletionAfterBoundaryChecksForTests = true;
             boundaryChecksResolvedThisTickForTests = false;
+            CompletedPulseCountForTests = 0;
 #endif
         }
 
@@ -150,6 +171,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var set = new WardSet(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.BoundaryReentry, ReentryInterval), center, Radius, count, IsEvolved, createdAt, Level == 5);
             sets.Add(set);
             wardPresenter?.ShowSet(set.Attack.InstanceId, set.Posts, null);
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.JangseungFourGuardians) &&
+                Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced)
+                MarkEnclosedTargets(set);
         }
 
         private void AdvanceEvolvedPostActivation(float step, in WeaponExecutionContext context)
@@ -203,7 +227,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     {
                         if (target == null || !target.IsAlive || target.HurtMask == null || set.RotatedTargetIds.Contains(target.RuntimeId)) continue;
                         if (!PixelMaskContactService.TryFindContact(set.RotationMask, transform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
-                        if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.RotatingAttack, WeaponId.JangseungWard, target, Mathf.CeilToInt(BaseDamage * .7f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick, elapsedSeconds - set.RotationRemaining), out _)) set.RotatedTargetIds.Add(target.RuntimeId);
+                        if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.RotatingAttack, WeaponId.JangseungWard, target, Mathf.CeilToInt(BaseDamage * .7f), false, contact, ContactPhase.PotentialBlast, context.SimulationTick, elapsedSeconds - set.RotationRemaining,
+                            true, WeaponHitTrait.Barrier | WeaponHitTrait.Knockback, set.DesiredCenter), out _)) set.RotatedTargetIds.Add(target.RuntimeId);
                     }
                 }
                 if (set.RotationRemaining > 0f) continue;
@@ -231,13 +256,113 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (best == null) return;
             if (PixelMaskContactService.TryFindContact(guardianMask, PixelMaskTransform.Translation(best.WorldPosition.X, best.WorldPosition.Y), best.HurtMask, best.HurtMaskTransform, out var contact))
             {
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.GuardianAttack, WeaponId.JangseungWard, best, Mathf.CeilToInt(BaseDamage * 1.1f), false, contact, ContactPhase.PotentialChain, context.SimulationTick, elapsedSeconds), out _))
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.GuardianAttack, WeaponId.JangseungWard, best, Mathf.CeilToInt(BaseDamage * 1.1f), false, contact, ContactPhase.PotentialChain, context.SimulationTick, elapsedSeconds,
+                    true, WeaponHitTrait.Heavy | WeaponHitTrait.Explosion, set.DesiredCenter), out _))
                 {
                     set.GuardianResolved = true;
                     PlayGuardianStrike(set.Attack.InstanceId, context, contact);
                 }
             }
             // Keep the authored guardian visible for the full lifetime after its one confirmed strike.
+        }
+
+        private void AdvanceLegacyCompletions(float step, in WeaponExecutionContext context)
+        {
+            foreach (var set in sets)
+            {
+                if (!set.IsCompleted || set.LegacyCompletionStarted) continue;
+                set.LegacyCompletionStarted = true;
+                if (Potentials.Legacy.Is(WeaponLegacyPathId.JangseungFourGuardians) &&
+                    Potentials.Legacy.Stage == WeaponLegacyStage.Completed)
+                {
+                    for (var index = 0; index < 3; index++)
+                        legacyPulses.Add(new LegacyPulse(set.Attack.InstanceId,
+                            new AttackInstance(runtime.AllocateAttackInstanceId(),
+                                RepeatHitPolicy.OncePerPhase, 0f), set.DesiredCenter,
+                            .05f + index * .2f, index));
+                }
+                else if (Potentials.Legacy.Is(WeaponLegacyPathId.JangseungGuardianDescent))
+                {
+                    legacySlams.Add(new LegacySlam(set.Attack.InstanceId,
+                        new AttackInstance(runtime.AllocateAttackInstanceId(),
+                            RepeatHitPolicy.OncePerPhase, 0f), set.DesiredCenter, .12f, 1.8f));
+                    if (Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced)
+                        legacySlams.Add(new LegacySlam(set.Attack.InstanceId,
+                            new AttackInstance(runtime.AllocateAttackInstanceId(),
+                                RepeatHitPolicy.OncePerPhase, 0f), set.DesiredCenter, .30f,
+                            Potentials.Legacy.Stage == WeaponLegacyStage.Completed ? 3.2f : 1.8f));
+                }
+            }
+
+            for (var index = legacyPulses.Count - 1; index >= 0; index--)
+            {
+                var pulse = legacyPulses[index]; pulse.Remaining -= step;
+                if (pulse.Remaining > 0f) { legacyPulses[index] = pulse; continue; }
+                ResolveLegacyPulse(pulse, context);
+                runtime.DamageService.RetireAttack(pulse.Attack.InstanceId);
+                legacyPulses.RemoveAt(index);
+#if UNITY_INCLUDE_TESTS
+                CompletedPulseCountForTests++;
+#endif
+            }
+
+            for (var index = legacySlams.Count - 1; index >= 0; index--)
+            {
+                var slam = legacySlams[index]; slam.Remaining -= step;
+                if (slam.Remaining > 0f) { legacySlams[index] = slam; continue; }
+                ResolveLegacySlam(slam, context);
+                runtime.DamageService.RetireAttack(slam.Attack.InstanceId);
+                legacySlams.RemoveAt(index);
+            }
+        }
+
+        private void ResolveLegacyPulse(LegacyPulse pulse, in WeaponExecutionContext context)
+        {
+            runtime.Targets.CopyTo(targets);
+            var radius = Radius * (1f + pulse.Ordinal * .25f);
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive ||
+                    DistanceSquared(target.WorldPosition, pulse.Center) > radius * radius) continue;
+                if (!runtime.DamageService.TryApply(WeaponDamageRequest.Create(pulse.Attack,
+                    WeaponId.JangseungWard, target, Mathf.CeilToInt(LegacySourceDamage * .8f),
+                    false, target.WorldPosition, ContactPhase.PotentialBlast, context.SimulationTick,
+                    true, WeaponHitTrait.Barrier | WeaponHitTrait.Knockback, pulse.Center), out _))
+                    continue;
+                target.ApplyKnockback(CenterOutward(pulse.Center, target.WorldPosition),
+                    .20f + pulse.Ordinal * .08f);
+            }
+        }
+
+        private void ResolveLegacySlam(LegacySlam slam, in WeaponExecutionContext context)
+        {
+            runtime.Targets.CopyTo(targets);
+            ICombatTarget best = null;
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive ||
+                    DistanceSquared(target.WorldPosition, slam.Center) > Radius * Radius) continue;
+                if (best == null || target.ThreatScore > best.ThreatScore ||
+                    Mathf.Approximately(target.ThreatScore, best.ThreatScore) &&
+                    target.RuntimeId < best.RuntimeId) best = target;
+            }
+            if (best == null) return;
+            if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(slam.Attack,
+                WeaponId.JangseungWard, best, Mathf.CeilToInt(LegacySourceDamage * slam.Multiplier),
+                false, best.WorldPosition, ContactPhase.PotentialChain, context.SimulationTick,
+                true, WeaponHitTrait.Heavy | WeaponHitTrait.Explosion, slam.Center), out _))
+                PlayGuardianStrike(slam.OwnerId, context, best.WorldPosition);
+        }
+
+        private void RetireExpiredLegacySets()
+        {
+            if (!Potentials.Legacy.Is(WeaponLegacyPathId.JangseungGuardianDescent)) return;
+            var lifetime = CooldownSeconds * .6f;
+            for (var index = sets.Count - 1; index >= 0; index--)
+            {
+                if (elapsedSeconds - sets[index].CreatedAt < lifetime) continue;
+                Retire(sets[index]); sets.RemoveAt(index);
+            }
         }
 
         private void MarkEnclosedTargets(WardSet set)
@@ -252,6 +377,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     set.StatusTargetIds.Add(target.RuntimeId);
                     status.ApplyJangseungWard(set.Attack.InstanceId, Level * 0.1f);
                 }
+                if (Potentials.Legacy.Is(WeaponLegacyPathId.JangseungFourGuardians) &&
+                    Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced &&
+                    target is IJangseungContactDamageTarget protectedTarget)
+                    protectedTarget.ApplyJangseungContactProtection(set.Attack.InstanceId, .2f);
             }
             set.MarkResolved = true;
         }
@@ -309,7 +438,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 // Mark the contact before damage so a rejected re-entry interval cannot turn into repeated line damage.
                 set.TouchingTargetIds.Add(target.RuntimeId);
                 if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(set.Attack, WeaponId.JangseungWard, target,
-                    Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, crossingTime), out _))
+                    Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.BoundaryCrossing, context.SimulationTick, crossingTime,
+                    true, WeaponHitTrait.Barrier | WeaponHitTrait.Knockback, set.DesiredCenter), out _))
                 {
                     wardPresenter?.PlayCrossing(set.Attack.InstanceId, segmentIndex,
                         new Vector2(segment.Start.X, segment.Start.Y), new Vector2(segment.End.X, segment.End.Y),
@@ -329,6 +459,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         set.StatusTargetIds.Add(target.RuntimeId);
                         status.ApplyJangseungWard(set.Attack.InstanceId, Level * 0.1f);
                     }
+                    if (Potentials.Legacy.Is(WeaponLegacyPathId.JangseungFourGuardians) &&
+                        Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced &&
+                        target is IJangseungContactDamageTarget protectedTarget)
+                        protectedTarget.ApplyJangseungContactProtection(set.Attack.InstanceId, .2f);
                 }
             }
             if (!IsTouchingBoundary(target, current, set)) set.TouchingTargetIds.Remove(target.RuntimeId);
@@ -446,15 +580,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     WeaponId.JangseungWard,
                     WeaponVisualPartIndex.Jangseung.Impact +
                     WeaponVisualPartIndex.Jangseung.ImpactFrameCount / 2);
-                var visual = new GameObject("Jangseung Evolved Guardian Burst");
-                visual.transform.SetParent(context.PresentationRoot, false);
-                visual.transform.position = new Vector3(set.DesiredCenter.X, set.DesiredCenter.Y, 0f);
-                visual.transform.localScale = ScaleSpriteToWorldSize(guardianBurst, 1.25f, 1.25f);
-                var renderer = visual.AddComponent<SpriteRenderer>();
-                renderer.sprite = guardianBurst;
-                renderer.color = new Color(1f, .90f, .52f, .86f);
-                renderer.sortingOrder = context.SortingOrder + 3;
-                set.EvolvedCompletionVisual = visual;
+                transientVisuals?.Play(guardianBurst,
+                    new Vector3(set.DesiredCenter.X, set.DesiredCenter.Y, 0f),
+                    Quaternion.identity, ScaleSpriteToWorldSize(guardianBurst, 1.25f, 1.25f),
+                    new Color(.86f, .58f, .18f, .86f), .22f, context.SortingOrder + 3);
                 set.EvolvedCompletionPresented = true;
             }
         }
@@ -526,8 +655,26 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void Retire(WardSet set)
         {
             if (set.Retired) return;
+            for (var index = legacyPulses.Count - 1; index >= 0; index--)
+                if (legacyPulses[index].OwnerId == set.Attack.InstanceId)
+                {
+                    runtime.DamageService.RetireAttack(legacyPulses[index].Attack.InstanceId);
+                    legacyPulses.RemoveAt(index);
+                }
+            for (var index = legacySlams.Count - 1; index >= 0; index--)
+                if (legacySlams[index].OwnerId == set.Attack.InstanceId)
+                {
+                    runtime.DamageService.RetireAttack(legacySlams[index].Attack.InstanceId);
+                    legacySlams.RemoveAt(index);
+                }
             foreach (var targetId in set.StatusTargetIds)
-                if (runtime.Targets.TryGet(targetId, out var target) && target is IJangseungWardStatusTarget status) status.RemoveJangseungWard(set.Attack.InstanceId);
+                if (runtime.Targets.TryGet(targetId, out var target))
+                {
+                    if (target is IJangseungWardStatusTarget status)
+                        status.RemoveJangseungWard(set.Attack.InstanceId);
+                    if (target is IJangseungContactDamageTarget protectedTarget)
+                        protectedTarget.RemoveJangseungContactProtection(set.Attack.InstanceId);
+                }
             runtime.DamageService.RetireAttack(set.Attack.InstanceId);
             if (set.RotatingAttack != null) runtime.DamageService.RetireAttack(set.RotatingAttack.InstanceId);
             if (set.GuardianAttack != null) runtime.DamageService.RetireAttack(set.GuardianAttack.InstanceId);
@@ -554,6 +701,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             return length <= maximum || length < 0.0001f ? target : new Float2(current.X + x * maximum / length, current.Y + y * maximum / length);
         }
         private static Float2 Lerp(Float2 left, Float2 right, float t) => new Float2(Mathf.Lerp(left.X, right.X, t), Mathf.Lerp(left.Y, right.Y, t));
+        private static float DistanceSquared(Float2 left, Float2 right)
+        {
+            var x = left.X - right.X; var y = left.Y - right.Y;
+            return x * x + y * y;
+        }
         private static Float2 OutwardDirection(Segment segment, Float2 previous, Float2 current)
         {
             var x = segment.End.X - segment.Start.X; var y = segment.End.Y - segment.Start.Y;
@@ -640,11 +792,32 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public bool PotentialCreatedThisTick { get; set; }
             public bool EvolvedCompletionPresented { get; set; }
             public GameObject EvolvedCompletionVisual { get; set; }
+            public bool LegacyCompletionStarted { get; set; }
             public void ActivateNextPost()
             {
                 if (Posts.Count < PostCount) Posts.Add(CardinalPost(DesiredCenter, Radius, CardinalIndex(PostCount, Posts.Count)));
             }
             private static int CardinalIndex(int count, int index) => count == 2 ? index * 2 : index;
+        }
+
+        private struct LegacyPulse
+        {
+            public LegacyPulse(int ownerId, AttackInstance attack, Float2 center, float remaining,
+                int ordinal)
+            { OwnerId = ownerId; Attack = attack; Center = center; Remaining = remaining;
+                Ordinal = ordinal; }
+            public int OwnerId; public AttackInstance Attack; public Float2 Center;
+            public float Remaining; public int Ordinal;
+        }
+
+        private struct LegacySlam
+        {
+            public LegacySlam(int ownerId, AttackInstance attack, Float2 center, float remaining,
+                float multiplier)
+            { OwnerId = ownerId; Attack = attack; Center = center; Remaining = remaining;
+                Multiplier = multiplier; }
+            public int OwnerId; public AttackInstance Attack; public Float2 Center;
+            public float Remaining; public float Multiplier;
         }
     }
 }

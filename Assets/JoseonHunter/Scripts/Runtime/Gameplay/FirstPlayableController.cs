@@ -390,6 +390,7 @@ namespace JoseonHunter.Runtime.Gameplay
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> jangseungWardSources = new Dictionary<int, float>();
+            private readonly Dictionary<int, float> jangseungContactProtectionSources = new Dictionary<int, float>();
             private readonly List<int> statusSourceScratch = new List<int>();
             private float slowDecayRemaining;
             private float slowDecayStartMultiplier = 1f;
@@ -414,6 +415,23 @@ namespace JoseonHunter.Runtime.Gameplay
             public void ApplyJangseungWard(int sourceId, float strength) => jangseungWardSources[sourceId] = Mathf.Clamp01(strength);
 
             public void RemoveJangseungWard(int sourceId) => jangseungWardSources.Remove(sourceId);
+
+            public void ApplyJangseungContactProtection(int sourceId, float reduction) =>
+                jangseungContactProtectionSources[sourceId] = Mathf.Clamp01(reduction);
+
+            public void RemoveJangseungContactProtection(int sourceId) =>
+                jangseungContactProtectionSources.Remove(sourceId);
+
+            public float ContactDamageMultiplier
+            {
+                get
+                {
+                    var multiplier = 1f;
+                    foreach (var source in jangseungContactProtectionSources)
+                        multiplier = Mathf.Min(multiplier, 1f - source.Value);
+                    return multiplier;
+                }
+            }
 
             public void ApplyStagger(float durationSeconds)
             {
@@ -465,6 +483,7 @@ namespace JoseonHunter.Runtime.Gameplay
         }
 
         private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget, IJangseungWardStatusTarget,
+            IJangseungContactDamageTarget,
             IControlStatusTarget
         {
             private readonly FirstPlayableController owner;
@@ -516,6 +535,10 @@ namespace JoseonHunter.Runtime.Gameplay
             public void ApplyFreeze(int sourceId, float durationSeconds) => state.ApplyFreeze(sourceId, durationSeconds);
             public void ApplyJangseungWard(int sourceId, float strength) => state.ApplyJangseungWard(sourceId, strength);
             public void RemoveJangseungWard(int sourceId) => state.RemoveJangseungWard(sourceId);
+            public void ApplyJangseungContactProtection(int sourceId, float reduction) =>
+                state.ApplyJangseungContactProtection(sourceId, reduction);
+            public void RemoveJangseungContactProtection(int sourceId) =>
+                state.RemoveJangseungContactProtection(sourceId);
             public void ApplyStagger(float durationSeconds) => state.ApplyStagger(durationSeconds);
         }
 
@@ -1338,7 +1361,8 @@ namespace JoseonHunter.Runtime.Gameplay
                     if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
                         contactInvulnerability <= 0f)
                     {
-                        playerHealth = Mathf.Max(0f, playerHealth - enemy.ContactDamage);
+                        playerHealth = Mathf.Max(0f, playerHealth -
+                            enemy.ContactDamage * enemy.ContactDamageMultiplier);
                         UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
                         contactInvulnerability = 0.55f;
                         StartCoroutine(FlashPlayer());

@@ -38,6 +38,19 @@ namespace JoseonHunter.Runtime.Combat.Weapons.Presentation
             entry.Play(ownerId, sprite, contact, sortingOrder);
         }
 
+        public int ActiveSilhouetteCountForTests
+        {
+            get
+            {
+                var count = 0;
+                foreach (var entry in entries) if (entry.Active) count++;
+                return count;
+            }
+        }
+        public bool UsesCroppedGuardianPartsForTests => false;
+        public int ActivePaletteColorCountForTests => ActiveSilhouetteCountForTests == 0 ? 0 : 3;
+        public bool UsesWhiteOutlineForTests => false;
+
         public void Tick(float deltaTime)
         {
             if (disposed) return;
