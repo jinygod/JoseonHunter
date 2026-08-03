@@ -33,7 +33,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             projectiles = new LinearProjectileExecutor(runtime);
-            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds));
+            var splitDamage = modifiers.Legacy.Is(WeaponLegacyPathId.GakgungSplitFletching) ? .75f : 1f;
+            var sunCadence = modifiers.Legacy.Is(WeaponLegacyPathId.GakgungSunPiercer) ? 1.25f : 1f;
+            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage) * splitDamage);
+            CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds) * sunCadence);
             Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Speed = Mathf.Max(0.01f, modifiers.ScaleSpeed(speed)); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
             IsEvolved = evolved;
             runtime.DamageService.DamageConfirmed += OnDamageConfirmed;
@@ -86,7 +89,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 foreach (var splitTarget in targets)
                 {
                     if (splitTarget == null || !splitTarget.IsAlive || splitTarget.HurtMask == null || !PixelMaskContactService.TryFindContact(child.Mask, PixelMaskTransform.Translation(child.Position.X, child.Position.Y), splitTarget.HurtMask, splitTarget.HurtMaskTransform, out var contact)) continue;
-                    hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack, WeaponId.GakgungShot, splitTarget, Mathf.CeilToInt(BaseDamage * .45f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                    hit = runtime.DamageService.TryApply(WeaponDamageRequest.Create(child.Attack,
+                        WeaponId.GakgungShot, splitTarget, Mathf.CeilToInt(BaseDamage * .45f), false,
+                        contact, ContactPhase.PotentialChain, context.SimulationTick, true,
+                        WeaponHitTrait.Pierce, child.Position), out _);
                     if (hit) break;
                 }
                 if (!hit && child.RemainingRange > 0f) { splitArrows[index] = child; continue; }
@@ -153,32 +159,44 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var targetDelta = new Float2(target.WorldPosition.X - context.OwnerPosition.X, target.WorldPosition.Y - context.OwnerPosition.Y);
             var targetDistance = Mathf.Sqrt(targetDelta.X * targetDelta.X + targetDelta.Y * targetDelta.Y);
             shotSequence++;
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.GakgungSplitFletching))
+            {
+                LaunchSplitLegacyVolley(context, direction, targetDistance, target);
+                return;
+            }
+            var sunLegacy = Potentials.Legacy.Is(WeaponLegacyPathId.GakgungSunPiercer);
             var sunPiercer = IsEvolved && shotSequence % 4 == 0;
-            var impacts = sunPiercer ? 8 : (Level == 5 ? 3 : 1);
+            var impacts = sunPiercer ? 8 : sunLegacy ? 4 : (Level == 5 ? 3 : 1);
             var damage = Mathf.CeilToInt(BaseDamage * (sunPiercer ? 3f : 1f));
             var scale = Mathf.Clamp(sunPiercer ? 1.08f : 1f, .72f, 1.08f);
             var speed = sunPiercer ? Speed * 0.7f : Speed;
             LastSelectedTargetRuntimeId = target.RuntimeId;
-            LastLaunchCount = Level == 5 ? 3 : 1;
+            LastLaunchCount = sunLegacy ? 1 : Level == 5 ? 3 : 1;
             LastProjectileMaximumImpacts = impacts;
             LastProjectileScale = scale;
-            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer, true, targetDistance, target);
-            if (Level != 5) return;
+            LaunchArrow(context, direction, 0f, impacts, damage, speed, scale, sunPiercer || sunLegacy,
+                true, targetDistance, target, sunLegacy ? .15f : 0f,
+                sunLegacy && Potentials.Legacy.Stage == WeaponLegacyStage.Completed ? 1.3f : 1f);
+            if (Level != 5 || sunLegacy) return;
             LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
             LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
             LastProjectileScale = scale;
         }
 
-        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts, int damage, float speed, float scale, bool allowExtendedImpacts, bool primary, float targetDistance, ICombatTarget target)
+        private void LaunchArrow(in WeaponExecutionContext context, Float2 direction, float degrees, int impacts,
+            int damage, float speed, float scale, bool allowExtendedImpacts, bool primary,
+            float targetDistance, ICombatTarget target, float damagePerImpactBonus = 0f,
+            float bossDamageMultiplier = 1f)
         {
             var shotDirection = Rotate(direction, degrees);
             PixelHitMask drawMask = null;
             var fullDraw = primary && Potentials.HasPotential(WeaponPotentialId.GakgungFullDraw) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungFullDraw, out _, out drawMask);
-            var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+            var attack = new AttackInstance(runtime.AllocateAttackInstanceId(),
+                impacts > 1 ? RepeatHitPolicy.OncePerPhase : RepeatHitPolicy.OncePerInstance, 0f);
 #if UNITY_INCLUDE_TESTS
             if (!primary) levelFiveSideArrowAttackIdsForTests.Add(attack.InstanceId);
 #endif
-            if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range);
+            if (primary) primaryArrows[attack.InstanceId] = new ArrowInfo(context.OwnerPosition, Range, impacts);
             projectiles.Launch(context, new LinearProjectileSpec(
                 attack, WeaponId.GakgungShot,
                 context.OwnerPosition, shotDirection, speed, Range / speed, damage, impacts, "Gakgung Arrow", scale,
@@ -187,12 +205,38 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                  0.28f,
                  WeaponVisualPartIndex.Gakgung.Projectile,
                  WeaponVisualPartIndex.Gakgung.ProjectileFrameCount,
-                 .05f));
+                 .05f,
+                 WeaponHitTrait.Pierce,
+                 damagePerImpactBonus,
+                 bossDamageMultiplier));
+        }
+
+        private void LaunchSplitLegacyVolley(in WeaponExecutionContext context, Float2 direction,
+            float targetDistance, ICombatTarget target)
+        {
+            var completedBurst = Potentials.Legacy.Stage == WeaponLegacyStage.Completed && shotSequence % 4 == 0;
+            var count = completedBurst ? 7 : Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced ? 5 : 3;
+            var sideMultiplier = completedBurst ? .55f : Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced
+                ? .6f
+                : .7f;
+            LastSelectedTargetRuntimeId = target.RuntimeId;
+            LastLaunchCount = count;
+            LastProjectileMaximumImpacts = 1;
+            LastProjectileScale = 1f;
+            var middle = count / 2;
+            for (var index = 0; index < count; index++)
+            {
+                var offset = (index - middle) * 9f;
+                var multiplier = index == middle && !completedBurst ? 1f : sideMultiplier;
+                LaunchArrow(context, direction, offset, 1, Mathf.CeilToInt(BaseDamage * multiplier),
+                    Speed, 1f, false, index == middle, targetDistance, target);
+            }
         }
 
         private void OnDamageConfirmed(ConfirmedDamageEvent damage)
         {
             if (!damage.WeaponId.Equals(WeaponId.GakgungShot) || !primaryArrows.TryGetValue(damage.AttackInstanceId, out var arrow)) return;
+            arrow.ImpactCount++;
             var vectorFromLaunch = new Float2(
                 damage.ContactPoint.X - arrow.Start.X,
                 damage.ContactPoint.Y - arrow.Start.Y);
@@ -213,6 +257,16 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Color.white,
                 impactCue.ResolvedLifetime,
                 effectSortingOrder);
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.GakgungSunPiercer) &&
+                Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced &&
+                firstImpacts.Add(damage.AttackInstanceId))
+            {
+                runtime.AffixStatuses.ApplyTimedStatus(damage.TargetRuntimeId, CombatStatusKind.ArmorBreak,
+                    2.5f, 1, WeaponId.GakgungShot);
+            }
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.GakgungSunPiercer) &&
+                Potentials.Legacy.Stage == WeaponLegacyStage.Completed && arrow.ImpactCount >= arrow.MaxImpacts)
+                ResolveSunPiercerBlast(damage, arrow);
             if (Potentials.HasPotential(WeaponPotentialId.GakgungArmorBreakArrowhead) && firstImpacts.Add(damage.AttackInstanceId) &&
                 WeaponPotentialVisuals.TryGet(WeaponPotentialId.GakgungArmorBreakArrowhead, out _, out var armorMask) && runtime.Targets.TryGet(damage.TargetRuntimeId, out var armorTarget) && armorTarget != null && armorTarget.HurtMask != null &&
                 PixelMaskContactService.TryFindContact(armorMask, PixelMaskTransform.Translation(damage.ContactPoint.X, damage.ContactPoint.Y), armorTarget.HurtMask, armorTarget.HurtMaskTransform, out _))
@@ -257,7 +311,33 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var radians = degrees * Mathf.Deg2Rad; var cosine = Mathf.Cos(radians); var sine = Mathf.Sin(radians);
             return new Float2(value.X * cosine - value.Y * sine, value.X * sine + value.Y * cosine);
         }
-        private readonly struct ArrowInfo { public ArrowInfo(Float2 start, float range) { Start = start; Range = range; } public Float2 Start { get; } public float Range { get; } }
+        private void ResolveSunPiercerBlast(ConfirmedDamageEvent damage, ArrowInfo arrow)
+        {
+            var attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f);
+            runtime.Targets.CopyTo(targets);
+            foreach (var target in targets)
+            {
+                if (target == null || !target.IsAlive) continue;
+                var delta = new Float2(target.WorldPosition.X - damage.ContactPoint.X,
+                    target.WorldPosition.Y - damage.ContactPoint.Y);
+                if (delta.X * delta.X + delta.Y * delta.Y > 1f) continue;
+                runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.GakgungShot,
+                    target, Mathf.CeilToInt(BaseDamage * 1.8f), false, target.WorldPosition,
+                    ContactPhase.Blast, damage.SimulationTick, true,
+                    WeaponHitTrait.Explosion | WeaponHitTrait.Pierce, arrow.Start), out _);
+            }
+            runtime.DamageService.RetireAttack(attack.InstanceId);
+        }
+
+        private sealed class ArrowInfo
+        {
+            public ArrowInfo(Float2 start, float range, int maxImpacts)
+            { Start = start; Range = range; MaxImpacts = maxImpacts; }
+            public Float2 Start { get; }
+            public float Range { get; }
+            public int MaxImpacts { get; }
+            public int ImpactCount { get; set; }
+        }
         private struct SplitArrow { public SplitArrow(AttackInstance attack, Float2 position, Float2 direction, PixelHitMask mask, float range) { Attack = attack; Position = position; Direction = direction; Mask = mask; RemainingRange = range; Delay = .05f; } public AttackInstance Attack; public Float2 Position; public Float2 Direction; public PixelHitMask Mask; public float RemainingRange; public float Delay; }
     }
 }

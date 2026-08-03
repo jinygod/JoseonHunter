@@ -180,8 +180,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     {
                         damage = Mathf.CeilToInt(damage * (1f + .6f * FullDrawProgress(projectile, sample)));
                     }
+                    if (projectile.DamagePerImpactBonus > 0f)
+                        damage = Mathf.CeilToInt(damage * (1f + Mathf.Min(.6f,
+                            projectile.ImpactCount * projectile.DamagePerImpactBonus)));
+                    if (target.IsBoss) damage = Mathf.CeilToInt(damage * projectile.BossDamageMultiplier);
                     if (!runtime.DamageService.TryApply(
-                            WeaponDamageRequest.Create(projectile.Attack, projectile.WeaponId, target, damage, false, contact, ContactPhase.Direct, context.SimulationTick),
+                            WeaponDamageRequest.Create(projectile.Attack, projectile.WeaponId, target, damage, false,
+                                contact, ContactPhase.Direct, context.SimulationTick, true, projectile.Traits,
+                                projectile.Origin),
                             out _)) continue;
 #if UNITY_INCLUDE_TESTS
                     HasLastImpactContactForTests = true;
@@ -254,6 +260,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 Speed = spec.Speed; RemainingLifetime = spec.Lifetime; Damage = spec.Damage; MaxImpacts = spec.MaxImpacts;
                 Visual = visual; Mask = mask; Origin = spec.Position; InitialLifetime = spec.Lifetime; AllowedRange = spec.AllowedRange; BaseScale = visual.transform.localScale.x; FullDraw = spec.FullDraw; PotentialMask = spec.PotentialMask;
                 ArcAmplitude = spec.ArcAmplitude; Acceleration = spec.Acceleration;
+                Traits = spec.Traits;
+                DamagePerImpactBonus = spec.DamagePerImpactBonus;
+                BossDamageMultiplier = spec.BossDamageMultiplier;
                 VisualPartStart = spec.VisualPartStart; VisualFrameCount = spec.VisualFrameCount;
                 VisualFrameSeconds = spec.VisualFrameSeconds;
             }
@@ -274,6 +283,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float InitialLifetime { get; } public float AllowedRange { get; } public float BaseScale { get; } public bool FullDraw { get; } public PixelHitMask PotentialMask { get; }
             public float ArcAmplitude { get; }
             public float Acceleration { get; }
+            public WeaponHitTrait Traits { get; }
+            public float DamagePerImpactBonus { get; }
+            public float BossDamageMultiplier { get; }
             public int VisualPartStart { get; }
             public int VisualFrameCount { get; }
             public float VisualFrameSeconds { get; }
@@ -307,7 +319,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             float acceleration = 0f,
             int visualPartStart = 0,
             int visualFrameCount = 1,
-            float visualFrameSeconds = .05f)
+            float visualFrameSeconds = .05f,
+            WeaponHitTrait traits = WeaponHitTrait.None,
+            float damagePerImpactBonus = 0f,
+            float bossDamageMultiplier = 1f)
         {
             Attack = attack ?? throw new ArgumentNullException(nameof(attack));
             WeaponId = weaponId; Position = position; Direction = direction; Speed = Mathf.Max(0.01f, speed);
@@ -321,6 +336,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             VisualPartStart = Mathf.Max(0, visualPartStart);
             VisualFrameCount = Mathf.Max(1, visualFrameCount);
             VisualFrameSeconds = Mathf.Max(.01f, visualFrameSeconds);
+            Traits = traits;
+            DamagePerImpactBonus = Mathf.Max(0f, damagePerImpactBonus);
+            BossDamageMultiplier = Mathf.Max(0f, bossDamageMultiplier);
         }
         public AttackInstance Attack { get; }
         public WeaponId WeaponId { get; }
@@ -338,5 +356,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int VisualPartStart { get; }
         public int VisualFrameCount { get; }
         public float VisualFrameSeconds { get; }
+        public WeaponHitTrait Traits { get; }
+        public float DamagePerImpactBonus { get; }
+        public float BossDamageMultiplier { get; }
     }
 }

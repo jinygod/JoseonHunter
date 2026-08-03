@@ -18,6 +18,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<ICombatTarget> targetBuffer = new List<ICombatTarget>();
         private readonly Stack<GameObject> pool = new Stack<GameObject>();
         private readonly Dictionary<Sprite, PixelHitMask> masksBySprite = new Dictionary<Sprite, PixelHitMask>();
+        private readonly Dictionary<int, float> venomRemaining = new Dictionary<int, float>();
+        private readonly List<int> venomTargetIds = new List<int>();
         private WeaponTransientVisualPool transientVisuals;
         private Transform transientVisualRoot;
         private float cooldown;
@@ -30,10 +32,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public FlyingBladeExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            Reconfigure(modifiers.ScaleDamage(baseDamage), modifiers.ScaleCooldown(cooldownSeconds), modifiers.ScaleArea(range), modifiers.ScaleSpeed(speed), bladeCount);
+            var legacyDamage = modifiers.Legacy.Is(WeaponLegacyPathId.HwandoVenom) ? .8f : 1f;
+            var legacyCooldown = modifiers.Legacy.Is(WeaponLegacyPathId.HwandoMoonEclipse) ? 1.2f : 1f;
+            Reconfigure(modifiers.ScaleDamage(baseDamage) * legacyDamage,
+                modifiers.ScaleCooldown(cooldownSeconds) * legacyCooldown,
+                modifiers.ScaleArea(range), modifiers.ScaleSpeed(speed), bladeCount);
             Level = Mathf.Max(1, level);
             Potentials = modifiers;
             IsEvolved = evolved;
+            runtime.DamageService.DamageConfirmed += OnDamageConfirmed;
         }
 
         public void Reconfigure(float baseDamage, float cooldownSeconds, float range, float speed, int bladeCount)
@@ -57,6 +64,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int PooledBladeCount => pool.Count;
         public int LastVolleyLaunchCount { get; private set; }
         public int ReturnedToPoolCount { get; private set; }
+        public int LastSelectedTargetRuntimeId { get; private set; }
 #if UNITY_INCLUDE_TESTS
         public int PendingAfterimageCountForTests => afterimages.Count;
         public Float2 FirstActivePositionForTests => active.Count > 0 ? active[0].Position : default;
@@ -75,6 +83,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
         {
+            TickVenomTargets(deltaTime);
             EnsureTransientVisuals(context.PresentationRoot);
             transientVisuals?.Tick(deltaTime);
             cooldown -= deltaTime;
@@ -113,7 +122,10 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (shadow.Delay > 0f) continue;
                 if (runtime.Targets.TryGet(shadow.TargetRuntimeId, out var resolvedTarget) && resolvedTarget != null && resolvedTarget.IsAlive && resolvedTarget.HurtMask != null &&
                     PixelMaskContactService.TryFindContact(shadow.Mask, PixelMaskTransform.Translation(shadow.Contact.X, shadow.Contact.Y), resolvedTarget.HurtMask, resolvedTarget.HurtMaskTransform, out var contact))
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(shadow.Attack, WeaponId.HwandoFlyingBlade, resolvedTarget, Mathf.CeilToInt(BaseDamage * .55f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(shadow.Attack, WeaponId.HwandoFlyingBlade,
+                        resolvedTarget, Mathf.CeilToInt(BaseDamage * shadow.DamageMultiplier), false, contact,
+                        ContactPhase.PotentialChain, context.SimulationTick, true, WeaponHitTrait.Slash,
+                        shadow.Contact), out _);
                 runtime.DamageService.RetireAttack(shadow.Attack.InstanceId); afterimages.RemoveAt(index);
             }
 
@@ -130,8 +142,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var afterimage in afterimages) runtime.DamageService.RetireAttack(afterimage.Attack.InstanceId);
             afterimages.Clear();
             moonCasts.Clear();
+            venomRemaining.Clear();
+            venomTargetIds.Clear();
             cooldown = 0f;
             MaximumDistanceFromLaunch = 0f;
+            LastSelectedTargetRuntimeId = 0;
             transientVisuals?.Dispose();
             transientVisuals = null;
             transientVisualRoot = null;
@@ -139,6 +154,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Dispose()
         {
+            runtime.DamageService.DamageConfirmed -= OnDamageConfirmed;
             Reset();
             while (pool.Count > 0)
             {
@@ -154,36 +170,55 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private bool TryFindTarget(Float2 owner, out ICombatTarget target)
         {
             target = null;
-            var bestDistanceSquared = Range * Range;
+            var rangeSquared = Range * Range;
+            var bestDistanceSquared = rangeSquared;
+            ICombatTarget poisonedTarget = null;
+            var poisonedDistanceSquared = rangeSquared;
+            var completedVenom = Potentials.Legacy.Is(WeaponLegacyPathId.HwandoVenom) &&
+                                 Potentials.Legacy.Stage == WeaponLegacyStage.Completed;
             runtime.Targets.CopyTo(targetBuffer);
             foreach (var candidate in targetBuffer)
             {
                 if (candidate == null || !candidate.IsAlive) continue;
                 var delta = Subtract(candidate.WorldPosition, owner);
                 var distanceSquared = delta.X * delta.X + delta.Y * delta.Y;
-                if (distanceSquared > bestDistanceSquared) continue;
-                bestDistanceSquared = distanceSquared;
-                target = candidate;
+                if (distanceSquared > rangeSquared) continue;
+                if (completedVenom && runtime.AffixStatuses.HasStatus(candidate.RuntimeId,
+                        CombatStatusKind.Poison) && distanceSquared <= poisonedDistanceSquared)
+                {
+                    poisonedDistanceSquared = distanceSquared;
+                    poisonedTarget = candidate;
+                }
+                if (distanceSquared <= bestDistanceSquared)
+                {
+                    bestDistanceSquared = distanceSquared;
+                    target = candidate;
+                }
             }
+            if (poisonedTarget != null) target = poisonedTarget;
             return target != null;
         }
 
         private void LaunchVolley(in WeaponExecutionContext context, ICombatTarget target)
         {
+            LastSelectedTargetRuntimeId = target.RuntimeId;
             var launch = context.OwnerPosition;
             var toTarget = Subtract(target.WorldPosition, launch);
             var targetDistance = Mathf.Sqrt(toTarget.X * toTarget.X + toTarget.Y * toTarget.Y);
             var direction = targetDistance > 0.001f ? new Float2(toTarget.X / targetDistance, toTarget.Y / targetDistance) : new Float2(1f, 0f);
+            var completedMoon = Potentials.Legacy.Is(WeaponLegacyPathId.HwandoMoonEclipse) &&
+                                Potentials.Legacy.Stage == WeaponLegacyStage.Completed;
             var count = IsEvolved ? 4 : BladeCount;
-            var cast = IsEvolved ? new MoonCast() : null;
+            var cast = IsEvolved || completedMoon ? new MoonCast() : null;
             var castHits = new HashSet<int>();
             LastVolleyLaunchCount = count;
             for (var index = 0; index < count; index++)
             {
-                var radialDirection = IsEvolved ? Rotate(direction, index * 90f) : direction;
-                var distance = IsEvolved ? Range : Mathf.Min(Range, targetDistance);
+                var radialDirection = IsEvolved ? Rotate(direction, index * 90f) :
+                    completedMoon ? Rotate(direction, index * (360f / count)) : direction;
+                var distance = IsEvolved || completedMoon ? Range : Mathf.Min(Range, targetDistance);
                 var endpoint = new Float2(launch.X + radialDirection.X * distance, launch.Y + radialDirection.Y * distance);
-                var stagger = IsEvolved ? 0f : index * 0.1f;
+                var stagger = IsEvolved || completedMoon ? 0f : index * 0.1f;
                 var visual = Acquire(context);
                 visual.transform.position = new Vector3(launch.X, launch.Y, 0f);
                 var arcSign = count > 1 && (index & 1) != 0 ? -1f : 1f;
@@ -302,15 +337,23 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveMoonBlast(Float2 crossing, in WeaponExecutionContext context)
         {
-            var blast = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+            var blast = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f);
             var blastTransform = PixelMaskTransform.Translation(crossing.X, crossing.Y);
             runtime.Targets.CopyTo(targetBuffer);
             foreach (var target in targetBuffer)
             {
                 if (target == null || !target.IsAlive || target.HurtMask == null) continue;
-                if (!PixelMaskContactService.TryFindContact(runtime.BladeMask, blastTransform, target.HurtMask, target.HurtMaskTransform, out var contact)) continue;
+                var legacyMoon = Potentials.Legacy.Is(WeaponLegacyPathId.HwandoMoonEclipse);
+                var delta = Subtract(target.WorldPosition, crossing);
+                var insideLegacyBlast = legacyMoon && delta.X * delta.X + delta.Y * delta.Y <= 1.25f * 1.25f;
+                if (!insideLegacyBlast && !PixelMaskContactService.TryFindContact(runtime.BladeMask,
+                        blastTransform, target.HurtMask, target.HurtMaskTransform, out _)) continue;
+                var contact = insideLegacyBlast ? target.WorldPosition : crossing;
                 runtime.DamageService.TryApply(
-                    WeaponDamageRequest.Create(blast, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Blast, context.SimulationTick),
+                    WeaponDamageRequest.Create(blast, WeaponId.HwandoFlyingBlade, target,
+                        Mathf.CeilToInt(BaseDamage * (Potentials.Legacy.Is(WeaponLegacyPathId.HwandoMoonEclipse) ? 2.2f : 1f)),
+                        false, contact, ContactPhase.Blast, context.SimulationTick, true,
+                        WeaponHitTrait.Explosion, crossing),
                     out _);
             }
             runtime.DamageService.RetireAttack(blast.InstanceId);
@@ -328,10 +371,28 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     PixelMaskContactService.TryFindContact(danceMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _);
                 var ramp = danceContact ? 1f + Mathf.Min(.60f, blade.CastHits.Count * .15f) : 1f;
                 if (!runtime.DamageService.TryApply(
-                        WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target, Mathf.CeilToInt(BaseDamage * ramp), false, contact, phase, context.SimulationTick),
+                        WeaponDamageRequest.Create(blade.Attack, WeaponId.HwandoFlyingBlade, target,
+                            Mathf.CeilToInt(BaseDamage * ramp), false, contact, phase,
+                            context.SimulationTick, true, WeaponHitTrait.Slash, blade.Start),
                         out _)) continue;
                 SpawnImpact(context, contact);
                 if (danceContact) blade.CastHits.Add(target.RuntimeId);
+                if (Potentials.Legacy.Is(WeaponLegacyPathId.HwandoVenom))
+                {
+                    var poison = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f);
+                    runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(
+                        WeaponId.HwandoFlyingBlade, target.RuntimeId, contact,
+                        Mathf.CeilToInt(BaseDamage * .20f), 8, poison, true, ContactPhase.Poison));
+                    venomRemaining[target.RuntimeId] = 4f;
+                }
+                if (blade.Inbound && Potentials.Legacy.Is(WeaponLegacyPathId.HwandoMoonEclipse))
+                {
+                    var count = Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced ? 2 : 1;
+                    for (var shadowIndex = 0; shadowIndex < count; shadowIndex++)
+                        afterimages.Add(new Afterimage(
+                            new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f),
+                            target.RuntimeId, contact, blade.Mask, .7f, .12f + shadowIndex * .08f));
+                }
                 if (Potentials.HasPotential(WeaponPotentialId.HwandoVenomFang) && WeaponPotentialVisuals.TryGet(WeaponPotentialId.HwandoVenomFang, out _, out var venomMask) &&
                     PixelMaskContactService.TryFindContact(venomMask, PixelMaskTransform.Translation(contact.X, contact.Y), target.HurtMask, target.HurtMaskTransform, out _))
                 {
@@ -341,7 +402,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
                 if (blade.Inbound && Potentials.HasPotential(WeaponPotentialId.HwandoReturningAfterimage) &&
                     WeaponPotentialVisuals.TryGet(WeaponPotentialId.HwandoReturningAfterimage, out _, out var shadowMask))
-                    afterimages.Add(new Afterimage(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), target.RuntimeId, contact, shadowMask));
+                    afterimages.Add(new Afterimage(new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), target.RuntimeId, contact, shadowMask, .55f, .12f));
             }
         }
 
@@ -380,6 +441,56 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             trail.localScale = Vector3.one;
             visual.SetActive(true);
             return visual;
+        }
+
+        private void OnDamageConfirmed(ConfirmedDamageEvent damage)
+        {
+            if (!Potentials.Legacy.Is(WeaponLegacyPathId.HwandoVenom) ||
+                !venomRemaining.TryGetValue(damage.TargetRuntimeId, out var remaining) ||
+                !runtime.Targets.TryGet(damage.TargetRuntimeId, out var defeated) || defeated == null ||
+                defeated.IsAlive) return;
+            venomRemaining.Remove(damage.TargetRuntimeId);
+            runtime.Targets.CopyTo(targetBuffer);
+            var transferred = 0;
+            while (transferred < 3)
+            {
+                ICombatTarget nearest = null;
+                var nearestDistance = float.MaxValue;
+                foreach (var candidate in targetBuffer)
+                {
+                    if (candidate == null || !candidate.IsAlive || candidate.RuntimeId == damage.TargetRuntimeId ||
+                        venomRemaining.ContainsKey(candidate.RuntimeId)) continue;
+                    var delta = Subtract(candidate.WorldPosition, defeated.WorldPosition);
+                    var distance = delta.X * delta.X + delta.Y * delta.Y;
+                    if (distance >= nearestDistance) continue;
+                    nearest = candidate;
+                    nearestDistance = distance;
+                }
+                if (nearest == null) break;
+                var ticks = Mathf.Max(1, Mathf.CeilToInt(remaining / .5f));
+                var poison = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f);
+                if (runtime.AffixStatuses.ApplyOrRefreshPeriodic(new PeriodicEffectRequest(
+                        WeaponId.HwandoFlyingBlade, nearest.RuntimeId, nearest.WorldPosition,
+                        Mathf.CeilToInt(BaseDamage * .20f), ticks, poison, true, ContactPhase.Poison)))
+                {
+                    venomRemaining[nearest.RuntimeId] = remaining;
+                    transferred++;
+                }
+                else break;
+            }
+        }
+
+        private void TickVenomTargets(float deltaTime)
+        {
+            if (venomRemaining.Count == 0 || deltaTime <= 0f) return;
+            venomTargetIds.Clear();
+            foreach (var pair in venomRemaining) venomTargetIds.Add(pair.Key);
+            foreach (var targetId in venomTargetIds)
+            {
+                var remaining = venomRemaining[targetId] - deltaTime;
+                if (remaining <= 0f) venomRemaining.Remove(targetId);
+                else venomRemaining[targetId] = remaining;
+            }
         }
 
         private void SpawnImpact(in WeaponExecutionContext context, Float2 contact)
@@ -552,8 +663,13 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private sealed class Afterimage
         {
-            public Afterimage(AttackInstance attack, int targetRuntimeId, Float2 contact, PixelHitMask mask) { Attack = attack; TargetRuntimeId = targetRuntimeId; Contact = contact; Mask = mask; Delay = .12f; }
-            public AttackInstance Attack { get; } public int TargetRuntimeId { get; } public Float2 Contact { get; } public PixelHitMask Mask { get; } public float Delay { get; set; }
+            public Afterimage(AttackInstance attack, int targetRuntimeId, Float2 contact, PixelHitMask mask,
+                float damageMultiplier, float delay)
+            { Attack = attack; TargetRuntimeId = targetRuntimeId; Contact = contact; Mask = mask;
+                DamageMultiplier = damageMultiplier; Delay = delay; }
+            public AttackInstance Attack { get; } public int TargetRuntimeId { get; }
+            public Float2 Contact { get; } public PixelHitMask Mask { get; }
+            public float DamageMultiplier { get; } public float Delay { get; set; }
         }
 
         private sealed class MoonCast
