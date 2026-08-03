@@ -54,6 +54,9 @@ namespace JoseonHunter.Runtime.Combat
             public float NextReactionTime;
             public float ReactionCooldownRemaining;
             public float SealVulnerabilityRemaining;
+            public float FrostVulnerabilityRemaining;
+            public float FrostContactWindowRemaining;
+            public byte FrostContactCount;
         }
 
         public WeaponAffixStatusService(CombatTargetRegistry targets, CombatDamageService damage)
@@ -91,6 +94,37 @@ namespace JoseonHunter.Runtime.Combat
             if (!timedStatuses.TryGetValue(targetId, out var state))
                 timedStatuses.Add(targetId, state = new TargetStatusState());
             state.SealVulnerabilityRemaining = Math.Max(state.SealVulnerabilityRemaining, duration);
+            return true;
+        }
+
+        public bool ApplyFrostVulnerability(int targetId, float duration)
+        {
+            if (!IsFinite(duration) || duration <= 0f || !TryGetLiveTarget(targetId, out _)) return false;
+            if (!timedStatuses.TryGetValue(targetId, out var state))
+                timedStatuses.Add(targetId, state = new TargetStatusState());
+            state.FrostVulnerabilityRemaining = Math.Max(state.FrostVulnerabilityRemaining, duration);
+            return true;
+        }
+
+        public bool RecordFrostContact(int targetId, WeaponId source, float windowSeconds = 2f,
+            float freezeSeconds = 1.2f)
+        {
+            if (!IsFinite(windowSeconds) || windowSeconds <= 0f || !IsFinite(freezeSeconds) ||
+                freezeSeconds <= 0f || !TryGetLiveTarget(targetId, out _)) return false;
+            if (!timedStatuses.TryGetValue(targetId, out var state))
+                timedStatuses.Add(targetId, state = new TargetStatusState());
+            if (state.FrostContactWindowRemaining <= 0f) state.FrostContactCount = 0;
+            state.FrostContactWindowRemaining = windowSeconds;
+            state.FrostContactCount++;
+            if (state.FrostContactCount < 3) return false;
+            state.FrostContactCount = 0;
+            return ApplyTimedStatus(targetId, CombatStatusKind.Freeze, freezeSeconds, 1, source);
+        }
+
+        public bool TryConsumeStatus(int targetId, CombatStatusKind kind)
+        {
+            if (!timedStatuses.TryGetValue(targetId, out var state) || !Active(state, kind)) return false;
+            Consume(state, kind);
             return true;
         }
 
@@ -180,6 +214,7 @@ namespace JoseonHunter.Runtime.Combat
             if (!timedStatuses.TryGetValue(targetRuntimeId, out var state)) return multiplier;
             if (Active(state, CombatStatusKind.ArmorBreak)) multiplier = Math.Max(multiplier, 1.25f);
             if (state.SealVulnerabilityRemaining > 0f) multiplier = Math.Max(multiplier, 1.15f);
+            if (state.FrostVulnerabilityRemaining > 0f) multiplier = Math.Max(multiplier, 1.10f);
             return multiplier;
         }
 
@@ -333,6 +368,12 @@ namespace JoseonHunter.Runtime.Combat
                 state.SealVulnerabilityRemaining = Math.Max(0f,
                     state.SealVulnerabilityRemaining - deltaTime);
                 if (state.SealVulnerabilityRemaining > 0f) any = true;
+                state.FrostVulnerabilityRemaining = Math.Max(0f,
+                    state.FrostVulnerabilityRemaining - deltaTime);
+                state.FrostContactWindowRemaining = Math.Max(0f,
+                    state.FrostContactWindowRemaining - deltaTime);
+                if (state.FrostVulnerabilityRemaining > 0f ||
+                    state.FrostContactWindowRemaining > 0f) any = true;
                 for (var index = 0; index < state.Remaining.Length; index++)
                 {
                     if (state.Remaining[index] <= 0f) continue;

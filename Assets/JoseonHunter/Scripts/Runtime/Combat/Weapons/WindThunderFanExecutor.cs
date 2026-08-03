@@ -34,6 +34,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private float inboundPauseRemaining;
         private Float2 lightningDirection;
         private readonly List<Bleed> bleeds = new List<Bleed>();
+        private readonly List<VacuumPulse> vacuumPulses = new List<VacuumPulse>();
+        private readonly List<HeavenStrike> heavenStrikes = new List<HeavenStrike>();
         private PendingChain pendingChain;
         private Float2 castOrigin;
 #if UNITY_INCLUDE_TESTS
@@ -46,13 +48,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public WindThunderFanExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float knockback, int markedTargetCap, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Potentials = modifiers;
-            Knockback = Mathf.Max(0f, knockback); MarkedTargetCap = Mathf.Max(1, markedTargetCap); Level = Mathf.Clamp(level, 1, 5);
+            LegacySourceDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); BaseDamage = LegacySourceDamage; CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range)); Potentials = modifiers;
+            Knockback = Mathf.Max(0f, knockback) * (modifiers.Legacy.Is(WeaponLegacyPathId.FanVacuum) ? 1.5f : modifiers.Legacy.Is(WeaponLegacyPathId.FanHeavenThunder) ? 0f : 1f); MarkedTargetCap = Mathf.Max(1, markedTargetCap); Level = Mathf.Clamp(level, 1, 5);
             IsEvolved = evolved;
             State = WindThunderFanState.Complete;
         }
 
         public float BaseDamage { get; }
+        private float LegacySourceDamage { get; }
         public float CooldownSeconds { get; }
         public float Range { get; }
         public float Knockback { get; }
@@ -68,6 +71,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public IReadOnlyList<int> LastSuccessfulOutboundTargetIds => successfulOutboundTargetIds;
         public IReadOnlyList<float> LastOutboundStrikeTimes => outboundStrikeTimes;
 #if UNITY_INCLUDE_TESTS
+        public float LegacyLightningDamageMultiplierForTests => Potentials.Legacy.Is(WeaponLegacyPathId.FanVacuum) ? .7f : 1f;
+        public float LegacyPullMultiplierForTests => Potentials.Legacy.Is(WeaponLegacyPathId.FanVacuum) ? 1.5f : 0f;
+        public int MaximumBleedStacksForTests { get; private set; }
+        public int MaximumVacuumTargetsQueriedForTests { get; private set; }
+        public int LastHeavenThunderBounceCountForTests { get; private set; }
         public IReadOnlyList<float> LightningPresentationTimesForTests => lightningPresentationTimes;
         public IReadOnlyList<int> GustPresentationPartsForTests => gustPresentationPartsForTests;
         public IReadOnlyList<int> WindMarkPresentationPartsForTests => windMarkPresentationPartsForTests;
@@ -86,7 +94,18 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             AdvancePendingVisuals(step, context);
             AdvanceBleeds(step, context);
             AdvancePotentialChain(step, context);
+            AdvanceVacuumPulses(step, context);
+            AdvanceHeavenStrikes(step, context);
             cooldown -= step;
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.FanHeavenThunder))
+            {
+                if (cooldown <= 0f && heavenStrikes.Count == 0 && HasLegalTarget()
+#if UNITY_INCLUDE_TESTS
+                    && !SuppressNewCastsForTests
+#endif
+                    ) StartHeavenThunder(context.OwnerPosition);
+                return;
+            }
             if (State == WindThunderFanState.Complete && cooldown <= 0f && HasLegalTarget()
 #if UNITY_INCLUDE_TESTS
                 && !SuppressNewCastsForTests
@@ -114,11 +133,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         {
             if (attack != null) runtime.DamageService.RetireAttack(attack.InstanceId);
             foreach (var bleed in bleeds) runtime.DamageService.RetireAttack(bleed.Attack.InstanceId);
+            foreach (var pulse in vacuumPulses) runtime.DamageService.RetireAttack(pulse.Attack.InstanceId);
+            foreach (var strike in heavenStrikes) runtime.DamageService.RetireAttack(strike.Attack.InstanceId);
             if (pendingChain.Attack != null) runtime.DamageService.RetireAttack(pendingChain.Attack.InstanceId);
-            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); lightningPresentationTimes.Clear(); pendingVisuals.Clear(); bleeds.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
+            attack = null; marked.Clear(); successfulOutboundTargetIds.Clear(); successfulOutboundTargetIdSet.Clear(); outboundStrikeTimes.Clear(); lightningPresentationTimes.Clear(); pendingVisuals.Clear(); bleeds.Clear(); vacuumPulses.Clear(); heavenStrikes.Clear(); pendingChain = default; outboundElapsed = 0f; inboundPauseRemaining = 0f; strikeDueIn = LightningStrikeInterval; cooldown = 0f; State = WindThunderFanState.Complete;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0; LastLightningSimulationTick = -1;
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
 #if UNITY_INCLUDE_TESTS
+            MaximumBleedStacksForTests = 0; MaximumVacuumTargetsQueriedForTests = 0; LastHeavenThunderBounceCountForTests = 0;
             gustPresentationPartsForTests.Clear(); windMarkPresentationPartsForTests.Clear();
             outboundLightningPresentationPartsForTests.Clear(); inboundPresentationPartsForTests.Clear();
 #endif
@@ -137,6 +159,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             gustIndex = 0; lightningIndex = 0; strikeDueIn = LightningStrikeInterval; outboundElapsed = 0f; inboundPauseRemaining = 0f;
             LastWindContactCount = 0; LastLightningContactCount = 0; LastInboundContactCount = 0;
             attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerPhase, 0f);
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.FanVacuum) && Potentials.Legacy.Stage == WeaponLegacyStage.Completed)
+                for (var index = 0; index < 3; index++) vacuumPulses.Add(new VacuumPulse(.15f + index * .2f,
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f)));
             State = WindThunderFanState.WindActive;
         }
 
@@ -153,12 +178,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (marked.Count >= MarkedTargetCap || target == null || !target.IsAlive || marked.Contains(target)) continue;
                 if (!IsInsideCone(context.OwnerPosition, direction, target.WorldPosition) || !TryGustContact(target, out var contact)) continue;
                 // Push is intentionally issued before the confirmed wind damage, so an echo cannot precede the visible gust response.
-                target.ApplyKnockback(direction, Knockback);
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Wind, context.SimulationTick), out _))
+                var vacuum = Potentials.Legacy.Is(WeaponLegacyPathId.FanVacuum);
+                target.ApplyKnockback(vacuum ? new Float2(-direction.X, -direction.Y) : direction, Knockback);
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage), false, contact, ContactPhase.Wind, context.SimulationTick,
+                    traits: vacuum ? WeaponHitTrait.Wind | WeaponHitTrait.Pull : WeaponHitTrait.Wind, attackOrigin: castOrigin), out _))
                 {
                     marked.Add(target); LastWindContactCount++;
                     PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount, false, .62f, PresentationSequenceKind.WindMark);
                     if (Potentials.HasPotential(WeaponPotentialId.FanVacuumEdge) && TryPotentialContact(WeaponPotentialId.FanVacuumEdge, target, contact)) RefreshBleed(target, contact);
+                    if (vacuum) AddVacuumBleed(target, contact, context);
                 }
             }
             gustIndex++;
@@ -176,8 +204,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             {
                 if (target == null || !target.IsAlive || !TryGustContact(target, out var contact)) continue;
                 var multiplier = LightningMultiplier(target, contact, false);
-                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * multiplier), false, contact, ContactPhase.Lightning, context.SimulationTick), out _))
+                var vacuum = Potentials.Legacy.Is(WeaponLegacyPathId.FanVacuum);
+                if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * (1f + Level * 0.1f) * multiplier * (vacuum ? .7f : 1f)), false, contact, ContactPhase.Lightning, context.SimulationTick,
+                    traits: vacuum ? WeaponHitTrait.Explosion | WeaponHitTrait.Pull : WeaponHitTrait.Explosion, attackOrigin: castOrigin), out _))
                 {
+                    runtime.AffixStatuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.Shock, 2f, 1, WeaponId.WindThunderFan);
                     LastLightningContactCount++;
                     lightningPresentationTimes.Add(0f);
                     PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f, PresentationSequenceKind.OutboundLightning);
@@ -463,6 +494,23 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             for (var i = bleeds.Count - 1; i >= 0; i--)
             {
                 var bleed = bleeds[i]; bleed.Elapsed += step;
+                if (Potentials.Legacy.Is(WeaponLegacyPathId.FanVacuum) && bleed.Stacks > 0)
+                {
+                    bleed.RemainingSeconds -= step;
+                    while (bleed.Elapsed + .00001f >= .5f && bleed.RemainingSeconds > 0f)
+                    {
+                        bleed.Elapsed -= .5f;
+                        if (!runtime.Targets.TryGet(bleed.TargetId, out var vacuumTarget) || vacuumTarget == null || !vacuumTarget.IsAlive)
+                        { bleed.RemainingSeconds = 0f; break; }
+                        runtime.DamageService.TryApply(WeaponDamageRequest.Create(bleed.Attack, WeaponId.WindThunderFan,
+                            vacuumTarget, Mathf.CeilToInt(LegacySourceDamage * .15f * bleed.Stacks), false,
+                            bleed.Contact, ContactPhase.Bleed, context.SimulationTick, traits: WeaponHitTrait.Wind), out _);
+                    }
+                    if (bleed.RemainingSeconds <= 0f)
+                    { runtime.DamageService.RetireAttack(bleed.Attack.InstanceId); bleeds.RemoveAt(i); }
+                    else bleeds[i] = bleed;
+                    continue;
+                }
                 while (bleed.Elapsed + .00001f >= .4f && bleed.Remaining > 0)
                 {
                     bleed.Elapsed -= .4f; if (!runtime.Targets.TryGet(bleed.TargetId, out var target) || target == null || !target.IsAlive) { bleed.Remaining = 0; break; }
@@ -470,6 +518,108 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 }
                 if (bleed.Remaining <= 0) { runtime.DamageService.RetireAttack(bleed.Attack.InstanceId); bleeds.RemoveAt(i); } else bleeds[i] = bleed;
             }
+        }
+
+        private void AddVacuumBleed(ICombatTarget target, Float2 contact, in WeaponExecutionContext context)
+        {
+            var found = -1;
+            for (var index = 0; index < bleeds.Count; index++) if (bleeds[index].TargetId == target.RuntimeId) { found = index; break; }
+            Bleed bleed;
+            if (found >= 0) bleed = bleeds[found];
+            else bleed = new Bleed { TargetId = target.RuntimeId, Contact = contact, Attack = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.TimedTicks, .5f) };
+            bleed.Stacks = Mathf.Min(3, bleed.Stacks + 1); bleed.RemainingSeconds = 2f; bleed.Elapsed = 0f; bleed.Contact = contact;
+#if UNITY_INCLUDE_TESTS
+            MaximumBleedStacksForTests = Mathf.Max(MaximumBleedStacksForTests, bleed.Stacks);
+#endif
+            runtime.AffixStatuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.Bleed, 2f, bleed.Stacks, WeaponId.WindThunderFan);
+            if (found >= 0) bleeds[found] = bleed; else bleeds.Add(bleed);
+            if (bleed.Stacks < 3 || Potentials.Legacy.Stage < WeaponLegacyStage.Reinforced) return;
+            var rupture = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+            runtime.DamageService.TryApply(WeaponDamageRequest.Create(rupture, WeaponId.WindThunderFan, target,
+                Mathf.CeilToInt(LegacySourceDamage), false, contact, ContactPhase.PotentialBlast, context.SimulationTick,
+                traits: WeaponHitTrait.Wind | WeaponHitTrait.Pull, attackOrigin: castOrigin), out _);
+            runtime.DamageService.RetireAttack(rupture.InstanceId);
+        }
+
+        private void AdvanceVacuumPulses(float step, in WeaponExecutionContext context)
+        {
+            for (var index = vacuumPulses.Count - 1; index >= 0; index--)
+            {
+                var pulse = vacuumPulses[index]; pulse.Remaining -= step;
+                if (pulse.Remaining > .00001f) { vacuumPulses[index] = pulse; continue; }
+                runtime.Targets.CopyTo(targets);
+                targets.Sort((left, right) => CompareDanger(castOrigin, left, right));
+                var queried = Mathf.Min(8, targets.Count);
+#if UNITY_INCLUDE_TESTS
+                MaximumVacuumTargetsQueriedForTests = Mathf.Max(MaximumVacuumTargetsQueriedForTests, queried);
+#endif
+                for (var targetIndex = 0; targetIndex < queried; targetIndex++)
+                {
+                    var target = targets[targetIndex];
+                    if (target == null || !target.IsAlive || DistanceSquared(castOrigin, target.WorldPosition) > Range * Range) continue;
+                    var dx = castOrigin.X - target.WorldPosition.X; var dy = castOrigin.Y - target.WorldPosition.Y;
+                    var length = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (length > .0001f) target.ApplyKnockback(new Float2(dx / length, dy / length), Knockback * .35f);
+                    AddVacuumBleed(target, target.WorldPosition, context);
+                }
+                runtime.DamageService.RetireAttack(pulse.Attack.InstanceId);
+                vacuumPulses.RemoveAt(index);
+            }
+        }
+
+        private void StartHeavenThunder(Float2 origin)
+        {
+            castOrigin = origin; cooldown = CooldownSeconds;
+            runtime.Targets.CopyTo(targets);
+            targets.RemoveAll(target => target == null || !target.IsAlive || DistanceSquared(origin, target.WorldPosition) > Range * Range);
+            targets.Sort((left, right) => CompareDanger(origin, left, right));
+            var cap = Potentials.Legacy.Stage == WeaponLegacyStage.Completed ? 7 : 4;
+            var count = Mathf.Min(cap, targets.Count);
+#if UNITY_INCLUDE_TESTS
+            LastHeavenThunderBounceCountForTests = count;
+#endif
+            for (var index = 0; index < count; index++)
+                heavenStrikes.Add(new HeavenStrike(targets[index].RuntimeId, .05f + index * LightningStrikeInterval,
+                    LegacySourceDamage * .7f, ContactPhase.PotentialChain, WeaponHitTrait.Explosion,
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), false));
+            if (Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced && count > 0)
+                heavenStrikes.Add(new HeavenStrike(targets[0].RuntimeId, .08f + count * LightningStrikeInterval,
+                    LegacySourceDamage * .8f, ContactPhase.Inbound, WeaponHitTrait.Explosion,
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), false));
+            if (Potentials.Legacy.Stage == WeaponLegacyStage.Completed && count > 0)
+                heavenStrikes.Add(new HeavenStrike(targets[0].RuntimeId, .16f + count * LightningStrikeInterval,
+                    LegacySourceDamage * 2f, ContactPhase.Blast, WeaponHitTrait.Explosion,
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f), true));
+        }
+
+        private void AdvanceHeavenStrikes(float step, in WeaponExecutionContext context)
+        {
+            for (var index = heavenStrikes.Count - 1; index >= 0; index--)
+            {
+                var strike = heavenStrikes[index]; strike.Remaining -= step;
+                if (strike.Remaining > .00001f) { heavenStrikes[index] = strike; continue; }
+                if (runtime.Targets.TryGet(strike.TargetId, out var center) && center != null && center.IsAlive)
+                {
+                    if (strike.IsBlast)
+                    {
+                        runtime.Targets.CopyTo(targets);
+                        foreach (var target in targets)
+                            if (target != null && target.IsAlive && DistanceSquared(center.WorldPosition, target.WorldPosition) <= 2.25f)
+                                ApplyHeavenStrike(strike, target, center.WorldPosition, context);
+                    }
+                    else ApplyHeavenStrike(strike, center, center.WorldPosition, context);
+                }
+                runtime.DamageService.RetireAttack(strike.Attack.InstanceId);
+                heavenStrikes.RemoveAt(index);
+            }
+        }
+
+        private void ApplyHeavenStrike(HeavenStrike strike, ICombatTarget target, Float2 origin, in WeaponExecutionContext context)
+        {
+            if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(strike.Attack, WeaponId.WindThunderFan, target,
+                Mathf.CeilToInt(strike.Damage), false, target.WorldPosition, strike.Phase, context.SimulationTick,
+                traits: strike.Traits, attackOrigin: origin), out _))
+                runtime.AffixStatuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.Shock, 2f, 1, WeaponId.WindThunderFan);
         }
         private void ScheduleChain(ICombatTarget killed)
         {
@@ -482,7 +632,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             if (runtime.Targets.TryGet(pendingChain.TargetId, out var target) && target != null && target.IsAlive && target.HurtMask != null && WeaponPotentialVisuals.TryGet(WeaponPotentialId.FanReturningChain, out _, out var mask) && PixelMaskContactService.TryFindContact(mask, PixelMaskTransform.Translation(target.WorldPosition.X, target.WorldPosition.Y), target.HurtMask, target.HurtMaskTransform, out var contact)) runtime.DamageService.TryApply(WeaponDamageRequest.Create(pendingChain.Attack, WeaponId.WindThunderFan, target, Mathf.CeilToInt(BaseDamage * .5f), false, contact, ContactPhase.PotentialChain, context.SimulationTick), out _);
             runtime.DamageService.RetireAttack(pendingChain.Attack.InstanceId); pendingChain = default;
         }
-        private struct Bleed { public int TargetId; public Float2 Contact; public int Remaining; public float Elapsed; public AttackInstance Attack; }
+        private struct Bleed { public int TargetId; public Float2 Contact; public int Remaining; public float RemainingSeconds; public int Stacks; public float Elapsed; public AttackInstance Attack; }
+        private struct VacuumPulse { public VacuumPulse(float remaining, AttackInstance attack) { Remaining = remaining; Attack = attack; } public float Remaining; public AttackInstance Attack; }
+        private struct HeavenStrike { public HeavenStrike(int targetId, float remaining, float damage, ContactPhase phase, WeaponHitTrait traits, AttackInstance attack, bool isBlast) { TargetId = targetId; Remaining = remaining; Damage = damage; Phase = phase; Traits = traits; Attack = attack; IsBlast = isBlast; } public int TargetId; public float Remaining; public float Damage; public ContactPhase Phase; public WeaponHitTrait Traits; public AttackInstance Attack; public bool IsBlast; }
         private struct PendingChain { public bool Scheduled; public float Remaining; public int TargetId; public AttackInstance Attack; }
         private enum PresentationSequenceKind { Gust, WindMark, OutboundLightning, Inbound }
         private struct PendingVisual

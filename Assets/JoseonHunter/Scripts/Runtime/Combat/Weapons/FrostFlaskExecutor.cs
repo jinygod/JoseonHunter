@@ -27,6 +27,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private readonly List<ICombatTarget> targets = new List<ICombatTarget>();
         private readonly List<Field> fields = new List<Field>();
         private readonly List<SpreadResidence> spreadResidences = new List<SpreadResidence>();
+        private readonly List<FrostBloom> legacyBlooms = new List<FrostBloom>();
         private readonly PixelHitMask diskMask = CreateDiskMask();
         private readonly PixelHitMask spikeMask = CreateSpikeMask();
         private WeaponTransientVisualPool transientVisuals;
@@ -36,13 +37,17 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public FrostFlaskExecutor(WeaponRuntimeController runtime, float baseDamage, float cooldownSeconds, float range, float lobDuration, float duration, float radius, int fieldCapacity, int level, bool evolved = false, WeaponRuntimeModifiers modifiers = default, float slowFraction = .5f)
         {
             this.runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            BaseDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage)); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range));
-            LobDuration = Mathf.Max(0.01f, modifiers.ScaleDuration(lobDuration)); Duration = Mathf.Max(0.01f, modifiers.ScaleDuration(duration)); Radius = Mathf.Max(0.01f, modifiers.ScaleArea(radius)); FieldCapacity = Mathf.Clamp(fieldCapacity, 1, MaximumFields); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
-            SlowFraction = Mathf.Clamp01(slowFraction);
+            LegacySourceDamage = Mathf.Max(1f, modifiers.ScaleDamage(baseDamage));
+            var mist = modifiers.Legacy.Is(WeaponLegacyPathId.FrostMist);
+            var shatter = modifiers.Legacy.Is(WeaponLegacyPathId.FrostShatter);
+            BaseDamage = LegacySourceDamage * (mist ? .65f : 1f); CooldownSeconds = Mathf.Max(0.01f, modifiers.ScaleCooldown(cooldownSeconds)); Range = Mathf.Max(0.01f, modifiers.ScaleArea(range));
+            LobDuration = Mathf.Max(0.01f, modifiers.ScaleDuration(lobDuration)); Duration = Mathf.Max(0.01f, modifiers.ScaleDuration(duration) * (shatter ? .5f : 1f)); Radius = Mathf.Max(0.01f, modifiers.ScaleArea(radius) * (mist ? 1.35f : 1f)); FieldCapacity = Mathf.Clamp(fieldCapacity, 1, MaximumFields); Level = Mathf.Clamp(level, 1, 5); Potentials = modifiers;
+            SlowFraction = Mathf.Clamp01(mist ? .45f : slowFraction);
             IsEvolved = evolved;
         }
 
         public float BaseDamage { get; }
+        private float LegacySourceDamage { get; }
         public float CooldownSeconds { get; }
         public float Range { get; }
         public float LobDuration { get; }
@@ -60,6 +65,9 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool AllStoredTargetsResolvedOnce { get; private set; }
         public float LastFieldVisualScale { get; private set; } = 1f;
 #if UNITY_INCLUDE_TESTS
+        public float LegacyLandingDamageForTests => Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? LegacySourceDamage * 1.5f : BaseDamage;
+        public int CompletedBloomCountForTests { get; private set; }
+        public int LastLegacyShatterTargetCountForTests { get; private set; }
         public int FirstVisualPartIndexForTests => fields.Count == 0 ? -1 : fields[0].VisualPartIndex;
         public int ConfirmedStoredShatterVisualCountForTests { get; private set; }
         public Float2 LastConfirmedStoredShatterPositionForTests { get; private set; }
@@ -75,6 +83,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             transientVisuals?.Tick(step);
             cooldown -= step;
             AdvanceSpreadResidences(step);
+            AdvanceLegacyBlooms(step, context);
             if (cooldown <= 0f
 #if UNITY_INCLUDE_TESTS
                 && !SuppressNewCastsForTests
@@ -106,10 +115,14 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             foreach (var field in fields) { CleanupFieldStatus(field); Retire(field); }
             foreach (var spread in spreadResidences) if (runtime.Targets.TryGet(spread.TargetId, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(spread.SourceId, SlowDecaySeconds);
             spreadResidences.Clear();
+            foreach (var bloom in legacyBlooms) runtime.DamageService.RetireAttack(bloom.Attack.InstanceId);
+            legacyBlooms.Clear();
             fields.Clear(); cooldown = 0f; ExpiredFieldCount = 0;
             LastStoredFrozenTargetCount = 0; LastResolvedStoredTargetCount = 0; AllStoredTargetsResolvedOnce = false;
             LastFieldVisualScale = 1f;
 #if UNITY_INCLUDE_TESTS
+            CompletedBloomCountForTests = 0;
+            LastLegacyShatterTargetCountForTests = 0;
             ConfirmedStoredShatterVisualCountForTests = 0;
             LastConfirmedStoredShatterPositionForTests = default;
 #endif
@@ -133,6 +146,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     LastFieldVisualScale = .65f;
                     UpdateFieldVisual(field, context, .65f);
                     ResolveLandingBurst(field, context);
+                    if (Potentials.Legacy.Is(WeaponLegacyPathId.FrostMist) && Potentials.Legacy.Stage == WeaponLegacyStage.Completed)
+                        ScheduleLegacyBlooms(field.Landing);
                     PlayLandingFragments(field, context);
                 }
                 return;
@@ -175,8 +190,11 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         if (IsEvolved) field.StoredFrozen.Add(target.RuntimeId);
                     }
                 }
-                if (field.ActiveAge + 0.0001f >= field.NextDamageAge)
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage * .5f), false, contact, ContactPhase.Tick, context.SimulationTick), out _);
+                if (field.ActiveAge + 0.0001f >= field.NextDamageAge &&
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage * .5f), false, contact, ContactPhase.Tick, context.SimulationTick,
+                        traits: Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? WeaponHitTrait.None : WeaponHitTrait.Explosion,
+                        attackOrigin: field.Landing), out _))
+                    RecordLegacyFrostHit(target);
             }
             foreach (var previous in field.Inside)
                 if (!inside.Contains(previous) && runtime.Targets.TryGet(previous, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
@@ -229,6 +247,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         private void ResolveLandingBurst(Field field, in WeaponExecutionContext context)
         {
+            if (Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter))
+                ResolveLegacyShatter(field.Landing, context);
             var burst = new AttackInstance(
                 runtime.AllocateAttackInstanceId(),
                 RepeatHitPolicy.OncePerInstance,
@@ -248,19 +268,96 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         target.HurtMask,
                         target.HurtMaskTransform,
                         out var contact)) continue;
-                runtime.DamageService.TryApply(
+                if (runtime.DamageService.TryApply(
                     WeaponDamageRequest.Create(
                         burst,
                         WeaponId.FrostFlask,
                         target,
-                        Mathf.CeilToInt(BaseDamage),
+                        Mathf.CeilToInt(Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? LegacySourceDamage * 1.5f : BaseDamage),
                         false,
                         contact,
                         ContactPhase.Blast,
-                        context.SimulationTick),
-                    out _);
+                        context.SimulationTick,
+                        traits: Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? WeaponHitTrait.None : WeaponHitTrait.Explosion,
+                        attackOrigin: field.Landing),
+                    out _)) RecordLegacyFrostHit(target);
             }
             runtime.DamageService.RetireAttack(burst.InstanceId);
+        }
+
+        private void RecordLegacyFrostHit(ICombatTarget target)
+        {
+            if (!Potentials.Legacy.Is(WeaponLegacyPathId.FrostMist) || target == null) return;
+            var frozen = runtime.AffixStatuses.RecordFrostContact(target.RuntimeId, WeaponId.FrostFlask);
+            if (frozen && Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced)
+                runtime.AffixStatuses.ApplyFrostVulnerability(target.RuntimeId, 2f);
+        }
+
+        private void ScheduleLegacyBlooms(Float2 center)
+        {
+            for (var index = 0; index < 3; index++)
+                legacyBlooms.Add(new FrostBloom(center, .15f + index * .2f,
+                    new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f)));
+        }
+
+        private void AdvanceLegacyBlooms(float step, in WeaponExecutionContext context)
+        {
+            for (var index = legacyBlooms.Count - 1; index >= 0; index--)
+            {
+                var bloom = legacyBlooms[index];
+                bloom.Remaining -= step;
+                if (bloom.Remaining > .00001f) { legacyBlooms[index] = bloom; continue; }
+                runtime.Targets.CopyTo(targets);
+                foreach (var target in targets)
+                {
+                    if (target == null || !target.IsAlive || DistanceSquared(bloom.Center, target.WorldPosition) > Radius * Radius) continue;
+                    var contact = target.WorldPosition;
+                    if (runtime.DamageService.TryApply(WeaponDamageRequest.Create(bloom.Attack, WeaponId.FrostFlask, target,
+                        Mathf.RoundToInt(LegacySourceDamage * .6f), false, contact, ContactPhase.PotentialBlast,
+                        context.SimulationTick, traits: WeaponHitTrait.Explosion, attackOrigin: bloom.Center), out _))
+                        RecordLegacyFrostHit(target);
+                }
+                runtime.DamageService.RetireAttack(bloom.Attack.InstanceId);
+                legacyBlooms.RemoveAt(index);
+#if UNITY_INCLUDE_TESTS
+                CompletedBloomCountForTests++;
+#endif
+            }
+        }
+
+        private void ResolveLegacyShatter(Float2 center, in WeaponExecutionContext context)
+        {
+            runtime.Targets.CopyTo(targets);
+            targets.RemoveAll(target => target == null || !target.IsAlive ||
+                DistanceSquared(center, target.WorldPosition) > Radius * Radius ||
+                !runtime.AffixStatuses.HasStatus(target.RuntimeId, CombatStatusKind.Freeze));
+            targets.Sort((left, right) =>
+            {
+                var compared = DistanceSquared(center, left.WorldPosition).CompareTo(DistanceSquared(center, right.WorldPosition));
+                return compared != 0 ? compared : left.RuntimeId.CompareTo(right.RuntimeId);
+            });
+            var cap = Potentials.Legacy.Stage == WeaponLegacyStage.Completed ? 5 :
+                Potentials.Legacy.Stage >= WeaponLegacyStage.Reinforced ? 3 : 1;
+            var resolved = 0;
+            for (var index = 0; index < targets.Count && resolved < cap; index++)
+            {
+                var target = targets[index];
+                if (!runtime.AffixStatuses.TryConsumeStatus(target.RuntimeId, CombatStatusKind.Freeze)) continue;
+                var shatter = new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f);
+                runtime.DamageService.TryApply(WeaponDamageRequest.Create(shatter, WeaponId.FrostFlask, target,
+                    Mathf.CeilToInt(LegacySourceDamage * 1.8f), false, target.WorldPosition, ContactPhase.PotentialChain,
+                    context.SimulationTick, traits: WeaponHitTrait.Explosion, attackOrigin: center), out _);
+                runtime.DamageService.RetireAttack(shatter.InstanceId);
+                resolved++;
+            }
+#if UNITY_INCLUDE_TESTS
+            LastLegacyShatterTargetCountForTests = resolved;
+#endif
+        }
+
+        private static float DistanceSquared(Float2 left, Float2 right)
+        {
+            var x = left.X - right.X; var y = left.Y - right.Y; return x * x + y * y;
         }
 
         private bool TryFindCrowd(Float2 origin, out Float2 landing)
@@ -520,5 +617,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public int VisualPartIndex { get; set; } = WeaponVisualPartIndex.FrostFlask.Projectile;
         }
         private struct SpreadResidence { public SpreadResidence(int targetId, int sourceId, float remaining) { TargetId = targetId; SourceId = sourceId; Remaining = remaining; } public int TargetId; public int SourceId; public float Remaining; }
+        private struct FrostBloom { public FrostBloom(Float2 center, float remaining, AttackInstance attack) { Center = center; Remaining = remaining; Attack = attack; } public Float2 Center; public float Remaining; public AttackInstance Attack; }
     }
 }
