@@ -102,6 +102,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private float trailTimer;
         private float sealCooldown;
         private float magnetMessageTimer;
+        private float upgradeQueueGraceRemaining;
         private int experience;
         private int experienceToNext;
         private int level;
@@ -133,6 +134,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
         private const string BattlefieldPresentationResourcesPath = "Presentation/BattlefieldPresentationLibrary";
         private const float StartingPickupRadius = .58f;
+        private const float QueuedUpgradeGraceSeconds = 1f;
 
         /// <summary>Read-only combat event source for presentation components.</summary>
         public CombatDamageService CombatDamageService => combatDamageService;
@@ -733,6 +735,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
+            if (upgradeQueueGraceRemaining > 0f)
+            {
+                upgradeQueueGraceRemaining = Mathf.Max(0f,
+                    upgradeQueueGraceRemaining - Mathf.Max(0f, delta));
+                if (upgradeQueueGraceRemaining <= 0f && OpenNextPendingUpgrade())
+                    return;
+            }
+
             var previousElapsed = elapsed;
             elapsed = Mathf.Min(PrototypeDurationSeconds, elapsed + delta);
             contactInvulnerability = Mathf.Max(0f, contactInvulnerability - delta);
@@ -897,9 +907,10 @@ namespace JoseonHunter.Runtime.Gameplay
             trailTimer = 0f;
             sealCooldown = 0f;
             magnetMessageTimer = 0f;
+            upgradeQueueGraceRemaining = 0f;
             experience = 0;
-            experienceToNext = 8;
             level = 1;
+            experienceToNext = ExperienceCurve.GetThresholdForNextLevel(level);
             registeredWeaponIds.Clear();
             weaponMasks.Load(weaponCatalog);
             RegisterCatalogWeapons();
@@ -2002,15 +2013,22 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 experience -= experienceToNext;
                 level++;
-                experienceToNext = 7 + level * 4;
+                experienceToNext = ExperienceCurve.GetThresholdForNextLevel(level);
                 pendingUpgradeCount++;
             }
 
-            if (!upgradeOpen && !awaitingUpgradePresentationClose && pendingUpgradeCount > 0)
-            {
-                pendingUpgradeCount--;
-                OpenUpgrade();
-            }
+            if (!upgradeOpen && !awaitingUpgradePresentationClose && upgradeQueueGraceRemaining <= 0f)
+                OpenNextPendingUpgrade();
+        }
+
+        private bool OpenNextPendingUpgrade()
+        {
+            if (pendingUpgradeCount <= 0) return false;
+            pendingUpgradeCount--;
+            OpenUpgrade();
+            if (upgradeOpen) return true;
+            pendingUpgradeCount++;
+            return false;
         }
 
         private void RebuildWeaponExecutorsForLevel()
@@ -2215,11 +2233,12 @@ namespace JoseonHunter.Runtime.Gameplay
             awaitingUpgradePresentationClose = false;
             if (pendingUpgradeCount > 0)
             {
-                pendingUpgradeCount--;
-                OpenUpgrade();
+                if (!flow.TryTransition(GameFlowState.Playing)) return false;
+                upgradeQueueGraceRemaining = QueuedUpgradeGraceSeconds;
             }
             else
             {
+                upgradeQueueGraceRemaining = 0f;
                 flow.TryTransition(GameFlowState.Playing);
             }
 
@@ -2237,6 +2256,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 upgradeOpen = false;
                 awaitingUpgradePresentationClose = false;
+                upgradeQueueGraceRemaining = 0f;
                 pendingWeaponChoice = null;
                 upgradeOffers.Clear();
                 upgradeOfferData.Clear();

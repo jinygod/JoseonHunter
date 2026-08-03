@@ -48,7 +48,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Confirming_appraisal_opens_a_queued_level_without_resuming_gameplay()
+        public IEnumerator Confirming_appraisal_returns_to_combat_before_the_next_queued_level()
         {
             yield return LoadGameplay();
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
@@ -65,6 +65,13 @@ namespace JoseonHunter.Tests.PlayMode
             affix.Confirm();
             yield return new WaitForSecondsRealtime(.2f);
 
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+
+            controller.TickGameplayIfRunningForTests(.5f);
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            controller.TickGameplayIfRunningForTests(.51f);
             Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.LevelUpSelection));
             Assert.That(controller.IsUpgradeOpen, Is.True);
             Assert.That(Time.timeScale, Is.Zero);

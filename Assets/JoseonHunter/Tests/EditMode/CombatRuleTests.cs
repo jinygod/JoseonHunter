@@ -31,17 +31,21 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(clamped.FinalDamage, Is.EqualTo(1));
         }
 
-        [TestCase(1, 5)]
-        [TestCase(2, 8)]
-        [TestCase(3, 12)]
-        [TestCase(4, 18)]
-        [TestCase(5, 26)]
-        [TestCase(6, 36)]
-        [TestCase(7, 48)]
-        [TestCase(8, 62)]
-        public void ExperienceCurveUsesApprovedThresholds(int level, int expected)
+        [TestCase(1, 15)]
+        [TestCase(2, 24)]
+        [TestCase(5, 63)]
+        [TestCase(10, 168)]
+        [TestCase(22, 624)]
+        public void ExperienceCurveUsesScalableThresholds(int level, int expected)
         {
             Assert.That(ExperienceCurve.GetThresholdForNextLevel(level), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ExperienceCurveRejectsNonPositiveLevels()
+        {
+            Assert.Throws<System.ArgumentOutOfRangeException>(() =>
+                ExperienceCurve.GetThresholdForNextLevel(0));
         }
 
         [Test]

@@ -30,7 +30,6 @@
 
 **Interfaces:**
 - Produces: `ExperienceCurve.GetThresholdForNextLevel(int level) : int` for every positive level.
-- Produces: `FirstPlayableController.PendingUpgradeCountForTests : int` and `UpgradeQueueGraceRemainingForTests : float` under `UNITY_INCLUDE_TESTS`.
 - Consumes: existing `GameFlowCoordinator` transitions `AugmentResult -> Playing -> LevelUpSelection`.
 
 - [ ] **Step 1: Write failing curve tests**
@@ -80,7 +79,6 @@ After forcing one reward and adding enough experience for another level, confirm
 ```csharp
 Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
 Assert.That(controller.IsUpgradeOpen, Is.False);
-Assert.That(controller.UpgradeQueueGraceRemainingForTests, Is.GreaterThan(0f));
 controller.TickGameplayIfRunningForTests(.5f);
 Assert.That(controller.IsUpgradeOpen, Is.False);
 controller.TickGameplayIfRunningForTests(.51f);
