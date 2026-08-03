@@ -6,6 +6,31 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WaveSpawnDirectorTests
     {
+        [TestCase(20f, "plague_rat")]
+        [TestCase(46f, "vengeful_spirit")]
+        [TestCase(94f, "dokkaebi")]
+        public void IntroductionWindowsSelectOnlyTheNewNormalFamily(float elapsed, string expected)
+        {
+            var director = new WaveSpawnDirector(1701);
+
+            Assert.That(Enumerable.Range(0, 32).Select(_ => director.SelectNormal(elapsed)),
+                Is.All.EqualTo(expected));
+        }
+
+        [Test]
+        public void LearnedNormalFamiliesMixOnlyAtTheApprovedWeights()
+        {
+            Assert.That(WaveSchedule.NormalEntriesAt(60f)
+                    .Select(entry => (entry.ContentId, entry.Weight)),
+                Is.EqualTo(new[] { ("plague_rat", 60), ("vengeful_spirit", 40) }));
+            Assert.That(WaveSchedule.NormalEntriesAt(110f)
+                    .Select(entry => (entry.ContentId, entry.Weight)),
+                Is.EqualTo(new[] { ("plague_rat", 25), ("vengeful_spirit", 40), ("dokkaebi", 35) }));
+            Assert.That(WaveSchedule.NormalEntriesAt(145f)
+                    .Select(entry => (entry.ContentId, entry.Weight)),
+                Is.EqualTo(new[] { ("plague_rat", 20), ("vengeful_spirit", 40), ("dokkaebi", 40) }));
+        }
+
         [Test]
         public void SameSeedProducesSameNormalAndPackSequence()
         {

@@ -46,7 +46,16 @@ namespace JoseonHunter.Domain.Runs
 
         public string SelectNormal(RunPhase phase)
         {
-            var entries = WaveSchedule.For(phase).WeightedContent;
+            return SelectWeighted(WaveSchedule.For(phase).WeightedContent);
+        }
+
+        public string SelectNormal(float elapsedSeconds)
+        {
+            return SelectWeighted(WaveSchedule.NormalEntriesAt(elapsedSeconds));
+        }
+
+        private string SelectWeighted(System.Collections.Generic.IReadOnlyList<WeightedEnemyEntry> entries)
+        {
             if (entries.Count == 0) return string.Empty;
 
             var totalWeight = 0;

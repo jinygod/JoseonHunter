@@ -17,10 +17,11 @@ namespace JoseonHunter.Runtime.Gameplay
     public sealed class EnemyArchetypeProfile
     {
         private EnemyArchetypeProfile(EnemyArchetype archetype, string contentId, float healthMultiplier,
-            float speedMultiplier, float contactMultiplier)
+            float speedMultiplier, float contactMultiplier, float displayScaleMultiplier = 1f)
         {
             Archetype = archetype; ContentId = contentId; HealthMultiplier = healthMultiplier;
             SpeedMultiplier = speedMultiplier; ContactMultiplier = contactMultiplier;
+            DisplayScaleMultiplier = displayScaleMultiplier;
         }
 
         public EnemyArchetype Archetype { get; }
@@ -28,10 +29,14 @@ namespace JoseonHunter.Runtime.Gameplay
         public float HealthMultiplier { get; }
         public float SpeedMultiplier { get; }
         public float ContactMultiplier { get; }
+        public float DisplayScaleMultiplier { get; }
         public bool IsSpecial => Archetype != EnemyArchetype.Normal;
 
         public static EnemyArchetypeProfile ForContentId(string contentId) => contentId switch
         {
+            "plague_rat" => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId, .75f, 1.10f, .80f),
+            "vengeful_spirit" => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId, .55f, 1.65f, .75f),
+            "dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId, 2.60f, .55f, 1.35f, 1.15f),
             "shield_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.ShieldDokkaebi, contentId, 1.45f, .82f, 1.05f),
             "spirit_shaman" => new EnemyArchetypeProfile(EnemyArchetype.SpiritShaman, contentId, 1.15f, .78f, .9f),
             "charging_horn_ghost" => new EnemyArchetypeProfile(EnemyArchetype.ChargingHornGhost, contentId, 1.3f, .92f, 1.15f),

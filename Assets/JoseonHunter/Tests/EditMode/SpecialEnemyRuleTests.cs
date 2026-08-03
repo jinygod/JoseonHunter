@@ -8,6 +8,14 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class SpecialEnemyRuleTests
     {
         [Test]
+        public void NormalEnemyProfilesHaveDistinctReadableRoles()
+        {
+            AssertProfile("plague_rat", .75f, 1.10f, .80f, 1f);
+            AssertProfile("vengeful_spirit", .55f, 1.65f, .75f, 1f);
+            AssertProfile("dokkaebi", 2.60f, .55f, 1.35f, 1.15f);
+        }
+
+        [Test]
         public void ShieldOnlyResistsFrontDirectHits()
         {
             var shield = EnemyArchetypeProfile.ForContentId("shield_dokkaebi");
@@ -55,6 +63,17 @@ namespace JoseonHunter.Tests.EditMode
                 Vector2.zero, false, false, true, 99, 100);
             Assert.That(fallback.SplitChildren, Is.Zero);
             Assert.That(fallback.FallbackBlast, Is.True);
+        }
+
+        private static void AssertProfile(string contentId, float health, float speed, float contact,
+            float displayScale)
+        {
+            var profile = EnemyArchetypeProfile.ForContentId(contentId);
+            Assert.That(profile.HealthMultiplier, Is.EqualTo(health));
+            Assert.That(profile.SpeedMultiplier, Is.EqualTo(speed));
+            Assert.That(profile.ContactMultiplier, Is.EqualTo(contact));
+            Assert.That(profile.DisplayScaleMultiplier, Is.EqualTo(displayScale));
+            Assert.That(profile.IsSpecial, Is.False);
         }
     }
 }

@@ -85,34 +85,65 @@ namespace JoseonHunter.Domain.Runs
 
     public static class WaveSchedule
     {
+        private static readonly IReadOnlyList<WeightedEnemyEntry> EmptyEntries = Entries();
+        private static readonly IReadOnlyList<WeightedEnemyEntry> RatOnlyEntries =
+            Entries(("plague_rat", 100));
+        private static readonly IReadOnlyList<WeightedEnemyEntry> SpiritOnlyEntries =
+            Entries(("vengeful_spirit", 100));
+        private static readonly IReadOnlyList<WeightedEnemyEntry> RatSpiritEntries =
+            Entries(("plague_rat", 60), ("vengeful_spirit", 40));
+        private static readonly IReadOnlyList<WeightedEnemyEntry> DokkaebiOnlyEntries =
+            Entries(("dokkaebi", 100));
+        private static readonly IReadOnlyList<WeightedEnemyEntry> LearnedEntries =
+            Entries(("plague_rat", 25), ("vengeful_spirit", 40), ("dokkaebi", 35));
+        private static readonly IReadOnlyList<WeightedEnemyEntry> PeakEntries =
+            Entries(("plague_rat", 20), ("vengeful_spirit", 40), ("dokkaebi", 40));
+        private static readonly IReadOnlyList<WeightedEnemyEntry> BossEntries =
+            Entries(("fallen_general", 100));
+
+        private static readonly WaveDefinition EmptyDefinition = Definition(0, EmptyEntries);
+        private static readonly WaveDefinition WaveOneDefinition = Definition(72, RatOnlyEntries,
+            Pack(new[] { "plague_rat" }, 8, 12, 7f, 11f));
+        private static readonly WaveDefinition WaveTwoDefinition = Definition(104, RatSpiritEntries,
+            Pack(new[] { "vengeful_spirit" }, 10, 14, 10f, 14f),
+            new[] { "shield_dokkaebi", "spirit_shaman" }, 1);
+        private static readonly WaveDefinition WaveThreeDefinition = Definition(128, LearnedEntries,
+            Pack(new[] { "dokkaebi" }, 10, 16, 9f, 13f),
+            new[] { "charging_horn_ghost", "splitting_rat" }, 1);
+        private static readonly WaveDefinition PeakDefinition = Definition(140, PeakEntries,
+            Pack(new[] { "vengeful_spirit", "dokkaebi" }, 12, 18, 8f, 12f),
+            new[] { "shield_dokkaebi", "spirit_shaman", "charging_horn_ghost", "splitting_rat" }, 2);
+        private static readonly WaveDefinition BossDefinition = Definition(36, BossEntries);
+
         public static WaveDefinition For(RunPhase phase, bool normalWavesStopped) =>
-            normalWavesStopped ? Definition(0, Entries()) : For(phase);
+            normalWavesStopped ? EmptyDefinition : For(phase);
 
         public static WaveDefinition For(RunPhase phase, RunTick tick) =>
             For(phase, tick.NormalWavesStopped);
 
         public static WaveDefinition For(RunPhase phase) => phase switch
         {
-            RunPhase.WaveOne => Definition(72,
-                Entries(("plague_rat", 100)),
-                Pack(new[] { "plague_rat" }, 8, 12, 7f, 11f)),
-            RunPhase.WaveTwo => Definition(104,
-                Entries(("plague_rat", 65), ("vengeful_spirit", 35)),
-                Pack(new[] { "vengeful_spirit" }, 10, 14, 10f, 14f),
-                new[] { "shield_dokkaebi", "spirit_shaman" }, 1),
-            RunPhase.WaveThree => Definition(128,
-                Entries(("plague_rat", 20), ("vengeful_spirit", 45), ("sakkat_specter", 35)),
-                Pack(new[] { "vengeful_spirit", "sakkat_specter" }, 10, 16, 9f, 13f),
-                new[] { "charging_horn_ghost", "splitting_rat" }, 1),
-            RunPhase.Peak => Definition(140,
-                Entries(("sakkat_specter", 35), ("dokkaebi", 35), ("bandit", 30)),
-                Pack(new[] { "sakkat_specter", "dokkaebi", "bandit" }, 12, 18, 8f, 12f),
-                new[] { "shield_dokkaebi", "spirit_shaman", "charging_horn_ghost", "splitting_rat" }, 2),
-            RunPhase.BossWarning => Definition(36, Entries(("fallen_general", 100))),
-            RunPhase.Boss => Definition(36, Entries(("fallen_general", 100))),
-            RunPhase.Expired => Definition(0, Entries()),
+            RunPhase.WaveOne => WaveOneDefinition,
+            RunPhase.WaveTwo => WaveTwoDefinition,
+            RunPhase.WaveThree => WaveThreeDefinition,
+            RunPhase.Peak => PeakDefinition,
+            RunPhase.BossWarning => BossDefinition,
+            RunPhase.Boss => BossDefinition,
+            RunPhase.Expired => EmptyDefinition,
             _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null)
         };
+
+        public static IReadOnlyList<WeightedEnemyEntry> NormalEntriesAt(float elapsedSeconds)
+        {
+            if (float.IsNaN(elapsedSeconds) || float.IsInfinity(elapsedSeconds) || elapsedSeconds < 0f)
+                throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
+            if (elapsedSeconds < 45f) return RatOnlyEntries;
+            if (elapsedSeconds < 53f) return SpiritOnlyEntries;
+            if (elapsedSeconds < 90f) return RatSpiritEntries;
+            if (elapsedSeconds < 100f) return DokkaebiOnlyEntries;
+            if (elapsedSeconds < 135f) return LearnedEntries;
+            return PeakEntries;
+        }
 
         private static WaveDefinition Definition(
             int activeCap,
