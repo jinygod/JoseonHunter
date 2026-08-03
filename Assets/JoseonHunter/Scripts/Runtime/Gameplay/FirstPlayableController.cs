@@ -48,6 +48,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly HashSet<string> unlockedUpgradeIds = new HashSet<string>();
         private readonly HashSet<string> acquiredEvolutionIds = new HashSet<string>();
         private readonly HashSet<string> discardedWeaponIds = new HashSet<string>();
+        private readonly HashSet<string> seenSpecialEnemyGuides = new HashSet<string>(StringComparer.Ordinal);
         private readonly WeaponEvolutionState evolutionState = new WeaponEvolutionState();
         private readonly WeaponRunAffixState weaponAffixes = new WeaponRunAffixState();
         private readonly WeaponLegacyState weaponLegacyState = new WeaponLegacyState();
@@ -119,6 +120,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private string waveAnnouncement = string.Empty;
         private float waveAnnouncementTimer;
         private int waveAnnouncementIntensity;
+#if UNITY_INCLUDE_TESTS
+        public string LastSpecialEnemyGuideForTests { get; private set; } = string.Empty;
+        public int SpecialEnemyGuideCountForTests { get; private set; }
+#endif
 
         private const float PrototypeDurationSeconds = 180f;
         private const int RunSpawnSeed = 0x4A4F5345;
@@ -233,6 +238,20 @@ namespace JoseonHunter.Runtime.Gameplay
             enemies[enemies.Count - 1].Object.transform.position = position;
             return target;
         }
+        public ICombatTarget SpawnSpecialEnemyForTests(string contentId, Vector2 position)
+        {
+            SpawnEnemy(false, 0, contentId);
+            var state = enemies[enemies.Count - 1];
+            state.Object.transform.position = position;
+            state.Facing = player == null ? Vector2.left : ((Vector2)player.transform.position - position).normalized;
+            return state.CombatTarget;
+        }
+        public int LivingSpecialEnemyCountForTests => enemies.Count(enemy => enemy.Object != null &&
+            !enemy.IsTreasure && !enemy.IsBoss && !enemy.IsMidBoss && enemy.ArchetypeProfile != null &&
+            enemy.ArchetypeProfile.IsSpecial);
+        public int LivingNormalOnlyEnemyCountForTests => enemies.Count(enemy => enemy.Object != null &&
+            !enemy.IsTreasure && !enemy.IsBoss && !enemy.IsMidBoss && (enemy.ArchetypeProfile == null ||
+            !enemy.ArchetypeProfile.IsSpecial));
         public Vector2 LastSpawnPositionForTests { get; private set; }
         public Vector2 LastSpawnRootPositionForTests { get; private set; }
         public Bounds LastSpawnRendererBoundsForTests { get; private set; }
@@ -386,6 +405,11 @@ namespace JoseonHunter.Runtime.Gameplay
             public bool IsTreasure;
             public int ExperienceValue = 1;
             public string ContentId;
+            public EnemyArchetypeProfile ArchetypeProfile;
+            public SpecialEnemyMotionState SpecialMotion;
+            public Vector2 Facing = Vector2.left;
+            public float AuraRemaining;
+            public bool WasKnockedBack;
             public ICombatTarget CombatTarget;
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
@@ -454,6 +478,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
                 slowDecayRemaining = Mathf.Max(0f, slowDecayRemaining - delta);
                 staggerRemaining = Mathf.Max(0f, staggerRemaining - delta);
+                AuraRemaining = Mathf.Max(0f, AuraRemaining - delta);
             }
 
             public float MovementMultiplier
@@ -466,6 +491,9 @@ namespace JoseonHunter.Runtime.Gameplay
                     return slowDecayRemaining <= 0f ? 1f : Mathf.Lerp(1f, slowDecayStartMultiplier, slowDecayRemaining / 0.35f);
                 }
             }
+
+            public bool IsControlled => freezeSources.Count > 0 || staggerRemaining > 0f;
+            public float AuraMultiplier => AuraRemaining > 0f ? 1.2f : 1f;
 
             private float SlowMultiplier()
             {
@@ -484,7 +512,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private sealed class PrototypeCombatTarget : ICombatTarget, IFrostStatusTarget, IJangseungWardStatusTarget,
             IJangseungContactDamageTarget,
-            IControlStatusTarget
+            IControlStatusTarget, IIncomingDamageResistanceTarget
         {
             private readonly FirstPlayableController owner;
             private readonly EnemyState state;
@@ -529,6 +557,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     position.x + direction.X * inverseMagnitude * displacement,
                     position.y + direction.Y * inverseMagnitude * displacement,
                     position.z);
+                state.WasKnockedBack = true;
             }
             public void ApplyFrostSlow(int sourceId, float strength) => state.ApplyFrostSlow(sourceId, strength);
             public void RemoveFrostSlow(int sourceId, float decaySeconds) => state.RemoveFrostSlow(sourceId, decaySeconds);
@@ -540,6 +569,13 @@ namespace JoseonHunter.Runtime.Gameplay
             public void RemoveJangseungContactProtection(int sourceId) =>
                 state.RemoveJangseungContactProtection(sourceId);
             public void ApplyStagger(float durationSeconds) => state.ApplyStagger(durationSeconds);
+            public float IncomingDamageMultiplier(Float2 attackOrigin, WeaponHitTrait traits)
+            {
+                if (state.ArchetypeProfile == null || state.Object == null) return 1f;
+                var position = (Vector2)state.Object.transform.position;
+                var toOrigin = new Vector2(attackOrigin.X - position.x, attackOrigin.Y - position.y);
+                return state.ArchetypeProfile.IncomingDamageMultiplier(state.Facing, toOrigin, traits);
+            }
         }
 
         private enum PickupKind
@@ -755,6 +791,7 @@ namespace JoseonHunter.Runtime.Gameplay
             unlockedUpgradeIds.Clear();
             acquiredEvolutionIds.Clear();
             discardedWeaponIds.Clear();
+            seenSpecialEnemyGuides.Clear();
             weaponAffixes.Clear();
             weaponLegacyState.Clear();
             affixRollOrdinal = 0;
@@ -836,6 +873,8 @@ namespace JoseonHunter.Runtime.Gameplay
             MidBossSpawnCountForTests = 0;
             FinalBossSpawnCountForTests = 0;
             PackSpawnCountForTests = 0;
+            LastSpecialEnemyGuideForTests = string.Empty;
+            SpecialEnemyGuideCountForTests = 0;
 #endif
             RunReset?.Invoke();
         }
@@ -933,8 +972,24 @@ namespace JoseonHunter.Runtime.Gameplay
                  index < batchSize && activeEnemyCount < wave.ActiveCap;
                  index++)
             {
-                SpawnEnemy(false, 0, waveSpawnDirector.SelectNormal(phase));
+                CountLivingEnemyKinds(out var livingNormal, out var livingSpecial);
+                var contentId = waveSpawnDirector.TrySelectSpecial(phase, livingNormal, livingSpecial, out var specialId)
+                    ? specialId
+                    : waveSpawnDirector.SelectNormal(phase);
+                SpawnEnemy(false, 0, contentId);
                 activeEnemyCount++;
+            }
+        }
+
+        private void CountLivingEnemyKinds(out int normal, out int special)
+        {
+            normal = 0; special = 0;
+            for (var index = 0; index < enemies.Count; index++)
+            {
+                var enemy = enemies[index];
+                if (enemy.Object == null || enemy.IsTreasure || enemy.IsBoss || enemy.IsMidBoss) continue;
+                if (enemy.ArchetypeProfile != null && enemy.ArchetypeProfile.IsSpecial) special++;
+                else normal++;
             }
         }
 
@@ -1018,6 +1073,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 : isMidBoss ? "dokkaebi_captain" :
                 string.IsNullOrEmpty(normalContentId) ?
                     waveSpawnDirector.SelectNormal(RunClock.PhaseAt(elapsed)) : normalContentId;
+            var archetypeProfile = EnemyArchetypeProfile.ForContentId(resolvedContentId);
             var chosenSprite = isBoss
                 ? bossSprite
                 : (isMidBoss
@@ -1045,7 +1101,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var baseHealth = isBoss ? 680f :
                 isMidBoss ? (midBossTier >= 2 ? 320f : 180f) :
                 Mathf.Lerp(18f, 42f, elapsed / PrototypeDurationSeconds);
-            var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier;
+            var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier;
             var displayScale = isBoss
                 ? VisualScale.BossEnemyScale
                 : isMidBoss
@@ -1073,18 +1129,20 @@ namespace JoseonHunter.Runtime.Gameplay
                 MotionWeight = isBoss || isElite ? MotionWeight.Heavy : MotionWeight.Medium,
                 Health = health,
                 MaximumHealth = health,
-                Speed = isBoss ? .98f :
+                Speed = (isBoss ? .98f :
                     isMidBoss ? (midBossTier >= 2 ? 1.08f : 1f) :
-                    Mathf.Lerp(0.775f, 1.325f, elapsed / PrototypeDurationSeconds) * rank.SpeedMultiplier,
-                ContactDamage = isBoss ? 24f :
+                    Mathf.Lerp(0.775f, 1.325f, elapsed / PrototypeDurationSeconds) * rank.SpeedMultiplier) * archetypeProfile.SpeedMultiplier,
+                ContactDamage = (isBoss ? 24f :
                     isMidBoss ? (midBossTier >= 2 ? 20f : 16f) :
-                    10f * rank.ContactDamageMultiplier,
+                    10f * rank.ContactDamageMultiplier) * archetypeProfile.ContactMultiplier,
                 IsBoss = rank.IsBoss,
                 IsElite = rank.IsElite,
                 IsMidBoss = isMidBoss,
                 MidBossTier = midBossTier,
                 ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue,
-                ContentId = resolvedContentId
+                ContentId = resolvedContentId,
+                ArchetypeProfile = archetypeProfile,
+                Facing = player == null ? Vector2.left : ((Vector2)player.transform.position - position).normalized
             };
             if (rank.IsElite || isMidBoss)
             {
@@ -1095,7 +1153,27 @@ namespace JoseonHunter.Runtime.Gameplay
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
+            ShowSpecialEnemyGuide(archetypeProfile);
             if (isBoss || isMidBoss) bossAlive = true;
+        }
+
+        private void ShowSpecialEnemyGuide(EnemyArchetypeProfile profile)
+        {
+            if (profile == null || !profile.IsSpecial || !seenSpecialEnemyGuides.Add(profile.ContentId)) return;
+            var guide = profile.Archetype switch
+            {
+                EnemyArchetype.ShieldDokkaebi => "방패 도깨비 · 정면을 피해 공격하세요",
+                EnemyArchetype.SpiritShaman => "원혼 무당 · 주변 적을 강화합니다",
+                EnemyArchetype.ChargingHornGhost => "돌진 쇠뿔귀 · 붉은 예고선에서 벗어나세요",
+                EnemyArchetype.SplittingRat => "분열 쥐 · 범위 공격으로 한꺼번에 처리하세요",
+                _ => string.Empty
+            };
+            if (guide.Length == 0) return;
+            ShowWaveAnnouncement(guide, 2, 2.2f);
+#if UNITY_INCLUDE_TESTS
+            LastSpecialEnemyGuideForTests = guide;
+            SpecialEnemyGuideCountForTests++;
+#endif
         }
 
         private static Bounds MoveRendererOutsideViewport(
@@ -1350,7 +1428,15 @@ namespace JoseonHunter.Runtime.Gameplay
                     var chase = (playerPosition - enemyPosition).normalized;
                     var separate = separationGrid.Resolve(index, 8);
                     var direction = Vector2.ClampMagnitude(chase + separate * .72f, 1f);
-                    var velocity = direction * (enemy.Speed * enemy.MovementMultiplier);
+                    var archetype = enemy.ArchetypeProfile == null ? EnemyArchetype.Normal : enemy.ArchetypeProfile.Archetype;
+                    var specialMotion = SpecialEnemyMotion.Tick(archetype, ref enemy.SpecialMotion, delta,
+                        chase, enemy.IsControlled, enemy.WasKnockedBack, false, 0, 0);
+                    enemy.WasKnockedBack = false;
+                    if (specialMotion.AuraPulse) ApplyShamanAura(enemy);
+                    var velocity = archetype == EnemyArchetype.ChargingHornGhost
+                        ? specialMotion.Velocity * enemy.MovementMultiplier
+                        : direction * (enemy.Speed * enemy.MovementMultiplier * enemy.AuraMultiplier);
+                    if (velocity.sqrMagnitude > .0001f) enemy.Facing = velocity.normalized;
                     enemy.Object.transform.position = enemyPosition + velocity * delta;
                     enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
 
@@ -1362,7 +1448,7 @@ namespace JoseonHunter.Runtime.Gameplay
                         contactInvulnerability <= 0f)
                     {
                         playerHealth = Mathf.Max(0f, playerHealth -
-                            enemy.ContactDamage * enemy.ContactDamageMultiplier);
+                            enemy.ContactDamage * enemy.ContactDamageMultiplier * enemy.AuraMultiplier);
                         UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
                         contactInvulnerability = 0.55f;
                         StartCoroutine(FlashPlayer());
@@ -1373,6 +1459,20 @@ namespace JoseonHunter.Runtime.Gameplay
                         }
                     }
                 }
+            }
+        }
+
+        private void ApplyShamanAura(EnemyState shaman)
+        {
+            if (shaman == null || shaman.Object == null) return;
+            var center = (Vector2)shaman.Object.transform.position;
+            const float radiusSquared = 12.25f;
+            for (var index = 0; index < enemies.Count; index++)
+            {
+                var target = enemies[index];
+                if (ReferenceEquals(target, shaman) || target.Object == null || target.IsTreasure) continue;
+                if (((Vector2)target.Object.transform.position - center).sqrMagnitude > radiusSquared) continue;
+                target.AuraRemaining = Mathf.Max(target.AuraRemaining, .35f);
             }
         }
 
@@ -1481,6 +1581,14 @@ namespace JoseonHunter.Runtime.Gameplay
             var wasMidBoss = enemy.IsMidBoss;
             var wasTreasure = enemy.IsTreasure;
             var deathPosition = enemy.Object.transform.position;
+            var splitResult = default(SpecialEnemyMotionResult);
+            if (enemy.ArchetypeProfile != null && enemy.ArchetypeProfile.Archetype == EnemyArchetype.SplittingRat)
+            {
+                var phase = RunClock.PhaseAt(elapsed);
+                var activeCap = WaveSchedule.For(phase).ActiveCap;
+                splitResult = SpecialEnemyMotion.Tick(EnemyArchetype.SplittingRat, ref enemy.SpecialMotion, 0f,
+                    Vector2.zero, false, false, true, Mathf.Max(0, ActiveCombatEnemyCount() - 1), activeCap);
+            }
             combatTargets.Unregister(enemy.CombatTarget);
             enemies.Remove(enemy);
             if (wasBoss || wasMidBoss)
@@ -1501,6 +1609,22 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 ScatterTreasure(deathPosition);
                 return;
+            }
+
+            for (var child = 0; child < splitResult.SplitChildren; child++)
+            {
+                SpawnEnemy(false, 0, "plague_rat");
+                var spawned = enemies[enemies.Count - 1];
+                var offset = child == 0 ? Vector2.left * .22f : Vector2.right * .22f;
+                spawned.Object.transform.position = (Vector2)deathPosition + offset;
+                spawned.Health *= .55f; spawned.MaximumHealth = spawned.Health;
+                spawned.Speed *= 1.12f;
+            }
+            if (splitResult.FallbackBlast && player != null &&
+                Vector2.Distance(deathPosition, player.transform.position) <= 1.6f)
+            {
+                playerHealth = Mathf.Max(0f, playerHealth - 6f);
+                UpdateHealthBar(playerHealthFill, playerHealth / playerMaxHealth);
             }
 
             kills++;

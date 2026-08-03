@@ -57,5 +57,28 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(Enumerable.Range(0, 16)
                 .Select(_ => director.SelectNormal(RunPhase.WaveThree)), Is.EqualTo(first));
         }
+
+        [Test]
+        public void SpecialFamiliesAreIntroducedByPhaseAndNeverExceedTheQuarterCap()
+        {
+            var director = new WaveSpawnDirector(1701);
+            Assert.That(director.TrySelectSpecial(RunPhase.WaveOne, 100, 0, out _), Is.False);
+            Assert.That(director.TrySelectSpecial(RunPhase.WaveTwo, 20, 5, out _), Is.False);
+            Assert.That(director.TrySelectSpecial(RunPhase.WaveTwo, 20, 4, out var waveTwo), Is.True);
+            Assert.That(new[] { "shield_dokkaebi", "spirit_shaman" }, Does.Contain(waveTwo));
+
+            director.Reset();
+            var waveThree = Enumerable.Range(0, 12)
+                .Select(_ => director.TrySelectSpecial(RunPhase.WaveThree, 100, 0, out var id) ? id : string.Empty)
+                .Where(id => id.Length > 0).Distinct().ToArray();
+            Assert.That(waveThree.Length, Is.EqualTo(1));
+            Assert.That(new[] { "charging_horn_ghost", "splitting_rat" }, Does.Contain(waveThree[0]));
+
+            director.Reset();
+            var peak = Enumerable.Range(0, 24)
+                .Select(_ => director.TrySelectSpecial(RunPhase.Peak, 100, 0, out var id) ? id : string.Empty)
+                .Where(id => id.Length > 0).Distinct().ToArray();
+            Assert.That(peak.Length, Is.InRange(1, 2));
+        }
     }
 }

@@ -20,6 +20,10 @@ namespace JoseonHunter.Runtime.Gameplay
             Add("dokkaebi", At(orderedSprites, 2));
             Add("sakkat_specter", At(orderedSprites, 3));
             Add("vengeful_spirit", At(orderedSprites, 4));
+            Add("shield_dokkaebi", At(orderedSprites, 2) ?? legacyAlternate);
+            Add("spirit_shaman", At(orderedSprites, 4) ?? legacyAlternate);
+            Add("charging_horn_ghost", At(orderedSprites, 2) ?? legacyAlternate);
+            Add("splitting_rat", At(orderedSprites, 0) ?? plagueRat);
         }
 
         public Sprite Resolve(string contentId)

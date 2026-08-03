@@ -58,7 +58,9 @@ namespace JoseonHunter.Domain.Runs
         public WaveDefinition(
             int activeCap,
             IReadOnlyList<WeightedEnemyEntry> weightedContent,
-            WavePackDefinition? pack = null)
+            WavePackDefinition? pack = null,
+            IReadOnlyList<string> specialContentIds = null,
+            int maximumSpecialFamilies = 0)
         {
             if (activeCap < 0) throw new ArgumentOutOfRangeException(nameof(activeCap));
             if (weightedContent == null) throw new ArgumentNullException(nameof(weightedContent));
@@ -69,12 +71,16 @@ namespace JoseonHunter.Domain.Runs
                 ids[index] = weightedContent[index].ContentId;
             ContentIds = Array.AsReadOnly(ids);
             Pack = pack;
+            SpecialContentIds = specialContentIds ?? Array.Empty<string>();
+            MaximumSpecialFamilies = Math.Max(0, Math.Min(maximumSpecialFamilies, SpecialContentIds.Count));
         }
 
         public int ActiveCap { get; }
         public IReadOnlyList<string> ContentIds { get; }
         public IReadOnlyList<WeightedEnemyEntry> WeightedContent { get; }
         public WavePackDefinition? Pack { get; }
+        public IReadOnlyList<string> SpecialContentIds { get; }
+        public int MaximumSpecialFamilies { get; }
     }
 
     public static class WaveSchedule
@@ -92,13 +98,16 @@ namespace JoseonHunter.Domain.Runs
                 Pack(new[] { "plague_rat" }, 8, 12, 7f, 11f)),
             RunPhase.WaveTwo => Definition(104,
                 Entries(("plague_rat", 65), ("vengeful_spirit", 35)),
-                Pack(new[] { "vengeful_spirit" }, 10, 14, 10f, 14f)),
+                Pack(new[] { "vengeful_spirit" }, 10, 14, 10f, 14f),
+                new[] { "shield_dokkaebi", "spirit_shaman" }, 1),
             RunPhase.WaveThree => Definition(128,
                 Entries(("plague_rat", 20), ("vengeful_spirit", 45), ("sakkat_specter", 35)),
-                Pack(new[] { "vengeful_spirit", "sakkat_specter" }, 10, 16, 9f, 13f)),
+                Pack(new[] { "vengeful_spirit", "sakkat_specter" }, 10, 16, 9f, 13f),
+                new[] { "charging_horn_ghost", "splitting_rat" }, 1),
             RunPhase.Peak => Definition(140,
                 Entries(("sakkat_specter", 35), ("dokkaebi", 35), ("bandit", 30)),
-                Pack(new[] { "sakkat_specter", "dokkaebi", "bandit" }, 12, 18, 8f, 12f)),
+                Pack(new[] { "sakkat_specter", "dokkaebi", "bandit" }, 12, 18, 8f, 12f),
+                new[] { "shield_dokkaebi", "spirit_shaman", "charging_horn_ghost", "splitting_rat" }, 2),
             RunPhase.BossWarning => Definition(36, Entries(("fallen_general", 100))),
             RunPhase.Boss => Definition(36, Entries(("fallen_general", 100))),
             RunPhase.Expired => Definition(0, Entries()),
@@ -108,7 +117,9 @@ namespace JoseonHunter.Domain.Runs
         private static WaveDefinition Definition(
             int activeCap,
             IReadOnlyList<WeightedEnemyEntry> entries,
-            WavePackDefinition? pack = null) => new(activeCap, entries, pack);
+            WavePackDefinition? pack = null,
+            IReadOnlyList<string> specialContentIds = null,
+            int maximumSpecialFamilies = 0) => new(activeCap, entries, pack, specialContentIds, maximumSpecialFamilies);
 
         private static IReadOnlyList<WeightedEnemyEntry> Entries(
             params (string ContentId, int Weight)[] entries)

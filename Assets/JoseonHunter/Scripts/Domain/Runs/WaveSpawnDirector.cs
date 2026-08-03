@@ -23,6 +23,9 @@ namespace JoseonHunter.Domain.Runs
         private RunPhase? scheduledPhase;
         private float nextPackSeconds;
         private int packOrdinal;
+        private RunPhase? specialPhase;
+        private string[] specialFamilies = Array.Empty<string>();
+        private int specialOrdinal;
 
         public WaveSpawnDirector(int seed)
         {
@@ -36,6 +39,9 @@ namespace JoseonHunter.Domain.Runs
             scheduledPhase = null;
             nextPackSeconds = float.PositiveInfinity;
             packOrdinal = 0;
+            specialPhase = null;
+            specialFamilies = Array.Empty<string>();
+            specialOrdinal = 0;
         }
 
         public string SelectNormal(RunPhase phase)
@@ -82,6 +88,36 @@ namespace JoseonHunter.Domain.Runs
             var count = Math.Min(availableSlots, random.Next(pack.MinimumSize, pack.MaximumSize + 1));
             plan = new EnemyPackPlan(contentId, count, random.Next(0, 4));
             nextPackSeconds = elapsedSeconds + NextInterval(pack);
+            return true;
+        }
+
+        public bool TrySelectSpecial(RunPhase phase, int livingNormalCount, int livingSpecialCount,
+            out string contentId)
+        {
+            contentId = string.Empty;
+            if (livingNormalCount < 0) throw new ArgumentOutOfRangeException(nameof(livingNormalCount));
+            if (livingSpecialCount < 0) throw new ArgumentOutOfRangeException(nameof(livingSpecialCount));
+            var specialCap = (int)Math.Floor(livingNormalCount * .25f);
+            var definition = WaveSchedule.For(phase);
+            if (specialCap <= 0 || livingSpecialCount >= specialCap || definition.SpecialContentIds.Count == 0 ||
+                definition.MaximumSpecialFamilies == 0) return false;
+
+            if (specialPhase != phase)
+            {
+                specialPhase = phase; specialOrdinal = 0;
+                if (definition.MaximumSpecialFamilies == 1)
+                {
+                    specialFamilies = new[] { definition.SpecialContentIds[random.Next(definition.SpecialContentIds.Count)] };
+                }
+                else
+                {
+                    var first = random.Next(definition.SpecialContentIds.Count);
+                    var second = (first + 1 + random.Next(definition.SpecialContentIds.Count - 1)) % definition.SpecialContentIds.Count;
+                    specialFamilies = new[] { definition.SpecialContentIds[first], definition.SpecialContentIds[second] };
+                }
+            }
+
+            contentId = specialFamilies[specialOrdinal++ % specialFamilies.Length];
             return true;
         }
 
