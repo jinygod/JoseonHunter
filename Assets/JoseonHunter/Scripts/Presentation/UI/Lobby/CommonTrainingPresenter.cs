@@ -34,7 +34,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
                 Vector2.zero, Vector2.zero);
             var description = LobbyUiFactory.Text("Training Description", transform,
-                "모든 무기에 적용되는 작은 성장입니다. 각 수련은 최대 10%까지 오릅니다.", 20f);
+                "모든 무기에 적용되며, 수련별 최대치는 10%입니다.", 19f);
             description.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(description.rectTransform, new Vector2(.06f, .82f), new Vector2(.94f, .90f),
                 Vector2.zero, Vector2.zero);

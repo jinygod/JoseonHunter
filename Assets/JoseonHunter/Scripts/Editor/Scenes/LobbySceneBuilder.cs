@@ -110,7 +110,7 @@ namespace JoseonHunter.Editor.Scenes
             canvas.worldCamera = camera;
             canvas.planeDistance = 1f;
 
-            var output = Path.GetFullPath("Artifacts/Lobby");
+            var output = Path.GetFullPath("Artifacts/LobbyPremium");
             Directory.CreateDirectory(output);
             foreach (var resolution in new[] { new Vector2Int(720, 1280), new Vector2Int(1080, 2340) })
             {
