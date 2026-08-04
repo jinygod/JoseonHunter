@@ -12,6 +12,13 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class RunSettlementLobbyPlayModeTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            Time.timeScale = 1f;
+            if (MetaGameSession.Current != null) Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
         [TearDown]
         public void TearDown()
         {
