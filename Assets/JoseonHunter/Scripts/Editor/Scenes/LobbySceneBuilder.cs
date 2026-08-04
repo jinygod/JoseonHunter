@@ -21,8 +21,6 @@ namespace JoseonHunter.Editor.Scenes
         private const string PremiumFramePath = "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_frame.png";
         private const string PremiumButtonPath =
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
-        private const string ConstablePath =
-            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/rookie_constable.png";
 
         [MenuItem("JoseonHunter/Setup/Build Lobby")]
         public static void Build()
@@ -197,22 +195,15 @@ namespace JoseonHunter.Editor.Scenes
             primary.type = Image.Type.Sliced;
             primary.color = Color.white;
 
-            var patrol = canvasObject.GetComponentInChildren<PatrolPresenter>(true);
-            if (patrol == null || patrol.ConstableImage == null)
-                throw new InvalidOperationException("Lobby patrol portrait slot is missing.");
-            patrol.ConstableImage.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(ConstablePath);
-            if (patrol.ConstableImage.sprite == null)
-                throw new InvalidOperationException($"Missing constable portrait: {ConstablePath}");
-            patrol.ConstableImage.color = Color.white;
         }
 
         private static void PopulatePatrolPreview(GameObject instance)
         {
             var transforms = instance.GetComponentsInChildren<Transform>(true);
             SetPreviewText(transforms, "Preset", "편성 1 · 첫 순찰대");
-            SetPreviewText(transforms, "Starting Weapon", "시작 무기\n환도 비검");
+            SetPreviewText(transforms, "Starting Weapon", "시작 무기 · 환도 비검");
             SetPreviewText(transforms, "Style", "운용법 · 기본식");
-            SetPreviewText(transforms, "Record", "아직 승리 기록이 없습니다");
+            SetPreviewText(transforms, "Record", "최고 기록 · 아직 기록 없음");
         }
 
         private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)

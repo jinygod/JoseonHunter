@@ -14,7 +14,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
     [DisallowMultipleComponent]
     public sealed class PatrolPresenter : MonoBehaviour
     {
-        [SerializeField] private Image constableImage;
         [SerializeField] private TMP_Text presetText;
         [SerializeField] private TMP_Text weaponText;
         [SerializeField] private TMP_Text styleText;
@@ -31,46 +30,49 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private int selectedPreset;
         private WeaponId selectedWeapon = WeaponId.HwandoFlyingBlade;
 
-        public Image ConstableImage => constableImage;
-
         public void Build()
         {
-            if (transform.Find("Patrol Title") != null) return;
-            var title = LobbyUiFactory.Text("Patrol Title", transform, "출전 준비", 36f,
+            if (transform.Find("Stage Name") != null) return;
+            var title = LobbyUiFactory.Text("Stage Name", transform, "귀곡 야행", 34f,
                 TextAlignmentOptions.Center, true);
-            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .91f), new Vector2(.96f, .985f),
+            title.color = LobbyUiFactory.Gold;
+            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .80f), new Vector2(.96f, .95f),
                 Vector2.zero, Vector2.zero);
 
-            constableImage = LobbyUiFactory.Image("Rookie Constable", transform, Color.white);
-            constableImage.preserveAspect = true;
-            LobbyUiFactory.Anchor(constableImage.rectTransform, new Vector2(.05f, .30f), new Vector2(.43f, .87f),
+            var difficulty = LobbyUiFactory.Text("Difficulty", transform, "난이도 · 보통", 20f);
+            difficulty.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Anchor(difficulty.rectTransform, new Vector2(.15f, .70f), new Vector2(.85f, .81f),
                 Vector2.zero, Vector2.zero);
 
-            var detail = LobbyUiFactory.Image("Patrol Detail", transform, LobbyUiFactory.Hanji);
-            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.43f, .31f), new Vector2(.95f, .87f),
+            var detail = LobbyUiFactory.Image("Patrol Detail", transform,
+                new Color(.065f, .065f, .075f, .96f));
+            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.04f, .37f), new Vector2(.96f, .70f),
                 Vector2.zero, Vector2.zero);
-            presetText = TextLine("Preset", detail.transform, .78f, .95f, 28f, true);
-            weaponText = TextLine("Starting Weapon", detail.transform, .56f, .76f, 27f);
-            styleText = TextLine("Style", detail.transform, .36f, .55f, 22f);
-            recordText = TextLine("Record", detail.transform, .17f, .35f, 20f);
-            var difficulty = TextLine("Difficulty", detail.transform, .04f, .16f, 20f);
-            difficulty.text = "난이도 · 보통";
+            LobbyUiFactory.AddGoldRule(detail.transform, new Vector2(0f, .97f), Vector2.one);
+            presetText = TextLine("Preset", detail.transform, .72f, .94f, 23f, true);
+            weaponText = TextLine("Starting Weapon", detail.transform, .49f, .71f, 22f);
+            styleText = TextLine("Style", detail.transform, .27f, .48f, 20f);
+            recordText = TextLine("Record", detail.transform, .05f, .26f, 18f);
 
-            previousPresetButton = SmallButton("Previous Preset", "이전 편성", .05f, .23f, .205f, .29f);
-            nextPresetButton = SmallButton("Next Preset", "다음 편성", .25f, .43f, .205f, .29f);
-            previousWeaponButton = SmallButton("Previous Weapon", "이전 무기", .45f, .63f, .205f, .29f);
-            nextWeaponButton = SmallButton("Next Weapon", "다음 무기", .65f, .83f, .205f, .29f);
-            saveButton = SmallButton("Save Preset", "편성 저장", .05f, .43f, .115f, .19f);
-            patrolButton = SmallButton("Start Patrol", "출전", .45f, .95f, .115f, .19f, 29f);
+            previousPresetButton = SmallButton("Previous Preset", "편성 ◀", .04f, .25f, .245f, .35f);
+            nextPresetButton = SmallButton("Next Preset", "편성 ▶", .27f, .48f, .245f, .35f);
+            previousWeaponButton = SmallButton("Previous Weapon", "무기 ◀", .52f, .73f, .245f, .35f);
+            nextWeaponButton = SmallButton("Next Weapon", "무기 ▶", .75f, .96f, .245f, .35f);
+            saveButton = SmallButton("Save Preset", "편성 저장", .04f, .47f, .04f, .24f);
+            patrolButton = LobbyUiFactory.Button("Start Patrol", transform, "출전", 31f,
+                LobbyUiFactory.Gold, LobbyUiFactory.Ink);
+            LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.51f, .04f),
+                new Vector2(.96f, .24f), Vector2.zero, Vector2.zero);
             feedbackText = LobbyUiFactory.Text("Patrol Feedback", transform, string.Empty, 18f);
-            feedbackText.color = LobbyUiFactory.Brown;
-            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .035f), new Vector2(.95f, .105f),
+            feedbackText.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.04f, 0f), new Vector2(.96f, .04f),
                 Vector2.zero, Vector2.zero);
         }
 
         private TMP_Text TextLine(string name, Transform parent, float minY, float maxY, float size, bool title = false)
         {
-            var text = LobbyUiFactory.Text(name, parent, string.Empty, size, TextAlignmentOptions.Center, title);
+            var text = LobbyUiFactory.Text(name, parent, string.Empty, size, TextAlignmentOptions.Left, title);
+            text.color = title ? LobbyUiFactory.Gold : LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(text.rectTransform, new Vector2(.05f, minY), new Vector2(.95f, maxY),
                 Vector2.zero, Vector2.zero);
             return text;
@@ -173,7 +175,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (session == null) return;
             var dto = session.Data.PatrolLoadouts[selectedPreset];
             presetText.text = $"편성 {selectedPreset + 1} · {dto.Name}";
-            weaponText.text = $"시작 무기\n{LobbyViewModels.WeaponName(selectedWeapon)}";
+            weaponText.text = $"시작 무기 · {LobbyViewModels.WeaponName(selectedWeapon)}";
             var styleName = "기본식";
             if (dto.WeaponStyleIds.TryGetValue(selectedWeapon.Value, out var styleId) &&
                 !string.IsNullOrEmpty(styleId) && session.Data.UnlockedWeaponStyles.Contains(styleId) &&
@@ -181,7 +183,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 styleName = definition.DisplayName;
             styleText.text = $"운용법 · {styleName}";
             var best = session.Data.BestPatrolResults.TryGetValue("victory_kills", out var value) ? value : 0;
-            recordText.text = best > 0 ? $"최고 승리 처치 {best:N0}" : "아직 승리 기록이 없습니다";
+            recordText.text = best > 0 ? $"최고 기록 · 승리 처치 {best:N0}" : "최고 기록 · 아직 기록 없음";
         }
     }
 }

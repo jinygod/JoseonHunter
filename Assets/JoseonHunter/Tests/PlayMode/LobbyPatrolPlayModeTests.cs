@@ -46,6 +46,22 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(MetaGameSession.Current.Data.PatrolLoadouts, Has.Count.EqualTo(3));
         }
 
+        [UnityTest]
+        public IEnumerator PatrolHomePresentsStageAndLargePrimaryAction()
+        {
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var stage = GameObject.Find("Stage Name");
+            Assert.That(stage, Is.Not.Null);
+            Assert.That(stage.GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("귀곡 야행"));
+
+            var start = GameObject.Find("Start Patrol");
+            Assert.That(start, Is.Not.Null);
+            Assert.That(start.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("출전"));
+            Assert.That(start.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(76f));
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;
