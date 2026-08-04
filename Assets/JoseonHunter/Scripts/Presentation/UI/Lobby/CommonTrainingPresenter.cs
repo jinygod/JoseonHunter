@@ -30,10 +30,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (transform.Find("Training Title") != null) return;
             var title = LobbyUiFactory.Text("Training Title", transform, "공통 수련", 34f,
                 TextAlignmentOptions.Center, true);
+            title.color = LobbyUiFactory.AntiqueGold;
             LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
                 Vector2.zero, Vector2.zero);
             var description = LobbyUiFactory.Text("Training Description", transform,
                 "모든 무기에 적용되는 작은 성장입니다. 각 수련은 최대 10%까지 오릅니다.", 20f);
+            description.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(description.rectTransform, new Vector2(.06f, .82f), new Vector2(.94f, .90f),
                 Vector2.zero, Vector2.zero);
 
@@ -51,31 +53,35 @@ namespace JoseonHunter.Presentation.UI.Lobby
             {
                 var id = (CommonTrainingId)index;
                 trainingButtons[index] = LobbyUiFactory.Button("Training " + id, gridRoot,
-                    LobbyViewModels.TrainingName(id), 23f);
+                    LobbyViewModels.TrainingName(id), 21f,
+                    LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
             }
 
-            var detail = LobbyUiFactory.Image("Training Detail", transform, LobbyUiFactory.Hanji);
-            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.07f, .24f), new Vector2(.93f, .53f),
+            var detail = LobbyUiFactory.Image("Training Detail", transform, LobbyUiFactory.NightInk);
+            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.07f, .29f), new Vector2(.93f, .53f),
                 Vector2.zero, Vector2.zero);
             currentText = DetailText("Current", detail.transform, .68f, .94f);
             nextText = DetailText("Next", detail.transform, .39f, .66f);
             costText = DetailText("Cost", detail.transform, .10f, .37f);
 
-            purchaseButton = LobbyUiFactory.Button("Purchase Training", transform, "수련하기", 25f);
-            LobbyUiFactory.Anchor(purchaseButton.GetComponent<RectTransform>(), new Vector2(.16f, .135f),
-                new Vector2(.58f, .22f), Vector2.zero, Vector2.zero);
-            resetButton = LobbyUiFactory.Button("Reset Training", transform, "전체 초기화", 22f);
-            LobbyUiFactory.Anchor(resetButton.GetComponent<RectTransform>(), new Vector2(.60f, .135f),
-                new Vector2(.84f, .22f), Vector2.zero, Vector2.zero);
+            purchaseButton = LobbyUiFactory.Button("Purchase Training", transform, "수련하기", 25f,
+                LobbyUiFactory.Crimson, LobbyUiFactory.HanjiLight);
+            LobbyUiFactory.Anchor(purchaseButton.GetComponent<RectTransform>(), new Vector2(.12f, .09f),
+                new Vector2(.61f, .27f), Vector2.zero, Vector2.zero);
+            resetButton = LobbyUiFactory.Button("Reset Training", transform, "전체 초기화", 21f,
+                LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+            LobbyUiFactory.Anchor(resetButton.GetComponent<RectTransform>(), new Vector2(.63f, .09f),
+                new Vector2(.88f, .27f), Vector2.zero, Vector2.zero);
             feedbackText = LobbyUiFactory.Text("Training Feedback", transform, string.Empty, 18f);
-            feedbackText.color = LobbyUiFactory.Brown;
-            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .045f), new Vector2(.95f, .125f),
+            feedbackText.color = LobbyUiFactory.AntiqueGold;
+            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .01f), new Vector2(.95f, .08f),
                 Vector2.zero, Vector2.zero);
         }
 
         private static TMP_Text DetailText(string name, Transform parent, float minY, float maxY)
         {
             var text = LobbyUiFactory.Text(name, parent, string.Empty, 24f);
+            text.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(text.rectTransform, new Vector2(.05f, minY), new Vector2(.95f, maxY),
                 Vector2.zero, Vector2.zero);
             return text;

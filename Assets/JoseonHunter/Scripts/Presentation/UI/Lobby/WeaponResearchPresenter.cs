@@ -29,11 +29,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (transform.Find("Research Title") != null) return;
             titleText = LobbyUiFactory.Text("Research Title", transform, "무기 연구", 34f,
                 TextAlignmentOptions.Center, true);
-            LobbyUiFactory.Anchor(titleText.rectTransform, new Vector2(.04f, .91f), new Vector2(.96f, .985f),
+            titleText.color = LobbyUiFactory.AntiqueGold;
+            LobbyUiFactory.Anchor(titleText.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
                 Vector2.zero, Vector2.zero);
 
             var weaponGrid = LobbyUiFactory.Rect("Weapon Grid", transform);
-            LobbyUiFactory.Anchor(weaponGrid, new Vector2(.04f, .68f), new Vector2(.96f, .90f),
+            LobbyUiFactory.Anchor(weaponGrid, new Vector2(.04f, .69f), new Vector2(.96f, .895f),
                 Vector2.zero, Vector2.zero);
             var grid = weaponGrid.gameObject.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -44,14 +45,16 @@ namespace JoseonHunter.Presentation.UI.Lobby
             weaponButtons = new Button[WeaponRoster.All.Count];
             for (var index = 0; index < weaponButtons.Length; index++)
                 weaponButtons[index] = LobbyUiFactory.Button("Weapon " + index, weaponGrid,
-                    LobbyViewModels.WeaponName(WeaponRoster.All[index]), 19f);
+                    LobbyViewModels.WeaponName(WeaponRoster.All[index]), 19f,
+                    LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
 
-            masteryText = LobbyUiFactory.Text("Mastery", transform, string.Empty, 23f);
-            LobbyUiFactory.Anchor(masteryText.rectTransform, new Vector2(.06f, .61f), new Vector2(.94f, .675f),
+            masteryText = LobbyUiFactory.Text("Mastery", transform, string.Empty, 22f);
+            masteryText.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Anchor(masteryText.rectTransform, new Vector2(.06f, .625f), new Vector2(.94f, .685f),
                 Vector2.zero, Vector2.zero);
 
             var styles = LobbyUiFactory.Rect("Style Cards", transform);
-            LobbyUiFactory.Anchor(styles, new Vector2(.05f, .14f), new Vector2(.95f, .60f),
+            LobbyUiFactory.Anchor(styles, new Vector2(.05f, .10f), new Vector2(.95f, .615f),
                 Vector2.zero, Vector2.zero);
             var layout = styles.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 12f;
@@ -62,11 +65,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             layout.childForceExpandWidth = true;
             styleButtons = new Button[3];
             for (var index = 0; index < styleButtons.Length; index++)
-                styleButtons[index] = LobbyUiFactory.Button("Style " + index, styles, string.Empty, 20f);
+                styleButtons[index] = LobbyUiFactory.Button("Style " + index, styles, string.Empty, 20f,
+                    LobbyUiFactory.Crimson, LobbyUiFactory.HanjiLight);
 
             feedbackText = LobbyUiFactory.Text("Research Feedback", transform, string.Empty, 19f);
-            feedbackText.color = LobbyUiFactory.Brown;
-            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .045f), new Vector2(.95f, .13f),
+            feedbackText.color = LobbyUiFactory.AntiqueGold;
+            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .015f), new Vector2(.95f, .085f),
                 Vector2.zero, Vector2.zero);
         }
 

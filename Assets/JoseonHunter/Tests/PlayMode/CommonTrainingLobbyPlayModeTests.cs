@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -38,6 +39,13 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.CurrentTextForTests, Is.EqualTo("현재 최대 체력 +0%"));
             Assert.That(presenter.NextTextForTests, Is.EqualTo("강화 후 최대 체력 +2%"));
             Assert.That(presenter.CostTextForTests, Is.EqualTo("필요 엽전 100"));
+            Canvas.ForceUpdateCanvases();
+            var purchase = presenter.transform.Find("Purchase Training").GetComponent<Button>();
+            Assert.That(purchase.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(64f));
+            Assert.That(purchase.GetComponentInChildren<TMPro.TMP_Text>().fontSize, Is.GreaterThanOrEqualTo(18f));
+            var detail = presenter.transform.Find("Training Detail").GetComponent<Image>();
+            Assert.That(detail.color.maxColorComponent, Is.LessThan(.5f));
+            Assert.That(detail.color.a, Is.GreaterThan(.95f));
 
             presenter.PurchaseForTests();
             Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(400));
