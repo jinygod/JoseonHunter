@@ -41,7 +41,7 @@ namespace JoseonHunter.Tests.EditMode
                     ? new[] { "Main Camera", "FirstPlayable", "EventSystem" }
                     : scenePath.EndsWith("Bootstrap.unity", StringComparison.Ordinal)
                         ? new[] { "Bootstrap Loading" }
-                        : new[] { "SceneRoot" };
+                        : new[] { "Lobby Camera", "Lobby Canvas", "EventSystem" };
                 CollectionAssert.AreEquivalent(expected, roots.Select(root => root.name));
             }
             finally
