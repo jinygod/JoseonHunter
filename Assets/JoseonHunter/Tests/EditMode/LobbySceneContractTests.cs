@@ -36,7 +36,8 @@ namespace JoseonHunter.Tests.EditMode
                          {
                              "Lobby Background", "Safe Area", "Header", "Weapon Research Panel",
                              "Patrol Panel", "Common Training Panel", "Bottom Navigation",
-                             "Stage Content"
+                             "Stage Content", "Coin Icon", "Patrol Hero", "Patrol Hero Shadow",
+                             "Starting Weapon Selector", "Weapon Selection Overlay"
                          })
                     Assert.That(transforms.Any(item => item.name == required), Is.True, required);
 
@@ -45,14 +46,20 @@ namespace JoseonHunter.Tests.EditMode
                 foreach (var removed in new[]
                          {
                              "Hero Viewport", "Hero Art", "Hero Shade", "Hero Name", "Hero Subtitle",
-                             "Previous Preset", "Next Preset", "Save Preset", "Preset", "Difficulty", "Record"
+                             "Previous Preset", "Next Preset", "Save Preset", "Preset", "Difficulty", "Record",
+                             "Previous Weapon", "Next Weapon", "Current Weapon Icon"
                          })
                     Assert.That(transforms.Any(item => item.name == removed), Is.False, removed);
 
                 var navigation = transforms.Single(item => item.name == "Bottom Navigation");
                 var navigationLabels = navigation.GetComponentsInChildren<Button>(true)
                     .Select(button => button.GetComponentInChildren<TMP_Text>(true).text).ToArray();
-                Assert.That(navigationLabels, Is.EquivalentTo(new[] { "무기 연구", "출전", "공통 수련" }));
+                Assert.That(navigationLabels, Is.EquivalentTo(new[] { "무기 연구", "출전", "수련" }));
+
+                var hero = transforms.Single(item => item.name == "Patrol Hero").GetComponent<Image>();
+                Assert.That(hero.sprite, Is.Not.Null);
+                Assert.That(hero.preserveAspect, Is.True);
+                Assert.That(hero.transform.parent.name, Is.EqualTo("Patrol Panel"));
                 foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
                 {
                     var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();

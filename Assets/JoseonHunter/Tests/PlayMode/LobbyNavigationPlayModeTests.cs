@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using JoseonHunter.Domain.Save;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
@@ -36,10 +37,31 @@ namespace JoseonHunter.Tests.PlayMode
             var labels = navigation.GetComponentsInChildren<Button>(true)
                 .Select(button => button.GetComponentInChildren<TMPro.TMP_Text>().text).ToArray();
 
-            Assert.That(labels, Is.EqualTo(new[] { "무기 연구", "출전", "공통 수련" }));
+            Assert.That(labels, Is.EqualTo(new[] { "무기 연구", "출전", "수련" }));
             Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.True);
             Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.False);
             Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator HeaderShowsCoinSpriteBesideBareNumber()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 155;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var coinIcon = GameObject.Find("Coin Icon")?.GetComponent<Image>();
+            var coinText = GameObject.Find("Coin Text")?.GetComponent<TMPro.TMP_Text>();
+
+            Assert.That(coinIcon, Is.Not.Null);
+            Assert.That(coinIcon.sprite, Is.Not.Null);
+            Assert.That(coinIcon.preserveAspect, Is.True);
+            Assert.That(coinText, Is.Not.Null);
+            Assert.That(coinText.text, Is.EqualTo("155"));
+            Assert.That(coinText.text, Does.Not.Contain("엽전"));
+            Assert.That(coinText.text, Does.Not.Contain("냥"));
         }
 
         [UnityTest]
@@ -64,5 +86,17 @@ namespace JoseonHunter.Tests.PlayMode
         private static GameObject FindIncludingInactive(string name) =>
             Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Single(transform => transform.name == name).gameObject;
+
+        private sealed class MemoryRepository : ISaveRepository
+        {
+            private SaveDataV1 stored;
+            public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
+            public LoadResult Load() => new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
+            public SaveResult Save(SaveDataV1 data)
+            {
+                stored = data.Copy();
+                return new SaveResult(true, SaveError.None);
+            }
+        }
     }
 }

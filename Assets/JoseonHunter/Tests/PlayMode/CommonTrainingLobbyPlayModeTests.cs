@@ -35,6 +35,11 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             var presenter = Object.FindFirstObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
 
+            Assert.That(presenter.transform.Find("Training Title").GetComponent<TMPro.TMP_Text>().text,
+                Is.EqualTo("수련"));
+            Assert.That(presenter.transform.Find("Training Description").GetComponent<TMPro.TMP_Text>().text,
+                Is.EqualTo("수련 효과는 모든 출전에 적용되며, 항목별 최대치는 10%입니다."));
+
             presenter.SelectForTests(CommonTrainingId.Vitality);
             Assert.That(presenter.CurrentTextForTests, Is.EqualTo("현재 최대 체력 +0%"));
             Assert.That(presenter.NextTextForTests, Is.EqualTo("강화 후 최대 체력 +2%"));

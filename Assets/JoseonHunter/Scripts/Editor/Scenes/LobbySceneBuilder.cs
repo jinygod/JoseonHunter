@@ -22,6 +22,10 @@ namespace JoseonHunter.Editor.Scenes
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
         private const string SecondaryButtonPath =
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
+        private const string CoinSpritePath =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png";
+        private const string HeroSpritePath =
+            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
         private const string WeaponCatalogPath = "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset";
 
         [MenuItem("JoseonHunter/Setup/Build Lobby")]
@@ -174,6 +178,16 @@ namespace JoseonHunter.Editor.Scenes
             if (background.sprite == null) throw new InvalidOperationException($"Missing Lobby background: {BackgroundPath}");
             background.color = Color.white;
 
+            var coinIcon = transforms.Single(item => item.name == "Coin Icon").GetComponent<Image>();
+            coinIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CoinSpritePath);
+            if (coinIcon.sprite == null) throw new InvalidOperationException($"Missing coin sprite: {CoinSpritePath}");
+            coinIcon.preserveAspect = true;
+
+            var patrolHero = transforms.Single(item => item.name == "Patrol Hero").GetComponent<Image>();
+            patrolHero.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroSpritePath);
+            if (patrolHero.sprite == null) throw new InvalidOperationException($"Missing hero sprite: {HeroSpritePath}");
+            patrolHero.preserveAspect = true;
+
             var frame = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumFramePath);
             if (frame == null) throw new InvalidOperationException($"Missing Lobby frame: {PremiumFramePath}");
             foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
@@ -203,6 +217,14 @@ namespace JoseonHunter.Editor.Scenes
             var catalog = AssetDatabase.LoadAssetAtPath<JoseonHunter.Content.Weapons.WeaponCatalogAsset>(
                 WeaponCatalogPath);
             if (catalog == null) throw new InvalidOperationException($"Missing weapon catalog: {WeaponCatalogPath}");
+            var startingWeaponIcon = transforms.Single(item => item.name == "Starting Weapon Icon").GetComponent<Image>();
+            if (catalog.TryGet(JoseonHunter.Domain.Combat.WeaponId.HwandoFlyingBlade, out var startingWeapon))
+            {
+                startingWeaponIcon.sprite = startingWeapon.UiIcon != null
+                    ? startingWeapon.UiIcon
+                    : startingWeapon.PresentationSprites.FirstOrDefault();
+                startingWeaponIcon.enabled = startingWeaponIcon.sprite != null;
+            }
             canvasObject.GetComponentInChildren<PatrolPresenter>(true).ConfigureCatalog(catalog);
             canvasObject.GetComponentInChildren<WeaponResearchPresenter>(true).ConfigureCatalog(catalog);
 
@@ -211,7 +233,8 @@ namespace JoseonHunter.Editor.Scenes
         private static void PopulatePatrolPreview(GameObject instance)
         {
             var transforms = instance.GetComponentsInChildren<Transform>(true);
-            SetPreviewText(transforms, "Starting Weapon", "환도 비검");
+            SetPreviewText(transforms, "Starting Weapon Name", "환도 비검");
+            SetPreviewText(transforms, "Coin Text", "155");
         }
 
         private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)

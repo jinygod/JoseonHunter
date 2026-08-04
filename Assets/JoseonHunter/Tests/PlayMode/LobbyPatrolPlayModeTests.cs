@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Presentation.UI.Lobby;
@@ -7,6 +8,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -57,6 +59,62 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(start.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("출전"));
             Assert.That(start.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(76f));
         }
+
+        [UnityTest]
+        public IEnumerator PatrolHomeCentersTransparentPixelHeroAndCompactWeaponSelector()
+        {
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var hero = GameObject.Find("Patrol Hero")?.GetComponent<Image>();
+            var shadow = GameObject.Find("Patrol Hero Shadow")?.GetComponent<PixelOvalGraphic>();
+            var selector = GameObject.Find("Starting Weapon Selector")?.GetComponent<Button>();
+
+            Assert.That(hero, Is.Not.Null);
+            Assert.That(hero.sprite, Is.Not.Null);
+            Assert.That(hero.preserveAspect, Is.True);
+            Assert.That(hero.transform.parent.name, Is.EqualTo("Patrol Panel"));
+            Assert.That(shadow, Is.Not.Null);
+            Assert.That(shadow.color.a, Is.InRange(.08f, .28f));
+            Assert.That(shadow.transform.GetSiblingIndex(), Is.LessThan(hero.transform.GetSiblingIndex()));
+            Assert.That(selector, Is.Not.Null);
+            Assert.That(GameObject.Find("Previous Weapon"), Is.Null);
+            Assert.That(GameObject.Find("Next Weapon"), Is.Null);
+            Assert.That(GameObject.Find("Current Weapon Icon"), Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator WeaponSelectorOpensGridAndImmediatelySavesChosenWeapon()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var selector = GameObject.Find("Starting Weapon Selector").GetComponent<Button>();
+            var overlay = FindIncludingInactive("Weapon Selection Overlay");
+            Assert.That(overlay.activeSelf, Is.False);
+
+            selector.onClick.Invoke();
+            yield return null;
+            Assert.That(overlay.activeSelf, Is.True);
+
+            var gakgung = overlay.transform.Find("Weapon Selection Panel/Weapon Grid/Weapon Option gakgung_shot")
+                ?.GetComponent<Button>();
+            Assert.That(gakgung, Is.Not.Null);
+            gakgung.onClick.Invoke();
+            yield return null;
+
+            var active = MetaGameSession.Current.Data.ActivePatrolLoadoutIndex;
+            Assert.That(MetaGameSession.Current.Data.PatrolLoadouts[active].StartingWeaponId,
+                Is.EqualTo(WeaponId.GakgungShot.Value));
+            Assert.That(overlay.activeSelf, Is.False);
+            Assert.That(GameObject.Find("Starting Weapon Name").GetComponent<TMPro.TMP_Text>().text,
+                Is.EqualTo("각궁"));
+        }
+
+        private static GameObject FindIncludingInactive(string name) =>
+            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Single(transform => transform.name == name).gameObject;
 
         private sealed class MemoryRepository : ISaveRepository
         {

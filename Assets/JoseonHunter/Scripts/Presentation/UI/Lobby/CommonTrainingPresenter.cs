@@ -28,13 +28,13 @@ namespace JoseonHunter.Presentation.UI.Lobby
         public void Build()
         {
             if (transform.Find("Training Title") != null) return;
-            var title = LobbyUiFactory.Text("Training Title", transform, "공통 수련", 34f,
+            var title = LobbyUiFactory.Text("Training Title", transform, "수련", 34f,
                 TextAlignmentOptions.Center, true);
             title.color = LobbyUiFactory.AntiqueGold;
             LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
                 Vector2.zero, Vector2.zero);
             var description = LobbyUiFactory.Text("Training Description", transform,
-                "모든 무기에 적용되며, 수련별 최대치는 10%입니다.", 19f);
+                "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 10%입니다.", 19f);
             description.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(description.rectTransform, new Vector2(.06f, .82f), new Vector2(.94f, .90f),
                 Vector2.zero, Vector2.zero);

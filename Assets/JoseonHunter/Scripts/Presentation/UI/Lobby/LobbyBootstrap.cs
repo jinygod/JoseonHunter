@@ -57,10 +57,14 @@ namespace JoseonHunter.Presentation.UI.Lobby
             title.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .1f), new Vector2(.65f, .9f),
                 Vector2.zero, Vector2.zero);
-            coinText = LobbyUiFactory.Text("Coin Text", header.transform, "엽전 0", 25f,
+            coinText = LobbyUiFactory.Text("Coin Text", header.transform, "0", 25f,
                 TextAlignmentOptions.Right);
             coinText.color = LobbyUiFactory.Gold;
-            LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.62f, .1f), new Vector2(.96f, .9f),
+            var coinIcon = LobbyUiFactory.Image("Coin Icon", header.transform, Color.white);
+            coinIcon.preserveAspect = true;
+            LobbyUiFactory.Anchor(coinIcon.rectTransform, new Vector2(.72f, .23f), new Vector2(.80f, .77f),
+                Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.80f, .1f), new Vector2(.96f, .9f),
                 Vector2.zero, Vector2.zero);
 
             var stageContent = LobbyUiFactory.Rect("Stage Content", safeArea);
@@ -88,7 +92,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var patrolButton = LobbyUiFactory.Button("Patrol Navigation", navigation.transform,
                 "출전", 24f, LobbyUiFactory.Crimson, LobbyUiFactory.Gold);
             var trainingButton = LobbyUiFactory.Button("Common Training Navigation", navigation.transform,
-                "공통 수련", 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+                "수련", 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
             navigation.gameObject.AddComponent<LobbyNavigationPresenter>().Initialize(
                 research.gameObject, patrol.gameObject, training.gameObject,
                 researchButton, patrolButton, trainingButton);
@@ -116,7 +120,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private void RefreshHeader()
         {
             if (coinText != null && MetaGameSession.Current != null)
-                coinText.text = $"엽전 {MetaGameSession.Current.Data.Coins:N0}";
+                coinText.text = $"{MetaGameSession.Current.Data.Coins:N0}";
         }
 
         private void ApplySafeArea()
