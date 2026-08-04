@@ -110,8 +110,24 @@ namespace JoseonHunter.Editor.Scenes
 
             var output = Path.GetFullPath("Artifacts/Lobby");
             Directory.CreateDirectory(output);
-            Capture(camera, new Vector2Int(720, 1280), Path.Combine(output, "720x1280.png"));
-            Capture(camera, new Vector2Int(1080, 2340), Path.Combine(output, "1080x2340.png"));
+            foreach (var resolution in new[] { new Vector2Int(720, 1280), new Vector2Int(1080, 2340) })
+            {
+                ShowPanel(instance, "Patrol Panel");
+                PopulatePatrolPreview(instance);
+                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-patrol.png"));
+
+                ShowPanel(instance, "Weapon Research Panel");
+                PopulateResearchPreview(instance, "연구 중", 0, string.Empty);
+                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-research-locked.png"));
+                PopulateResearchPreview(instance, "해금 가능", 2000, string.Empty);
+                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-research-ready.png"));
+                PopulateResearchPreview(instance, "엽전 부족", 2000, "엽전이 부족합니다.");
+                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-research-coins.png"));
+
+                ShowPanel(instance, "Common Training Panel");
+                PopulateTrainingPreview(instance);
+                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-training.png"));
+            }
             UnityEngine.Object.DestroyImmediate(instance);
             UnityEngine.Object.DestroyImmediate(cameraObject);
             Debug.Log($"Captured Lobby previews to {output}.");
@@ -170,6 +186,42 @@ namespace JoseonHunter.Editor.Scenes
             SetPreviewText(transforms, "Starting Weapon", "시작 무기\n환도 비검");
             SetPreviewText(transforms, "Style", "운용법 · 기본식");
             SetPreviewText(transforms, "Record", "아직 승리 기록이 없습니다");
+        }
+
+        private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)
+        {
+            var transforms = instance.GetComponentsInChildren<Transform>(true);
+            SetPreviewText(transforms, "Research Title", "환도 비검 연구");
+            SetPreviewText(transforms, "Mastery", $"숙련도 {mastery:N0} · 이 무기로 막타를 기록하면 숙련도가 오릅니다");
+            SetPreviewText(transforms, "Research Feedback", feedback);
+            var buttons = instance.GetComponentsInChildren<Button>(true)
+                .Where(button => button.name.StartsWith("Style ", StringComparison.Ordinal))
+                .OrderBy(button => button.name).ToArray();
+            buttons[0].GetComponentInChildren<TMPro.TMP_Text>(true).text =
+                "기본식 · 장착 중\n무기의 본래 운용법 / 추가 효과 없음\n처음부터 사용 가능";
+            buttons[1].GetComponentInChildren<TMPro.TMP_Text>(true).text =
+                $"맹독 비검 · {state}\n독 피해 강화 / 직접 피해 감소\n숙련도 2,000 · 엽전 800";
+            buttons[2].GetComponentInChildren<TMPro.TMP_Text>(true).text =
+                "월식 비검 · 연구 중\n강한 일격 / 재사용 대기 증가\n숙련도 8,000 · 엽전 2,400";
+        }
+
+        private static void PopulateTrainingPreview(GameObject instance)
+        {
+            var transforms = instance.GetComponentsInChildren<Transform>(true);
+            SetPreviewText(transforms, "Current", "현재 최대 체력 +0%");
+            SetPreviewText(transforms, "Next", "강화 후 최대 체력 +2%");
+            SetPreviewText(transforms, "Cost", "필요 엽전 100");
+            SetPreviewText(transforms, "Training Feedback", "모든 출전에 적용되는 소규모 공통 강화입니다.");
+        }
+
+        private static void ShowPanel(GameObject instance, string selectedName)
+        {
+            foreach (var name in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
+            {
+                var panel = instance.GetComponentsInChildren<Transform>(true)
+                    .Single(item => item.name == name).gameObject;
+                panel.SetActive(name == selectedName);
+            }
         }
 
         private static void SetPreviewText(Transform[] transforms, string name, string value)
