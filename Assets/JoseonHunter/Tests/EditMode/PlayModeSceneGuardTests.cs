@@ -1,34 +1,42 @@
 using JoseonHunter.Editor.Scenes;
 using NUnit.Framework;
+using UnityEditor.SceneManagement;
 
 namespace JoseonHunter.Tests.EditMode
 {
     public sealed class PlayModeSceneGuardTests
     {
         [Test]
-        public void EmptyPathInHumanEditorRedirectsToGameplay()
+        public void InteractiveEditorResolvesBootstrapAsPlayStartScene()
         {
             Assert.That(
-                PlayModeSceneGuard.ShouldRedirectToGameplay(string.Empty, isBatchMode: false, isPlayModeTestRunner: false),
-                Is.True);
+                PlayModeSceneGuard.ResolveStartScenePath(false),
+                Is.EqualTo("Assets/JoseonHunter/Scenes/Bootstrap.unity"));
         }
 
-        [TestCase("Assets/JoseonHunter/Scenes/Gameplay.unity")]
-        [TestCase("Assets/JoseonHunter/Scenes/Lobby.unity")]
-        public void SavedFoundationSceneDoesNotRedirect(string activeScenePath)
+        [Test]
+        public void BatchModeDoesNotOverridePlayStartScene()
         {
-            Assert.That(
-                PlayModeSceneGuard.ShouldRedirectToGameplay(activeScenePath, isBatchMode: false, isPlayModeTestRunner: false),
-                Is.False);
+            Assert.That(PlayModeSceneGuard.ResolveStartScenePath(true), Is.Null);
         }
 
-        [TestCase(true, false)]
-        [TestCase(false, true)]
-        public void AutomatedPlayModeExecutionDoesNotRedirect(bool isBatchMode, bool isPlayModeTestRunner)
+        [Test]
+        public void ConfigureStartSceneAssignsBootstrapForInteractiveEditor()
         {
-            Assert.That(
-                PlayModeSceneGuard.ShouldRedirectToGameplay(string.Empty, isBatchMode, isPlayModeTestRunner),
-                Is.False);
+            var previous = EditorSceneManager.playModeStartScene;
+            try
+            {
+                PlayModeSceneGuard.ConfigureStartScene(false);
+
+                Assert.That(EditorSceneManager.playModeStartScene, Is.Not.Null);
+                Assert.That(
+                    EditorSceneManager.playModeStartScene.name,
+                    Is.EqualTo("Bootstrap"));
+            }
+            finally
+            {
+                EditorSceneManager.playModeStartScene = previous;
+            }
         }
     }
 }

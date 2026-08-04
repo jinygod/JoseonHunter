@@ -1,73 +1,38 @@
-using System;
-using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace JoseonHunter.Editor.Scenes
 {
     [InitializeOnLoad]
     public static class PlayModeSceneGuard
     {
-        private const string GameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
-        private static bool resumePlayQueued;
+        private const string BootstrapScenePath = "Assets/JoseonHunter/Scenes/Bootstrap.unity";
 
         static PlayModeSceneGuard()
         {
-            EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
-            EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+            ConfigureStartScene(Application.isBatchMode);
         }
 
-        public static bool ShouldRedirectToGameplay(
-            string activeScenePath,
-            bool isBatchMode,
-            bool isPlayModeTestRunner)
+        public static string ResolveStartScenePath(bool isBatchMode)
         {
-            return string.IsNullOrEmpty(activeScenePath) && !isBatchMode && !isPlayModeTestRunner;
+            return isBatchMode ? null : BootstrapScenePath;
         }
 
-        private static void HandlePlayModeStateChanged(PlayModeStateChange state)
+        public static void ConfigureStartScene(bool isBatchMode)
         {
-            if (state != PlayModeStateChange.ExitingEditMode ||
-                !ShouldRedirectToGameplay(
-                    SceneManager.GetActiveScene().path,
-                    Application.isBatchMode,
-                    IsPlayModeTestRunnerActive()))
+            var path = ResolveStartScenePath(isBatchMode);
+            if (string.IsNullOrEmpty(path)) return;
+
+            var bootstrapScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+            if (bootstrapScene == null)
             {
+                EditorSceneManager.playModeStartScene = null;
+                Debug.LogError($"Editor Play 시작 씬을 찾을 수 없습니다: {path}");
                 return;
             }
 
-            EditorApplication.isPlaying = false;
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-
-            EditorSceneManager.OpenScene(GameplayScenePath);
-            resumePlayQueued = true;
-            EditorApplication.delayCall += ResumePlayInGameplay;
-        }
-
-        private static void ResumePlayInGameplay()
-        {
-            if (!resumePlayQueued || EditorApplication.isPlayingOrWillChangePlaymode) return;
-
-            resumePlayQueued = false;
-            EditorApplication.isPlaying = true;
-        }
-
-        private static bool IsPlayModeTestRunnerActive()
-        {
-            try
-            {
-                var testRunnerType = Type.GetType("UnityEditor.TestTools.TestRunner.Api.TestRunnerApi, UnityEditor.TestRunner");
-                var isRunActive = testRunnerType?.GetMethod(
-                    "IsRunActive",
-                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                return isRunActive != null && (bool)isRunActive.Invoke(null, null);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
+            EditorSceneManager.playModeStartScene = bootstrapScene;
         }
     }
 }
