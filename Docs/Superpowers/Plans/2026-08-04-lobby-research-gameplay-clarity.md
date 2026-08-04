@@ -30,7 +30,7 @@
 - Create: `Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png`
 - Replace: `Assets/JoseonHunter/Art/Characters/Lobby/han_yeonhwa_hero.png`
 - Replace: `Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png`
-- Modify: `Assets/JoseonHunter/Scripts/Editor/AssetProduction/JoseonAssetPostprocessor.cs`
+- Modify: `Assets/JoseonHunter/Scripts/Editor/AssetImport/JoseonAssetPostprocessor.cs`
 - Modify: `Assets/JoseonHunter/Tests/EditMode/PremiumLobbyAssetContractTests.cs`
 
 **Interfaces:**
@@ -97,7 +97,7 @@ UI 프레임은 Point, mipmap off, max 1024, border 24~32px. 한연화는 Biline
 - [ ] **Step 6: 에셋 묶음 커밋·푸시**
 
 ```powershell
-git add -- Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png Assets/JoseonHunter/Art/Characters/Lobby/han_yeonhwa_hero.png Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png Assets/JoseonHunter/Scripts/Editor/AssetProduction/JoseonAssetPostprocessor.cs Assets/JoseonHunter/Tests/EditMode/PremiumLobbyAssetContractTests.cs
+git add -- Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png Assets/JoseonHunter/Art/Characters/Lobby/han_yeonhwa_hero.png Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png Assets/JoseonHunter/Scripts/Editor/AssetImport/JoseonAssetPostprocessor.cs Assets/JoseonHunter/Tests/EditMode/PremiumLobbyAssetContractTests.cs
 git commit -m "art: unify lobby and combat controls"
 git push origin master
 ```

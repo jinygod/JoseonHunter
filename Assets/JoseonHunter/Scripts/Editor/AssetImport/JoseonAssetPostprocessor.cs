@@ -24,6 +24,10 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_frame.png";
         private const string PremiumLobbyButtonPath =
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
+        private const string PremiumLobbySecondaryButtonPath =
+            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
+        private const string CompactWeaponSlotPath =
+            "Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
@@ -137,7 +141,11 @@ namespace JoseonHunter.Editor.AssetImport
                 || assetPath.Equals(PremiumLobbyResourceHeroPath, System.StringComparison.Ordinal);
             var isFrame = assetPath.Equals(PremiumLobbyFramePath, System.StringComparison.Ordinal);
             var isButton = assetPath.Equals(PremiumLobbyButtonPath, System.StringComparison.Ordinal);
-            if (!isHero && !isFrame && !isButton) return false;
+            var isSecondaryButton = assetPath.Equals(
+                PremiumLobbySecondaryButtonPath,
+                System.StringComparison.Ordinal);
+            var isCompactWeaponSlot = assetPath.Equals(CompactWeaponSlotPath, System.StringComparison.Ordinal);
+            if (!isHero && !isFrame && !isButton && !isSecondaryButton && !isCompactWeaponSlot) return false;
 
             var texture = (TextureImporter)assetImporter;
             texture.textureType = TextureImporterType.Sprite;
@@ -153,7 +161,10 @@ namespace JoseonHunter.Editor.AssetImport
             texture.alphaIsTransparency = !isHero;
             texture.spriteBorder = isFrame
                 ? new Vector4(48f, 48f, 48f, 48f)
-                : isButton ? new Vector4(32f, 32f, 32f, 32f) : Vector4.zero;
+                : isButton ? new Vector4(32f, 32f, 32f, 32f)
+                : isSecondaryButton ? new Vector4(16f, 16f, 16f, 16f)
+                : isCompactWeaponSlot ? new Vector4(16f, 16f, 16f, 16f)
+                : Vector4.zero;
             texture.textureCompression = TextureImporterCompression.Compressed;
             texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
             {
