@@ -577,7 +577,7 @@ MonoBehaviour:
   progressFill: {fileID: 3547213396911143327}
   spiritFlame: {fileID: 6636080377368841003}
   subtitle: {fileID: 7401916483443873310}
-  gameplaySceneName: Gameplay
+  destinationSceneName: Lobby
   beginOnStart: 1
 --- !u!1 &4075604847547293741
 GameObject:

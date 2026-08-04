@@ -9,6 +9,7 @@ using JoseonHunter.Content.Weapons;
 using JoseonHunter.Content;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Runtime.Meta;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -97,6 +98,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private float playerMaxHealth;
         private float moveSpeed;
         private float pickupRadius;
+        private float runDamageMultiplier = 1f;
+        private float runExperienceMultiplier = 1f;
+        private float runIncomingDamageMultiplier = 1f;
         private float geumjulDamage;
         private float contactInvulnerability;
         private float spawnTimer;
@@ -162,6 +166,10 @@ namespace JoseonHunter.Runtime.Gameplay
         public int FinalBossSpawnCountForTests { get; private set; }
         public int PackSpawnCountForTests { get; private set; }
         public IReadOnlyDictionary<WeaponId, int> RunMasterySnapshotForTests => runWeaponKillLedger.Snapshot();
+        public float StartingMaximumHealthForTests => playerMaxHealth;
+        public float StartingDamageMultiplierForTests => runDamageMultiplier;
+        public float StartingMoveSpeedForTests => moveSpeed;
+        public float StartingPickupRadiusForTests => pickupRadius;
         public bool RunEndedForTests => runEnded;
         public bool VictoryForTests => victory;
         public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
@@ -873,7 +881,12 @@ namespace JoseonHunter.Runtime.Gameplay
             upgradeOfferData.Clear();
             pendingWeaponChoice = null;
             weaponLevels.Clear();
-            weaponLevels.Add(WeaponId.HwandoFlyingBlade.Value, 1);
+            var metaSession = MetaGameSession.Current;
+            var patrolLoadout = metaSession != null ? metaSession.ActiveLoadout : null;
+            var startingWeapon = patrolLoadout != null
+                ? patrolLoadout.StartingWeapon
+                : WeaponId.HwandoFlyingBlade;
+            weaponLevels.Add(startingWeapon.Value, 1);
             supportLevels.Clear();
             unlockedUpgradeIds.Clear();
             acquiredEvolutionIds.Clear();
@@ -881,6 +894,9 @@ namespace JoseonHunter.Runtime.Gameplay
             seenSpecialEnemyGuides.Clear();
             weaponAffixes.Clear();
             weaponLegacyState.Clear();
+            if (patrolLoadout != null)
+                foreach (var style in patrolLoadout.Styles)
+                    weaponLegacyState.EquipForRun(style.Key, style.Value);
             runWeaponKillLedger.Reset();
             pendingMasteryDeaths.Clear();
             affixRollOrdinal = 0;
@@ -905,11 +921,19 @@ namespace JoseonHunter.Runtime.Gameplay
             waveAnnouncementTimer = 0f;
             waveAnnouncementIntensity = 0;
             normalRoleAnnouncementMask = 0;
-            playerMaxHealth = 100f;
+            var training = metaSession != null ? new CommonTrainingProgression(metaSession.Data) : null;
+            var vitalityMultiplier = training?.Multiplier(CommonTrainingId.Vitality) ?? 1f;
+            runDamageMultiplier = training?.Multiplier(CommonTrainingId.Power) ?? 1f;
+            var movementMultiplier = training?.Multiplier(CommonTrainingId.Footwork) ?? 1f;
+            runExperienceMultiplier = training?.Multiplier(CommonTrainingId.Learning) ?? 1f;
+            var guardMultiplier = training?.Multiplier(CommonTrainingId.Guard) ?? 1f;
+            var resonanceMultiplier = training?.Multiplier(CommonTrainingId.Resonance) ?? 1f;
+            runIncomingDamageMultiplier = Mathf.Clamp(2f - guardMultiplier, .9f, 1f);
+            playerMaxHealth = 100f * vitalityMultiplier;
             playerHealth = playerMaxHealth;
-            moveSpeed = 2.4f;
-            pickupRadius = StartingPickupRadius;
-            geumjulDamage = 38f;
+            moveSpeed = 2.4f * movementMultiplier;
+            pickupRadius = StartingPickupRadius * resonanceMultiplier;
+            geumjulDamage = 38f * runDamageMultiplier;
             spawnTimer = 0.2f;
             chestSpawnTimer = 18f;
             trailTimer = 0f;
@@ -1582,7 +1606,7 @@ namespace JoseonHunter.Runtime.Gameplay
                         contactInvulnerability <= 0f)
                     {
                         playerHealth = Mathf.Max(0f, playerHealth -
-                            enemy.ContactDamage * enemy.ContactDamageMultiplier * enemy.AuraMultiplier);
+                            enemy.ContactDamage * enemy.ContactDamageMultiplier * enemy.AuraMultiplier * runIncomingDamageMultiplier);
                         UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
                         contactInvulnerability = 0.55f;
                         StartCoroutine(FlashPlayer());
@@ -1658,19 +1682,20 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (!weaponCatalog.TryGet(id, out var definition) || definition.Levels.Count != 5)
                     throw new InvalidOperationException($"Gameplay catalog is missing '{id}'.");
                 var data = definition.Levels[Mathf.Clamp(ownedLevel - 1, 0, 4)];
+                var baseDamage = Mathf.Max(1, Mathf.RoundToInt(data.BaseDamage * runDamageMultiplier));
                 IWeaponExecutor executor;
                 var evolved = evolutionState.IsEvolved(id);
                 var modifiers = WeaponRuntimeModifiers.From(
                     weaponAffixes.TryProfileFor(id, out var profile) ? profile : null,
                     weaponLegacyState.SnapshotFor(id, ownedLevel));
-                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers, slowFraction: data.SlowFraction);
-                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, data.BaseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved, modifiers);
+                if (id.Equals(WeaponId.HwandoFlyingBlade)) executor = new FlyingBladeExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.GakgungShot)) executor = new GakgungExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Speed, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.TalismanThrow)) executor = new TalismanExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ChainCount, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers, slowFraction: data.SlowFraction);
+                else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved, modifiers);
                 else throw new InvalidOperationException($"No executor is available for '{id}'.");
                 weaponRuntime.Register(id, executor);
                 registeredWeaponIds.Add(id);
@@ -2049,7 +2074,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void AddExperience(int amount)
         {
-            experience += amount;
+            experience += Mathf.Max(0, Mathf.CeilToInt(amount * runExperienceMultiplier));
             while (experience >= experienceToNext)
             {
                 experience -= experienceToNext;
@@ -2227,6 +2252,7 @@ namespace JoseonHunter.Runtime.Gameplay
         }
 
         private bool NeedsLegacyChoice(string weaponId, int resolvedLevel) =>
+            MetaGameSession.Current == null &&
             resolvedLevel == 3 &&
             !weaponLegacyState.SnapshotFor(new WeaponId(weaponId), 3).HasPath;
 

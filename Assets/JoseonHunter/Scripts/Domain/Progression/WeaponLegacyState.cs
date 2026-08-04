@@ -6,6 +6,7 @@ namespace JoseonHunter.Domain.Progression
     public sealed class WeaponLegacyState
     {
         private readonly Dictionary<WeaponId, WeaponLegacyPathId> selectedPaths = new();
+        private readonly HashSet<WeaponId> equippedFromRunStart = new();
 
         public bool TryChoose(WeaponId weaponId, WeaponLegacyPathId pathId)
         {
@@ -22,7 +23,8 @@ namespace JoseonHunter.Domain.Progression
 
         public WeaponLegacySnapshot SnapshotFor(WeaponId weaponId, int weaponLevel)
         {
-            if (!selectedPaths.TryGetValue(weaponId, out var pathId) || weaponLevel < 3)
+            if (!selectedPaths.TryGetValue(weaponId, out var pathId) ||
+                (weaponLevel < 3 && !equippedFromRunStart.Contains(weaponId)))
                 return default;
 
             var stage = weaponLevel >= 5
@@ -33,8 +35,25 @@ namespace JoseonHunter.Domain.Progression
             return new WeaponLegacySnapshot(pathId, stage);
         }
 
-        public bool Remove(WeaponId weaponId) => selectedPaths.Remove(weaponId);
+        public bool EquipForRun(WeaponId weaponId, WeaponLegacyPathId pathId)
+        {
+            if (!WeaponLegacyCatalog.TryGet(pathId, out var definition) ||
+                !definition.WeaponId.Equals(weaponId)) return false;
+            selectedPaths[weaponId] = pathId;
+            equippedFromRunStart.Add(weaponId);
+            return true;
+        }
 
-        public void Clear() => selectedPaths.Clear();
+        public bool Remove(WeaponId weaponId)
+        {
+            equippedFromRunStart.Remove(weaponId);
+            return selectedPaths.Remove(weaponId);
+        }
+
+        public void Clear()
+        {
+            selectedPaths.Clear();
+            equippedFromRunStart.Clear();
+        }
     }
 }

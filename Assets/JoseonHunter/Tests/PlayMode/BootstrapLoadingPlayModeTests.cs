@@ -1,6 +1,7 @@
 using System.Collections;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,24 +11,29 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class BootstrapLoadingPlayModeTests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            if (MetaGameSession.Current != null)
+                Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
         [UnityTest]
-        public IEnumerator BootstrapKeepsOpaqueOverlayUntilGameplayReadyThenRemovesIt()
+        public IEnumerator BootstrapLoadsLobbyAfterSaveInitializationThenRemovesOverlay()
         {
             GameplayReadySignal.Reset();
             SceneManager.LoadScene("Bootstrap");
 
-            yield return WaitForScene("Gameplay", 5f);
+            yield return WaitForScene("Lobby", 5f);
             var loader = Object.FindFirstObjectByType<BootstrapLoadingPresenter>();
             Assert.That(loader, Is.Not.Null);
             Assert.That(loader.OpaqueForTests, Is.True);
             yield return WaitForProgress(loader, 5f);
             Assert.That(loader.ProgressForTests, Is.EqualTo(1f).Within(.001f));
-            yield return WaitForReadiness(5f);
-            Assert.That(GameplayReadySignal.IsReady, Is.True);
-
             yield return WaitForLoaderRemoval(5f);
             Assert.That(Object.FindFirstObjectByType<BootstrapLoadingPresenter>(), Is.Null);
-            Assert.That(Object.FindFirstObjectByType<FirstPlayableController>(), Is.Not.Null);
+            Assert.That(MetaGameSession.Current, Is.Not.Null);
+            Assert.That(MetaGameSession.Current.Data.SchemaVersion, Is.EqualTo(2));
         }
 
         [UnityTest]

@@ -1,8 +1,10 @@
 using System.Collections;
 using TMPro;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Runtime.Meta;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 namespace JoseonHunter.Presentation.UI
 {
@@ -19,7 +21,8 @@ namespace JoseonHunter.Presentation.UI
         [SerializeField] private RectTransform progressFill;
         [SerializeField] private RectTransform spiritFlame;
         [SerializeField] private TMP_Text subtitle;
-        [SerializeField] private string gameplaySceneName = "Gameplay";
+        [FormerlySerializedAs("gameplaySceneName")]
+        [SerializeField] private string destinationSceneName = "Lobby";
         [SerializeField] private bool beginOnStart = true;
 
         private bool began;
@@ -63,7 +66,8 @@ namespace JoseonHunter.Presentation.UI
 
         private void Start()
         {
-            if (beginOnStart) Begin(gameplaySceneName);
+            MetaGameSession.EnsureExists();
+            if (beginOnStart) Begin(destinationSceneName);
         }
 
         private void Update()
@@ -78,22 +82,23 @@ namespace JoseonHunter.Presentation.UI
             if (instance == this) instance = null;
         }
 
-        public void Begin(string sceneName = "Gameplay")
+        public void Begin(string sceneName = "Lobby")
         {
             if (began) return;
             began = true;
-            gameplaySceneName = string.IsNullOrWhiteSpace(sceneName) ? "Gameplay" : sceneName;
-            StartCoroutine(LoadGameplay());
+            destinationSceneName = string.IsNullOrWhiteSpace(sceneName) ? "Lobby" : sceneName;
+            StartCoroutine(LoadDestination());
         }
 
-        private IEnumerator LoadGameplay()
+        private IEnumerator LoadDestination()
         {
-            GameplayReadySignal.Reset();
+            var waitsForGameplay = destinationSceneName == "Gameplay";
+            if (waitsForGameplay) GameplayReadySignal.Reset();
             var startedAt = Time.realtimeSinceStartup;
             AsyncOperation operation;
             try
             {
-                operation = SceneManager.LoadSceneAsync(gameplaySceneName, LoadSceneMode.Single);
+                operation = SceneManager.LoadSceneAsync(destinationSceneName, LoadSceneMode.Single);
             }
             catch (System.Exception)
             {
@@ -119,7 +124,7 @@ namespace JoseonHunter.Presentation.UI
             }
 
             SetProgress(1f);
-            while (!GameplayReadySignal.IsReady)
+            while (waitsForGameplay && !GameplayReadySignal.IsReady)
             {
                 if (Time.realtimeSinceStartup - startedAt > LoadTimeoutSeconds)
                 {

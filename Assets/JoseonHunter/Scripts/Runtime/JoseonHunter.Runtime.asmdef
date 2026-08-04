@@ -4,6 +4,7 @@
   "references": [
     "JoseonHunter.Domain",
     "JoseonHunter.Content",
+    "JoseonHunter.Infrastructure",
     "Unity.InputSystem"
   ],
   "autoReferenced": false
