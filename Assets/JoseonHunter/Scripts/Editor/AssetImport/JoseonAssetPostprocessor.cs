@@ -166,7 +166,7 @@ namespace JoseonHunter.Editor.AssetImport
                 ? new Vector4(48f, 48f, 48f, 48f)
                 : isButton ? new Vector4(32f, 32f, 32f, 32f)
                 : isSecondaryButton ? new Vector4(16f, 16f, 16f, 16f)
-                : isCompactWeaponSlot ? new Vector4(16f, 16f, 16f, 16f)
+                : isCompactWeaponSlot ? new Vector4(64f, 64f, 64f, 64f)
                 : Vector4.zero;
             texture.textureCompression = TextureImporterCompression.Compressed;
             texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
