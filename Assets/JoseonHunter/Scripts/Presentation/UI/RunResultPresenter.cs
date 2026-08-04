@@ -12,10 +12,10 @@ namespace JoseonHunter.Presentation.UI
         private RectTransform panelRect;
         private TextMeshProUGUI title;
         private TextMeshProUGUI summary;
-        private TextMeshProUGUI restartLabel;
-        private Button restartButton;
+        private TextMeshProUGUI lobbyReturnLabel;
+        private Button lobbyReturnButton;
 
-        public event Action RestartRequested;
+        public event Action LobbyReturnRequested;
 
         public void Render(FirstPlayableUiState state)
         {
@@ -28,7 +28,10 @@ namespace JoseonHunter.Presentation.UI
                 $"생존 시간  {state.Elapsed:0.0}초\n\n" +
                 $"처치  {state.Kills}\n\n" +
                 $"도달 레벨  {state.Level}\n\n" +
-                $"획득 엽전  {state.Coins}";
+                $"획득 엽전  {state.Coins}\n\n" +
+                $"획득 숙련도  {state.RunMasteryEarned}" +
+                (state.SettlementFailed ? "\n\n전투 기록을 저장하지 못했습니다. 다시 시도해 주세요." : string.Empty);
+            lobbyReturnLabel.text = state.SettlementFailed ? "다시 저장" : "로비로 돌아가기";
         }
 
         public void ApplyPortraitLayout()
@@ -78,16 +81,17 @@ namespace JoseonHunter.Presentation.UI
             SetRect(summary.rectTransform, new Vector2(0f, 10f), new Vector2(640f, 350f));
             summary.color = JoseonUiPalette.HanjiInk;
 
-            restartButton = RuntimeUiFactory.Button("Restart Button", panel.transform,
+            lobbyReturnButton = RuntimeUiFactory.Button("Lobby Return Button", panel.transform,
                 JoseonUiPalette.AppraisalResult);
-            SetRect(restartButton.GetComponent<RectTransform>(), new Vector2(0f, -252f),
+            SetRect(lobbyReturnButton.GetComponent<RectTransform>(), new Vector2(0f, -252f),
                 new Vector2(370f, 86f));
-            restartButton.onClick.AddListener(() => RestartRequested?.Invoke());
-            restartLabel = RuntimeUiFactory.Text("Restart Label", restartButton.transform, "다시 시작", 30f,
+            lobbyReturnButton.onClick.AddListener(() => LobbyReturnRequested?.Invoke());
+            lobbyReturnLabel = RuntimeUiFactory.Text("Lobby Return Label", lobbyReturnButton.transform,
+                "로비로 돌아가기", 30f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
-            RuntimeUiFactory.Stretch(restartLabel.rectTransform, 12f, 8f, 12f, 8f);
-            restartLabel.fontStyle = FontStyles.Bold;
-            restartLabel.color = JoseonUiPalette.DarkPanelText;
+            RuntimeUiFactory.Stretch(lobbyReturnLabel.rectTransform, 12f, 8f, 12f, 8f);
+            lobbyReturnLabel.fontStyle = FontStyles.Bold;
+            lobbyReturnLabel.color = JoseonUiPalette.DarkPanelText;
 
             ApplyPortraitLayout();
             resultRoot.SetActive(false);

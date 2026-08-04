@@ -1,3 +1,4 @@
+using System;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
 using UnityEngine;
@@ -20,6 +21,8 @@ namespace JoseonHunter.Presentation.UI
         private Image bossFill;
         private GameObject bossRoot;
         private RectTransform vitalsRect;
+
+        public event Action ReturnRequested;
 
         public void Build()
         {
@@ -70,6 +73,18 @@ namespace JoseonHunter.Presentation.UI
             bossText = Label("Boss Label", bossRect, new Vector2(0f, -8f), new Vector2(590f, 26f), 21f, TextAlignmentOptions.Center);
             bossFill = Bar("Boss Fill", bossRect, new Vector2(15f, -49f), new Vector2(590f, 18f), JoseonUiPalette.Crimson);
             bossRoot.SetActive(false);
+
+            var returnButton = RuntimeUiFactory.Button("Return Button", transform, JoseonUiPalette.Ink);
+            var returnRect = returnButton.GetComponent<RectTransform>();
+            returnRect.anchorMin = returnRect.anchorMax = new Vector2(1f, 1f);
+            returnRect.pivot = new Vector2(1f, 1f);
+            returnRect.anchoredPosition = new Vector2(-24f, -198f);
+            returnRect.sizeDelta = new Vector2(126f, 52f);
+            returnButton.onClick.AddListener(() => ReturnRequested?.Invoke());
+            var returnLabel = RuntimeUiFactory.Text("Return Label", returnButton.transform, "귀환", 21f,
+                TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
+            returnLabel.color = JoseonUiPalette.Hanji;
+            RuntimeUiFactory.Stretch(returnLabel.rectTransform, 8f, 5f, 8f, 5f);
             ApplyPortraitLayout();
         }
 

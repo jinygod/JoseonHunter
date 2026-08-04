@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using JoseonHunter.Domain.Geumjul;
@@ -122,6 +123,12 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool awaitingUpgradePresentationClose;
         private bool runEnded;
         private bool victory;
+        private bool runAbandoned;
+        private bool settlementPrepared;
+        private bool settlementSucceeded;
+        private bool settlementFailed;
+        private bool returningToLobby;
+        private RunSettlement pendingSettlement;
         private StagePacingTimeline stageTimeline;
         private int processedStageMilestones;
         private bool finalBossWarning;
@@ -172,6 +179,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public float StartingPickupRadiusForTests => pickupRadius;
         public bool RunEndedForTests => runEnded;
         public bool VictoryForTests => victory;
+        public bool SettlementSucceededForTests => settlementSucceeded;
         public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
         {
             elapsed = Mathf.Clamp(currentElapsed, 0f, PrototypeDurationSeconds);
@@ -225,6 +233,18 @@ namespace JoseonHunter.Runtime.Gameplay
         public void AddExperienceForTests(int amount) => AddExperience(amount);
         public void ResetRunForTests() => ResetRun();
         public void EndRunForTests(bool didWin) => EndRun(didWin);
+        public void AwardRunProgressForTests(WeaponId weaponId, int mastery, int earnedCoins)
+        {
+            if (mastery < 0 || earnedCoins < 0) throw new ArgumentOutOfRangeException();
+            for (var index = 0; index < mastery; index++)
+            {
+                var targetId = 1000000 + index;
+                runWeaponKillLedger.RecordHit(targetId, weaponId);
+                runWeaponKillLedger.ConfirmDeath(targetId, EnemyMasteryClass.Normal);
+            }
+            coins += earnedCoins;
+            kills += mastery;
+        }
         public void SetWeaponLevelForTests(WeaponId weaponId, int weaponLevel)
         {
             weaponLevels[weaponId.Value] = weaponLevel;
@@ -723,7 +743,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 {
                     if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
                     {
-                        RestartRun();
+                        ReturnToLobby();
                     }
 
                     return;
@@ -956,6 +976,11 @@ namespace JoseonHunter.Runtime.Gameplay
             awaitingUpgradePresentationClose = false;
             runEnded = false;
             victory = false;
+            runAbandoned = false;
+            settlementPrepared = false;
+            settlementSucceeded = false;
+            settlementFailed = false;
+            returningToLobby = false;
 
             player = CreateCombatantObject(
                 "Han Yeonhwa",
@@ -2475,7 +2500,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 level, experience, experienceToNext, coins, kills, elapsed, PrototypeDurationSeconds,
                 playerHealth, playerMaxHealth, finalBossWarning && !bossSpawned, bossAlive,
                 boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons,
-                waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity, runEnded, victory);
+                waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity, runEnded, victory,
+                RunMasteryTotal(), settlementFailed);
         }
 
         private static string LegacyStageName(WeaponLegacyStage stage) => stage switch
@@ -2498,6 +2524,32 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             if (!runEnded) return;
             ResetRun();
+        }
+
+        public void ReturnToLobby()
+        {
+            if (!runEnded || returningToLobby) return;
+            if (!TrySettleRun(runAbandoned)) return;
+            returningToLobby = true;
+            StartCoroutine(RouteToLobby());
+        }
+
+        public void ConfirmAbandonAndReturn()
+        {
+            if (runEnded || returningToLobby) return;
+            runEnded = true;
+            victory = false;
+            runAbandoned = true;
+            movement = Vector2.zero;
+            flow?.TryTransition(GameFlowState.GameOver);
+            ReturnToLobby();
+        }
+
+        private IEnumerator RouteToLobby()
+        {
+            var session = MetaGameSession.Current ?? MetaGameSession.EnsureExists();
+            yield return session.Router.LoadLobby();
+            returningToLobby = false;
         }
 
         private UpgradeChoiceView BuildUpgradeChoiceView(UpgradeOffer offer)
@@ -2692,8 +2744,41 @@ namespace JoseonHunter.Runtime.Gameplay
 
             runEnded = true;
             victory = didWin;
+            runAbandoned = false;
             movement = Vector2.zero;
             flow?.TryTransition(GameFlowState.GameOver);
+            TrySettleRun(false);
+        }
+
+        private bool TrySettleRun(bool abandoned)
+        {
+            if (!settlementPrepared)
+            {
+                pendingSettlement = new RunSettlement(
+                    runWeaponKillLedger.Snapshot(), coins, kills, elapsed, victory, abandoned);
+                settlementPrepared = true;
+            }
+            if (settlementSucceeded) return true;
+
+            var session = MetaGameSession.Current;
+            if (session == null)
+            {
+                settlementSucceeded = true;
+                settlementFailed = false;
+                return true;
+            }
+
+            var result = session.CommitRun(pendingSettlement);
+            settlementSucceeded = result.Success;
+            settlementFailed = !result.Success;
+            return result.Success;
+        }
+
+        private int RunMasteryTotal()
+        {
+            var total = 0;
+            foreach (var points in runWeaponKillLedger.Snapshot().Values) total += points;
+            return total;
         }
 
         private PixelHitMask MaskFor(SpriteRenderer renderer)

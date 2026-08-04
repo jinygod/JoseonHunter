@@ -23,6 +23,7 @@ namespace JoseonHunter.Presentation.UI
         private WeaponReplacementPresenter weaponReplacement;
         private WeaponLegacyChoicePresenter weaponLegacyChoice;
         private RunResultPresenter runResult;
+        private AbandonRunPresenter abandonRun;
         private CanvasGroup combatHudGroup;
         private CanvasGroup weaponRackGroup;
         private RectTransform safeAreaContainer;
@@ -84,6 +85,7 @@ namespace JoseonHunter.Presentation.UI
             combatHud = hudRoot.gameObject.AddComponent<CombatHudPresenter>();
             combatHudGroup = hudRoot.gameObject.AddComponent<CanvasGroup>();
             combatHud.Build();
+            combatHud.ReturnRequested += OpenAbandonConfirmation;
             var rackRoot = RuntimeUiFactory.Rect("Weapon Rack", safeAreaContainer);
             RuntimeUiFactory.Stretch(rackRoot, 0f, 0f, 0f, 0f);
             weaponRack = rackRoot.gameObject.AddComponent<WeaponRackPresenter>();
@@ -114,7 +116,12 @@ namespace JoseonHunter.Presentation.UI
             var resultRoot = RuntimeUiFactory.Rect("Run Result", modalSafeAreaContainer);
             RuntimeUiFactory.Stretch(resultRoot, 0f, 0f, 0f, 0f);
             runResult = resultRoot.gameObject.AddComponent<RunResultPresenter>();
-            runResult.RestartRequested += OnRestartRequested;
+            runResult.LobbyReturnRequested += OnLobbyReturnRequested;
+            var abandonRoot = RuntimeUiFactory.Rect("Abandon Run", modalSafeAreaContainer);
+            RuntimeUiFactory.Stretch(abandonRoot, 0f, 0f, 0f, 0f);
+            abandonRun = abandonRoot.gameObject.AddComponent<AbandonRunPresenter>();
+            abandonRun.Confirmed += ConfirmAbandon;
+            abandonRun.Cancelled += CancelAbandon;
         }
 
         private void OnDestroy()
@@ -127,7 +134,13 @@ namespace JoseonHunter.Presentation.UI
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
             if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
             if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
-            if (runResult != null) runResult.RestartRequested -= OnRestartRequested;
+            if (combatHud != null) combatHud.ReturnRequested -= OpenAbandonConfirmation;
+            if (runResult != null) runResult.LobbyReturnRequested -= OnLobbyReturnRequested;
+            if (abandonRun != null)
+            {
+                abandonRun.Confirmed -= ConfirmAbandon;
+                abandonRun.Cancelled -= CancelAbandon;
+            }
             if (instance == this) instance = null;
         }
 
@@ -135,6 +148,7 @@ namespace JoseonHunter.Presentation.UI
         {
             CloseUpgradeChoice();
             CloseRewardReveal();
+            abandonRun?.CloseImmediately();
             CancelUiModalPresentation();
         }
 
@@ -188,6 +202,7 @@ namespace JoseonHunter.Presentation.UI
             boundController.UpgradeChosen += OnUpgradeChosen;
             boundController.RunReset += CloseUpgradeChoice;
             boundController.RunReset += CloseRewardReveal;
+            boundController.RunReset += CloseAbandonWithoutFlowChange;
         }
 
         private void UnbindController()
@@ -199,6 +214,7 @@ namespace JoseonHunter.Presentation.UI
             boundController.UpgradeChosen -= OnUpgradeChosen;
             boundController.RunReset -= CloseUpgradeChoice;
             boundController.RunReset -= CloseRewardReveal;
+            boundController.RunReset -= CloseAbandonWithoutFlowChange;
             boundController = null;
         }
 
@@ -363,9 +379,39 @@ namespace JoseonHunter.Presentation.UI
             SetModalScrimVisible(false);
         }
 
-        private void OnRestartRequested()
+        private void OnLobbyReturnRequested()
         {
-            boundController?.RestartRun();
+            boundController?.ReturnToLobby();
+        }
+
+        private void OpenAbandonConfirmation()
+        {
+            if (boundController == null || boundController.UiState.RunEnded || abandonRun == null || abandonRun.IsOpen)
+                return;
+            if (!boundController.Flow.TryTransition(GameFlowState.Paused)) return;
+            SetBackgroundRaycastsEnabled(false);
+            SetModalScrimVisible(true);
+            abandonRun.Open();
+        }
+
+        private void CancelAbandon()
+        {
+            abandonRun?.CloseImmediately();
+            boundController?.Flow.TryTransition(GameFlowState.Playing);
+            SetBackgroundRaycastsEnabled(true);
+            SetModalScrimVisible(false);
+        }
+
+        private void ConfirmAbandon()
+        {
+            abandonRun?.CloseImmediately();
+            SetModalScrimVisible(false);
+            boundController?.ConfirmAbandonAndReturn();
+        }
+
+        private void CloseAbandonWithoutFlowChange()
+        {
+            abandonRun?.CloseImmediately();
         }
 
         private void SetBackgroundRaycastsEnabled(bool enabled)
@@ -397,6 +443,7 @@ namespace JoseonHunter.Presentation.UI
             weaponLegacyChoice?.ApplyPortraitLayout();
             affixReveal?.ApplyPortraitLayout();
             runResult?.ApplyPortraitLayout();
+            abandonRun?.ApplyPortraitLayout();
         }
 
         private static void ApplyNormalizedSafeArea(RectTransform container, Vector2 min, Vector2 max)

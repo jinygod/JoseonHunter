@@ -12,7 +12,8 @@ namespace JoseonHunter.Runtime.Gameplay
             float elapsed, float duration, float health, float maximumHealth, bool bossWarning, bool bossAlive,
             float bossHealth, float bossMaximumHealth, IReadOnlyList<WeaponSlotView> weapons,
             string waveAnnouncement = null, float waveAnnouncementRemaining = 0f,
-            int waveAnnouncementIntensity = 0, bool runEnded = false, bool victory = false)
+            int waveAnnouncementIntensity = 0, bool runEnded = false, bool victory = false,
+            int runMasteryEarned = 0, bool settlementFailed = false)
         {
             Level = level; Experience = experience; ExperienceToNext = experienceToNext; Coins = coins; Kills = kills;
             Elapsed = elapsed; Duration = duration; Health = health; MaximumHealth = maximumHealth;
@@ -23,6 +24,8 @@ namespace JoseonHunter.Runtime.Gameplay
             WaveAnnouncementIntensity = waveAnnouncementIntensity;
             RunEnded = runEnded;
             Victory = victory;
+            RunMasteryEarned = runMasteryEarned;
+            SettlementFailed = settlementFailed;
         }
 
         public int Level { get; }
@@ -44,6 +47,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public int WaveAnnouncementIntensity { get; }
         public bool RunEnded { get; }
         public bool Victory { get; }
+        public int RunMasteryEarned { get; }
+        public bool SettlementFailed { get; }
     }
 
     public readonly struct UpgradeChoiceView

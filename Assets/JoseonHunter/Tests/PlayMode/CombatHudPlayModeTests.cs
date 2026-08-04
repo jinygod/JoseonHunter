@@ -2,6 +2,7 @@ using System.Collections;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,6 +18,7 @@ namespace JoseonHunter.Tests.PlayMode
         public void RestoreTimeScale()
         {
             Time.timeScale = 1f;
+            if (MetaGameSession.Current != null) Object.DestroyImmediate(MetaGameSession.Current.gameObject);
         }
 
         [Test]
@@ -35,17 +37,18 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextNamed(root, "Kills"), Is.EqualTo("처치 21"));
             Assert.That(TextNamed(root, "Boss Warning"), Is.EqualTo("강한 기운이 다가옵니다"));
             Assert.That(TextNamed(root, "Boss Label"), Does.StartWith("우두머리 "));
+            Assert.That(TextNamed(root, "Return Label"), Is.EqualTo("귀환"));
             Assert.That(AllText(root), Does.Not.Match("HP|XP|COIN|KILLS|BOSS|DREADFUL"));
             Object.DestroyImmediate(root);
         }
 
         [Test]
-        public void RunResultIsOpaqueKoreanCanvasAndRequestsRestart()
+        public void RunResultIsOpaqueKoreanCanvasAndRequestsLobbyReturn()
         {
             var root = new GameObject("Korean Result Test");
             var presenter = root.AddComponent<RunResultPresenter>();
-            var restarts = 0;
-            presenter.RestartRequested += () => restarts++;
+            var returns = 0;
+            presenter.LobbyReturnRequested += () => returns++;
             presenter.Render(new FirstPlayableUiState(6, 0, 10, 13, 42,
                 83.4f, 180f, 0f, 100f, false, false, 0f, 0f,
                 System.Array.Empty<WeaponSlotView>(), runEnded: true, victory: false));
@@ -56,20 +59,20 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(summary, Does.Contain("처치"));
             Assert.That(summary, Does.Contain("도달 레벨"));
             Assert.That(summary, Does.Contain("획득 엽전"));
-            Assert.That(TextNamed(root, "Restart Label"), Is.EqualTo("다시 시작"));
+            Assert.That(TextNamed(root, "Lobby Return Label"), Is.EqualTo("로비로 돌아가기"));
             Assert.That(ImageNamed(root, "Result Panel").color.a, Is.EqualTo(1f));
             Assert.That(AllText(root), Does.Not.Match("Run|Restart|Survived|Try again"));
 
             var button = System.Array.Find(root.GetComponentsInChildren<Button>(true),
-                candidate => candidate.name == "Restart Button");
+                candidate => candidate.name == "Lobby Return Button");
             Assert.That(button, Is.Not.Null);
             button.onClick.Invoke();
-            Assert.That(restarts, Is.EqualTo(1));
+            Assert.That(returns, Is.EqualTo(1));
             Object.DestroyImmediate(root);
         }
 
         [UnityTest]
-        public IEnumerator GameplayRunResultButtonRestartsAndRestoresBackgroundRaycasts()
+        public IEnumerator GameplayRunResultButtonReturnsToLobby()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -85,15 +88,34 @@ namespace JoseonHunter.Tests.PlayMode
                 candidate => candidate.name == "Run Result Root");
             Assert.That(root.gameObject.activeSelf, Is.True);
             var button = System.Array.Find(presenter.GetComponentsInChildren<Button>(true),
-                candidate => candidate.name == "Restart Button");
+                candidate => candidate.name == "Lobby Return Button");
             button.onClick.Invoke();
-            yield return new WaitForSecondsRealtime(.15f);
+            for (var frame = 0; frame < 240 && SceneManager.GetActiveScene().name != "Lobby"; frame++)
+                yield return null;
+            Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("Lobby"));
+        }
 
-            Assert.That(controller.UiState.RunEnded, Is.False);
-            Assert.That(root.gameObject.activeSelf, Is.False);
-            foreach (var group in Object.FindObjectsByType<CanvasGroup>(FindObjectsInactive.Include,
-                         FindObjectsSortMode.None))
-                Assert.That(group.blocksRaycasts, Is.True, group.name);
+        [Test]
+        public void AbandonConfirmationUsesOpaqueKoreanCopyAndTwoClearChoices()
+        {
+            var root = new GameObject("Abandon Test");
+            var presenter = root.AddComponent<AbandonRunPresenter>();
+            var confirmed = 0;
+            var cancelled = 0;
+            presenter.Confirmed += () => confirmed++;
+            presenter.Cancelled += () => cancelled++;
+            presenter.Open();
+
+            Assert.That(TextNamed(root, "Abandon Title"), Is.EqualTo("순찰에서 귀환"));
+            Assert.That(TextNamed(root, "Abandon Message"), Does.Contain("숙련도와 엽전"));
+            Assert.That(ImageNamed(root, "Abandon Panel").color.a, Is.EqualTo(1f));
+            System.Array.Find(root.GetComponentsInChildren<Button>(true),
+                candidate => candidate.name == "Continue Combat Button").onClick.Invoke();
+            System.Array.Find(root.GetComponentsInChildren<Button>(true),
+                candidate => candidate.name == "Confirm Return Button").onClick.Invoke();
+            Assert.That(cancelled, Is.EqualTo(1));
+            Assert.That(confirmed, Is.EqualTo(1));
+            Object.DestroyImmediate(root);
         }
 
         [UnityTest]
