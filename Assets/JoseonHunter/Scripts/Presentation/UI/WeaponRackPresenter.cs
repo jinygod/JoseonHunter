@@ -173,12 +173,12 @@ namespace JoseonHunter.Presentation.UI
             {
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
-                slot.Root.transform.localScale = Vector3.one * pulse;
+                slot.Border.transform.localScale = Vector3.one * pulse;
                 yield return null;
             }
 
             slot.PulseRoutine = null;
-            if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.Border != null) slot.Border.transform.localScale = Vector3.one;
         }
 
         private void StopPulse(Slot slot)
@@ -186,6 +186,7 @@ namespace JoseonHunter.Presentation.UI
             if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.Border != null) slot.Border.transform.localScale = Vector3.one;
         }
     }
 }

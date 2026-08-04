@@ -131,14 +131,14 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             Assert.That(root.transform.Find("Weapon Slot 0").localScale, Is.EqualTo(Vector3.one));
             Assert.That(root.transform.Find("Weapon Slot 1").localScale, Is.EqualTo(Vector3.one));
-            Assert.That(root.transform.Find("Weapon Slot 1").Find("Accent").localScale.x, Is.GreaterThan(1f));
+            Assert.That(root.transform.Find("Weapon Slot 1").Find("Level Border").localScale.x, Is.GreaterThan(1f));
 
             rack.ResetPulses();
-            Assert.That(root.transform.Find("Weapon Slot 1").Find("Accent").localScale, Is.EqualTo(Vector3.one));
+            Assert.That(root.transform.Find("Weapon Slot 1").Find("Level Border").localScale, Is.EqualTo(Vector3.one));
             rack.Pulse("two", 2);
             yield return null;
             root.SetActive(false);
-            Assert.That(root.transform.Find("Weapon Slot 1").Find("Accent").localScale, Is.EqualTo(Vector3.one));
+            Assert.That(root.transform.Find("Weapon Slot 1").Find("Level Border").localScale, Is.EqualTo(Vector3.one));
             Object.Destroy(root);
         }
 
@@ -153,9 +153,9 @@ namespace JoseonHunter.Tests.PlayMode
             rack.Pulse("one", 3);
             yield return new WaitForSecondsRealtime(.16f);
             Assert.That(root.transform.Find("Weapon Slot 0").localScale, Is.EqualTo(Vector3.one));
-            Assert.That(root.transform.Find("Weapon Slot 0").Find("Accent").localScale.x, Is.GreaterThan(1f));
+            Assert.That(root.transform.Find("Weapon Slot 0").Find("Level Border").localScale.x, Is.GreaterThan(1f));
             yield return new WaitForSecondsRealtime(.15f);
-            Assert.That(root.transform.Find("Weapon Slot 0").Find("Accent").localScale, Is.EqualTo(Vector3.one));
+            Assert.That(root.transform.Find("Weapon Slot 0").Find("Level Border").localScale, Is.EqualTo(Vector3.one));
             Object.Destroy(root);
         }
     }
