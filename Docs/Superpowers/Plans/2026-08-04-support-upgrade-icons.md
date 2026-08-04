@@ -96,7 +96,7 @@ git push origin master
 ### Task 3: Resolve icons in support choice views
 
 **Files:**
-- Create: `Assets/JoseonHunter/Scripts/Presentation/UI/SupportUpgradeIconCatalog.cs`
+- Create: `Assets/JoseonHunter/Scripts/Runtime/Gameplay/SupportUpgradeIconCatalog.cs`
 - Modify: `Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs`
 
 **Interfaces:**
@@ -126,7 +126,7 @@ Run `SupportUpgradeIconCatalogTests` in EditMode and all `UpgradeChoicePlayModeT
 - [ ] **Step 4: Commit and push the implementation**
 
 ```powershell
-git add Assets/JoseonHunter/Scripts/Presentation/UI/SupportUpgradeIconCatalog.cs Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs Assets/JoseonHunter/Tests
+git add Assets/JoseonHunter/Scripts/Runtime/Gameplay/SupportUpgradeIconCatalog.cs Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs Assets/JoseonHunter/Tests
 git commit -m "feat: show dedicated support upgrade icons"
 git push origin master
 ```
@@ -159,4 +159,3 @@ git add docs/verification
 git commit -m "test: verify support upgrade icon presentation"
 git push origin master
 ```
-

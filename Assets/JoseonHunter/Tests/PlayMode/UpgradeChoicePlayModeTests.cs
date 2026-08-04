@@ -4,6 +4,7 @@ using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -134,6 +135,38 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(calls, Is.EqualTo(2));
             Assert.That(presenter.IsChoiceLocked, Is.True);
             Object.Destroy(go);
+        }
+
+        [UnityTest]
+        public IEnumerator Gameplay_support_choices_show_dedicated_icons_instead_of_the_generic_glyph()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var presenter = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            Assert.That(controller, Is.Not.Null);
+            Assert.That(presenter, Is.Not.Null);
+
+            controller.OpenUpgradeOffersForTests(
+                new UpgradeOffer("talisman", UpgradeKind.Support, 1),
+                new UpgradeOffer("boots", UpgradeKind.Support, 1),
+                new UpgradeOffer("warding_bell", UpgradeKind.Support, 1));
+            yield return null;
+
+            var cards = presenter.GetComponentsInChildren<Button>(true);
+            Assert.That(cards, Has.Length.EqualTo(3));
+            foreach (var card in cards)
+            {
+                var icon = card.transform.Find("Icon")?.GetComponent<Image>();
+                var glyph = card.transform.Find("Glyph");
+                Assert.That(icon, Is.Not.Null, card.name);
+                Assert.That(icon.enabled, Is.True, card.name);
+                Assert.That(icon.sprite, Is.Not.Null, card.name);
+                Assert.That(glyph, Is.Not.Null, card.name);
+                Assert.That(glyph.gameObject.activeSelf, Is.False, card.name);
+            }
         }
 
         private static UpgradeChoiceState Choices() => new UpgradeChoiceState(2, new[]

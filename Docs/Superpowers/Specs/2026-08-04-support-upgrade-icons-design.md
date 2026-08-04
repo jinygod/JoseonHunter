@@ -26,7 +26,7 @@
 
 ## Unity 연결
 
-패시브 ID에서 전용 `Sprite`를 반환하는 단일 카탈로그를 둔다. `FirstPlayableController`가 패시브 선택용 `UpgradeChoiceView`를 만들 때 이 카탈로그로 아이콘을 해결한다. 알 수 없는 ID나 누락된 에셋은 기존 글자 표식으로 안전하게 폴백한다.
+패시브 ID에서 전용 `Sprite`를 반환하는 런타임 카탈로그를 둔다. `FirstPlayableController`가 패시브 선택용 `UpgradeChoiceView`를 만들 때 이 카탈로그로 아이콘을 해결한다. 알 수 없는 ID나 누락된 에셋은 기존 글자 표식으로 안전하게 폴백한다.
 
 아이콘은 `Resources/UI/SupportIcons` 아래에 저장하여 런타임 생성형 UI에서도 안정적으로 불러온다. 임포터는 Sprite, Point 필터, 밉맵 비활성화, 무손실 압축 규칙을 사용한다.
 
@@ -36,4 +36,3 @@
 - 각 이미지가 픽셀 아트 임포트 규칙을 지키는 EditMode 테스트
 - 실제 패시브 선택 카드에서 이미지가 활성화되고 공통 `福` 글자가 숨겨지는 PlayMode 테스트
 - 관련 테스트 후 전체 EditMode/PlayMode 회귀 검증
-

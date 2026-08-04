@@ -2570,7 +2570,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 return new UpgradeChoiceView(
                     offer.Id, offer.Kind, offer.NextLevel, "능력 강화", SupportDisplayName(offer.Id),
-                    SupportBehavior(offer.Id), SupportDelta(offer.Id), null);
+                    SupportBehavior(offer.Id), SupportDelta(offer.Id), SupportUpgradeIconCatalog.Resolve(offer.Id));
             }
 
             return new UpgradeChoiceView(

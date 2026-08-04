@@ -30,6 +30,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png";
         private const string CompactWeaponSlotResourcePath =
             "Assets/JoseonHunter/Resources/UI/compact_weapon_slot.png";
+        private const string SupportUpgradeIconRoot =
+            "Assets/JoseonHunter/Resources/UI/SupportIcons/";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
@@ -59,6 +61,7 @@ namespace JoseonHunter.Editor.AssetImport
         private void OnPreprocessTexture()
         {
             if (ConfigurePremiumLobbyTexture()) return;
+            if (ConfigureSupportUpgradeIconTexture()) return;
 
             if (!assetPath.StartsWith(PixelRoot, System.StringComparison.Ordinal))
             {
@@ -135,6 +138,26 @@ namespace JoseonHunter.Editor.AssetImport
                     format = TextureImporterFormat.ASTC_6x6,
                 });
             }
+        }
+
+        private bool ConfigureSupportUpgradeIconTexture()
+        {
+            if (!assetPath.StartsWith(SupportUpgradeIconRoot, System.StringComparison.Ordinal)) return false;
+
+            var texture = (TextureImporter)assetImporter;
+            texture.textureType = TextureImporterType.Sprite;
+            texture.spriteImportMode = SpriteImportMode.Single;
+            texture.filterMode = FilterMode.Point;
+            texture.mipmapEnabled = false;
+            texture.spritePixelsPerUnit = 100f;
+            texture.alphaSource = TextureImporterAlphaSource.FromInput;
+            texture.alphaIsTransparency = true;
+            texture.isReadable = false;
+            texture.maxTextureSize = 128;
+            texture.textureCompression = TextureImporterCompression.Uncompressed;
+            texture.ClearPlatformTextureSettings("Android");
+            SetSingleSpritePivot(texture, new Vector2(.5f, .5f));
+            return true;
         }
 
         private bool ConfigurePremiumLobbyTexture()
