@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 namespace JoseonHunter.Tests.EditMode
 {
@@ -35,19 +36,34 @@ namespace JoseonHunter.Tests.EditMode
                          {
                              "Lobby Background", "Safe Area", "Header", "Weapon Research Panel",
                              "Patrol Panel", "Common Training Panel", "Bottom Navigation",
-                             "Hero Art", "Hero Shade", "Stage Content"
+                             "Stage Content"
                          })
                     Assert.That(transforms.Any(item => item.name == required), Is.True, required);
 
                 var background = transforms.Single(item => item.name == "Lobby Background").GetComponent<Image>();
                 Assert.That(background.sprite, Is.Not.Null);
-                var hero = transforms.Single(item => item.name == "Hero Art");
-                Assert.That(hero.GetComponent<Image>().sprite, Is.Not.Null);
-                Assert.That(hero.GetComponent("LobbyHeroMotion"), Is.Not.Null);
+                foreach (var removed in new[]
+                         {
+                             "Hero Viewport", "Hero Art", "Hero Shade", "Hero Name", "Hero Subtitle",
+                             "Previous Preset", "Next Preset", "Save Preset", "Preset", "Difficulty", "Record"
+                         })
+                    Assert.That(transforms.Any(item => item.name == removed), Is.False, removed);
+
+                var navigation = transforms.Single(item => item.name == "Bottom Navigation");
+                var navigationLabels = navigation.GetComponentsInChildren<Button>(true)
+                    .Select(button => button.GetComponentInChildren<TMP_Text>(true).text).ToArray();
+                Assert.That(navigationLabels, Is.EquivalentTo(new[] { "무기 연구", "출전", "공통 수련" }));
                 foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
                 {
                     var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();
                     Assert.That(panel.color.a, Is.EqualTo(1f));
+                }
+
+                foreach (var button in canvas.GetComponentsInChildren<Button>(true))
+                {
+                    var image = button.GetComponent<Image>();
+                    Assert.That(image.sprite, Is.Not.Null, button.name);
+                    Assert.That(image.type, Is.EqualTo(Image.Type.Sliced), button.name);
                 }
             }
             finally

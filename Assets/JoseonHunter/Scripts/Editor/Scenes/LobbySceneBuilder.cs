@@ -17,10 +17,12 @@ namespace JoseonHunter.Editor.Scenes
         private const string ScenePath = "Assets/JoseonHunter/Scenes/Lobby.unity";
         private const string PrefabPath = "Assets/JoseonHunter/Prefabs/UI/LobbyShell.prefab";
         private const string BackgroundPath = "Assets/JoseonHunter/Art/UI/Lobby/lobby_courtyard.png";
-        private const string HeroPath = "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
         private const string PremiumFramePath = "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_frame.png";
         private const string PremiumButtonPath =
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
+        private const string SecondaryButtonPath =
+            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
+        private const string WeaponCatalogPath = "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset";
 
         [MenuItem("JoseonHunter/Setup/Build Lobby")]
         public static void Build()
@@ -172,11 +174,6 @@ namespace JoseonHunter.Editor.Scenes
             if (background.sprite == null) throw new InvalidOperationException($"Missing Lobby background: {BackgroundPath}");
             background.color = Color.white;
 
-            var hero = transforms.Single(item => item.name == "Hero Art").GetComponent<Image>();
-            hero.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroPath);
-            if (hero.sprite == null) throw new InvalidOperationException($"Missing Lobby hero: {HeroPath}");
-            hero.color = Color.white;
-
             var frame = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumFramePath);
             if (frame == null) throw new InvalidOperationException($"Missing Lobby frame: {PremiumFramePath}");
             foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
@@ -190,20 +187,30 @@ namespace JoseonHunter.Editor.Scenes
             var primarySprite = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumButtonPath);
             if (primarySprite == null)
                 throw new InvalidOperationException($"Missing Lobby primary button: {PremiumButtonPath}");
-            var primary = transforms.Single(item => item.name == "Start Patrol").GetComponent<Image>();
-            primary.sprite = primarySprite;
-            primary.type = Image.Type.Sliced;
-            primary.color = Color.white;
+            var secondarySprite = AssetDatabase.LoadAssetAtPath<Sprite>(SecondaryButtonPath);
+            if (secondarySprite == null)
+                throw new InvalidOperationException($"Missing Lobby secondary button: {SecondaryButtonPath}");
+            foreach (var button in canvasObject.GetComponentsInChildren<Button>(true))
+            {
+                var image = button.GetComponent<Image>();
+                image.sprite = button.name is "Start Patrol" or "Purchase Training"
+                    ? primarySprite
+                    : secondarySprite;
+                image.type = Image.Type.Sliced;
+                image.color = Color.white;
+            }
+
+            var catalog = AssetDatabase.LoadAssetAtPath<JoseonHunter.Content.Weapons.WeaponCatalogAsset>(
+                WeaponCatalogPath);
+            if (catalog == null) throw new InvalidOperationException($"Missing weapon catalog: {WeaponCatalogPath}");
+            canvasObject.GetComponentInChildren<PatrolPresenter>(true).ConfigureCatalog(catalog);
 
         }
 
         private static void PopulatePatrolPreview(GameObject instance)
         {
             var transforms = instance.GetComponentsInChildren<Transform>(true);
-            SetPreviewText(transforms, "Preset", "편성 1 · 첫 순찰대");
-            SetPreviewText(transforms, "Starting Weapon", "시작 무기 · 환도 비검");
-            SetPreviewText(transforms, "Style", "운용법 · 기본식");
-            SetPreviewText(transforms, "Record", "최고 기록 · 아직 기록 없음");
+            SetPreviewText(transforms, "Starting Weapon", "환도 비검");
         }
 
         private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)

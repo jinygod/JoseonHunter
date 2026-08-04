@@ -63,35 +63,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.62f, .1f), new Vector2(.96f, .9f),
                 Vector2.zero, Vector2.zero);
 
-            var heroViewport = LobbyUiFactory.Rect("Hero Viewport", safeArea);
-            LobbyUiFactory.Anchor(heroViewport, new Vector2(.02f, .38f), new Vector2(.98f, .905f),
-                Vector2.zero, Vector2.zero);
-            heroViewport.gameObject.AddComponent<RectMask2D>();
-            var hero = LobbyUiFactory.Image("Hero Art", heroViewport, Color.white);
-            LobbyUiFactory.Stretch(hero.rectTransform);
-            hero.sprite = Resources.Load<Sprite>("Lobby/han_yeonhwa_hero");
-            hero.preserveAspect = true;
-            var aspect = hero.gameObject.AddComponent<AspectRatioFitter>();
-            aspect.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
-            hero.gameObject.AddComponent<LobbyHeroMotion>();
-
-            var heroShade = LobbyUiFactory.Image("Hero Shade", safeArea,
-                new Color(.018f, .022f, .035f, .20f));
-            LobbyUiFactory.Anchor(heroShade.rectTransform, new Vector2(.02f, .38f), new Vector2(.98f, .905f),
-                Vector2.zero, Vector2.zero);
-            var heroTitle = LobbyUiFactory.Text("Hero Name", heroShade.transform, "한연화의 순찰", 34f,
-                TextAlignmentOptions.Left, true);
-            heroTitle.color = LobbyUiFactory.HanjiLight;
-            LobbyUiFactory.Anchor(heroTitle.rectTransform, new Vector2(.045f, .66f), new Vector2(.55f, .86f),
-                Vector2.zero, Vector2.zero);
-            var heroSubtitle = LobbyUiFactory.Text("Hero Subtitle", heroShade.transform,
-                "귀곡 야행\n우두머리 출현", 19f, TextAlignmentOptions.Left);
-            heroSubtitle.color = new Color(.88f, .82f, .70f, 1f);
-            LobbyUiFactory.Anchor(heroSubtitle.rectTransform, new Vector2(.05f, .46f), new Vector2(.48f, .66f),
-                Vector2.zero, Vector2.zero);
-
             var stageContent = LobbyUiFactory.Rect("Stage Content", safeArea);
-            LobbyUiFactory.Anchor(stageContent, new Vector2(.02f, .12f), new Vector2(.98f, .59f),
+            LobbyUiFactory.Anchor(stageContent, new Vector2(.02f, .12f), new Vector2(.98f, .895f),
                 Vector2.zero, Vector2.zero);
             var research = Panel("Weapon Research Panel", stageContent);
             var patrol = Panel("Patrol Panel", stageContent);
