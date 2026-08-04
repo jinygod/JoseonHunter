@@ -16,6 +16,14 @@ namespace JoseonHunter.Editor.AssetImport
         private const string AppraisalUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/Appraisal/";
         private const string LobbyUiRoot = "Assets/JoseonHunter/Art/UI/Lobby/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
+        private const string PremiumLobbyHeroPath =
+            "Assets/JoseonHunter/Art/Characters/Lobby/han_yeonhwa_hero.png";
+        private const string PremiumLobbyResourceHeroPath =
+            "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
+        private const string PremiumLobbyFramePath =
+            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_frame.png";
+        private const string PremiumLobbyButtonPath =
+            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
@@ -44,6 +52,8 @@ namespace JoseonHunter.Editor.AssetImport
 
         private void OnPreprocessTexture()
         {
+            if (ConfigurePremiumLobbyTexture()) return;
+
             if (!assetPath.StartsWith(PixelRoot, System.StringComparison.Ordinal))
             {
                 return;
@@ -119,6 +129,41 @@ namespace JoseonHunter.Editor.AssetImport
                     format = TextureImporterFormat.ASTC_6x6,
                 });
             }
+        }
+
+        private bool ConfigurePremiumLobbyTexture()
+        {
+            var isHero = assetPath.Equals(PremiumLobbyHeroPath, System.StringComparison.Ordinal)
+                || assetPath.Equals(PremiumLobbyResourceHeroPath, System.StringComparison.Ordinal);
+            var isFrame = assetPath.Equals(PremiumLobbyFramePath, System.StringComparison.Ordinal);
+            var isButton = assetPath.Equals(PremiumLobbyButtonPath, System.StringComparison.Ordinal);
+            if (!isHero && !isFrame && !isButton) return false;
+
+            var texture = (TextureImporter)assetImporter;
+            texture.textureType = TextureImporterType.Sprite;
+            texture.spriteImportMode = SpriteImportMode.Single;
+            texture.mipmapEnabled = false;
+            texture.isReadable = false;
+            texture.maxTextureSize = isHero ? 2048 : 1024;
+            texture.filterMode = isHero ? FilterMode.Bilinear : FilterMode.Point;
+            texture.spritePixelsPerUnit = 100f;
+            texture.alphaSource = isHero
+                ? TextureImporterAlphaSource.None
+                : TextureImporterAlphaSource.FromInput;
+            texture.alphaIsTransparency = !isHero;
+            texture.spriteBorder = isFrame
+                ? new Vector4(48f, 48f, 48f, 48f)
+                : isButton ? new Vector4(32f, 32f, 32f, 32f) : Vector4.zero;
+            texture.textureCompression = TextureImporterCompression.Compressed;
+            texture.SetPlatformTextureSettings(new TextureImporterPlatformSettings
+            {
+                name = "Android",
+                overridden = true,
+                maxTextureSize = isHero ? 2048 : 1024,
+                format = TextureImporterFormat.ASTC_6x6
+            });
+            SetSingleSpritePivot(texture, new Vector2(.5f, .5f));
+            return true;
         }
 
         private static bool IsMobilePixelRuntime(string path)
