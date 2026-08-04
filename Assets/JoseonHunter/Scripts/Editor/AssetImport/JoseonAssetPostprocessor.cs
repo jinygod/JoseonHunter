@@ -28,6 +28,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
         private const string CompactWeaponSlotPath =
             "Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png";
+        private const string CompactWeaponSlotResourcePath =
+            "Assets/JoseonHunter/Resources/UI/compact_weapon_slot.png";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
             "Assets/JoseonHunter/Art/Characters/Runtime/FrontFacing/";
@@ -144,7 +146,8 @@ namespace JoseonHunter.Editor.AssetImport
             var isSecondaryButton = assetPath.Equals(
                 PremiumLobbySecondaryButtonPath,
                 System.StringComparison.Ordinal);
-            var isCompactWeaponSlot = assetPath.Equals(CompactWeaponSlotPath, System.StringComparison.Ordinal);
+            var isCompactWeaponSlot = assetPath.Equals(CompactWeaponSlotPath, System.StringComparison.Ordinal)
+                || assetPath.Equals(CompactWeaponSlotResourcePath, System.StringComparison.Ordinal);
             if (!isHero && !isFrame && !isButton && !isSecondaryButton && !isCompactWeaponSlot) return false;
 
             var texture = (TextureImporter)assetImporter;

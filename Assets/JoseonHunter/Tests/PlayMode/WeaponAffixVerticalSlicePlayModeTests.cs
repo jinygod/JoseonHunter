@@ -81,9 +81,13 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(potentialCells, Has.Length.EqualTo(3));
             Assert.That(potentialCells.All(cell => !cell.gameObject.activeSelf), Is.True,
                 "random potential cells are retired from the rack");
-            var legacyLabel = rack.GetComponentsInChildren<Component>(true).First(component =>
-                component.name == "Legacy Path" && component.GetType().Name == "TextMeshProUGUI");
-            Assert.That(legacyLabel.GetType().GetProperty("text").GetValue(legacyLabel), Is.EqualTo("전승 미선택"));
+            var slot = rack.transform.Find("Weapon Slot 0");
+            Assert.That(slot, Is.Not.Null);
+            var rect = slot.GetComponent<RectTransform>();
+            Assert.That(Mathf.Abs(rect.rect.width - rect.rect.height), Is.LessThanOrEqualTo(2f));
+            Assert.That(slot.Find("Name"), Is.Null);
+            Assert.That(slot.Find("Legacy Path"), Is.Null);
+            Assert.That(slot.GetComponent<Button>(), Is.Not.Null);
 
             rack.Pulse(WeaponId.HwandoFlyingBlade.Value, 2);
             yield return null;

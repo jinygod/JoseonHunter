@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Collections;
-using JoseonHunter.Domain.Combat;
+using System.Collections.Generic;
+using JoseonHunter.Content.Weapons;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,14 +11,15 @@ namespace JoseonHunter.Presentation.UI
 {
     public sealed class WeaponRackPresenter : MonoBehaviour
     {
+        private const float SlotSize = 112f;
+        private const float SlotGap = 18f;
+        private const int Columns = 4;
+
         private sealed class Slot
         {
             public GameObject Root;
-            public Image Accent;
+            public Image Border;
             public Image Icon;
-            public TextMeshProUGUI Name;
-            public TextMeshProUGUI Level;
-            public TextMeshProUGUI Totals;
             public Image[] PotentialCells;
             public string WeaponId;
             public Coroutine PulseRoutine;
@@ -28,13 +29,17 @@ namespace JoseonHunter.Presentation.UI
 
         private readonly List<Slot> slots = new();
         private readonly Dictionary<string, Slot> slotsByWeaponId = new();
+        private Sprite frameSprite;
+        private WeaponAffixPresentationCatalogAsset affixCatalog;
+
         public event Action<WeaponSlotView> WeaponSelected;
 
         public void Render(IReadOnlyList<WeaponSlotView> weapons)
         {
+            ResolveAssets();
             while (slots.Count > weapons.Count)
             {
-                var slot = slots[slots.Count - 1];
+                var slot = slots[^1];
                 if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId.Remove(slot.WeaponId);
                 Destroy(slot.Root);
                 slots.RemoveAt(slots.Count - 1);
@@ -51,7 +56,7 @@ namespace JoseonHunter.Presentation.UI
         public void Pulse(string weaponId, int newLevel, int newPotentialCount = 0)
         {
             if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
-            slot.Level.text = $"레벨 {newLevel}";
+            slot.Border.color = LevelBorder(newLevel);
             StopPulse(slot);
             slot.PulseRoutine = StartCoroutine(PulseRoutine(slot));
         }
@@ -63,55 +68,49 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnDisable() => ResetPulses();
 
+        private void ResolveAssets()
+        {
+            if (frameSprite == null) frameSprite = Resources.Load<Sprite>("UI/compact_weapon_slot");
+            if (affixCatalog == null)
+                affixCatalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
+        }
+
         private Slot CreateSlot(int index)
         {
             var slot = new Slot();
-            slot.Root = RuntimeUiFactory.Image("Weapon Slot " + index, transform, JoseonUiPalette.Ink).gameObject;
+            var rootImage = RuntimeUiFactory.Image("Weapon Slot " + index, transform, Color.clear);
+            slot.Root = rootImage.gameObject;
             slot.Button = slot.Root.AddComponent<Button>();
-            slot.Button.targetGraphic = slot.Root.GetComponent<Image>();
             slot.Button.transition = Selectable.Transition.ColorTint;
             slot.Button.onClick.AddListener(() => WeaponSelected?.Invoke(slot.View));
             var rect = slot.Root.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
             rect.pivot = new Vector2(.5f, 0f);
-            LayoutSlot(slot, index);
-            slot.Accent = RuntimeUiFactory.Image("Accent", slot.Root.transform, JoseonUiPalette.Gold);
-            var accentRect = slot.Accent.rectTransform;
-            accentRect.anchorMin = new Vector2(0f, 0f);
-            accentRect.anchorMax = new Vector2(0f, 1f);
-            accentRect.sizeDelta = new Vector2(6f, 0f);
-            accentRect.anchoredPosition = Vector2.zero;
+
+            slot.Border = RuntimeUiFactory.Image("Level Border", slot.Root.transform, Color.white);
+            slot.Border.sprite = frameSprite;
+            slot.Border.type = Image.Type.Sliced;
+            RuntimeUiFactory.Stretch(slot.Border.rectTransform, 0f, 0f, 0f, 0f);
+            slot.Button.targetGraphic = slot.Border;
+
             slot.Icon = RuntimeUiFactory.Image("Icon", slot.Root.transform, Color.white);
-            slot.Icon.rectTransform.anchorMin = slot.Icon.rectTransform.anchorMax = new Vector2(0f, .5f);
-            slot.Icon.rectTransform.pivot = new Vector2(0f, .5f);
-            slot.Icon.rectTransform.anchoredPosition = new Vector2(16f, 0f);
-            slot.Icon.rectTransform.sizeDelta = new Vector2(50f, 50f);
+            slot.Icon.rectTransform.anchorMin = slot.Icon.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            slot.Icon.rectTransform.pivot = new Vector2(.5f, .5f);
+            slot.Icon.rectTransform.anchoredPosition = new Vector2(0f, 5f);
+            slot.Icon.rectTransform.sizeDelta = new Vector2(70f, 70f);
             slot.Icon.preserveAspect = true;
-            slot.Name = RuntimeUiFactory.Text("Name", slot.Root.transform, string.Empty, 18f, TextAlignmentOptions.Left);
-            slot.Name.rectTransform.anchorMin = slot.Name.rectTransform.anchorMax = new Vector2(0f, .5f);
-            slot.Name.rectTransform.pivot = new Vector2(0f, .5f);
-            slot.Name.rectTransform.anchoredPosition = new Vector2(78f, 15f);
-            slot.Name.rectTransform.sizeDelta = new Vector2(224f, 26f);
-            slot.Level = RuntimeUiFactory.Text("Level", slot.Root.transform, string.Empty, 14f, TextAlignmentOptions.Left);
-            slot.Level.rectTransform.anchorMin = slot.Level.rectTransform.anchorMax = new Vector2(0f, .5f);
-            slot.Level.rectTransform.pivot = new Vector2(0f, .5f);
-            slot.Level.rectTransform.anchoredPosition = new Vector2(78f, -11f);
-            slot.Level.rectTransform.sizeDelta = new Vector2(224f, 20f);
-            slot.Totals = RuntimeUiFactory.Text("Legacy Path", slot.Root.transform, string.Empty, 12f, TextAlignmentOptions.Left,
-                RuntimeFontRole.BodyEmphasis);
-            slot.Totals.rectTransform.anchorMin = slot.Totals.rectTransform.anchorMax = new Vector2(0f, .5f);
-            slot.Totals.rectTransform.pivot = new Vector2(0f, .5f);
-            slot.Totals.rectTransform.anchoredPosition = new Vector2(78f, -30f);
-            slot.Totals.rectTransform.sizeDelta = new Vector2(224f, 16f);
+            slot.Icon.raycastTarget = false;
+
             slot.PotentialCells = new Image[3];
             for (var potentialIndex = 0; potentialIndex < slot.PotentialCells.Length; potentialIndex++)
             {
                 var cell = RuntimeUiFactory.Image("Potential Cell " + potentialIndex, slot.Root.transform, Color.white);
-                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = new Vector2(1f, .5f);
-                cell.rectTransform.pivot = new Vector2(1f, .5f);
-                cell.rectTransform.anchoredPosition = new Vector2(-12f - potentialIndex * 27f, 0f);
-                cell.rectTransform.sizeDelta = new Vector2(15f, 15f);
+                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = new Vector2(.5f, 0f);
+                cell.rectTransform.pivot = new Vector2(.5f, 0f);
+                cell.rectTransform.anchoredPosition = new Vector2((potentialIndex - 1) * 24f, 5f);
+                cell.rectTransform.sizeDelta = new Vector2(20f, 20f);
                 cell.preserveAspect = true;
+                cell.raycastTarget = false;
                 cell.gameObject.SetActive(false);
                 slot.PotentialCells[potentialIndex] = cell;
             }
@@ -120,23 +119,21 @@ namespace JoseonHunter.Presentation.UI
 
         public void ApplyPortraitLayout()
         {
-            for (var index = 0; index < slots.Count; index++) LayoutSlot(slots[index], index);
+            for (var index = 0; index < slots.Count; index++) LayoutSlot(slots[index], index, slots.Count);
         }
 
-        private void LayoutSlot(Slot slot, int index)
+        private static void LayoutSlot(Slot slot, int index, int count)
         {
             if (slot.Root == null) return;
             var rect = slot.Root.GetComponent<RectTransform>();
-            var rackRect = transform as RectTransform;
-            var availableWidth = rackRect == null ? 0f : rackRect.rect.width;
-            var width = availableWidth <= 0f ? PortraitUiMetrics.RackSlotWidth : Mathf.Min(
-                PortraitUiMetrics.RackSlotWidth, Mathf.Max(0f, (availableWidth - 24f) * .5f));
-            var column = index % 2;
-            var row = index / 2;
-            var x = (width + 24f) * .5f * (column == 0 ? -1f : 1f);
-            rect.anchoredPosition = new Vector2(x, PortraitUiMetrics.BottomMargin + row *
-                (PortraitUiMetrics.RackSlotHeight + 24f));
-            rect.sizeDelta = new Vector2(width, PortraitUiMetrics.RackSlotHeight);
+            var row = index / Columns;
+            var column = index % Columns;
+            var rowStart = row * Columns;
+            var rowCount = Mathf.Min(Columns, count - rowStart);
+            var x = (column - (rowCount - 1) * .5f) * (SlotSize + SlotGap);
+            rect.anchoredPosition = new Vector2(x,
+                PortraitUiMetrics.BottomMargin + row * (SlotSize + SlotGap));
+            rect.sizeDelta = new Vector2(SlotSize, SlotSize);
         }
 
         private void PopulateSlot(Slot slot, WeaponSlotView weapon)
@@ -145,17 +142,29 @@ namespace JoseonHunter.Presentation.UI
             slot.WeaponId = weapon.Id;
             slot.View = weapon;
             if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId[slot.WeaponId] = slot;
-            slot.Accent.color = JoseonUiPalette.WeaponAccent(new WeaponId(weapon.Id));
+            slot.Border.color = LevelBorder(weapon.Level);
             slot.Icon.sprite = weapon.Icon;
             slot.Icon.enabled = weapon.Icon != null;
-            slot.Name.text = weapon.DisplayName;
-            slot.Level.text = $"레벨 {weapon.Level}";
-            slot.Totals.text = string.IsNullOrEmpty(weapon.LegacyName) || weapon.LegacyName == "미선택"
-                ? "전승 미선택"
-                : "전승 · " + weapon.LegacyName;
+
             for (var index = 0; index < slot.PotentialCells.Length; index++)
-                slot.PotentialCells[index].gameObject.SetActive(false);
+            {
+                var cell = slot.PotentialCells[index];
+                var active = index < weapon.PotentialIds.Count;
+                cell.sprite = active && affixCatalog != null
+                    ? affixCatalog.SpriteForPotential(weapon.PotentialIds[index])
+                    : null;
+                cell.gameObject.SetActive(active && cell.sprite != null);
+            }
         }
+
+        private static Color LevelBorder(int level) => level switch
+        {
+            <= 1 => new Color(.72f, .68f, .58f, 1f),
+            2 => new Color(.22f, .72f, .60f, 1f),
+            3 => new Color(.25f, .48f, .90f, 1f),
+            4 => new Color(.63f, .36f, .82f, 1f),
+            _ => new Color(.90f, .65f, .20f, 1f)
+        };
 
         private IEnumerator PulseRoutine(Slot slot)
         {
@@ -164,15 +173,12 @@ namespace JoseonHunter.Presentation.UI
             {
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
-                slot.Accent.transform.localScale = Vector3.one * pulse;
+                slot.Root.transform.localScale = Vector3.one * pulse;
                 yield return null;
             }
 
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
-            if (slot.Accent != null) slot.Accent.transform.localScale = Vector3.one;
-            if (slot.PotentialCells != null)
-                foreach (var cell in slot.PotentialCells) if (cell != null) cell.transform.localScale = Vector3.one;
         }
 
         private void StopPulse(Slot slot)
@@ -180,9 +186,6 @@ namespace JoseonHunter.Presentation.UI
             if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
-            if (slot.Accent != null) slot.Accent.transform.localScale = Vector3.one;
-            if (slot.PotentialCells != null)
-                foreach (var cell in slot.PotentialCells) if (cell != null) cell.transform.localScale = Vector3.one;
         }
     }
 }

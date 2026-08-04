@@ -269,6 +269,31 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Weapon_rack_uses_level_border_and_visible_potential_icons()
+        {
+            var root = new GameObject("Compact Rack Test");
+            var rack = root.AddComponent<WeaponRackPresenter>();
+            rack.Render(new[]
+            {
+                new WeaponSlotView("gakgung_shot", "각궁", 3, null, potentialIds: new[]
+                {
+                    JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungFullDraw
+                })
+            });
+            yield return null;
+
+            var slot = root.transform.Find("Weapon Slot 0");
+            Assert.That(slot.GetComponent<RectTransform>().rect.width,
+                Is.EqualTo(slot.GetComponent<RectTransform>().rect.height).Within(2f));
+            var border = slot.Find("Level Border").GetComponent<Image>();
+            Assert.That(border.color.b, Is.GreaterThan(border.color.r));
+            var potential = slot.Find("Potential Cell 0").GetComponent<Image>();
+            Assert.That(potential.gameObject.activeSelf, Is.True);
+            Assert.That(potential.sprite, Is.Not.Null);
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
         public IEnumerator ReadOnlyWeaponDetailsDoNotOwnGameTime()
         {
             var root = new GameObject("Read Only Detail Test");
