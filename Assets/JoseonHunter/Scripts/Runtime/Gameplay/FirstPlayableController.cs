@@ -53,6 +53,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly WeaponEvolutionState evolutionState = new WeaponEvolutionState();
         private readonly WeaponRunAffixState weaponAffixes = new WeaponRunAffixState();
         private readonly WeaponLegacyState weaponLegacyState = new WeaponLegacyState();
+        private readonly RunWeaponKillLedger runWeaponKillLedger = new RunWeaponKillLedger();
+        private readonly Dictionary<int, EnemyMasteryClass> pendingMasteryDeaths = new Dictionary<int, EnemyMasteryClass>();
         private PendingWeaponChoice pendingWeaponChoice;
         private int affixRollOrdinal;
 #if UNITY_INCLUDE_TESTS
@@ -159,6 +161,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public int MidBossSpawnCountForTests { get; private set; }
         public int FinalBossSpawnCountForTests { get; private set; }
         public int PackSpawnCountForTests { get; private set; }
+        public IReadOnlyDictionary<WeaponId, int> RunMasterySnapshotForTests => runWeaponKillLedger.Snapshot();
         public bool RunEndedForTests => runEnded;
         public bool VictoryForTests => victory;
         public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
@@ -596,7 +599,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public PixelMaskTransform HurtMaskTransform => state.VisualRig != null
                 ? state.VisualRig.CollisionTransform(WorldPosition)
                 : owner.TransformFor(state.Renderer, WorldPosition);
-            public void ApplyResolvedDamage(int damage) => owner.ApplyEnemyDamage(state, damage);
+            public void ApplyResolvedDamage(int damage) => owner.ApplyEnemyDamage(state, damage, true);
             public void ApplyKnockback(Float2 direction, float force)
             {
                 if (state.Object == null || force <= 0f || float.IsNaN(force) || float.IsInfinity(force) ||
@@ -685,6 +688,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void OnDestroy()
         {
             geumjulPresenter?.Clear();
+            if (combatDamageService != null) combatDamageService.DamageConfirmed -= OnCombatDamageConfirmed;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
             if (solidSprite != null)
@@ -852,6 +856,7 @@ namespace JoseonHunter.Runtime.Gameplay
             flow?.ResetToPlaying();
             var visualLibrary = ResolveJangseungGeumjulVisualLibrary();
             geumjulPresenter?.Clear();
+            if (combatDamageService != null) combatDamageService.DamageConfirmed -= OnCombatDamageConfirmed;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
             if (runtimeObjects != null)
@@ -876,11 +881,14 @@ namespace JoseonHunter.Runtime.Gameplay
             seenSpecialEnemyGuides.Clear();
             weaponAffixes.Clear();
             weaponLegacyState.Clear();
+            runWeaponKillLedger.Reset();
+            pendingMasteryDeaths.Clear();
             affixRollOrdinal = 0;
             evolutionState.Clear();
             foreach (var evolution in WeaponEvolutionCatalog.All) unlockedUpgradeIds.Add(evolution.Id);
             combatTargets = new CombatTargetRegistry();
             combatDamageService = new CombatDamageService(combatTargets);
+            combatDamageService.DamageConfirmed += OnCombatDamageConfirmed;
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
@@ -1703,7 +1711,7 @@ namespace JoseonHunter.Runtime.Gameplay
             return masks.Count == 0 ? null : masks[0];
         }
 
-        private void ApplyEnemyDamage(EnemyState enemy, float damage)
+        private void ApplyEnemyDamage(EnemyState enemy, float damage, bool confirmedWeaponDamage = false)
         {
             if (enemy == null || enemy.Object == null)
             {
@@ -1733,6 +1741,11 @@ namespace JoseonHunter.Runtime.Gameplay
             var wasBoss = enemy.IsBoss;
             var wasMidBoss = enemy.IsMidBoss;
             var wasTreasure = enemy.IsTreasure;
+            var targetRuntimeId = enemy.CombatTarget.RuntimeId;
+            if (confirmedWeaponDamage && !wasTreasure)
+                pendingMasteryDeaths[targetRuntimeId] = MasteryClassFor(enemy);
+            else
+                runWeaponKillLedger.ForgetTarget(targetRuntimeId);
             var deathPosition = enemy.Object.transform.position;
             var splitResult = default(SpecialEnemyMotionResult);
             if (enemy.ArchetypeProfile != null && enemy.ArchetypeProfile.Archetype == EnemyArchetype.SplittingRat)
@@ -1783,7 +1796,7 @@ namespace JoseonHunter.Runtime.Gameplay
             kills++;
             if (wasBoss)
             {
-                EndRun(true);
+                if (!confirmedWeaponDamage) EndRun(true);
                 return;
             }
 
@@ -1799,6 +1812,25 @@ namespace JoseonHunter.Runtime.Gameplay
                     PickupKind.Magnet,
                     0);
             }
+        }
+
+        private void OnCombatDamageConfirmed(ConfirmedDamageEvent confirmed)
+        {
+            runWeaponKillLedger.RecordHit(confirmed.TargetRuntimeId, confirmed.WeaponId);
+            if (!pendingMasteryDeaths.TryGetValue(confirmed.TargetRuntimeId, out var enemyClass)) return;
+            pendingMasteryDeaths.Remove(confirmed.TargetRuntimeId);
+            runWeaponKillLedger.ConfirmDeath(confirmed.TargetRuntimeId, enemyClass);
+            if (enemyClass == EnemyMasteryClass.FinalBoss) EndRun(true);
+        }
+
+        private static EnemyMasteryClass MasteryClassFor(EnemyState enemy)
+        {
+            if (enemy.IsBoss) return EnemyMasteryClass.FinalBoss;
+            if (enemy.IsMidBoss) return EnemyMasteryClass.MidBoss;
+            if (enemy.IsElite) return EnemyMasteryClass.Elite;
+            return enemy.ArchetypeProfile != null && enemy.ArchetypeProfile.IsSpecial
+                ? EnemyMasteryClass.Special
+                : EnemyMasteryClass.Normal;
         }
 
         private System.Collections.IEnumerator AnimateDeathAndDestroy(EnemyState enemy)
