@@ -11,7 +11,7 @@ namespace JoseonHunter.Presentation.UI
     [DisallowMultipleComponent]
     public sealed class BootstrapLoadingPresenter : MonoBehaviour
     {
-        private const float MinimumVisibleSeconds = .35f;
+        private const float MinimumVisibleSeconds = 1.5f;
         private const float FadeDurationSeconds = .28f;
         private const float LoadTimeoutSeconds = 30f;
 
@@ -66,8 +66,8 @@ namespace JoseonHunter.Presentation.UI
 
         private void Start()
         {
-            MetaGameSession.EnsureExists();
-            if (beginOnStart) Begin(destinationSceneName);
+            var session = MetaGameSession.EnsureExists();
+            if (beginOnStart) Begin(session.ConsumePendingDestination(destinationSceneName));
         }
 
         private void Update()

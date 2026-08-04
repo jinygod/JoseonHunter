@@ -9,6 +9,7 @@ namespace JoseonHunter.Runtime.Meta
 
         public IEnumerator LoadLobby() => Load("Lobby");
         public IEnumerator LoadGameplay() => Load("Gameplay");
+        public IEnumerator LoadBootstrap() => Load("Bootstrap");
 
         private IEnumerator Load(string sceneName)
         {
@@ -21,6 +22,7 @@ namespace JoseonHunter.Runtime.Meta
                 yield break;
             }
 
+            operation.completed += _ => IsRouting = false;
             while (!operation.isDone) yield return null;
             IsRouting = false;
         }

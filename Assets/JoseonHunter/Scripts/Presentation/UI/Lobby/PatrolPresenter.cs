@@ -119,12 +119,13 @@ namespace JoseonHunter.Presentation.UI.Lobby
         {
             if (session.Router.IsRouting || !SaveCurrentWeapon()) return;
             patrolButton.interactable = false;
-            StartCoroutine(LoadGameplay());
+            session.SetPendingDestination("Gameplay");
+            StartCoroutine(LoadBootstrap());
         }
 
-        private IEnumerator LoadGameplay()
+        private IEnumerator LoadBootstrap()
         {
-            yield return session.Router.LoadGameplay();
+            yield return session.Router.LoadBootstrap();
             if (patrolButton != null) patrolButton.interactable = true;
         }
 

@@ -52,6 +52,25 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(Object.FindFirstObjectByType<BootstrapLoadingPresenter>(), Is.Null);
         }
 
+        [UnityTest]
+        public IEnumerator LobbySortieUsesBootstrapAndKeepsLoadingArtVisibleBeforeGameplay()
+        {
+            MetaGameSession.EnsureExists();
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            var start = GameObject.Find("Start Patrol").GetComponent<Button>();
+            start.onClick.Invoke();
+
+            yield return WaitForScene("Bootstrap", 5f);
+            var startedAt = Time.realtimeSinceStartup;
+            var loader = Object.FindFirstObjectByType<BootstrapLoadingPresenter>();
+            Assert.That(loader, Is.Not.Null);
+            Assert.That(loader.OpaqueForTests, Is.True);
+            yield return WaitForScene("Gameplay", 5f);
+            yield return WaitForLoaderRemoval(5f);
+            Assert.That(Time.realtimeSinceStartup - startedAt, Is.GreaterThanOrEqualTo(1.4f));
+        }
+
         private static IEnumerator WaitForScene(string sceneName, float timeoutSeconds)
         {
             var deadline = Time.realtimeSinceStartup + timeoutSeconds;

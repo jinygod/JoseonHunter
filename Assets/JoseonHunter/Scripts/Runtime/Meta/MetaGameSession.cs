@@ -15,6 +15,7 @@ namespace JoseonHunter.Runtime.Meta
         private ISaveRepository repository;
         private AutoSaveOrchestrator autosave;
         private SaveDataV1 data;
+        private string pendingDestination;
 
         public static MetaGameSession Current { get; private set; }
         public SaveDataV1 Data { get { EnsureInitialized(); return data; } }
@@ -82,6 +83,18 @@ namespace JoseonHunter.Runtime.Meta
         {
             EnsureInitialized();
             return autosave.CommitRun(settlement);
+        }
+
+        public void SetPendingDestination(string sceneName) =>
+            pendingDestination = string.IsNullOrWhiteSpace(sceneName) ? null : sceneName;
+
+        public string ConsumePendingDestination(string fallbackSceneName)
+        {
+            var destination = string.IsNullOrWhiteSpace(pendingDestination)
+                ? fallbackSceneName
+                : pendingDestination;
+            pendingDestination = null;
+            return destination;
         }
 
         private void EnsureInitialized(ISaveRepository requestedRepository = null)
