@@ -4,9 +4,26 @@ using System.Collections.Generic;
 namespace JoseonHunter.Domain.Save
 {
     [Serializable]
+    public sealed class PatrolLoadoutData
+    {
+        public string Name;
+        public string StartingWeaponId;
+        public Dictionary<string, string> WeaponStyleIds = new Dictionary<string, string>();
+        public string DifficultyId = "normal";
+
+        public PatrolLoadoutData Copy() => new PatrolLoadoutData
+        {
+            Name = Name,
+            StartingWeaponId = StartingWeaponId,
+            WeaponStyleIds = new Dictionary<string, string>(WeaponStyleIds ?? new Dictionary<string, string>()),
+            DifficultyId = DifficultyId
+        };
+    }
+
+    [Serializable]
     public sealed class SaveDataV1
     {
-        public int SchemaVersion = 1;
+        public int SchemaVersion = 2;
         public int Coins;
         public string OwnedHero = "hunter";
         public string EquippedHero = "hunter";
@@ -29,6 +46,12 @@ namespace JoseonHunter.Domain.Save
         public List<string> FirstSolutionFlags = new List<string>();
         public List<string> SelectableInvestigationPolicies = new List<string>();
         public string SelectedInvestigationPolicy;
+        public Dictionary<string, int> WeaponMasteryPoints = new Dictionary<string, int>();
+        public List<string> UnlockedWeaponStyles = new List<string>();
+        public Dictionary<string, int> CommonTrainingRanks = new Dictionary<string, int>();
+        public Dictionary<string, int> CommonTrainingSpentCoins = new Dictionary<string, int>();
+        public List<PatrolLoadoutData> PatrolLoadouts = new List<PatrolLoadoutData>();
+        public int ActivePatrolLoadoutIndex;
 
         public static SaveDataV1 CreateDefaults()
         {
@@ -45,6 +68,25 @@ namespace JoseonHunter.Domain.Save
 
             data.UnlockedHeroes.Add("hunter");
             data.UnlockedDifficulties.Add("normal");
+            foreach (var weaponId in Combat.WeaponRoster.All)
+                data.WeaponMasteryPoints[weaponId.Value] = 0;
+            foreach (Progression.CommonTrainingId id in Enum.GetValues(typeof(Progression.CommonTrainingId)))
+            {
+                data.CommonTrainingRanks[id.ToString()] = 0;
+                data.CommonTrainingSpentCoins[id.ToString()] = 0;
+            }
+            for (var index = 0; index < 3; index++)
+            {
+                var loadout = new PatrolLoadoutData
+                {
+                    Name = "순찰대 " + (index + 1),
+                    StartingWeaponId = Combat.WeaponId.HwandoFlyingBlade.Value,
+                    DifficultyId = "normal"
+                };
+                foreach (var weaponId in Combat.WeaponRoster.All)
+                    loadout.WeaponStyleIds[weaponId.Value] = string.Empty;
+                data.PatrolLoadouts.Add(loadout);
+            }
             return data;
         }
 
@@ -60,7 +102,10 @@ namespace JoseonHunter.Domain.Save
                 ClaimedInvestigationMilestones = new List<int>(ClaimedInvestigationMilestones), MonsterCompendiumEntries = new List<string>(MonsterCompendiumEntries),
                 UnlockedHeroes = new List<string>(UnlockedHeroes), UnlockedDifficulties = new List<string>(UnlockedDifficulties),
                 UnlockedRecipes = new List<string>(UnlockedRecipes), UnlockedAppearances = new List<string>(UnlockedAppearances),
-                FirstSolutionFlags = new List<string>(FirstSolutionFlags), SelectableInvestigationPolicies = new List<string>(SelectableInvestigationPolicies), SelectedInvestigationPolicy = SelectedInvestigationPolicy
+                FirstSolutionFlags = new List<string>(FirstSolutionFlags), SelectableInvestigationPolicies = new List<string>(SelectableInvestigationPolicies), SelectedInvestigationPolicy = SelectedInvestigationPolicy,
+                WeaponMasteryPoints = new Dictionary<string, int>(WeaponMasteryPoints), UnlockedWeaponStyles = new List<string>(UnlockedWeaponStyles),
+                CommonTrainingRanks = new Dictionary<string, int>(CommonTrainingRanks), CommonTrainingSpentCoins = new Dictionary<string, int>(CommonTrainingSpentCoins),
+                PatrolLoadouts = PatrolLoadouts.ConvertAll(loadout => loadout.Copy()), ActivePatrolLoadoutIndex = ActivePatrolLoadoutIndex
             };
             return copy;
         }
@@ -74,6 +119,9 @@ namespace JoseonHunter.Domain.Save
             MonsterCompendiumEntries = copy.MonsterCompendiumEntries; UnlockedHeroes = copy.UnlockedHeroes; UnlockedDifficulties = copy.UnlockedDifficulties;
             UnlockedRecipes = copy.UnlockedRecipes; UnlockedAppearances = copy.UnlockedAppearances; BestPatrolResults = copy.BestPatrolResults;
             TutorialCompleted = copy.TutorialCompleted; AccessibilityEnabled = copy.AccessibilityEnabled; AudioVolume = copy.AudioVolume; FirstSolutionFlags = copy.FirstSolutionFlags; SelectableInvestigationPolicies = copy.SelectableInvestigationPolicies; SelectedInvestigationPolicy = copy.SelectedInvestigationPolicy;
+            WeaponMasteryPoints = copy.WeaponMasteryPoints; UnlockedWeaponStyles = copy.UnlockedWeaponStyles;
+            CommonTrainingRanks = copy.CommonTrainingRanks; CommonTrainingSpentCoins = copy.CommonTrainingSpentCoins;
+            PatrolLoadouts = copy.PatrolLoadouts; ActivePatrolLoadoutIndex = copy.ActivePatrolLoadoutIndex;
         }
     }
 }

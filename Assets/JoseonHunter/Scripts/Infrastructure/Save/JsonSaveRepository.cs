@@ -71,7 +71,7 @@ namespace JoseonHunter.Infrastructure.Save
                 var envelope = JsonUtility.FromJson<SaveEnvelope>(File.ReadAllText(path, Encoding.UTF8));
                 if (envelope == null || string.IsNullOrEmpty(envelope.payload) || envelope.checksum != SaveChecksum.ForCanonicalPayload(envelope.payload)) return false;
                 var document = JsonUtility.FromJson<SaveDocument>(envelope.payload);
-                if (document == null || document.schemaVersion != 1) return false;
+                if (document == null || (document.schemaVersion != 1 && document.schemaVersion != 2)) return false;
                 data = document.ToData();
                 return true;
             }
@@ -87,15 +87,153 @@ namespace JoseonHunter.Infrastructure.Save
 
         [Serializable] private sealed class SaveEnvelope { public string payload; public string checksum; }
         [Serializable] private sealed class Entry { public string key; public int value; }
+        [Serializable] private sealed class StringEntry { public string key; public string value; }
+        [Serializable] private sealed class PatrolLoadoutDocument
+        {
+            public string name;
+            public string startingWeaponId;
+            public StringEntry[] weaponStyleIds;
+            public string difficultyId;
+        }
         [Serializable] private sealed class SaveDocument
         {
-            public int schemaVersion; public int coins; public string ownedHero; public string equippedHero; public Entry[] equipmentLevels; public Entry[] equipmentQualities; public Entry[] equipmentFragments; public Entry[] evolutionNodeRanks; public Entry[] evolutionSpentCoins; public string[] investigationClues; public int[] claimedInvestigationMilestones; public string[] monsterCompendiumEntries; public string[] unlockedHeroes; public string[] unlockedDifficulties; public string[] unlockedRecipes; public string[] unlockedAppearances; public Entry[] bestPatrolResults; public bool tutorialCompleted; public bool accessibilityEnabled; public float audioVolume; public string[] firstSolutionFlags; public string[] selectableInvestigationPolicies; public string selectedInvestigationPolicy;
-            public static SaveDocument From(SaveDataV1 data) => new SaveDocument { schemaVersion = 1, coins = Math.Max(0, data.Coins), ownedHero = data.OwnedHero, equippedHero = data.EquippedHero, equipmentLevels = Entries(data.EquipmentLevels), equipmentQualities = Entries(data.EquipmentQualities), equipmentFragments = Entries(data.EquipmentFragments), evolutionNodeRanks = Entries(data.EvolutionNodeRanks), evolutionSpentCoins = Entries(data.EvolutionSpentCoins), investigationClues = data.InvestigationClues.OrderBy(value => value, StringComparer.Ordinal).ToArray(), claimedInvestigationMilestones = data.ClaimedInvestigationMilestones.OrderBy(value => value).ToArray(), monsterCompendiumEntries = data.MonsterCompendiumEntries.OrderBy(value => value, StringComparer.Ordinal).ToArray(), unlockedHeroes = data.UnlockedHeroes.OrderBy(value => value, StringComparer.Ordinal).ToArray(), unlockedDifficulties = data.UnlockedDifficulties.OrderBy(value => value, StringComparer.Ordinal).ToArray(), unlockedRecipes = data.UnlockedRecipes.OrderBy(value => value, StringComparer.Ordinal).ToArray(), unlockedAppearances = data.UnlockedAppearances.OrderBy(value => value, StringComparer.Ordinal).ToArray(), bestPatrolResults = Entries(data.BestPatrolResults), tutorialCompleted = data.TutorialCompleted, accessibilityEnabled = data.AccessibilityEnabled, audioVolume = data.AudioVolume, firstSolutionFlags = data.FirstSolutionFlags.OrderBy(value => value, StringComparer.Ordinal).ToArray(), selectableInvestigationPolicies = data.SelectableInvestigationPolicies.OrderBy(value => value, StringComparer.Ordinal).ToArray(), selectedInvestigationPolicy = data.SelectedInvestigationPolicy };
-            public SaveDataV1 ToData() { var data = SaveDataV1.CreateDefaults(); data.Coins = Math.Max(0, coins); data.OwnedHero = ownedHero ?? data.OwnedHero; data.EquippedHero = equippedHero ?? data.EquippedHero; Overlay(data.EquipmentLevels, equipmentLevels); Overlay(data.EquipmentQualities, equipmentQualities); Overlay(data.EquipmentFragments, equipmentFragments); Overlay(data.EvolutionNodeRanks, evolutionNodeRanks); Overlay(data.EvolutionSpentCoins, evolutionSpentCoins); data.InvestigationClues = List(investigationClues); data.ClaimedInvestigationMilestones = new List<int>(claimedInvestigationMilestones ?? new int[0]); data.MonsterCompendiumEntries = List(monsterCompendiumEntries); data.UnlockedHeroes = List(unlockedHeroes); data.UnlockedDifficulties = List(unlockedDifficulties); data.UnlockedRecipes = List(unlockedRecipes); data.UnlockedAppearances = List(unlockedAppearances); data.BestPatrolResults = Dictionary(bestPatrolResults); data.TutorialCompleted = tutorialCompleted; data.AccessibilityEnabled = accessibilityEnabled; data.AudioVolume = audioVolume; data.FirstSolutionFlags = List(firstSolutionFlags); data.SelectableInvestigationPolicies = List(selectableInvestigationPolicies); data.SelectedInvestigationPolicy = selectedInvestigationPolicy; return data; }
+            public int schemaVersion;
+            public int coins;
+            public string ownedHero;
+            public string equippedHero;
+            public Entry[] equipmentLevels;
+            public Entry[] equipmentQualities;
+            public Entry[] equipmentFragments;
+            public Entry[] evolutionNodeRanks;
+            public Entry[] evolutionSpentCoins;
+            public string[] investigationClues;
+            public int[] claimedInvestigationMilestones;
+            public string[] monsterCompendiumEntries;
+            public string[] unlockedHeroes;
+            public string[] unlockedDifficulties;
+            public string[] unlockedRecipes;
+            public string[] unlockedAppearances;
+            public Entry[] bestPatrolResults;
+            public bool tutorialCompleted;
+            public bool accessibilityEnabled;
+            public float audioVolume;
+            public string[] firstSolutionFlags;
+            public string[] selectableInvestigationPolicies;
+            public string selectedInvestigationPolicy;
+            public Entry[] weaponMasteryPoints;
+            public string[] unlockedWeaponStyles;
+            public Entry[] commonTrainingRanks;
+            public Entry[] commonTrainingSpentCoins;
+            public PatrolLoadoutDocument[] patrolLoadouts;
+            public int activePatrolLoadoutIndex;
+
+            public static SaveDocument From(SaveDataV1 data) => new SaveDocument
+            {
+                schemaVersion = 2,
+                coins = Math.Max(0, data.Coins),
+                ownedHero = data.OwnedHero,
+                equippedHero = data.EquippedHero,
+                equipmentLevels = Entries(data.EquipmentLevels),
+                equipmentQualities = Entries(data.EquipmentQualities),
+                equipmentFragments = Entries(data.EquipmentFragments),
+                evolutionNodeRanks = Entries(data.EvolutionNodeRanks),
+                evolutionSpentCoins = Entries(data.EvolutionSpentCoins),
+                investigationClues = Sorted(data.InvestigationClues),
+                claimedInvestigationMilestones = data.ClaimedInvestigationMilestones.OrderBy(value => value).ToArray(),
+                monsterCompendiumEntries = Sorted(data.MonsterCompendiumEntries),
+                unlockedHeroes = Sorted(data.UnlockedHeroes),
+                unlockedDifficulties = Sorted(data.UnlockedDifficulties),
+                unlockedRecipes = Sorted(data.UnlockedRecipes),
+                unlockedAppearances = Sorted(data.UnlockedAppearances),
+                bestPatrolResults = Entries(data.BestPatrolResults),
+                tutorialCompleted = data.TutorialCompleted,
+                accessibilityEnabled = data.AccessibilityEnabled,
+                audioVolume = data.AudioVolume,
+                firstSolutionFlags = Sorted(data.FirstSolutionFlags),
+                selectableInvestigationPolicies = Sorted(data.SelectableInvestigationPolicies),
+                selectedInvestigationPolicy = data.SelectedInvestigationPolicy,
+                weaponMasteryPoints = Entries(data.WeaponMasteryPoints),
+                unlockedWeaponStyles = Sorted(data.UnlockedWeaponStyles),
+                commonTrainingRanks = Entries(data.CommonTrainingRanks),
+                commonTrainingSpentCoins = Entries(data.CommonTrainingSpentCoins),
+                patrolLoadouts = data.PatrolLoadouts.Select(FromLoadout).ToArray(),
+                activePatrolLoadoutIndex = data.ActivePatrolLoadoutIndex
+            };
+
+            public SaveDataV1 ToData()
+            {
+                var data = SaveDataV1.CreateDefaults();
+                data.SchemaVersion = 2;
+                data.Coins = Math.Max(0, coins);
+                data.OwnedHero = ownedHero ?? data.OwnedHero;
+                data.EquippedHero = equippedHero ?? data.EquippedHero;
+                Overlay(data.EquipmentLevels, equipmentLevels);
+                Overlay(data.EquipmentQualities, equipmentQualities);
+                Overlay(data.EquipmentFragments, equipmentFragments);
+                Overlay(data.EvolutionNodeRanks, evolutionNodeRanks);
+                Overlay(data.EvolutionSpentCoins, evolutionSpentCoins);
+                data.InvestigationClues = List(investigationClues);
+                data.ClaimedInvestigationMilestones = new List<int>(claimedInvestigationMilestones ?? Array.Empty<int>());
+                data.MonsterCompendiumEntries = List(monsterCompendiumEntries);
+                data.UnlockedHeroes = List(unlockedHeroes);
+                data.UnlockedDifficulties = List(unlockedDifficulties);
+                data.UnlockedRecipes = List(unlockedRecipes);
+                data.UnlockedAppearances = List(unlockedAppearances);
+                data.BestPatrolResults = Dictionary(bestPatrolResults);
+                data.TutorialCompleted = tutorialCompleted;
+                data.AccessibilityEnabled = accessibilityEnabled;
+                data.AudioVolume = audioVolume;
+                data.FirstSolutionFlags = List(firstSolutionFlags);
+                data.SelectableInvestigationPolicies = List(selectableInvestigationPolicies);
+                data.SelectedInvestigationPolicy = selectedInvestigationPolicy;
+                Overlay(data.WeaponMasteryPoints, weaponMasteryPoints);
+                data.UnlockedWeaponStyles = List(unlockedWeaponStyles);
+                Overlay(data.CommonTrainingRanks, commonTrainingRanks);
+                Overlay(data.CommonTrainingSpentCoins, commonTrainingSpentCoins);
+                if (patrolLoadouts != null && patrolLoadouts.Length > 0)
+                    data.PatrolLoadouts = NormalizeLoadouts(patrolLoadouts);
+                data.ActivePatrolLoadoutIndex = Math.Max(0, Math.Min(data.PatrolLoadouts.Count - 1, activePatrolLoadoutIndex));
+                return data;
+            }
+
+            private static PatrolLoadoutDocument FromLoadout(PatrolLoadoutData data) => new PatrolLoadoutDocument
+            {
+                name = data.Name,
+                startingWeaponId = data.StartingWeaponId,
+                weaponStyleIds = StringEntries(data.WeaponStyleIds),
+                difficultyId = data.DifficultyId
+            };
+
+            private static List<PatrolLoadoutData> NormalizeLoadouts(PatrolLoadoutDocument[] documents)
+            {
+                var defaults = SaveDataV1.CreateDefaults().PatrolLoadouts;
+                var result = new List<PatrolLoadoutData>(3);
+                for (var index = 0; index < 3; index++)
+                {
+                    if (index >= documents.Length || documents[index] == null)
+                    {
+                        result.Add(defaults[index].Copy());
+                        continue;
+                    }
+
+                    var document = documents[index];
+                    var loadout = defaults[index].Copy();
+                    loadout.Name = string.IsNullOrWhiteSpace(document.name) ? loadout.Name : document.name;
+                    loadout.StartingWeaponId = string.IsNullOrWhiteSpace(document.startingWeaponId) ? loadout.StartingWeaponId : document.startingWeaponId;
+                    loadout.DifficultyId = string.IsNullOrWhiteSpace(document.difficultyId) ? loadout.DifficultyId : document.difficultyId;
+                    foreach (var pair in StringDictionary(document.weaponStyleIds)) loadout.WeaponStyleIds[pair.Key] = pair.Value;
+                    result.Add(loadout);
+                }
+                return result;
+            }
+
             private static Entry[] Entries(Dictionary<string, int> values) => values.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new Entry { key = pair.Key, value = pair.Value }).ToArray();
-            private static System.Collections.Generic.Dictionary<string, int> Dictionary(Entry[] entries) => (entries ?? new Entry[0]).Where(entry => entry != null && !string.IsNullOrEmpty(entry.key)).ToDictionary(entry => entry.key, entry => entry.value);
-            private static void Overlay(System.Collections.Generic.Dictionary<string, int> destination, Entry[] entries) { foreach (var entry in entries ?? new Entry[0]) if (entry != null && !string.IsNullOrEmpty(entry.key)) destination[entry.key] = Math.Max(0, entry.value); }
-            private static List<string> List(string[] values) => new List<string>(values ?? new string[0]);
+            private static StringEntry[] StringEntries(Dictionary<string, string> values) => values.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new StringEntry { key = pair.Key, value = pair.Value }).ToArray();
+            private static Dictionary<string, int> Dictionary(Entry[] entries) => (entries ?? Array.Empty<Entry>()).Where(entry => entry != null && !string.IsNullOrEmpty(entry.key)).ToDictionary(entry => entry.key, entry => Math.Max(0, entry.value));
+            private static Dictionary<string, string> StringDictionary(StringEntry[] entries) => (entries ?? Array.Empty<StringEntry>()).Where(entry => entry != null && !string.IsNullOrEmpty(entry.key)).ToDictionary(entry => entry.key, entry => entry.value ?? string.Empty);
+            private static void Overlay(Dictionary<string, int> destination, Entry[] entries) { foreach (var entry in entries ?? Array.Empty<Entry>()) if (entry != null && !string.IsNullOrEmpty(entry.key)) destination[entry.key] = Math.Max(0, entry.value); }
+            private static List<string> List(string[] values) => new List<string>(values ?? Array.Empty<string>());
+            private static string[] Sorted(IEnumerable<string> values) => (values ?? Array.Empty<string>()).OrderBy(value => value, StringComparer.Ordinal).ToArray();
         }
     }
 }

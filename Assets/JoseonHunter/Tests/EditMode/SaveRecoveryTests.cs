@@ -24,13 +24,13 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void NewInstallLoadsSchemaOneDefaults()
+        public void NewInstallLoadsCurrentSchemaDefaults()
         {
             var result = new JsonSaveRepository(directory).Load();
 
             Assert.That(result.Source, Is.EqualTo(LoadSource.Defaults));
             Assert.That(result.Error, Is.EqualTo(SaveError.None));
-            Assert.That(result.Data.SchemaVersion, Is.EqualTo(1));
+            Assert.That(result.Data.SchemaVersion, Is.EqualTo(2));
         }
 
         [Test]
