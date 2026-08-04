@@ -14,6 +14,7 @@ namespace JoseonHunter.Editor.AssetImport
         private const string AffixJackpotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/";
         private const string MicroSlotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot/";
         private const string AppraisalUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/Appraisal/";
+        private const string LobbyUiRoot = "Assets/JoseonHunter/Art/UI/Lobby/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
         private const string CharacterRuntimeRoot = "Assets/JoseonHunter/Art/Characters/Runtime/";
         private const string FrontFacingCharacterRuntimeRoot =
@@ -49,6 +50,21 @@ namespace JoseonHunter.Editor.AssetImport
             }
 
             var texture = (TextureImporter)assetImporter;
+            if (assetPath.StartsWith(LobbyUiRoot, System.StringComparison.Ordinal))
+            {
+                texture.textureType = TextureImporterType.Sprite;
+                texture.spriteImportMode = SpriteImportMode.Single;
+                texture.filterMode = FilterMode.Point;
+                texture.mipmapEnabled = false;
+                texture.spritePixelsPerUnit = 32f;
+                texture.alphaSource = TextureImporterAlphaSource.None;
+                texture.alphaIsTransparency = false;
+                texture.isReadable = false;
+                texture.textureCompression = TextureImporterCompression.Uncompressed;
+                texture.ClearPlatformTextureSettings("Android");
+                SetSingleSpritePivot(texture, new Vector2(.5f, .5f));
+                return;
+            }
             texture.textureType = TextureImporterType.Sprite;
             texture.filterMode = IsBilinearArt(assetPath) ? FilterMode.Bilinear : FilterMode.Point;
             texture.mipmapEnabled = false;
