@@ -37,7 +37,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextNamed(root, "Kills"), Is.EqualTo("처치 21"));
             Assert.That(TextNamed(root, "Boss Warning"), Is.EqualTo("강한 기운이 다가옵니다"));
             Assert.That(TextNamed(root, "Boss Label"), Does.StartWith("우두머리 "));
-            Assert.That(TextNamed(root, "Return Label"), Is.EqualTo("귀환"));
+            Assert.That(System.Array.Find(root.GetComponentsInChildren<Button>(true),
+                candidate => candidate.name == "Pause Button"), Is.Not.Null);
+            Assert.That(ImageNamed(root, "Pause Bar Left"), Is.Not.Null);
+            Assert.That(ImageNamed(root, "Pause Bar Right"), Is.Not.Null);
+            Assert.That(System.Array.Find(root.GetComponentsInChildren<RectTransform>(true),
+                candidate => candidate.name == "Return Button"), Is.Null);
             Assert.That(AllText(root), Does.Not.Match("HP|XP|COIN|KILLS|BOSS|DREADFUL"));
             Object.DestroyImmediate(root);
         }
@@ -106,8 +111,10 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Cancelled += () => cancelled++;
             presenter.Open();
 
-            Assert.That(TextNamed(root, "Abandon Title"), Is.EqualTo("순찰에서 귀환"));
-            Assert.That(TextNamed(root, "Abandon Message"), Does.Contain("숙련도와 엽전"));
+            Assert.That(TextNamed(root, "Abandon Title"), Is.EqualTo("일시정지"));
+            Assert.That(TextNamed(root, "Abandon Message"), Does.Contain("전투를 계속"));
+            Assert.That(AllText(root), Does.Contain("계속하기"));
+            Assert.That(AllText(root), Does.Contain("로비로 돌아가기"));
             Assert.That(ImageNamed(root, "Abandon Panel").color.a, Is.EqualTo(1f));
             System.Array.Find(root.GetComponentsInChildren<Button>(true),
                 candidate => candidate.name == "Continue Combat Button").onClick.Invoke();

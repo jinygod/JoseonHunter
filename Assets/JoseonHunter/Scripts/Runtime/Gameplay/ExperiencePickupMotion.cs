@@ -4,12 +4,12 @@ namespace JoseonHunter.Runtime.Gameplay
 {
     public static class ExperiencePickupMotion
     {
-        private const float AccelerationDuration = .32f;
+        private const float AccelerationDuration = .30f;
 
         public static float SpeedAt(float attractionAge, bool forceCollect) =>
             forceCollect
                 ? 24f
-                : Mathf.Lerp(4f, 14f, Mathf.Clamp01(attractionAge / AccelerationDuration));
+                : Mathf.Lerp(2.2f, 13f, Mathf.Clamp01(attractionAge / AccelerationDuration));
 
         public static Vector2 Step(
             Vector2 current,

@@ -103,6 +103,7 @@ namespace JoseonHunter.Tests.PlayMode
                     bootstrap.ApplySafeArea(new Rect(0f, actual.y * .04f, actual.x, actual.y * .925f), actual);
                     Canvas.ForceUpdateCanvases();
                     AssertBounds(bootstrap, "Vitals", bootstrap.SafeAreaContainer);
+                    AssertBounds(bootstrap, "Pause Button", bootstrap.SafeAreaContainer);
                     AssertBounds(bootstrap, "Weapon Rack", bootstrap.SafeAreaContainer);
                     AssertBounds(bootstrap, "Weapon Slot 0", bootstrap.SafeAreaContainer);
                     AssertBounds(bootstrap, "Upgrade Card 0", bootstrap.ModalSafeAreaContainer);

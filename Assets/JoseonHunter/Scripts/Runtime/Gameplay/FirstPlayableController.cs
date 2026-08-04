@@ -1433,7 +1433,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 position,
                 8,
                 runtimeObjects);
-            chestObject.transform.localScale = Vector3.one * 0.32f;
+            chestObject.transform.localScale = Vector3.one * 0.52f;
             var renderer = chestObject.GetComponent<SpriteRenderer>();
             if (treasureChestSprite == null)
             {
@@ -1929,10 +1929,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 6,
                 runtimeObjects);
             var visualScale = kind == PickupKind.Experience
-                ? .48f
+                ? .62f
                 : kind == PickupKind.Yeopjeon
-                    ? .34f
-                    : .18f;
+                    ? .48f
+                    : .50f;
             pickupObject.transform.localScale = Vector3.one * visualScale;
             var renderer = pickupObject.GetComponent<SpriteRenderer>();
             if (kind == PickupKind.Magnet)
@@ -2020,7 +2020,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 var distance = Vector2.Distance(pickup.Object.transform.position, playerPosition);
                 if (pickup.Kind == PickupKind.Experience)
                 {
-                    var pulse = .48f + Mathf.Sin(Time.time * 4.5f + index * .73f) * .04f;
+                    var pulse = .62f + Mathf.Sin(Time.time * 4.5f + index * .73f) * .05f;
                     if (pickup.ForceCollect || distance <= pickupRadius)
                     {
                         BeginExperienceAttraction(pickup);
@@ -2042,7 +2042,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
                 else if (pickup.Kind == PickupKind.Yeopjeon)
                 {
-                    var pulse = .34f + Mathf.Sin(Time.time * 4.1f + index * .61f) * .025f;
+                    var pulse = .48f + Mathf.Sin(Time.time * 4.1f + index * .61f) * .035f;
                     pickup.Object.transform.localScale = Vector3.one * pulse;
                 }
                 if (pickup.ForceCollect || distance <= pickupRadius)
@@ -2060,7 +2060,8 @@ namespace JoseonHunter.Runtime.Gameplay
                             Mathf.Lerp(4f, 12f, 1f - distance / pickupRadius) * delta);
                 }
 
-                if (distance > 0.42f)
+                var collectionDistance = pickup.Kind == PickupKind.Experience ? .18f : .42f;
+                if (distance > collectionDistance)
                 {
                     continue;
                 }

@@ -12,6 +12,8 @@ namespace JoseonHunter.Tests.EditMode
             var early = ExperiencePickupMotion.SpeedAt(.02f, false);
             var late = ExperiencePickupMotion.SpeedAt(.30f, false);
 
+            Assert.That(early, Is.LessThan(4f));
+            Assert.That(late, Is.GreaterThan(10f));
             Assert.That(late, Is.GreaterThan(early));
             Assert.That(ExperiencePickupMotion.SpeedAt(.02f, true), Is.GreaterThan(late));
         }

@@ -49,13 +49,13 @@ namespace JoseonHunter.Presentation.UI
             panelRect.sizeDelta = new Vector2(760f, 430f);
             panel.raycastTarget = true;
 
-            var title = RuntimeUiFactory.Text("Abandon Title", panel.transform, "순찰에서 귀환", 43f,
+            var title = RuntimeUiFactory.Text("Abandon Title", panel.transform, "일시정지", 43f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
             SetRect(title.rectTransform, new Vector2(0f, 132f), new Vector2(650f, 70f));
             title.color = JoseonUiPalette.HanjiInk;
 
             var message = RuntimeUiFactory.Text("Abandon Message", panel.transform,
-                "현재까지 획득한 숙련도와 엽전을 저장하고 로비로 돌아갑니다.", 27f,
+                "전투를 계속하거나 현재 성과를 저장하고 로비로 돌아갈 수 있습니다.", 27f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             SetRect(message.rectTransform, new Vector2(0f, 38f), new Vector2(640f, 110f));
             message.color = JoseonUiPalette.HanjiInk;
@@ -63,13 +63,13 @@ namespace JoseonHunter.Presentation.UI
             var cancel = RuntimeUiFactory.Button("Continue Combat Button", panel.transform, JoseonUiPalette.Ink);
             SetRect(cancel.GetComponent<RectTransform>(), new Vector2(-170f, -118f), new Vector2(280f, 76f));
             cancel.onClick.AddListener(() => Cancelled?.Invoke());
-            ButtonLabel(cancel, "계속 전투");
+            ButtonLabel(cancel, "계속하기");
 
             var confirm = RuntimeUiFactory.Button("Confirm Return Button", panel.transform,
                 JoseonUiPalette.AppraisalResult);
             SetRect(confirm.GetComponent<RectTransform>(), new Vector2(170f, -118f), new Vector2(280f, 76f));
             confirm.onClick.AddListener(() => Confirmed?.Invoke());
-            ButtonLabel(confirm, "돌아가기");
+            ButtonLabel(confirm, "로비로 돌아가기");
             ApplyPortraitLayout();
             root.SetActive(false);
         }

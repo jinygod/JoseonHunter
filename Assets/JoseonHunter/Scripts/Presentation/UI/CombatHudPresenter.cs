@@ -74,18 +74,26 @@ namespace JoseonHunter.Presentation.UI
             bossFill = Bar("Boss Fill", bossRect, new Vector2(15f, -49f), new Vector2(590f, 18f), JoseonUiPalette.Crimson);
             bossRoot.SetActive(false);
 
-            var returnButton = RuntimeUiFactory.Button("Return Button", transform, JoseonUiPalette.Ink);
+            var returnButton = RuntimeUiFactory.Button("Pause Button", topLeft, new Color(.12f, .10f, .09f, 1f));
             var returnRect = returnButton.GetComponent<RectTransform>();
             returnRect.anchorMin = returnRect.anchorMax = new Vector2(1f, 1f);
             returnRect.pivot = new Vector2(1f, 1f);
-            returnRect.anchoredPosition = new Vector2(-24f, -198f);
-            returnRect.sizeDelta = new Vector2(126f, 52f);
+            returnRect.anchoredPosition = new Vector2(-14f, -14f);
+            returnRect.sizeDelta = new Vector2(64f, 64f);
             returnButton.onClick.AddListener(() => ReturnRequested?.Invoke());
-            var returnLabel = RuntimeUiFactory.Text("Return Label", returnButton.transform, "귀환", 21f,
-                TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
-            returnLabel.color = JoseonUiPalette.Hanji;
-            RuntimeUiFactory.Stretch(returnLabel.rectTransform, 8f, 5f, 8f, 5f);
+            PauseBar("Pause Bar Left", returnButton.transform, -9f);
+            PauseBar("Pause Bar Right", returnButton.transform, 9f);
             ApplyPortraitLayout();
+        }
+
+        private static void PauseBar(string name, Transform parent, float x)
+        {
+            var bar = RuntimeUiFactory.Image(name, parent, JoseonUiPalette.Hanji);
+            var rect = bar.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+            rect.anchoredPosition = new Vector2(x, 0f);
+            rect.sizeDelta = new Vector2(9f, 30f);
+            bar.raycastTarget = false;
         }
 
         public void ApplyPortraitLayout()
