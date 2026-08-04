@@ -62,5 +62,19 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(style.RequiredMastery, Is.EqualTo(8000));
             Assert.That(style.CoinCost, Is.EqualTo(2400));
         }
+
+        [Test]
+        public void ThirdStyleRequiresSecondStyleUnlockEvenWithEnoughResources()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 9999;
+            data.WeaponMasteryPoints[WeaponId.GakgungShot.Value] = 9999;
+            var third = WeaponMasteryCatalog.StylesFor(WeaponId.GakgungShot)[2];
+
+            var result = new WeaponMasteryProgression(data).CanPurchase(
+                WeaponId.GakgungShot, third.LegacyPathId);
+
+            Assert.That(result.Error, Is.EqualTo(ProgressionError.InvalidSelection));
+        }
     }
 }

@@ -63,6 +63,31 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.SelectedStyleStateForTests(1), Is.EqualTo("장착 중"));
         }
 
+        [UnityTest]
+        public IEnumerator ResearchShowsSelectedIconProgressAndExactSequentialLockMessage()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 9999;
+            data.WeaponMasteryPoints[WeaponId.HwandoFlyingBlade.Value] = 564;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            var presenter = Object.FindFirstObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
+
+            var icon = presenter.transform.Find("Selected Weapon Icon").GetComponent<Image>();
+            Assert.That(icon.sprite, Is.Not.Null);
+            var fill = presenter.transform.Find("Mastery Progress/Mastery Progress Fill")
+                .GetComponent<RectTransform>();
+            Assert.That(fill.anchorMax.x, Is.EqualTo(564f / 2000f).Within(.002f));
+            var mastery = presenter.transform.Find("Mastery Summary").GetComponent<TMPro.TMP_Text>();
+            Assert.That(mastery.text, Does.Contain("564 / 2,000"));
+
+            presenter.ActivateStyleForTests(2);
+
+            var feedback = presenter.transform.Find("Research Feedback").GetComponent<TMPro.TMP_Text>();
+            Assert.That(feedback.text, Is.EqualTo("2단계 연구 완료 시 해금"));
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;

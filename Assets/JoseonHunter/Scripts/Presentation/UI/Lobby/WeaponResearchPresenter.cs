@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Meta;
@@ -17,6 +19,9 @@ namespace JoseonHunter.Presentation.UI.Lobby
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text masteryText;
         [SerializeField] private TMP_Text feedbackText;
+        [SerializeField] private WeaponCatalogAsset weaponCatalog;
+        [SerializeField] private Image selectedWeaponIcon;
+        [SerializeField] private RectTransform masteryProgressFill;
         private MetaGameSession session;
         private Action refreshHeader;
         private int selectedWeaponIndex;
@@ -28,13 +33,18 @@ namespace JoseonHunter.Presentation.UI.Lobby
         {
             if (transform.Find("Research Title") != null) return;
             titleText = LobbyUiFactory.Text("Research Title", transform, "무기 연구", 34f,
-                TextAlignmentOptions.Center, true);
+                TextAlignmentOptions.Left, true);
             titleText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(titleText.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
+            LobbyUiFactory.Anchor(titleText.rectTransform, new Vector2(.22f, .90f), new Vector2(.96f, .985f),
+                Vector2.zero, Vector2.zero);
+
+            selectedWeaponIcon = LobbyUiFactory.Image("Selected Weapon Icon", transform, Color.white);
+            selectedWeaponIcon.preserveAspect = true;
+            LobbyUiFactory.Anchor(selectedWeaponIcon.rectTransform, new Vector2(.055f, .82f), new Vector2(.195f, .965f),
                 Vector2.zero, Vector2.zero);
 
             var weaponGrid = LobbyUiFactory.Rect("Weapon Grid", transform);
-            LobbyUiFactory.Anchor(weaponGrid, new Vector2(.04f, .69f), new Vector2(.96f, .895f),
+            LobbyUiFactory.Anchor(weaponGrid, new Vector2(.04f, .58f), new Vector2(.96f, .75f),
                 Vector2.zero, Vector2.zero);
             var grid = weaponGrid.gameObject.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -48,13 +58,22 @@ namespace JoseonHunter.Presentation.UI.Lobby
                     LobbyViewModels.WeaponName(WeaponRoster.All[index]), 19f,
                     LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
 
-            masteryText = LobbyUiFactory.Text("Mastery", transform, string.Empty, 22f);
+            masteryText = LobbyUiFactory.Text("Mastery Summary", transform, string.Empty, 21f);
             masteryText.color = LobbyUiFactory.HanjiLight;
-            LobbyUiFactory.Anchor(masteryText.rectTransform, new Vector2(.06f, .625f), new Vector2(.94f, .685f),
+            LobbyUiFactory.Anchor(masteryText.rectTransform, new Vector2(.22f, .825f), new Vector2(.94f, .895f),
+                Vector2.zero, Vector2.zero);
+
+            var progress = LobbyUiFactory.Image("Mastery Progress", transform, new Color(.04f, .055f, .05f, 1f));
+            LobbyUiFactory.Anchor(progress.rectTransform, new Vector2(.22f, .775f), new Vector2(.94f, .815f),
+                Vector2.zero, Vector2.zero);
+            var fill = LobbyUiFactory.Image("Mastery Progress Fill", progress.transform,
+                new Color(.18f, .76f, .39f, 1f));
+            masteryProgressFill = fill.rectTransform;
+            LobbyUiFactory.Anchor(masteryProgressFill, Vector2.zero, new Vector2(0f, 1f),
                 Vector2.zero, Vector2.zero);
 
             var styles = LobbyUiFactory.Rect("Style Cards", transform);
-            LobbyUiFactory.Anchor(styles, new Vector2(.05f, .10f), new Vector2(.95f, .615f),
+            LobbyUiFactory.Anchor(styles, new Vector2(.05f, .10f), new Vector2(.95f, .555f),
                 Vector2.zero, Vector2.zero);
             var layout = styles.gameObject.AddComponent<VerticalLayoutGroup>();
             layout.spacing = 12f;
@@ -93,6 +112,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Refresh();
         }
 
+        public void ConfigureCatalog(WeaponCatalogAsset value) => weaponCatalog = value;
+
         public string SelectedStyleStateForTests(int index) => StateFor(index);
         public void ActivateStyleForTests(int index) => ActivateStyle(index);
 
@@ -109,6 +130,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var styles = WeaponMasteryCatalog.StylesFor(weaponId);
             if (styleIndex < 0 || styleIndex >= styles.Count) return;
             var style = styles[styleIndex];
+            if (styleIndex == 2 && !session.Data.UnlockedWeaponStyles.Contains(styles[1].LegacyPathId.Value))
+            {
+                feedbackText.text = "2단계 연구 완료 시 해금";
+                Refresh();
+                return;
+            }
             if (!style.IsBase && !session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value))
             {
                 var purchase = session.PurchaseStyle(weaponId, style.LegacyPathId);
@@ -143,6 +170,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (style.IsBase) return string.IsNullOrEmpty(equipped.Value) ? "장착 중" : "기본식";
             if (equipped.Equals(style.LegacyPathId)) return "장착 중";
             if (session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value)) return "해금 완료";
+            if (styleIndex == 2 &&
+                !session.Data.UnlockedWeaponStyles.Contains(
+                    WeaponMasteryCatalog.StylesFor(weaponId)[1].LegacyPathId.Value))
+                return "2단계 연구 완료 시 해금";
             var mastery = session.Data.WeaponMasteryPoints.TryGetValue(weaponId.Value, out var points) ? points : 0;
             if (mastery < style.RequiredMastery) return "연구 중";
             return session.Data.Coins >= style.CoinCost ? "해금 가능" : "엽전 부족";
@@ -154,14 +185,30 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var weaponId = WeaponRoster.All[selectedWeaponIndex];
             var mastery = session.Data.WeaponMasteryPoints.TryGetValue(weaponId.Value, out var value) ? value : 0;
             titleText.text = $"{LobbyViewModels.WeaponName(weaponId)} 연구";
-            masteryText.text = $"숙련도 {mastery:N0} · 막타를 기록하면 이 무기의 숙련도가 오릅니다";
             var styles = WeaponMasteryCatalog.StylesFor(weaponId);
+            selectedWeaponIcon.sprite = weaponCatalog != null && weaponCatalog.TryGet(weaponId, out var definition)
+                ? definition.UiIcon != null ? definition.UiIcon : definition.PresentationSprites.FirstOrDefault()
+                : null;
+            selectedWeaponIcon.enabled = selectedWeaponIcon.sprite != null;
+            var firstUnlocked = session.Data.UnlockedWeaponStyles.Contains(styles[1].LegacyPathId.Value);
+            var nextRequired = firstUnlocked ? styles[2].RequiredMastery : styles[1].RequiredMastery;
+            masteryText.text = $"숙련도 {mastery:N0} / {nextRequired:N0}";
+            masteryProgressFill.anchorMax = new Vector2(
+                Mathf.Clamp01(nextRequired <= 0 ? 1f : mastery / (float)nextRequired), 1f);
+            masteryProgressFill.offsetMin = Vector2.zero;
+            masteryProgressFill.offsetMax = Vector2.zero;
             for (var index = 0; index < styleButtons.Length; index++)
             {
                 var style = styles[index];
-                var requirement = style.IsBase ? "처음부터 사용 가능" : $"숙련도 {style.RequiredMastery:N0} · 엽전 {style.CoinCost:N0}";
-                styleButtons[index].GetComponentInChildren<TMP_Text>().text =
-                    $"{style.DisplayName}  ·  {StateFor(index)}\n{style.Benefit} / {style.Tradeoff}\n{requirement}";
+                string line;
+                if (style.IsBase)
+                    line = $"{style.DisplayName} · {StateFor(index)}\n처음부터 사용 가능";
+                else if (index == 2 && !firstUnlocked)
+                    line = $"{style.DisplayName} · 잠김\n2단계 연구 완료 시 해금";
+                else
+                    line = $"{style.DisplayName} · {StateFor(index)} ({mastery:N0}/{style.RequiredMastery:N0})\n" +
+                           $"{style.Benefit} / {style.Tradeoff}";
+                styleButtons[index].GetComponentInChildren<TMP_Text>().text = line;
             }
         }
     }

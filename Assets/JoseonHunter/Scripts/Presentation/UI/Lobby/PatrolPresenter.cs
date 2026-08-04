@@ -133,7 +133,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (session == null) return;
             weaponText.text = LobbyViewModels.WeaponName(selectedWeapon);
             weaponIcon.sprite = weaponCatalog != null && weaponCatalog.TryGet(selectedWeapon, out var definition)
-                ? definition.UiIcon
+                ? definition.UiIcon != null ? definition.UiIcon : definition.PresentationSprites.FirstOrDefault()
                 : null;
             weaponIcon.enabled = weaponIcon.sprite != null;
         }

@@ -18,6 +18,11 @@ namespace JoseonHunter.Domain.Progression
             if (data.UnlockedWeaponStyles.Contains(pathId.Value))
                 return new ProgressionResult(false, ProgressionError.AlreadyUnlocked);
 
+            var styles = WeaponMasteryCatalog.StylesFor(weaponId);
+            if (styles.Count >= 3 && styles[2].LegacyPathId.Equals(pathId) &&
+                !data.UnlockedWeaponStyles.Contains(styles[1].LegacyPathId.Value))
+                return new ProgressionResult(false, ProgressionError.InvalidSelection);
+
             var mastery = data.WeaponMasteryPoints.TryGetValue(weaponId.Value, out var points) ? points : 0;
             if (mastery < style.RequiredMastery)
                 return new ProgressionResult(false, ProgressionError.InsufficientMastery);

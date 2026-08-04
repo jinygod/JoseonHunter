@@ -204,6 +204,7 @@ namespace JoseonHunter.Editor.Scenes
                 WeaponCatalogPath);
             if (catalog == null) throw new InvalidOperationException($"Missing weapon catalog: {WeaponCatalogPath}");
             canvasObject.GetComponentInChildren<PatrolPresenter>(true).ConfigureCatalog(catalog);
+            canvasObject.GetComponentInChildren<WeaponResearchPresenter>(true).ConfigureCatalog(catalog);
 
         }
 
@@ -217,7 +218,7 @@ namespace JoseonHunter.Editor.Scenes
         {
             var transforms = instance.GetComponentsInChildren<Transform>(true);
             SetPreviewText(transforms, "Research Title", "환도 비검 연구");
-            SetPreviewText(transforms, "Mastery", $"숙련도 {mastery:N0} · 이 무기로 막타를 기록하면 숙련도가 오릅니다");
+            SetPreviewText(transforms, "Mastery Summary", $"숙련도 {mastery:N0} / 2,000");
             SetPreviewText(transforms, "Research Feedback", feedback);
             var buttons = instance.GetComponentsInChildren<Button>(true)
                 .Where(button => button.name.StartsWith("Style ", StringComparison.Ordinal))
