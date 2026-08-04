@@ -14,8 +14,7 @@ namespace JoseonHunter.Editor.Scenes
     {
         private const string BootstrapScenePath = "Assets/JoseonHunter/Scenes/Bootstrap.unity";
         private const string PrefabPath = "Assets/JoseonHunter/Prefabs/UI/BootstrapLoading.prefab";
-        private const string SpiritFlamePath =
-            "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/experience_spirit_flame.png";
+        private const string HeroPath = "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
 
         [MenuItem("JoseonHunter/Setup/Build Bootstrap Loading")]
         public static void Build()
@@ -85,7 +84,7 @@ namespace JoseonHunter.Editor.Scenes
             canvas.worldCamera = camera;
             canvas.planeDistance = 1f;
 
-            var output = Path.GetFullPath("Artifacts/BootstrapLoading");
+            var output = Path.GetFullPath("Artifacts/BootstrapLoadingPremium");
             Directory.CreateDirectory(output);
             var resolutions = new[] { new Vector2Int(720, 1280), new Vector2Int(1080, 2340) };
             foreach (var resolution in resolutions)
@@ -135,42 +134,55 @@ namespace JoseonHunter.Editor.Scenes
                     new Color(.018f, .026f, .035f, 1f));
                 Stretch(background.rectTransform, 0f, 0f, 0f, 0f);
 
-                var spiritSprite = AssetDatabase.LoadAssetAtPath<Sprite>(SpiritFlamePath);
-                var halo = Image("Spirit Halo", root.transform, new Color(.08f, .33f, .31f, .16f));
-                halo.sprite = spiritSprite;
-                halo.preserveAspect = true;
-                SetAnchored(halo.rectTransform, new Vector2(.5f, .5f), new Vector2(360f, 360f), new Vector2(0f, 70f));
+                var heroSprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroPath);
+                if (heroSprite == null) throw new InvalidOperationException($"Missing loading hero: {HeroPath}");
+                var hero = Image("Han Yeonhwa Loading Art", root.transform, Color.white);
+                hero.sprite = heroSprite;
+                hero.preserveAspect = true;
+                Stretch(hero.rectTransform, 0f, 0f, 0f, 0f);
+                var fitter = hero.gameObject.AddComponent<AspectRatioFitter>();
+                fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fitter.aspectRatio = heroSprite.rect.width / heroSprite.rect.height;
 
-                var flame = Image("Spirit Flame", root.transform, Color.white);
-                flame.sprite = spiritSprite;
-                flame.preserveAspect = true;
-                SetAnchored(flame.rectTransform, new Vector2(.5f, .5f), new Vector2(154f, 154f), new Vector2(0f, 75f));
+                var shade = Image("Loading Art Shade", root.transform, new Color(.012f, .016f, .025f, .34f));
+                Stretch(shade.rectTransform, 0f, 0f, 0f, 0f);
+                var lowerShade = Image("Loading Copy Shade", root.transform, new Color(.018f, .026f, .035f, .78f));
+                Stretch(lowerShade.rectTransform, 0f, 0f, 0f, 0f);
+                lowerShade.rectTransform.anchorMax = new Vector2(1f, .31f);
+
+                var eyebrow = Text("Eyebrow", root.transform, "요괴가 깨어나는 밤", 21f,
+                    TextAlignmentOptions.Left, RuntimeFontRole.Body);
+                eyebrow.color = new Color(.82f, .62f, .27f, 1f);
+                SetAnchored(eyebrow.rectTransform, new Vector2(.5f, 1f), new Vector2(620f, 48f),
+                    new Vector2(0f, -122f));
 
                 var title = Text("Title", root.transform, "조선 요괴 사냥꾼", 48f,
-                    TextAlignmentOptions.Center, RuntimeFontRole.Title);
+                    TextAlignmentOptions.Left, RuntimeFontRole.Title);
                 title.color = new Color(.91f, .82f, .57f, 1f);
                 title.fontStyle = FontStyles.Bold;
-                SetAnchored(title.rectTransform, new Vector2(.5f, .5f), new Vector2(620f, 96f), new Vector2(0f, 260f));
+                SetAnchored(title.rectTransform, new Vector2(.5f, 1f), new Vector2(620f, 96f),
+                    new Vector2(0f, -186f));
 
                 var subtitle = Text("Subtitle", root.transform, "어둠 속 길을 밝히는 중…", 24f,
-                    TextAlignmentOptions.Center, RuntimeFontRole.Body);
+                    TextAlignmentOptions.Left, RuntimeFontRole.Body);
                 subtitle.color = new Color(.77f, .78f, .72f, 1f);
-                SetAnchored(subtitle.rectTransform, new Vector2(.5f, .5f), new Vector2(620f, 60f), new Vector2(0f, -88f));
+                SetAnchored(subtitle.rectTransform, new Vector2(.5f, 0f), new Vector2(620f, 60f),
+                    new Vector2(0f, 216f));
 
                 var track = Image("Brush Progress Track", root.transform, new Color(.08f, .095f, .105f, 1f));
-                SetAnchored(track.rectTransform, new Vector2(.5f, .5f), new Vector2(480f, 14f), new Vector2(0f, -160f));
+                SetAnchored(track.rectTransform, new Vector2(.5f, 0f), new Vector2(620f, 14f), new Vector2(0f, 150f));
                 var fill = Image("Brush Progress Fill", track.transform, new Color(.82f, .62f, .27f, 1f));
                 Stretch(fill.rectTransform, 0f, 2f, 0f, 2f);
                 fill.rectTransform.pivot = new Vector2(0f, .5f);
                 fill.rectTransform.anchorMax = new Vector2(0f, 1f);
 
                 var accent = Image("Red Seal Accent", root.transform, new Color(.55f, .12f, .105f, 1f));
-                SetAnchored(accent.rectTransform, new Vector2(.5f, .5f), new Vector2(54f, 8f), new Vector2(0f, -204f));
+                SetAnchored(accent.rectTransform, new Vector2(0f, 0f), new Vector2(54f, 8f), new Vector2(77f, 108f));
 
                 root.GetComponent<BootstrapLoadingPresenter>().Configure(
                     root.GetComponent<CanvasGroup>(),
                     fill.rectTransform,
-                    flame.rectTransform,
+                    null,
                     subtitle);
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }

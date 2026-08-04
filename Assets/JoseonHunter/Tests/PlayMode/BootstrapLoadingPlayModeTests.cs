@@ -6,6 +6,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -28,6 +29,9 @@ namespace JoseonHunter.Tests.PlayMode
             var loader = Object.FindFirstObjectByType<BootstrapLoadingPresenter>();
             Assert.That(loader, Is.Not.Null);
             Assert.That(loader.OpaqueForTests, Is.True);
+            var hero = loader.transform.Find("Han Yeonhwa Loading Art").GetComponent<Image>();
+            Assert.That(hero.sprite, Is.Not.Null);
+            Assert.That(hero.color.a, Is.GreaterThan(.9f));
             yield return WaitForProgress(loader, 5f);
             Assert.That(loader.ProgressForTests, Is.EqualTo(1f).Within(.001f));
             yield return WaitForLoaderRemoval(5f);
