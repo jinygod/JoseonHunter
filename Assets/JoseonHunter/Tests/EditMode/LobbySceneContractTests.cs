@@ -34,12 +34,16 @@ namespace JoseonHunter.Tests.EditMode
                 foreach (var required in new[]
                          {
                              "Lobby Background", "Safe Area", "Header", "Weapon Research Panel",
-                             "Patrol Panel", "Common Training Panel", "Bottom Navigation"
+                             "Patrol Panel", "Common Training Panel", "Bottom Navigation",
+                             "Hero Art", "Hero Shade", "Stage Content"
                          })
                     Assert.That(transforms.Any(item => item.name == required), Is.True, required);
 
                 var background = transforms.Single(item => item.name == "Lobby Background").GetComponent<Image>();
                 Assert.That(background.sprite, Is.Not.Null);
+                var hero = transforms.Single(item => item.name == "Hero Art");
+                Assert.That(hero.GetComponent<Image>().sprite, Is.Not.Null);
+                Assert.That(hero.GetComponent("LobbyHeroMotion"), Is.Not.Null);
                 foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
                 {
                     var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();

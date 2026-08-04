@@ -39,7 +39,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             scaler.matchWidthOrHeight = .5f;
             if (GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
 
-            var background = LobbyUiFactory.Image("Lobby Background", transform, Color.white);
+            var background = LobbyUiFactory.Image("Lobby Background", transform,
+                new Color(.12f, .13f, .16f, 1f));
             LobbyUiFactory.Stretch(background.rectTransform);
             background.sprite = Resources.Load<Sprite>("Lobby/lobby_courtyard");
             background.preserveAspect = false;
@@ -47,10 +48,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             safeArea = LobbyUiFactory.Rect("Safe Area", transform);
             LobbyUiFactory.Stretch(safeArea);
 
-            var header = LobbyUiFactory.Image("Header", safeArea, LobbyUiFactory.Ink);
-            LobbyUiFactory.Anchor(header.rectTransform, new Vector2(.03f, .90f), new Vector2(.97f, .985f),
+            var header = LobbyUiFactory.Image("Header", safeArea, LobbyUiFactory.NightInk);
+            LobbyUiFactory.Anchor(header.rectTransform, new Vector2(.02f, .905f), new Vector2(.98f, .985f),
                 Vector2.zero, Vector2.zero);
-            var title = LobbyUiFactory.Text("Lobby Title", header.transform, "순찰 준비", 38f,
+            LobbyUiFactory.AddGoldRule(header.transform, new Vector2(0f, 0f), new Vector2(1f, .025f));
+            var title = LobbyUiFactory.Text("Lobby Title", header.transform, "조선 요괴 사냥꾼", 31f,
                 TextAlignmentOptions.Left, true);
             title.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .1f), new Vector2(.65f, .9f),
@@ -61,15 +63,45 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.62f, .1f), new Vector2(.96f, .9f),
                 Vector2.zero, Vector2.zero);
 
-            var research = Panel("Weapon Research Panel");
-            var patrol = Panel("Patrol Panel");
-            var training = Panel("Common Training Panel");
+            var heroViewport = LobbyUiFactory.Rect("Hero Viewport", safeArea);
+            LobbyUiFactory.Anchor(heroViewport, new Vector2(.02f, .38f), new Vector2(.98f, .905f),
+                Vector2.zero, Vector2.zero);
+            heroViewport.gameObject.AddComponent<RectMask2D>();
+            var hero = LobbyUiFactory.Image("Hero Art", heroViewport, Color.white);
+            LobbyUiFactory.Stretch(hero.rectTransform);
+            hero.sprite = Resources.Load<Sprite>("Lobby/han_yeonhwa_hero");
+            hero.preserveAspect = true;
+            var aspect = hero.gameObject.AddComponent<AspectRatioFitter>();
+            aspect.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+            hero.gameObject.AddComponent<LobbyHeroMotion>();
+
+            var heroShade = LobbyUiFactory.Image("Hero Shade", safeArea,
+                new Color(.018f, .022f, .035f, .20f));
+            LobbyUiFactory.Anchor(heroShade.rectTransform, new Vector2(.02f, .38f), new Vector2(.98f, .905f),
+                Vector2.zero, Vector2.zero);
+            var heroTitle = LobbyUiFactory.Text("Hero Name", heroShade.transform, "한연화의 순찰", 34f,
+                TextAlignmentOptions.Left, true);
+            heroTitle.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Anchor(heroTitle.rectTransform, new Vector2(.045f, .66f), new Vector2(.55f, .86f),
+                Vector2.zero, Vector2.zero);
+            var heroSubtitle = LobbyUiFactory.Text("Hero Subtitle", heroShade.transform,
+                "귀곡 야행\n우두머리 출현", 19f, TextAlignmentOptions.Left);
+            heroSubtitle.color = new Color(.88f, .82f, .70f, 1f);
+            LobbyUiFactory.Anchor(heroSubtitle.rectTransform, new Vector2(.05f, .46f), new Vector2(.48f, .66f),
+                Vector2.zero, Vector2.zero);
+
+            var stageContent = LobbyUiFactory.Rect("Stage Content", safeArea);
+            LobbyUiFactory.Anchor(stageContent, new Vector2(.02f, .12f), new Vector2(.98f, .59f),
+                Vector2.zero, Vector2.zero);
+            var research = Panel("Weapon Research Panel", stageContent);
+            var patrol = Panel("Patrol Panel", stageContent);
+            var training = Panel("Common Training Panel", stageContent);
             research.gameObject.AddComponent<WeaponResearchPresenter>().Build();
             patrol.gameObject.AddComponent<PatrolPresenter>().Build();
             training.gameObject.AddComponent<CommonTrainingPresenter>().Build();
 
-            var navigation = LobbyUiFactory.Image("Bottom Navigation", safeArea, LobbyUiFactory.Ink);
-            LobbyUiFactory.Anchor(navigation.rectTransform, new Vector2(.03f, .015f), new Vector2(.97f, .105f),
+            var navigation = LobbyUiFactory.Image("Bottom Navigation", safeArea, LobbyUiFactory.NightInk);
+            LobbyUiFactory.Anchor(navigation.rectTransform, new Vector2(.02f, .015f), new Vector2(.98f, .105f),
                 Vector2.zero, Vector2.zero);
             var layout = navigation.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 8f;
@@ -78,9 +110,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             layout.childControlWidth = true;
             layout.childForceExpandHeight = true;
             layout.childForceExpandWidth = true;
-            var researchButton = LobbyUiFactory.Button("Weapon Research Navigation", navigation.transform, "무기 연구", 22f);
-            var patrolButton = LobbyUiFactory.Button("Patrol Navigation", navigation.transform, "출전", 24f);
-            var trainingButton = LobbyUiFactory.Button("Common Training Navigation", navigation.transform, "공통 수련", 22f);
+            var researchButton = LobbyUiFactory.Button("Weapon Research Navigation", navigation.transform,
+                "무기 연구", 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+            var patrolButton = LobbyUiFactory.Button("Patrol Navigation", navigation.transform,
+                "출전", 24f, LobbyUiFactory.Crimson, LobbyUiFactory.Gold);
+            var trainingButton = LobbyUiFactory.Button("Common Training Navigation", navigation.transform,
+                "공통 수련", 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
             navigation.gameObject.AddComponent<LobbyNavigationPresenter>().Initialize(
                 research.gameObject, patrol.gameObject, training.gameObject,
                 researchButton, patrolButton, trainingButton);
@@ -88,11 +123,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
             EnsureEventSystem();
         }
 
-        private RectTransform Panel(string name)
+        private static RectTransform Panel(string name, Transform parent)
         {
-            var panel = LobbyUiFactory.Image(name, safeArea, LobbyUiFactory.HanjiLight);
-            LobbyUiFactory.Anchor(panel.rectTransform, new Vector2(.03f, .12f), new Vector2(.97f, .885f),
-                Vector2.zero, Vector2.zero);
+            var panel = LobbyUiFactory.Image(name, parent, LobbyUiFactory.NightInk);
+            LobbyUiFactory.Stretch(panel.rectTransform);
             return panel.rectTransform;
         }
 

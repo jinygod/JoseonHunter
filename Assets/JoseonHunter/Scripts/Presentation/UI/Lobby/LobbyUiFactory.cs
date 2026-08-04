@@ -6,12 +6,15 @@ namespace JoseonHunter.Presentation.UI.Lobby
 {
     internal static class LobbyUiFactory
     {
-        internal static readonly Color Hanji = new Color(.88f, .80f, .62f, 1f);
-        internal static readonly Color HanjiLight = new Color(.95f, .89f, .73f, 1f);
-        internal static readonly Color Ink = new Color(.11f, .075f, .055f, 1f);
-        internal static readonly Color Brown = new Color(.25f, .12f, .075f, 1f);
+        internal static readonly Color Hanji = new Color(.82f, .73f, .53f, 1f);
+        internal static readonly Color HanjiLight = new Color(.96f, .89f, .71f, 1f);
+        internal static readonly Color Ink = new Color(.035f, .043f, .065f, 1f);
+        internal static readonly Color NightInk = new Color(.035f, .043f, .065f, 1f);
+        internal static readonly Color Brown = new Color(.20f, .065f, .052f, 1f);
+        internal static readonly Color Crimson = new Color(.34f, .10f, .075f, 1f);
         internal static readonly Color Jade = new Color(.22f, .42f, .36f, 1f);
-        internal static readonly Color Gold = new Color(.78f, .52f, .16f, 1f);
+        internal static readonly Color Gold = new Color(.78f, .54f, .20f, 1f);
+        internal static readonly Color AntiqueGold = new Color(.78f, .54f, .20f, 1f);
 
         internal static RectTransform Rect(string name, Transform parent)
         {
@@ -51,19 +54,32 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         internal static Button Button(string name, Transform parent, string label, float size = 24f)
         {
-            var image = Image(name, parent, Brown, true);
+            return Button(name, parent, label, size, Brown, HanjiLight);
+        }
+
+        internal static Button Button(string name, Transform parent, string label, float size,
+            Color background, Color foreground)
+        {
+            var image = Image(name, parent, background, true);
             var button = image.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
             var colors = button.colors;
-            colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(1.16f, 1.08f, 1.02f, 1f);
-            colors.pressedColor = new Color(.72f, .72f, .72f, 1f);
-            colors.selectedColor = Color.white;
+            colors.normalColor = background;
+            colors.highlightedColor = Color.Lerp(background, Color.white, .14f);
+            colors.pressedColor = Color.Lerp(background, Color.black, .24f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.disabledColor = new Color(background.r, background.g, background.b, .45f);
             button.colors = colors;
             var text = Text("Label", image.transform, label, size);
-            text.color = HanjiLight;
+            text.color = foreground;
             Stretch(text.rectTransform, 12f, 6f, 12f, 6f);
             return button;
+        }
+
+        internal static void AddGoldRule(Transform parent, Vector2 min, Vector2 max)
+        {
+            var rule = Image("Gold Rule", parent, AntiqueGold);
+            Anchor(rule.rectTransform, min, max, Vector2.zero, Vector2.zero);
         }
 
         internal static void Stretch(RectTransform rect, float left = 0f, float bottom = 0f,

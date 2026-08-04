@@ -48,12 +48,17 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Lobby");
             yield return null;
             var navigation = GameObject.Find("Bottom Navigation");
-            navigation.GetComponentsInChildren<Button>(true)[0].onClick.Invoke();
+            var buttons = navigation.GetComponentsInChildren<Button>(true);
+            buttons[0].onClick.Invoke();
             yield return null;
 
             Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.True);
             Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.False);
             Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
+            Assert.That(buttons[0].colors.normalColor,
+                Is.EqualTo(new Color(.34f, .10f, .075f, 1f)));
+            Assert.That(buttons[1].colors.normalColor,
+                Is.EqualTo(new Color(.035f, .043f, .065f, 1f)));
         }
 
         private static GameObject FindIncludingInactive(string name) =>

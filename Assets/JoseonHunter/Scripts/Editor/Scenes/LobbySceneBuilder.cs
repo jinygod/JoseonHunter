@@ -17,6 +17,10 @@ namespace JoseonHunter.Editor.Scenes
         private const string ScenePath = "Assets/JoseonHunter/Scenes/Lobby.unity";
         private const string PrefabPath = "Assets/JoseonHunter/Prefabs/UI/LobbyShell.prefab";
         private const string BackgroundPath = "Assets/JoseonHunter/Art/UI/Lobby/lobby_courtyard.png";
+        private const string HeroPath = "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
+        private const string PremiumFramePath = "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_frame.png";
+        private const string PremiumButtonPath =
+            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
         private const string ConstablePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/rookie_constable.png";
 
@@ -169,6 +173,29 @@ namespace JoseonHunter.Editor.Scenes
             background.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(BackgroundPath);
             if (background.sprite == null) throw new InvalidOperationException($"Missing Lobby background: {BackgroundPath}");
             background.color = Color.white;
+
+            var hero = transforms.Single(item => item.name == "Hero Art").GetComponent<Image>();
+            hero.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroPath);
+            if (hero.sprite == null) throw new InvalidOperationException($"Missing Lobby hero: {HeroPath}");
+            hero.color = Color.white;
+
+            var frame = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumFramePath);
+            if (frame == null) throw new InvalidOperationException($"Missing Lobby frame: {PremiumFramePath}");
+            foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
+            {
+                var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();
+                panel.sprite = frame;
+                panel.type = Image.Type.Sliced;
+                panel.color = Color.white;
+            }
+
+            var primarySprite = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumButtonPath);
+            if (primarySprite == null)
+                throw new InvalidOperationException($"Missing Lobby primary button: {PremiumButtonPath}");
+            var primary = transforms.Single(item => item.name == "Start Patrol").GetComponent<Image>();
+            primary.sprite = primarySprite;
+            primary.type = Image.Type.Sliced;
+            primary.color = Color.white;
 
             var patrol = canvasObject.GetComponentInChildren<PatrolPresenter>(true);
             if (patrol == null || patrol.ConstableImage == null)
