@@ -152,12 +152,12 @@ namespace JoseonHunter.Domain.Runs
         private static float PhaseStartSeconds(RunPhase phase) => phase switch
         {
             RunPhase.WaveOne => 0f,
-            RunPhase.WaveTwo => 45f,
-            RunPhase.WaveThree => 90f,
-            RunPhase.Peak => 135f,
-            RunPhase.BossWarning => 165f,
-            RunPhase.Boss => 180f,
-            RunPhase.Expired => 240f,
+            RunPhase.WaveTwo => 120f,
+            RunPhase.WaveThree => 300f,
+            RunPhase.Peak => 600f,
+            RunPhase.BossWarning => 840f,
+            RunPhase.Boss => 900f,
+            RunPhase.Expired => 960f,
             _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null)
         };
 

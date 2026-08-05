@@ -127,10 +127,10 @@ namespace JoseonHunter.Domain.Runs
         private static readonly IReadOnlyList<EnemyIntroductionDefinition> EnemyIntroductions =
             Array.AsReadOnly(new[]
             {
-                new EnemyIntroductionDefinition(102f, "shield_dokkaebi", 1),
-                new EnemyIntroductionDefinition(120f, "charging_horn_ghost", 1),
-                new EnemyIntroductionDefinition(138f, "spirit_shaman", 1),
-                new EnemyIntroductionDefinition(150f, "splitting_rat", 1)
+                new EnemyIntroductionDefinition(420f, "shield_dokkaebi", 1),
+                new EnemyIntroductionDefinition(510f, "charging_horn_ghost", 1),
+                new EnemyIntroductionDefinition(660f, "spirit_shaman", 1),
+                new EnemyIntroductionDefinition(735f, "splitting_rat", 1)
             });
 
         public static IReadOnlyList<EnemyIntroductionDefinition> Introductions => EnemyIntroductions;
@@ -157,11 +157,11 @@ namespace JoseonHunter.Domain.Runs
         {
             if (float.IsNaN(elapsedSeconds) || float.IsInfinity(elapsedSeconds) || elapsedSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
-            if (elapsedSeconds < 45f) return RatOnlyEntries;
-            if (elapsedSeconds < 53f) return SpiritOnlyEntries;
-            if (elapsedSeconds < 90f) return RatSpiritEntries;
-            if (elapsedSeconds < 100f) return DokkaebiOnlyEntries;
-            if (elapsedSeconds < 135f) return LearnedEntries;
+            if (elapsedSeconds < 120f) return RatOnlyEntries;
+            if (elapsedSeconds < 150f) return SpiritOnlyEntries;
+            if (elapsedSeconds < 300f) return RatSpiritEntries;
+            if (elapsedSeconds < 330f) return DokkaebiOnlyEntries;
+            if (elapsedSeconds < 600f) return LearnedEntries;
             return PeakEntries;
         }
 

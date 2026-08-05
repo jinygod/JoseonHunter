@@ -6,12 +6,12 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class RunRuleTests
     {
         [TestCase(0f, RunPhase.WaveOne)]
-        [TestCase(45f, RunPhase.WaveTwo)]
-        [TestCase(90f, RunPhase.WaveThree)]
-        [TestCase(135f, RunPhase.Peak)]
-        [TestCase(165f, RunPhase.BossWarning)]
-        [TestCase(180f, RunPhase.Boss)]
-        [TestCase(240f, RunPhase.Expired)]
+        [TestCase(120f, RunPhase.WaveTwo)]
+        [TestCase(300f, RunPhase.WaveThree)]
+        [TestCase(600f, RunPhase.Peak)]
+        [TestCase(840f, RunPhase.BossWarning)]
+        [TestCase(900f, RunPhase.Boss)]
+        [TestCase(960f, RunPhase.Expired)]
         public void ClockUsesApprovedBoundaries(float seconds, RunPhase expected)
         {
             var clock = new RunClock();
@@ -26,7 +26,7 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(() => clock.Advance(float.NaN), Throws.InstanceOf<System.ArgumentOutOfRangeException>());
             Assert.That(() => clock.Advance(float.PositiveInfinity), Throws.InstanceOf<System.ArgumentOutOfRangeException>());
-            Assert.That(clock.Advance(180f), Is.EqualTo(RunPhase.Boss));
+            Assert.That(clock.Advance(900f), Is.EqualTo(RunPhase.Boss));
         }
 
         [Test]
@@ -34,9 +34,9 @@ namespace JoseonHunter.Tests.EditMode
         {
             var clock = new RunClock();
 
-            clock.Advance(45f);
+            clock.Advance(120f);
 
-            Assert.That(clock.ElapsedSeconds, Is.EqualTo(45f));
+            Assert.That(clock.ElapsedSeconds, Is.EqualTo(120f));
         }
 
         [TestCase(RunPhase.WaveOne, 72)]

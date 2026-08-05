@@ -142,7 +142,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool suppressAutomaticSpawningForTests;
 #endif
 
-        private const float PrototypeDurationSeconds = 180f;
+        private const float PrototypeDurationSeconds = StagePacingTimeline.CanonicalDurationSeconds;
         private const int RunSpawnSeed = 0x4A4F5345;
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
         private const string BattlefieldPresentationResourcesPath = "Presentation/BattlefieldPresentationLibrary";
@@ -1150,13 +1150,13 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ShowNormalRoleAnnouncements()
         {
-            if (elapsed >= 45f && (normalRoleAnnouncementMask & 1) == 0)
+            if (elapsed >= 120f && (normalRoleAnnouncementMask & 1) == 0)
             {
                 normalRoleAnnouncementMask |= 1;
                 ShowWaveAnnouncement("원한 처녀귀신 출현 · 매우 빠르지만 약합니다", 1, 2.2f);
             }
 
-            if (elapsed >= 90f && (normalRoleAnnouncementMask & 2) == 0)
+            if (elapsed >= 300f && (normalRoleAnnouncementMask & 2) == 0)
             {
                 normalRoleAnnouncementMask |= 2;
                 ShowWaveAnnouncement("도깨비 출현 · 느리지만 매우 단단합니다", 1, 2.2f);
@@ -1239,7 +1239,7 @@ namespace JoseonHunter.Runtime.Gameplay
 #endif
 
             var pacing = stageTimeline.Sample(elapsed);
-            var isElite = !isBoss && !isMidBoss && elapsed >= 3f &&
+            var isElite = !isBoss && !isMidBoss && elapsed >= 60f &&
                           UnityEngine.Random.value < pacing.EliteChance;
 #if UNITY_INCLUDE_TESTS
             if (!isBoss && !isMidBoss && forceEliteForTests.HasValue)
