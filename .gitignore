@@ -36,6 +36,8 @@ sysinfo.txt
 
 # Local test reports and capture output
 /Artifacts/
+/tmp/
+/.utmp/
 
 # Platform build artifacts
 *.apk
