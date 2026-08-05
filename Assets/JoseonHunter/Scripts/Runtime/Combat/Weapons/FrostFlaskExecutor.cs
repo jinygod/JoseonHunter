@@ -290,7 +290,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void ScheduleLegacyBlooms(Float2 center)
         {
             for (var index = 0; index < 3; index++)
-                legacyBlooms.Add(new FrostBloom(center, .15f + index * .2f,
+                legacyBlooms.Add(new FrostBloom(center, .15f + index * .4f,
                     new AttackInstance(runtime.AllocateAttackInstanceId(), RepeatHitPolicy.OncePerInstance, 0f)));
         }
 
