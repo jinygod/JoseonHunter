@@ -1,5 +1,6 @@
 using System.Collections;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
@@ -70,21 +71,26 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Support_choice_reports_which_stat_changed_in_korean()
+        public IEnumerator Support_choice_applies_and_returns_without_reward_confirmation()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
             yield return null;
+            yield return null;
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
-            controller.OpenUpgradeOffersForTests(new UpgradeOffer("warding_bell", UpgradeKind.Support, 1));
+            var startingSpeed = controller.StartingMoveSpeedForTests;
+            controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
             Assert.That(controller.TryChooseUpgrade(0), Is.True);
 
-            yield return new WaitForSecondsRealtime(.55f);
+            for (var frame = 0; frame < 60 && controller.Flow.State != GameFlowState.Playing; frame++)
+                yield return null;
 
-            var detail = reward.transform.Find("Reward Reveal/Reward Panel/Detail").GetComponent("TextMeshProUGUI");
-            Assert.That(TextValue(detail), Is.EqualTo("경험치 획득 범위 +0.7"));
-            reward.Confirm();
+            Assert.That(reward.IsRevealing, Is.False);
+            Assert.That(reward.IsAwaitingConfirmation, Is.False);
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
+            Assert.That(controller.StartingMoveSpeedForTests,
+                Is.EqualTo(startingSpeed * 1.12f).Within(.001f));
         }
 
         private static string TextValue(Component text) =>
@@ -94,7 +100,7 @@ namespace JoseonHunter.Tests.PlayMode
             (Color)text.GetType().GetProperty("color").GetValue(text);
 
         [UnityTest]
-        public IEnumerator Pending_choice_waits_for_reward_reveal_before_opening()
+        public IEnumerator Pending_choice_keeps_gameplay_grace_after_immediate_support()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -106,12 +112,10 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.TryChooseUpgrade(0), Is.True);
             controller.AddExperienceForTests(100);
 
-            yield return new WaitForSecondsRealtime(.25f);
-            Assert.That(controller.IsUpgradeOpen, Is.False);
             yield return new WaitForSecondsRealtime(.5f);
-            Assert.That(reward.IsAwaitingConfirmation, Is.True);
-            reward.Confirm();
-            yield return new WaitForSecondsRealtime(.1f);
+            Assert.That(controller.IsUpgradeOpen, Is.False);
+            Assert.That(reward.IsRevealing, Is.False);
+            Assert.That(controller.Flow.State, Is.EqualTo(GameFlowState.Playing));
             Assert.That(controller.IsUpgradeOpen, Is.False);
             controller.TickGameplayIfRunningForTests(1.01f);
             Assert.That(controller.IsUpgradeOpen, Is.True);

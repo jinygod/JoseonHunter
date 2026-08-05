@@ -294,10 +294,11 @@ namespace JoseonHunter.Presentation.UI
         {
             using (FirstPlayableProfilerMarkers.UiModal.Auto())
             {
-                waitingForRewardReveal = true;
+                var requiresRewardPresentation = reward.Kind != ProgressionRewardKind.Support;
+                waitingForRewardReveal = requiresRewardPresentation;
                 waitingForChoiceClose = true;
                 pendingReward = reward;
-                hasPendingReward = true;
+                hasPendingReward = requiresRewardPresentation;
                 upgradeChoice?.CloseAfterExternalSelection();
                 if (reward.Kind != ProgressionRewardKind.Support)
                 {
