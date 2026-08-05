@@ -43,6 +43,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly List<EnemySeparationAgent> separationAgents = new List<EnemySeparationAgent>();
         private readonly EnemySeparationGrid separationGrid = new EnemySeparationGrid(.84f);
         private readonly List<PickupState> pickups = new List<PickupState>();
+        private readonly List<PickupState> pickupPool = new List<PickupState>();
         private readonly List<BossProjectileState> bossProjectiles = new List<BossProjectileState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
@@ -121,6 +122,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private int pendingUpgradeCount;
         private bool bossSpawned;
         private bool bossAlive;
+        private bool magnetSweepActive;
         private bool upgradeOpen;
         private bool awaitingUpgradePresentationClose;
         private bool runEnded;
@@ -177,6 +179,9 @@ namespace JoseonHunter.Runtime.Gameplay
         public int PendingUpgradeCountForTests => pendingUpgradeCount;
         public float LastSpawnScaleForTests { get; private set; }
         public bool BossTelegraphVisibleForTests => bossTelegraphPresenter != null && bossTelegraphPresenter.IsVisible;
+        public int ActiveExperiencePickupCountForTests => pickups.Count(pickup => pickup.Kind == PickupKind.Experience);
+        public int TotalExperiencePickupValueForTests => pickups.Where(pickup => pickup.Kind == PickupKind.Experience).Sum(pickup => pickup.Value);
+        public void SpawnExperiencePickupForTests(Vector2 position, int value) => SpawnPickup(position, PickupKind.Experience, value);
         public IReadOnlyDictionary<WeaponId, int> RunMasterySnapshotForTests => runWeaponKillLedger.Snapshot();
         public float StartingMaximumHealthForTests => playerMaxHealth;
         public float StartingDamageMultiplierForTests => runDamageMultiplier;
@@ -718,6 +723,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public bool Attracting;
             public float AttractionAge;
             public TrailRenderer Trail;
+            public float BaseScale;
         }
 
         private sealed class BossProjectileState
@@ -927,6 +933,7 @@ namespace JoseonHunter.Runtime.Gameplay
             runtimeObjects.SetParent(transform, false);
             enemies.Clear();
             pickups.Clear();
+            pickupPool.Clear();
             bossProjectiles.Clear();
             trail.Clear();
             upgradeOffers.Clear();
@@ -1005,6 +1012,7 @@ namespace JoseonHunter.Runtime.Gameplay
             pendingUpgradeCount = 0;
             bossSpawned = false;
             bossAlive = false;
+            magnetSweepActive = false;
             upgradeOpen = false;
             awaitingUpgradePresentationClose = false;
             runEnded = false;
@@ -2054,9 +2062,6 @@ namespace JoseonHunter.Runtime.Gameplay
             if (wasMidBoss)
             {
                 ScatterTreasure(deathPosition);
-            }
-            if (UnityEngine.Random.value < 0.01f)
-            {
                 SpawnPickup(
                     deathPosition + (Vector3)(UnityEngine.Random.insideUnitCircle * 0.2f),
                     PickupKind.Magnet,
@@ -2112,6 +2117,31 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void SpawnPickup(Vector2 position, PickupKind kind, int value)
         {
+            if (kind == PickupKind.Experience)
+            {
+                if (level >= RunLoadoutRules.MaximumPlayerLevel) return;
+                var activeExperienceCount = 0;
+                PickupState nearest = null;
+                var nearestDistance = float.PositiveInfinity;
+                for (var index = 0; index < pickups.Count; index++)
+                {
+                    var candidate = pickups[index];
+                    if (candidate.Kind != PickupKind.Experience || candidate.Object == null) continue;
+                    activeExperienceCount++;
+                    var distance = ((Vector2)candidate.Object.transform.position - position).sqrMagnitude;
+                    if (distance >= nearestDistance) continue;
+                    nearest = candidate;
+                    nearestDistance = distance;
+                }
+
+                if (ExperiencePickupBudget.ShouldMerge(activeExperienceCount) && nearest != null)
+                {
+                    nearest.Value = ExperiencePickupBudget.MergeValue(nearest.Value, value);
+                    UpdateExperiencePickupVisual(nearest);
+                    return;
+                }
+            }
+
             var sprite = kind == PickupKind.Experience
                 ? experienceSprite
                 : kind == PickupKind.Yeopjeon
@@ -2122,19 +2152,62 @@ namespace JoseonHunter.Runtime.Gameplay
                 : kind == PickupKind.Yeopjeon
                     ? "Yeopjeon"
                     : "Spirit Magnet";
-            var pickupObject = CreateSpriteObject(
-                objectName,
-                sprite != null ? sprite : solidSprite,
-                position,
-                6,
-                runtimeObjects);
-            var visualScale = kind == PickupKind.Experience
-                ? .62f
-                : kind == PickupKind.Yeopjeon
-                    ? .48f
-                    : .50f;
-            pickupObject.transform.localScale = Vector3.one * visualScale;
+            PickupState pickup = null;
+            for (var index = 0; index < pickupPool.Count; index++)
+            {
+                var candidate = pickupPool[index];
+                if (candidate.Kind == kind && candidate.Object != null && !candidate.Object.activeSelf)
+                {
+                    pickup = candidate;
+                    break;
+                }
+            }
+
+            if (pickup == null)
+            {
+                var createdObject = CreateSpriteObject(
+                    objectName,
+                    sprite != null ? sprite : solidSprite,
+                    position,
+                    6,
+                    runtimeObjects);
+                pickup = new PickupState { Object = createdObject, Kind = kind };
+                if (kind == PickupKind.Experience)
+                {
+                    var trailRenderer = createdObject.AddComponent<TrailRenderer>();
+                    trailRenderer.time = .14f;
+                    trailRenderer.minVertexDistance = .035f;
+                    trailRenderer.startWidth = .12f;
+                    trailRenderer.endWidth = 0f;
+                    trailRenderer.startColor = new Color(.30f, 1f, .92f, .78f);
+                    trailRenderer.endColor = new Color(.20f, .86f, 1f, 0f);
+                    trailRenderer.sortingOrder = 5;
+                    trailRenderer.sharedMaterial = pickupTrailMaterial;
+                    trailRenderer.emitting = false;
+                    pickup.Trail = trailRenderer;
+                }
+                pickupPool.Add(pickup);
+            }
+
+            var pickupObject = pickup.Object;
+            pickupObject.name = objectName;
+            pickupObject.transform.position = position;
+            pickupObject.transform.rotation = Quaternion.identity;
+            pickupObject.SetActive(true);
+            pickup.Value = value;
+            pickup.ForceCollect = false;
+            pickup.Attracting = false;
+            pickup.AttractionAge = 0f;
+            if (pickup.Trail != null)
+            {
+                pickup.Trail.Clear();
+                pickup.Trail.emitting = false;
+            }
+
             var renderer = pickupObject.GetComponent<SpriteRenderer>();
+            renderer.sprite = sprite != null ? sprite : solidSprite;
+            renderer.color = Color.white;
+            pickup.BaseScale = kind == PickupKind.Experience ? .72f : kind == PickupKind.Yeopjeon ? .48f : .50f;
             if (kind == PickupKind.Magnet)
             {
                 renderer.color = new Color(0.25f, 0.92f, 1f);
@@ -2146,7 +2219,23 @@ namespace JoseonHunter.Runtime.Gameplay
                     : new Color(0.35f, 0.85f, 1f);
             }
 
-            pickups.Add(new PickupState { Object = pickupObject, Kind = kind, Value = value });
+            if (kind == PickupKind.Experience) UpdateExperiencePickupVisual(pickup);
+            else pickupObject.transform.localScale = Vector3.one * pickup.BaseScale;
+            pickups.Add(pickup);
+        }
+
+        private static void UpdateExperiencePickupVisual(PickupState pickup)
+        {
+            var tier = ExperiencePickupBudget.TierFor(pickup.Value);
+            pickup.BaseScale = tier == ExperiencePickupTier.Large ? 1.05f :
+                tier == ExperiencePickupTier.Medium ? .88f : .72f;
+            var renderer = pickup.Object.GetComponent<SpriteRenderer>();
+            renderer.color = tier == ExperiencePickupTier.Large
+                ? new Color(.92f, .18f, .72f)
+                : tier == ExperiencePickupTier.Medium
+                    ? new Color(.58f, .34f, .96f)
+                    : new Color(.20f, .95f, .90f);
+            pickup.Object.transform.localScale = Vector3.one * pickup.BaseScale;
         }
 
         private void CreateExperienceAbsorbFlash()
@@ -2191,22 +2280,16 @@ namespace JoseonHunter.Runtime.Gameplay
             if (pickup.Attracting || pickup.Object == null) return;
             pickup.Attracting = true;
             pickup.AttractionAge = 0f;
-            var spriteRenderer = pickup.Object.GetComponent<SpriteRenderer>();
-            var trailRenderer = pickup.Object.AddComponent<TrailRenderer>();
-            trailRenderer.time = .14f;
-            trailRenderer.minVertexDistance = .035f;
-            trailRenderer.startWidth = .12f;
-            trailRenderer.endWidth = 0f;
-            trailRenderer.startColor = new Color(.30f, 1f, .92f, .78f);
-            trailRenderer.endColor = new Color(.20f, .86f, 1f, 0f);
-            trailRenderer.sortingOrder = spriteRenderer == null ? 5 : spriteRenderer.sortingOrder - 1;
-            trailRenderer.sharedMaterial = pickupTrailMaterial;
-            trailRenderer.emitting = true;
-            pickup.Trail = trailRenderer;
+            if (pickup.Trail != null)
+            {
+                pickup.Trail.Clear();
+                pickup.Trail.emitting = true;
+            }
         }
 
         private void UpdatePickups(float delta)
         {
+            ActivateMagnetBatch();
             var playerPosition = (Vector2)player.transform.position;
             for (var index = pickups.Count - 1; index >= 0; index--)
             {
@@ -2220,7 +2303,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 var distance = Vector2.Distance(pickup.Object.transform.position, playerPosition);
                 if (pickup.Kind == PickupKind.Experience)
                 {
-                    var pulse = .62f + Mathf.Sin(Time.time * 4.5f + index * .73f) * .05f;
+                    var pulse = pickup.BaseScale + Mathf.Sin(Time.time * 4.5f + index * .73f) * .05f;
                     if (pickup.ForceCollect || distance <= pickupRadius)
                     {
                         BeginExperienceAttraction(pickup);
@@ -2280,22 +2363,53 @@ namespace JoseonHunter.Runtime.Gameplay
                     CollectMagnet();
                 }
 
-                Destroy(pickup.Object);
-                pickups.RemoveAt(index);
+                ReleasePickupAt(index);
             }
         }
 
         private void CollectMagnet()
         {
-            foreach (var pickup in pickups)
+            magnetSweepActive = true;
+            magnetMessageTimer = 1.2f;
+        }
+
+        private void ActivateMagnetBatch()
+        {
+            if (!magnetSweepActive) return;
+            const int batchSize = 24;
+            var activated = 0;
+            var remaining = false;
+            for (var index = 0; index < pickups.Count; index++)
             {
-                if (pickup.Kind == PickupKind.Experience)
+                var pickup = pickups[index];
+                if (pickup.Kind != PickupKind.Experience || pickup.ForceCollect) continue;
+                if (activated < batchSize)
                 {
                     pickup.ForceCollect = true;
+                    activated++;
+                }
+                else
+                {
+                    remaining = true;
                 }
             }
+            magnetSweepActive = remaining;
+        }
 
-            magnetMessageTimer = 1.2f;
+        private void ReleasePickupAt(int index)
+        {
+            var pickup = pickups[index];
+            if (pickup.Trail != null)
+            {
+                pickup.Trail.emitting = false;
+                pickup.Trail.Clear();
+            }
+            pickup.Attracting = false;
+            pickup.ForceCollect = false;
+            pickup.AttractionAge = 0f;
+            pickup.Object.transform.rotation = Quaternion.identity;
+            pickup.Object.SetActive(false);
+            pickups.RemoveAt(index);
         }
 
         private void AddExperience(int amount)

@@ -24,7 +24,8 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(pickup.transform.position, Is.EqualTo(before),
                 "Starting pickup attraction must require near-contact distance.");
-            Assert.That(pickup.GetComponent<TrailRenderer>(), Is.Null);
+            Assert.That(pickup.GetComponent<TrailRenderer>(), Is.Not.Null);
+            Assert.That(pickup.GetComponent<TrailRenderer>().emitting, Is.False);
         }
 
         [UnityTest]
@@ -36,7 +37,7 @@ namespace JoseonHunter.Tests.PlayMode
             var pickup = GameObject.Find("Experience Flame");
             Assert.That(controller, Is.Not.Null);
             Assert.That(pickup, Is.Not.Null);
-            Assert.That(pickup.transform.localScale.x, Is.InRange(.61f, .63f));
+            Assert.That(pickup.transform.localScale.x, Is.InRange(.71f, .73f));
             var before = pickup.transform.position;
 
             Assert.That(controller.TickGameplayIfRunningForTests(.05f), Is.True);
@@ -81,6 +82,22 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(afterFirst - afterSecond, Is.GreaterThan(start - afterFirst));
             Assert.That(pickup.GetComponent<TrailRenderer>(), Is.Not.Null);
             Assert.That(pickup.GetComponent<TrailRenderer>().emitting, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator ExperiencePickupCapMergesWithoutLosingValue()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            Assert.That(controller, Is.Not.Null);
+            controller.ConfigureSeparationLoadScenarioForTests();
+
+            for (var index = 0; index < 181; index++)
+                controller.SpawnExperiencePickupForTests(new Vector2(10f + index * .01f, 10f), 1);
+
+            Assert.That(controller.ActiveExperiencePickupCountForTests, Is.EqualTo(180));
+            Assert.That(controller.TotalExperiencePickupValueForTests, Is.EqualTo(181));
         }
 
         private static IEnumerator LoadPickupAt(Vector2 position)
