@@ -230,6 +230,7 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.GreaterThanOrEqualTo(icon.anchoredPosition.x + icon.sizeDelta.x * .5f + 24f));
             Assert.That(generalTitle.GetSiblingIndex(), Is.GreaterThan(generalWindow.GetSiblingIndex()),
                 "The general-affix text must render above its row frame.");
+            Assert.That(TextValue(generalTitle), Is.EqualTo("현재 적용 효과"));
             Assert.That(TextColor(generalTitle).grayscale, Is.GreaterThan(.45f));
             Assert.That(TextColor(generalDetail).grayscale, Is.GreaterThan(.65f));
             Assert.That(ImageNamed(presenter, "Confirm Result").sprite, Is.Null);

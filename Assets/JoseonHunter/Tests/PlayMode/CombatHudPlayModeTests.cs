@@ -291,6 +291,32 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Weapon_rack_clamps_star_bounds_and_shows_at_most_three_potentials()
+        {
+            var root = new GameObject("Rack Bounds Test");
+            var rack = root.AddComponent<WeaponRackPresenter>();
+            rack.Render(new[]
+            {
+                new WeaponSlotView("one", "One", 1, null),
+                new WeaponSlotView("five", "Five", 5, null, potentialIds: new[]
+                {
+                    JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungArmorBreakArrowhead,
+                    JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungSplitFletching,
+                    JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungFullDraw
+                })
+            });
+            yield return null;
+
+            var first = root.transform.Find("Weapon Slot 0");
+            var fifth = root.transform.Find("Weapon Slot 1");
+            Assert.That(TextNamed(first.gameObject, "Level Stars"), Is.EqualTo("★"));
+            Assert.That(TextNamed(fifth.gameObject, "Level Stars"), Is.EqualTo("★★★★★"));
+            Assert.That(fifth.Find("Potential Cell 2").gameObject.activeSelf, Is.True);
+            Assert.That(fifth.Find("Potential Cell 3"), Is.Null);
+            Object.Destroy(root);
+        }
+
+        [UnityTest]
         public IEnumerator ReadOnlyWeaponDetailsDoNotOwnGameTime()
         {
             var root = new GameObject("Read Only Detail Test");

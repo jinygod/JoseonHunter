@@ -74,6 +74,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int ActiveSpreadResidenceCountForTests => spreadResidences.Count;
         public float FirstSpreadRemainingForTests => spreadResidences.Count == 0 ? 0f : spreadResidences[0].Remaining;
         public bool SuppressNewCastsForTests { get; set; }
+        public int LandingFragmentPlayCountForTests { get; private set; }
+        public int LastLandingFragmentPartIndexForTests { get; private set; } = -1;
 #endif
 
         public void Tick(float deltaTime, in WeaponExecutionContext context)
@@ -125,6 +127,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             LastLegacyShatterTargetCountForTests = 0;
             ConfirmedStoredShatterVisualCountForTests = 0;
             LastConfirmedStoredShatterPositionForTests = default;
+            LandingFragmentPlayCountForTests = 0;
+            LastLandingFragmentPartIndexForTests = -1;
 #endif
             transientVisuals?.Dispose(); transientVisuals = null; transientVisualRoot = null;
         }
@@ -468,33 +472,26 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             var scale = ScaleSpriteToWorldDiameter(renderer.sprite, Radius * 2f * radiusScale);
             scale.y *= .58f;
             field.Visual.transform.localScale = scale;
-            renderer.color = new Color(.62f, .92f, 1f, .46f);
+            renderer.color = new Color(.62f, .92f, 1f, .60f);
         }
 
         private void PlayLandingFragments(Field field, in WeaponExecutionContext context)
         {
-            var cue = new WeaponVisualCue(WeaponId.FrostFlask, WeaponVisualStage.Impact, Level, IsEvolved, .72f, .12f);
+            var cue = new WeaponVisualCue(WeaponId.FrostFlask, WeaponVisualStage.Impact, Level, IsEvolved, .52f, .12f);
+            var partIndex = WeaponVisualPartIndex.FrostFlask.Impact + 3;
             var impactSprite = context.PresentationSpriteFor(
                 WeaponId.FrostFlask,
-                WeaponVisualPartIndex.FrostFlask.Impact);
+                partIndex);
             var impactScale = ScaleSpriteToWorldDiameter(impactSprite, cue.ResolvedScale);
             transientVisuals?.Play(
                 impactSprite,
                 new Vector3(field.Landing.X, field.Landing.Y, 0f), Quaternion.identity,
                 impactScale,
-                new Color(.72f, 1f, 1f, .94f), cue.ResolvedLifetime, context.SortingOrder + 2);
-            transientVisuals?.Play(
-                impactSprite,
-                new Vector3(field.Landing.X - Radius * .28f, field.Landing.Y + Radius * .12f, 0f),
-                Quaternion.Euler(0f, 0f, -28f),
-                impactScale * .48f,
-                new Color(.34f, .88f, 1f, .78f), cue.ResolvedLifetime, context.SortingOrder + 3);
-            transientVisuals?.Play(
-                impactSprite,
-                new Vector3(field.Landing.X + Radius * .26f, field.Landing.Y + Radius * .16f, 0f),
-                Quaternion.Euler(0f, 0f, 34f),
-                impactScale * .44f,
-                new Color(.34f, .88f, 1f, .74f), cue.ResolvedLifetime, context.SortingOrder + 3);
+                new Color(.72f, 1f, 1f, .82f), cue.ResolvedLifetime, context.SortingOrder + 2);
+#if UNITY_INCLUDE_TESTS
+            LandingFragmentPlayCountForTests++;
+            LastLandingFragmentPartIndexForTests = partIndex;
+#endif
         }
 
         private void PlayConfirmedShatter(Field field, in WeaponExecutionContext context)

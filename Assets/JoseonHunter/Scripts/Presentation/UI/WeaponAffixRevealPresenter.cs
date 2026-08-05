@@ -203,7 +203,7 @@ namespace JoseonHunter.Presentation.UI
             weaponName.text = weapon.DisplayName;
             weaponLevel.text = $"레벨 {weapon.Level} · 현재 무기";
             weaponBehavior.text = weapon.Behavior;
-            title.text = "현재 추가옵션";
+            title.text = "현재 적용 효과";
             detail.text = $"추가옵션 {AffixCount(weapon.GeneralAffixRolls, weapon.GeneralAffixSummary)}개";
             detail.enableWordWrapping = false;
             detail.rectTransform.localScale = Vector3.one;

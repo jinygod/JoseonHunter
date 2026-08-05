@@ -1017,11 +1017,16 @@ namespace JoseonHunter.Tests.EditMode
 
             frost.Tick(.1f, context);
             frost.Tick(.09f, context);
+            var fieldRenderer = root.transform.Find("Frost Flask").GetComponent<SpriteRenderer>();
 
             NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(frost.FirstVisualPartIndexForTests, Is.InRange(14, 15));
                 Assert.That(frost.LastFieldVisualScale, Is.LessThanOrEqualTo(1f));
+                Assert.That(fieldRenderer.color.a, Is.InRange(.55f, .65f));
+                Assert.That(frost.LandingFragmentPlayCountForTests, Is.EqualTo(1));
+                Assert.That(frost.LastLandingFragmentPartIndexForTests,
+                    Is.EqualTo(WeaponVisualPartIndex.FrostFlask.Impact + 3));
             });
         }
 
