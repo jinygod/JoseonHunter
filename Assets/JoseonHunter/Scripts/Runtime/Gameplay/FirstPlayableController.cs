@@ -2810,7 +2810,8 @@ namespace JoseonHunter.Runtime.Gameplay
                     WeaponBehavior(weapon.Key),
                     legacyName,
                     LegacyStageName(legacy.Stage),
-                    NextLegacyMilestone(legacy.Stage)));
+                    NextLegacyMilestone(legacy.Stage),
+                    profile?.GeneralRolls));
             }
 
             // The final boss owns the featured health bar even if a midboss survived into

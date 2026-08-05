@@ -75,7 +75,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public WeaponSlotView(string id, string displayName, int level, Sprite icon,
             string generalAffixSummary = null, IEnumerable<WeaponPotentialId> potentialIds = null,
             IEnumerable<WeaponAffixTier> generalAffixTiers = null, string behavior = null,
-            string legacyName = null, string legacyStageName = null, string nextLegacyMilestone = null)
+            string legacyName = null, string legacyStageName = null, string nextLegacyMilestone = null,
+            IEnumerable<WeaponAffixRoll> generalAffixRolls = null)
         {
             Id = id; DisplayName = displayName; Level = level; Icon = icon;
             GeneralAffixSummary = generalAffixSummary ?? string.Empty;
@@ -85,6 +86,7 @@ namespace JoseonHunter.Runtime.Gameplay
             NextLegacyMilestone = nextLegacyMilestone ?? "무기 3레벨에서 두 방식 중 하나 선택";
             PotentialIds = Array.AsReadOnly((potentialIds ?? Array.Empty<WeaponPotentialId>()).ToArray());
             GeneralAffixTiers = Array.AsReadOnly((generalAffixTiers ?? Array.Empty<WeaponAffixTier>()).ToArray());
+            GeneralAffixRolls = Array.AsReadOnly((generalAffixRolls ?? Array.Empty<WeaponAffixRoll>()).ToArray());
         }
 
         public string Id { get; }
@@ -98,6 +100,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public string NextLegacyMilestone { get; }
         public IReadOnlyList<WeaponPotentialId> PotentialIds { get; }
         public IReadOnlyList<WeaponAffixTier> GeneralAffixTiers { get; }
+        public IReadOnlyList<WeaponAffixRoll> GeneralAffixRolls { get; }
     }
 
     public sealed class UpgradeChoiceState

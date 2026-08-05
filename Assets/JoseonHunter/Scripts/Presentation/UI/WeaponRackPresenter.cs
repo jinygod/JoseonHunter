@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,8 +12,8 @@ namespace JoseonHunter.Presentation.UI
 {
     public sealed class WeaponRackPresenter : MonoBehaviour
     {
-        private const float SlotSize = 112f;
-        private const float SlotGap = 18f;
+        private const float SlotSize = 124f;
+        private const float SlotGap = 16f;
         private const int Columns = 4;
 
         private sealed class Slot
@@ -20,6 +21,7 @@ namespace JoseonHunter.Presentation.UI
             public GameObject Root;
             public Image Border;
             public Image Icon;
+            public TextMeshProUGUI LevelStars;
             public Image[] PotentialCells;
             public string WeaponId;
             public Coroutine PulseRoutine;
@@ -56,7 +58,6 @@ namespace JoseonHunter.Presentation.UI
         public void Pulse(string weaponId, int newLevel, int newPotentialCount = 0)
         {
             if (string.IsNullOrEmpty(weaponId) || !slotsByWeaponId.TryGetValue(weaponId, out var slot)) return;
-            slot.Border.color = LevelBorder(newLevel);
             StopPulse(slot);
             slot.PulseRoutine = StartCoroutine(PulseRoutine(slot));
         }
@@ -87,7 +88,7 @@ namespace JoseonHunter.Presentation.UI
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
             rect.pivot = new Vector2(.5f, 0f);
 
-            slot.Border = RuntimeUiFactory.Image("Level Border", slot.Root.transform, Color.white);
+            slot.Border = RuntimeUiFactory.Image("Quality Border", slot.Root.transform, Color.white);
             slot.Border.sprite = frameSprite;
             slot.Border.type = Image.Type.Sliced;
             RuntimeUiFactory.Stretch(slot.Border.rectTransform, 0f, 0f, 0f, 0f);
@@ -96,19 +97,29 @@ namespace JoseonHunter.Presentation.UI
             slot.Icon = RuntimeUiFactory.Image("Icon", slot.Root.transform, Color.white);
             slot.Icon.rectTransform.anchorMin = slot.Icon.rectTransform.anchorMax = new Vector2(.5f, .5f);
             slot.Icon.rectTransform.pivot = new Vector2(.5f, .5f);
-            slot.Icon.rectTransform.anchoredPosition = new Vector2(0f, 5f);
-            slot.Icon.rectTransform.sizeDelta = new Vector2(70f, 70f);
+            slot.Icon.rectTransform.anchoredPosition = new Vector2(0f, 9f);
+            slot.Icon.rectTransform.sizeDelta = new Vector2(68f, 68f);
             slot.Icon.preserveAspect = true;
             slot.Icon.raycastTarget = false;
+
+            slot.LevelStars = RuntimeUiFactory.Text("Level Stars", slot.Root.transform, string.Empty, 17f,
+                TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
+            slot.LevelStars.color = JoseonUiPalette.Gold;
+            slot.LevelStars.enableWordWrapping = false;
+            slot.LevelStars.raycastTarget = false;
+            slot.LevelStars.rectTransform.anchorMin = slot.LevelStars.rectTransform.anchorMax = new Vector2(.5f, 0f);
+            slot.LevelStars.rectTransform.pivot = new Vector2(.5f, 0f);
+            slot.LevelStars.rectTransform.anchoredPosition = new Vector2(0f, 5f);
+            slot.LevelStars.rectTransform.sizeDelta = new Vector2(104f, 22f);
 
             slot.PotentialCells = new Image[3];
             for (var potentialIndex = 0; potentialIndex < slot.PotentialCells.Length; potentialIndex++)
             {
                 var cell = RuntimeUiFactory.Image("Potential Cell " + potentialIndex, slot.Root.transform, Color.white);
-                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = new Vector2(.5f, 0f);
-                cell.rectTransform.pivot = new Vector2(.5f, 0f);
-                cell.rectTransform.anchoredPosition = new Vector2((potentialIndex - 1) * 24f, 5f);
-                cell.rectTransform.sizeDelta = new Vector2(20f, 20f);
+                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = new Vector2(.5f, 1f);
+                cell.rectTransform.pivot = new Vector2(.5f, 1f);
+                cell.rectTransform.anchoredPosition = new Vector2((potentialIndex - 1) * 22f, -7f);
+                cell.rectTransform.sizeDelta = new Vector2(18f, 18f);
                 cell.preserveAspect = true;
                 cell.raycastTarget = false;
                 cell.gameObject.SetActive(false);
@@ -142,9 +153,11 @@ namespace JoseonHunter.Presentation.UI
             slot.WeaponId = weapon.Id;
             slot.View = weapon;
             if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId[slot.WeaponId] = slot;
-            slot.Border.color = LevelBorder(weapon.Level);
+            slot.Border.color = ColorFor(WeaponAffixQuality.BandFor(
+                WeaponAffixQuality.Score(weapon.GeneralAffixRolls)));
             slot.Icon.sprite = weapon.Icon;
             slot.Icon.enabled = weapon.Icon != null;
+            slot.LevelStars.text = new string('★', Mathf.Clamp(weapon.Level, 1, 5));
 
             for (var index = 0; index < slot.PotentialCells.Length; index++)
             {
@@ -157,13 +170,13 @@ namespace JoseonHunter.Presentation.UI
             }
         }
 
-        private static Color LevelBorder(int level) => level switch
+        public static Color ColorFor(WeaponAffixQualityBand quality) => quality switch
         {
-            <= 1 => new Color(.72f, .68f, .58f, 1f),
-            2 => new Color(.22f, .72f, .60f, 1f),
-            3 => new Color(.25f, .48f, .90f, 1f),
-            4 => new Color(.63f, .36f, .82f, 1f),
-            _ => new Color(.90f, .65f, .20f, 1f)
+            WeaponAffixQualityBand.Green => new Color(.30f, .78f, .46f, 1f),
+            WeaponAffixQualityBand.Blue => new Color(.30f, .58f, .96f, 1f),
+            WeaponAffixQualityBand.Crimson => new Color(.82f, .28f, .28f, 1f),
+            WeaponAffixQualityBand.Gold => new Color(1f, .72f, .18f, 1f),
+            _ => new Color(.72f, .70f, .66f, 1f)
         };
 
         private IEnumerator PulseRoutine(Slot slot)

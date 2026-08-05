@@ -126,7 +126,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level_up_keeps_combat_paused_until_reward_confirmation_then_sequences_the_queue()
+        public IEnumerator Support_level_up_resumes_combat_then_sequences_the_queue_after_grace()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
@@ -157,18 +157,10 @@ namespace JoseonHunter.Tests.PlayMode
             yield return new WaitForSecondsRealtime(.25f);
 
             Assert.That(controller.AppliedUpgradeCount, Is.EqualTo(1));
-            Assert.That(Time.timeScale, Is.Zero);
-            Assert.That(rewardReveal.IsRevealing, Is.True);
-            Assert.That(controller.IsUpgradeOpen, Is.False,
-                "The queued choice must wait until the unscaled reward reveal completes.");
-
-            yield return new WaitForSecondsRealtime(.5f);
-            Assert.That(rewardReveal.IsAwaitingConfirmation, Is.True);
-            rewardReveal.Confirm();
-            yield return new WaitForSecondsRealtime(.2f);
-            Assert.That(rewardReveal.IsRevealing, Is.False);
-            Assert.That(controller.IsUpgradeOpen, Is.False);
             Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Assert.That(rewardReveal.IsRevealing, Is.False);
+            Assert.That(controller.IsUpgradeOpen, Is.False,
+                "The queued choice must preserve a playable grace interval after immediate support application.");
             controller.TickGameplayIfRunningForTests(1.01f);
             Assert.That(controller.IsUpgradeOpen, Is.True);
         }
@@ -269,7 +261,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Weapon_rack_uses_level_border_and_visible_potential_icons()
+        public IEnumerator Weapon_rack_shows_level_stars_affix_quality_and_potential_icons()
         {
             var root = new GameObject("Compact Rack Test");
             var rack = root.AddComponent<WeaponRackPresenter>();
@@ -278,15 +270,20 @@ namespace JoseonHunter.Tests.PlayMode
                 new WeaponSlotView("gakgung_shot", "각궁", 3, null, potentialIds: new[]
                 {
                     JoseonHunter.Domain.Progression.WeaponPotentialId.GakgungFullDraw
+                }, generalAffixRolls: new[]
+                {
+                    new WeaponAffixRoll(WeaponAffixStat.Damage, WeaponAffixTier.Standard, 20d),
+                    new WeaponAffixRoll(WeaponAffixStat.Area, WeaponAffixTier.Standard, 14d)
                 })
             });
             yield return null;
 
             var slot = root.transform.Find("Weapon Slot 0");
-            Assert.That(slot.GetComponent<RectTransform>().rect.width,
-                Is.EqualTo(slot.GetComponent<RectTransform>().rect.height).Within(2f));
-            var border = slot.Find("Level Border").GetComponent<Image>();
-            Assert.That(border.color.b, Is.GreaterThan(border.color.r));
+            Assert.That(slot.GetComponent<RectTransform>().rect.width, Is.EqualTo(124f).Within(.01f));
+            Assert.That(slot.GetComponent<RectTransform>().rect.height, Is.EqualTo(124f).Within(.01f));
+            Assert.That(TextNamed(slot.gameObject, "Level Stars"), Is.EqualTo("★★★"));
+            var border = slot.Find("Quality Border").GetComponent<Image>();
+            Assert.That(border.color, Is.EqualTo(WeaponRackPresenter.ColorFor(WeaponAffixQualityBand.Blue)));
             var potential = slot.Find("Potential Cell 0").GetComponent<Image>();
             Assert.That(potential.gameObject.activeSelf, Is.True);
             Assert.That(potential.sprite, Is.Not.Null);
