@@ -43,6 +43,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly List<EnemySeparationAgent> separationAgents = new List<EnemySeparationAgent>();
         private readonly EnemySeparationGrid separationGrid = new EnemySeparationGrid(.84f);
         private readonly List<PickupState> pickups = new List<PickupState>();
+        private readonly List<BossProjectileState> bossProjectiles = new List<BossProjectileState>();
         private readonly List<Vector2> trail = new List<Vector2>();
         private readonly List<string> upgradeOffers = new List<string>();
         private readonly List<UpgradeOffer> upgradeOfferData = new List<UpgradeOffer>();
@@ -79,6 +80,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private CombatantVisualRig playerVisualRig;
         private Transform playerHealthFill;
         private GeumjulTrailPresenter geumjulPresenter;
+        private BossTelegraphPresenter bossTelegraphPresenter;
         private CombatTargetRegistry combatTargets;
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
@@ -173,6 +175,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public int FinalBossSpawnCountForTests { get; private set; }
         public int PackSpawnCountForTests { get; private set; }
         public int PendingUpgradeCountForTests => pendingUpgradeCount;
+        public float LastSpawnScaleForTests { get; private set; }
+        public bool BossTelegraphVisibleForTests => bossTelegraphPresenter != null && bossTelegraphPresenter.IsVisible;
         public IReadOnlyDictionary<WeaponId, int> RunMasterySnapshotForTests => runWeaponKillLedger.Snapshot();
         public float StartingMaximumHealthForTests => playerMaxHealth;
         public float StartingDamageMultiplierForTests => runDamageMultiplier;
@@ -496,6 +500,12 @@ namespace JoseonHunter.Runtime.Gameplay
             public IReadOnlyList<Sprite> SpecialFrames;
             public float SpecialAnimationTime;
             public ICombatTarget CombatTarget;
+            public BossCombatRole BossRole;
+            public BossAttackController BossAttack;
+            public BossAttackSnapshot BossAttackSnapshot;
+            public Vector2 ChargeStart;
+            public bool BossAttackHitApplied;
+            public float ContactRadius;
             private readonly Dictionary<int, float> frostSlowSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> freezeSources = new Dictionary<int, float>();
             private readonly Dictionary<int, float> jangseungWardSources = new Dictionary<int, float>();
@@ -507,7 +517,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
             public void ApplyFrostSlow(int sourceId, float strength)
             {
-                frostSlowSources[sourceId] = Mathf.Clamp01(strength);
+                var resolved = Mathf.Clamp01(strength);
+                if (IsBoss || IsMidBoss) resolved = 1f - (1f - resolved) * .35f;
+                frostSlowSources[sourceId] = resolved;
                 slowDecayRemaining = 0f;
             }
 
@@ -519,7 +531,13 @@ namespace JoseonHunter.Runtime.Gameplay
                 slowDecayRemaining = Mathf.Max(0f, decaySeconds);
             }
 
-            public void ApplyFreeze(int sourceId, float durationSeconds) => freezeSources[sourceId] = Mathf.Max(freezeSources.TryGetValue(sourceId, out var remaining) ? remaining : 0f, Mathf.Max(0f, durationSeconds));
+            public void ApplyFreeze(int sourceId, float durationSeconds)
+            {
+                var resolved = IsBoss || IsMidBoss ? Mathf.Min(.25f, durationSeconds) : durationSeconds;
+                freezeSources[sourceId] = Mathf.Max(
+                    freezeSources.TryGetValue(sourceId, out var remaining) ? remaining : 0f,
+                    Mathf.Max(0f, resolved));
+            }
 
             public void ApplyJangseungWard(int sourceId, float strength) => jangseungWardSources[sourceId] = Mathf.Clamp01(strength);
 
@@ -702,6 +720,13 @@ namespace JoseonHunter.Runtime.Gameplay
             public TrailRenderer Trail;
         }
 
+        private sealed class BossProjectileState
+        {
+            public GameObject Object;
+            public Vector2 Velocity;
+            public float Remaining;
+        }
+
         private void Awake()
         {
             GameplayReadySignal.Reset();
@@ -717,6 +742,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private void OnDestroy()
         {
             geumjulPresenter?.Clear();
+            bossTelegraphPresenter?.Dispose();
+            bossTelegraphPresenter = null;
             if (combatDamageService != null) combatDamageService.DamageConfirmed -= OnCombatDamageConfirmed;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
@@ -792,6 +819,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 UpdateTreasureSpawning(delta);
             }
             UpdateEnemies(delta);
+            UpdateBossProjectiles(delta);
             using (FirstPlayableProfilerMarkers.Weapon.Auto()) UpdateAttack(delta);
             UpdateExperienceAbsorbFlash(delta);
             using (FirstPlayableProfilerMarkers.Pickup.Auto()) UpdatePickups(delta);
@@ -885,6 +913,8 @@ namespace JoseonHunter.Runtime.Gameplay
             flow?.ResetToPlaying();
             var visualLibrary = ResolveJangseungGeumjulVisualLibrary();
             geumjulPresenter?.Clear();
+            bossTelegraphPresenter?.Dispose();
+            bossTelegraphPresenter = null;
             if (combatDamageService != null) combatDamageService.DamageConfirmed -= OnCombatDamageConfirmed;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
@@ -897,6 +927,7 @@ namespace JoseonHunter.Runtime.Gameplay
             runtimeObjects.SetParent(transform, false);
             enemies.Clear();
             pickups.Clear();
+            bossProjectiles.Clear();
             trail.Clear();
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
@@ -1009,6 +1040,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 .AddComponent<GeumjulTrailPresenter>();
             geumjulPresenter.transform.SetParent(runtimeObjects, false);
             geumjulPresenter.Configure(visualLibrary, runtimeObjects, 4);
+            bossTelegraphPresenter = new BossTelegraphPresenter(runtimeObjects);
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
             cameraFollowVelocity = Vector3.zero;
@@ -1282,17 +1314,22 @@ namespace JoseonHunter.Runtime.Gameplay
                 isElite ? CombatantVisualRole.Elite : CombatantVisualRole.Enemy);
 
             var renderer = visualRig.Renderer;
-            var baseHealth = isBoss ? 680f :
-                isMidBoss ? (midBossTier >= 2 ? 320f : 180f) :
+            var bossRole = isBoss
+                ? BossCombatRole.FinalBoss
+                : midBossTier >= 2
+                    ? BossCombatRole.SecondMidBoss
+                    : BossCombatRole.FirstMidBoss;
+            var baseHealth = isBoss ? 6000f :
+                isMidBoss ? (midBossTier >= 2 ? 1400f : 450f) :
                 Mathf.Lerp(18f, 42f, elapsed / PrototypeDurationSeconds);
             var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier;
-            var displayScale = isBoss
-                ? VisualScale.BossEnemyScale
-                : isMidBoss
-                    ? Mathf.Lerp(VisualScale.EliteEnemyScale, VisualScale.BossEnemyScale,
-                        midBossTier >= 2 ? .68f : .42f)
-                    : VisualScale.ScaleFor(rank);
+            var displayScale = isBoss || isMidBoss
+                ? VisualScale.NormalEnemyScale * BossScaleProfile.MultiplierFor(bossRole)
+                : VisualScale.ScaleFor(rank);
             enemyObject.transform.localScale = Vector3.one * (displayScale * archetypeProfile.DisplayScaleMultiplier);
+#if UNITY_INCLUDE_TESTS
+            LastSpawnScaleForTests = displayScale * archetypeProfile.DisplayScaleMultiplier;
+#endif
 #if UNITY_INCLUDE_TESTS
             var finalRendererBounds = MoveRendererOutsideViewport(enemyObject.transform, renderer, spawnBounds, side);
             LastSpawnRootPositionForTests = enemyObject.transform.position;
@@ -1323,6 +1360,11 @@ namespace JoseonHunter.Runtime.Gameplay
                 IsElite = rank.IsElite,
                 IsMidBoss = isMidBoss,
                 MidBossTier = midBossTier,
+                BossRole = bossRole,
+                BossAttack = isBoss || isMidBoss ? new BossAttackController(bossRole, 1.2f) : null,
+                ContactRadius = isBoss || isMidBoss
+                    ? BossScaleProfile.ContactRadius(VisualScale.NormalContactRadius, bossRole)
+                    : VisualScale.ContactRadiusFor(rank),
                 ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue,
                 ContentId = resolvedContentId,
                 ArchetypeProfile = archetypeProfile,
@@ -1332,8 +1374,8 @@ namespace JoseonHunter.Runtime.Gameplay
             if (rank.IsElite || isMidBoss)
             {
                 state.HealthFill = CreateHealthBar(enemyObject.transform);
-                state.HealthFill.parent.localPosition = new Vector3(0f, isMidBoss ? -1.02f : -0.78f, 0f);
-                state.HealthFill.parent.localScale = Vector3.one * (isMidBoss ? .66f : .52f);
+                state.HealthFill.parent.localPosition = new Vector3(0f, isMidBoss ? -1.2f : -0.78f, 0f);
+                state.HealthFill.parent.localScale = Vector3.one * (isMidBoss ? .82f : .52f);
             }
             if (archetypeProfile.Archetype == EnemyArchetype.ShieldDokkaebi)
             {
@@ -1470,10 +1512,23 @@ namespace JoseonHunter.Runtime.Gameplay
             bossSpawned = true;
             bossAlive = true;
             finalBossWarning = false;
+            ClearNormalEnemiesForFinalBoss();
             SpawnEnemy(true);
 #if UNITY_INCLUDE_TESTS
             FinalBossSpawnCountForTests++;
 #endif
+        }
+
+        private void ClearNormalEnemiesForFinalBoss()
+        {
+            for (var index = enemies.Count - 1; index >= 0; index--)
+            {
+                var enemy = enemies[index];
+                if (enemy.Object == null || enemy.IsBoss || enemy.IsMidBoss || enemy.IsTreasure) continue;
+                combatTargets.Unregister(enemy.CombatTarget);
+                Destroy(enemy.Object);
+                enemies.RemoveAt(index);
+            }
         }
 
         private void SpawnMidBoss(int tier)
@@ -1565,6 +1620,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private void UpdateEnemies(float delta)
         {
             var playerPosition = (Vector2)player.transform.position;
+            var featuredBoss = FeaturedBossEnemy();
             for (var index = enemies.Count - 1; index >= 0; index--)
             {
                 var enemy = enemies[index];
@@ -1594,14 +1650,11 @@ namespace JoseonHunter.Runtime.Gameplay
                     var enemy = enemies[index];
                     if (enemy.IsTreasure) continue;
 
-                    var rank = enemy.IsBoss
-                        ? EnemyRankProfile.Boss
-                        : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
                     separationEnemies.Add(enemy);
                     separationAgents.Add(new EnemySeparationAgent(
                         enemy.CombatTarget.RuntimeId,
                         enemy.Object.transform.position,
-                        VisualScale.ContactRadiusFor(rank)));
+                        enemy.ContactRadius));
                 }
 
                 separationGrid.Rebuild(separationAgents);
@@ -1629,14 +1682,13 @@ namespace JoseonHunter.Runtime.Gameplay
                     var velocity = archetype == EnemyArchetype.ChargingHornGhost
                         ? specialMotion.Velocity * enemy.MovementMultiplier
                         : direction * (enemy.Speed * enemy.MovementMultiplier * enemy.AuraMultiplier);
+                    if (ReferenceEquals(enemy, featuredBoss) && enemy.BossAttack != null)
+                        velocity = ResolveBossVelocity(enemy, enemyPosition, playerPosition, chase, delta);
                     if (velocity.sqrMagnitude > .0001f) enemy.Facing = velocity.normalized;
                     enemy.Object.transform.position = enemyPosition + velocity * delta;
                     enemy.VisualRig?.Tick(velocity, delta, enemy.MotionWeight);
 
-                    var rank = enemy.IsBoss
-                        ? EnemyRankProfile.Boss
-                        : enemy.IsElite ? EnemyRankProfile.Elite : EnemyRankProfile.Normal;
-                    var hitDistance = VisualScale.ContactRadiusFor(rank);
+                    var hitDistance = enemy.ContactRadius;
                     if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
                         contactInvulnerability <= 0f)
                     {
@@ -1653,6 +1705,144 @@ namespace JoseonHunter.Runtime.Gameplay
                     }
                 }
             }
+
+            if (featuredBoss == null) bossTelegraphPresenter?.Hide();
+        }
+
+        private EnemyState FeaturedBossEnemy()
+        {
+            EnemyState midBoss = null;
+            for (var index = 0; index < enemies.Count; index++)
+            {
+                var candidate = enemies[index];
+                if (candidate.Object == null) continue;
+                if (candidate.IsBoss) return candidate;
+                if (midBoss == null && candidate.IsMidBoss) midBoss = candidate;
+            }
+
+            return midBoss;
+        }
+
+        private Vector2 ResolveBossVelocity(
+            EnemyState enemy,
+            Vector2 enemyPosition,
+            Vector2 playerPosition,
+            Vector2 chase,
+            float delta)
+        {
+            var snapshot = enemy.BossAttack.Tick(
+                delta,
+                new Float2(enemyPosition.x, enemyPosition.y),
+                new Float2(playerPosition.x, playerPosition.y),
+                enemy.MaximumHealth <= 0f ? 0f : enemy.Health / enemy.MaximumHealth);
+            enemy.BossAttackSnapshot = snapshot;
+            var lockedTarget = new Vector2(snapshot.LockedTarget.X, snapshot.LockedTarget.Y);
+            if (snapshot.Phase == BossAttackPhase.Telegraph)
+                bossTelegraphPresenter?.Show(snapshot.Kind, enemyPosition, lockedTarget,
+                    enemy.Object.transform.localScale.x, Time.time);
+            else
+                bossTelegraphPresenter?.Hide();
+
+            if (snapshot.ExecuteStarted)
+            {
+                enemy.BossAttackHitApplied = false;
+                enemy.ChargeStart = enemyPosition;
+                if (snapshot.Kind == BossAttackKind.SuppressionSlam)
+                {
+                    var radius = enemy.IsBoss ? 2.5f : 2.1f;
+                    if ((playerPosition - lockedTarget).sqrMagnitude <= radius * radius)
+                        ApplyBossDamageToPlayer(enemy.IsBoss ? 18f : 16f);
+                    enemy.BossAttackHitApplied = true;
+                }
+                else if (snapshot.Kind == BossAttackKind.SpiritVolley)
+                {
+                    SpawnBossVolley(enemyPosition, enemy.Health < enemy.MaximumHealth * .5f ? 10 : 8);
+                    enemy.BossAttackHitApplied = true;
+                }
+            }
+
+            if (snapshot.Phase == BossAttackPhase.Execute && snapshot.Kind == BossAttackKind.BloodCharge)
+            {
+                var charge = lockedTarget - enemy.ChargeStart;
+                var velocity = charge.sqrMagnitude <= .0001f ? Vector2.zero : charge.normalized * 14f;
+                if (!enemy.BossAttackHitApplied &&
+                    (playerPosition - enemyPosition).sqrMagnitude <=
+                    (enemy.ContactRadius + .45f) * (enemy.ContactRadius + .45f))
+                {
+                    ApplyBossDamageToPlayer(enemy.IsBoss ? 22f : 20f);
+                    enemy.BossAttackHitApplied = true;
+                }
+                return velocity;
+            }
+
+            return snapshot.Phase == BossAttackPhase.Chase
+                ? chase * (enemy.Speed * enemy.MovementMultiplier * enemy.AuraMultiplier)
+                : Vector2.zero;
+        }
+
+        private void SpawnBossVolley(Vector2 center, int count)
+        {
+            for (var index = 0; index < count; index++)
+            {
+                var projectile = AcquireBossProjectile();
+                var angle = Mathf.PI * 2f * (index + .35f) / count;
+                projectile.Object.transform.position = center;
+                projectile.Object.transform.localScale = Vector3.one * .32f;
+                projectile.Object.SetActive(true);
+                projectile.Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 6.2f;
+                projectile.Remaining = 4f;
+            }
+        }
+
+        private BossProjectileState AcquireBossProjectile()
+        {
+            for (var index = 0; index < bossProjectiles.Count; index++)
+                if (bossProjectiles[index].Object != null && !bossProjectiles[index].Object.activeSelf)
+                    return bossProjectiles[index];
+
+            var projectileObject = CreateSpriteObject(
+                "Fallen General Spirit Projectile",
+                solidSprite,
+                Vector2.zero,
+                7,
+                runtimeObjects);
+            projectileObject.GetComponent<SpriteRenderer>().color = new Color(.58f, .05f, .16f, .95f);
+            projectileObject.SetActive(false);
+            var created = new BossProjectileState { Object = projectileObject };
+            bossProjectiles.Add(created);
+            return created;
+        }
+
+        private void UpdateBossProjectiles(float delta)
+        {
+            if (player == null) return;
+            var playerPosition = (Vector2)player.transform.position;
+            for (var index = 0; index < bossProjectiles.Count; index++)
+            {
+                var projectile = bossProjectiles[index];
+                if (projectile.Object == null || !projectile.Object.activeSelf) continue;
+                projectile.Remaining -= delta;
+                projectile.Object.transform.position += (Vector3)(projectile.Velocity * delta);
+                if (((Vector2)projectile.Object.transform.position - playerPosition).sqrMagnitude <= .22f * .22f)
+                {
+                    ApplyBossDamageToPlayer(11f);
+                    projectile.Object.SetActive(false);
+                }
+                else if (projectile.Remaining <= 0f)
+                {
+                    projectile.Object.SetActive(false);
+                }
+            }
+        }
+
+        private void ApplyBossDamageToPlayer(float amount)
+        {
+            if (contactInvulnerability > 0f || playerHealth <= 0f) return;
+            playerHealth = Mathf.Max(0f, playerHealth - amount * runIncomingDamageMultiplier);
+            UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
+            contactInvulnerability = .35f;
+            StartCoroutine(FlashPlayer());
+            if (playerHealth <= 0f) EndRun(false);
         }
 
         private void ApplyShamanAura(EnemyState shaman)

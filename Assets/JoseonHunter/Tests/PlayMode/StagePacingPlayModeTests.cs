@@ -10,15 +10,15 @@ namespace JoseonHunter.Tests.PlayMode
     public sealed class StagePacingPlayModeTests
     {
         [UnityTest]
-        public IEnumerator PreviewMilestonesSpawnEachMidBossOnce()
+        public IEnumerator FifteenMinuteMilestonesSpawnEachMidBossOnce()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
-            controller.AdvanceStageForTests(0f, 60f);
-            controller.AdvanceStageForTests(60f, 61f);
+            controller.AdvanceStageForTests(0f, 300f);
+            controller.AdvanceStageForTests(300f, 301f);
 
             Assert.That(controller.MidBossSpawnCountForTests, Is.EqualTo(1));
             Assert.That(controller.UiState.BossAlive, Is.True);
@@ -33,7 +33,7 @@ namespace JoseonHunter.Tests.PlayMode
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
-            Assert.That(controller.UiState.Duration, Is.EqualTo(180f));
+            Assert.That(controller.UiState.Duration, Is.EqualTo(900f));
 
             var camera = Camera.main;
             Assert.That(camera, Is.Not.Null);
@@ -86,6 +86,12 @@ namespace JoseonHunter.Tests.PlayMode
                         var view = ViewportBounds(camera);
                         AssertRendererIsOutside(view, side, controller.LastSpawnRendererBoundsForTests);
                         AssertRootRemainsOutside(view, side, scenario.Margin, controller.LastSpawnRootPositionForTests);
+                        if (scenario.IsBoss)
+                            Assert.That(controller.LastSpawnScaleForTests, Is.EqualTo(.78f * 2.3f).Within(.001f));
+                        else if (scenario.MidBossTier == 1)
+                            Assert.That(controller.LastSpawnScaleForTests, Is.EqualTo(.78f * 1.7f).Within(.001f));
+                        else if (scenario.MidBossTier == 2)
+                            Assert.That(controller.LastSpawnScaleForTests, Is.EqualTo(.78f * 1.9f).Within(.001f));
                     }
                 }
             }
@@ -104,11 +110,11 @@ namespace JoseonHunter.Tests.PlayMode
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
-            controller.AdvanceStageForTests(0f, 60f);
+            controller.AdvanceStageForTests(0f, 300f);
             controller.DefeatMidBossesForTests();
             Assert.That(controller.RunEndedForTests, Is.False);
 
-            controller.AdvanceStageForTests(179f, 180.1f);
+            controller.AdvanceStageForTests(899f, 900f);
             Assert.That(controller.FinalBossSpawnCountForTests, Is.EqualTo(1));
             Assert.That(controller.RunEndedForTests, Is.False);
 
@@ -125,10 +131,10 @@ namespace JoseonHunter.Tests.PlayMode
             var controller = Object.FindFirstObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
-            controller.AdvanceStageForTests(0f, 120f);
-            controller.AdvanceStageForTests(179f, 180.1f);
+            controller.AdvanceStageForTests(0f, 600f);
+            controller.AdvanceStageForTests(899f, 900f);
 
-            Assert.That(controller.UiState.BossMaximumHealth, Is.EqualTo(680f));
+            Assert.That(controller.UiState.BossMaximumHealth, Is.EqualTo(6000f));
         }
 
         private static Rect ViewportBounds(Camera camera)
