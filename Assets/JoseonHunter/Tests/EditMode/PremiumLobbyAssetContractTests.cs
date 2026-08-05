@@ -1,3 +1,5 @@
+using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -6,8 +8,6 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class PremiumLobbyAssetContractTests
     {
-        private const string HeroPath =
-            "Assets/JoseonHunter/Art/Characters/Lobby/han_yeonhwa_hero.png";
         private const string ResourceHeroPath =
             "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
         private const string FramePath =
@@ -16,13 +16,29 @@ namespace JoseonHunter.Tests.EditMode
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
         private const string SecondaryButtonPath =
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
-        private const string CompactWeaponSlotPath =
-            "Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png";
+        private const string CompactWeaponSlotResourcePath =
+            "Assets/JoseonHunter/Resources/UI/compact_weapon_slot.png";
+
+        [Test]
+        public void PremiumRuntimeAssetsDoNotHaveByteIdenticalArtCopies()
+        {
+            foreach (var resourcePath in new[] { ResourceHeroPath, CompactWeaponSlotResourcePath })
+            {
+                var resourceBytes = File.ReadAllBytes(resourcePath);
+                var duplicatePaths = Directory
+                    .GetFiles("Assets/JoseonHunter/Art", Path.GetFileName(resourcePath), SearchOption.AllDirectories)
+                    .Where(path => File.ReadAllBytes(path).SequenceEqual(resourceBytes))
+                    .ToArray();
+
+                Assert.That(duplicatePaths, Is.Empty,
+                    $"{resourcePath} must be the single canonical runtime copy; duplicates: {string.Join(", ", duplicatePaths)}");
+            }
+        }
 
         [Test]
         public void PremiumLobbyArtExistsAndIsMobileBounded()
         {
-            foreach (var path in new[] { HeroPath, ResourceHeroPath, FramePath, PrimaryButtonPath })
+            foreach (var path in new[] { ResourceHeroPath, FramePath, PrimaryButtonPath })
             {
                 Assert.That(AssetDatabase.LoadAssetAtPath<Sprite>(path), Is.Not.Null, path);
                 var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -50,7 +66,7 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void SecondaryButtonAndCompactSlotAreSlicedMobileSprites()
         {
-            foreach (var path in new[] { SecondaryButtonPath, CompactWeaponSlotPath })
+            foreach (var path in new[] { SecondaryButtonPath, CompactWeaponSlotResourcePath })
             {
                 var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
                 Assert.That(sprite, Is.Not.Null, path);

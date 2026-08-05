@@ -16,8 +16,6 @@ namespace JoseonHunter.Editor.AssetImport
         private const string AppraisalUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/Appraisal/";
         private const string LobbyUiRoot = "Assets/JoseonHunter/Art/UI/Lobby/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
-        private const string PremiumLobbyHeroPath =
-            "Assets/JoseonHunter/Art/Characters/Lobby/han_yeonhwa_hero.png";
         private const string PremiumLobbyResourceHeroPath =
             "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
         private const string PremiumLobbyFramePath =
@@ -26,8 +24,6 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
         private const string PremiumLobbySecondaryButtonPath =
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
-        private const string CompactWeaponSlotPath =
-            "Assets/JoseonHunter/Art/UI/Combat/compact_weapon_slot.png";
         private const string CompactWeaponSlotResourcePath =
             "Assets/JoseonHunter/Resources/UI/compact_weapon_slot.png";
         private const string SupportUpgradeIconRoot =
@@ -162,15 +158,15 @@ namespace JoseonHunter.Editor.AssetImport
 
         private bool ConfigurePremiumLobbyTexture()
         {
-            var isHero = assetPath.Equals(PremiumLobbyHeroPath, System.StringComparison.Ordinal)
-                || assetPath.Equals(PremiumLobbyResourceHeroPath, System.StringComparison.Ordinal);
+            var isHero = assetPath.Equals(PremiumLobbyResourceHeroPath, System.StringComparison.Ordinal);
             var isFrame = assetPath.Equals(PremiumLobbyFramePath, System.StringComparison.Ordinal);
             var isButton = assetPath.Equals(PremiumLobbyButtonPath, System.StringComparison.Ordinal);
             var isSecondaryButton = assetPath.Equals(
                 PremiumLobbySecondaryButtonPath,
                 System.StringComparison.Ordinal);
-            var isCompactWeaponSlot = assetPath.Equals(CompactWeaponSlotPath, System.StringComparison.Ordinal)
-                || assetPath.Equals(CompactWeaponSlotResourcePath, System.StringComparison.Ordinal);
+            var isCompactWeaponSlot = assetPath.Equals(
+                CompactWeaponSlotResourcePath,
+                System.StringComparison.Ordinal);
             if (!isHero && !isFrame && !isButton && !isSecondaryButton && !isCompactWeaponSlot) return false;
 
             var texture = (TextureImporter)assetImporter;
