@@ -20,6 +20,7 @@ namespace JoseonHunter.Presentation.UI
             int existingPotentialCount,
             bool isNewAcquisition = false,
             string accumulatedAffixSummary = null,
+            IReadOnlyList<WeaponAffixRoll> generalAffixRolls = null,
             bool hasWeaponContext = false,
             string legacyName = null,
             string legacyStageName = null,
@@ -35,6 +36,7 @@ namespace JoseonHunter.Presentation.UI
             ExistingPotentialCount = Mathf.Clamp(existingPotentialCount, 0, CurrentPotentials.Count);
             IsNewAcquisition = isNewAcquisition;
             AccumulatedAffixSummary = accumulatedAffixSummary ?? string.Empty;
+            GeneralAffixRolls = generalAffixRolls ?? Array.Empty<WeaponAffixRoll>();
             HasWeaponContext = hasWeaponContext;
             LegacyName = legacyName ?? "미선택";
             LegacyStageName = legacyStageName ?? "무기 3레벨에서 두 방식 중 하나 선택";
@@ -51,6 +53,7 @@ namespace JoseonHunter.Presentation.UI
         public int ExistingPotentialCount { get; }
         public bool IsNewAcquisition { get; }
         public string AccumulatedAffixSummary { get; }
+        public IReadOnlyList<WeaponAffixRoll> GeneralAffixRolls { get; }
         public bool HasWeaponContext { get; }
         public string LegacyName { get; }
         public string LegacyStageName { get; }
@@ -72,6 +75,7 @@ namespace JoseonHunter.Presentation.UI
                 Mathf.Max(0, current.Count - awardedCount),
                 reward.Kind == ProgressionRewardKind.NewWeapon,
                 slot.GeneralAffixSummary,
+                Array.AsReadOnly(slot.GeneralAffixRolls.ToArray()),
                 true,
                 slot.LegacyName,
                 slot.LegacyStageName,
@@ -80,6 +84,7 @@ namespace JoseonHunter.Presentation.UI
 
         public static WeaponAppraisalViewModel ForResult(WeaponAffixRollResult result) =>
             new(string.Empty, "무기 운명 감정", 1, "추가옵션과 잠재 능력을 확인합니다",
-                null, result, result?.NewPotentials ?? Array.Empty<WeaponPotentialId>(), 0);
+                null, result, result?.NewPotentials ?? Array.Empty<WeaponPotentialId>(), 0,
+                generalAffixRolls: Array.Empty<WeaponAffixRoll>());
     }
 }

@@ -44,7 +44,10 @@ namespace JoseonHunter.Tests.EditMode
             var slot = new WeaponSlotView(
                 "gakgung_shot", "각궁", 3, null, "피해량 +24%",
                 new[] { WeaponPotentialId.GakgungSplitFletching, WeaponPotentialId.GakgungFullDraw },
-                behavior: "적을 관통하는 화살");
+                behavior: "적을 관통하는 화살", generalAffixRolls: new[]
+                {
+                    new WeaponAffixRoll(WeaponAffixStat.Damage, WeaponAffixTier.High, 23.88d)
+                });
 
             var model = WeaponAppraisalViewModel.From(reward, slot);
 
@@ -55,6 +58,8 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(model.CurrentPotentials, Has.Count.EqualTo(2));
             Assert.That(model.IsNewAcquisition, Is.False);
             Assert.That(model.AccumulatedAffixSummary, Is.EqualTo("피해량 +24%"));
+            Assert.That(model.GeneralAffixRolls, Has.Count.EqualTo(1));
+            Assert.That(model.GeneralAffixRolls[0].Value, Is.EqualTo(23.88d));
         }
     }
 }

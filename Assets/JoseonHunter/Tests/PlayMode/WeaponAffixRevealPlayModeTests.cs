@@ -93,11 +93,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(ImageNamed(presenter, "Locked Potential 1").sprite, Is.Null);
             Assert.That(ImageNamed(presenter, "Stop Flash 0").sprite, Is.Null);
             Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
-            var legacyStage = RectNamed(presenter, "Legacy Stage");
-            Assert.That(legacyStage.gameObject.activeSelf, Is.True);
-            Assert.That(TextValue(legacyStage),
-                Is.EqualTo("현재 상태 · 무기 3레벨에서 두 방식 중 하나 선택"));
-            Assert.That(TextColor(legacyStage).grayscale, Is.LessThan(.5f));
+            var growth = RectNamed(presenter, "Growth Summary Row");
+            Assert.That(growth.gameObject.activeSelf, Is.True);
+            Assert.That(TextValue(growth), Does.Contain("성장 방식"));
+            Assert.That(TextValue(growth), Does.Contain("선택 전"));
+            Assert.That(TextColor(growth).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -113,7 +113,7 @@ namespace JoseonHunter.Tests.PlayMode
                 "재사용 대기시간 -8%", behavior: "Returning blade"));
 
             var main = RectNamed(presenter, "Reel Window 0");
-            var summary = RectNamed(presenter, "Accumulated Affix Summary");
+            var summary = RectNamed(presenter, "Effect Summary Title");
             var firstPotential = RectNamed(presenter, "Reel Window 1");
             var lastPotential = RectNamed(presenter, "Reel Window 3");
             var confirm = RectNamed(presenter, "Confirm Result");
@@ -255,10 +255,13 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-0").enabled, Is.False);
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-1").enabled, Is.False);
             }
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Path")), Is.EqualTo("선택한 성장 · 빙무"));
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Stage")), Is.EqualTo("현재 상태 · 선택"));
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Next")), Is.EqualTo("다음 강화 · 4레벨 · 강화"));
-            Assert.That(TextColor(RectNamed(presenter, "Legacy Stage")).grayscale, Is.LessThan(.5f));
+            Assert.That(TextValue(RectNamed(presenter, "Affix Summary Row")),
+                Is.EqualTo("누적 추가옵션\nDamage +24%"));
+            Assert.That(TextValue(RectNamed(presenter, "Growth Summary Row")),
+                Is.EqualTo("성장 방식\n빙무 · 선택"));
+            Assert.That(TextValue(RectNamed(presenter, "Potential Summary Row")),
+                Is.EqualTo("잠재 능력\n독니"));
+            Assert.That(TextColor(RectNamed(presenter, "Growth Summary Row")).grayscale, Is.LessThan(.5f));
 
             Object.DestroyImmediate(presenter.gameObject);
         }
@@ -274,10 +277,8 @@ namespace JoseonHunter.Tests.PlayMode
                 legacyName: "관일", legacyStageName: "최종 효과 완성",
                 nextLegacyMilestone: "최종 효과 적용 중"));
 
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Stage")),
-                Is.EqualTo("현재 상태 · 최종 효과 완성"));
-            Assert.That(TextValue(RectNamed(presenter, "Legacy Next")),
-                Is.EqualTo("성장 완료 · 최종 효과 적용 중"));
+            Assert.That(TextValue(RectNamed(presenter, "Growth Summary Row")),
+                Is.EqualTo("성장 방식\n관일 · 최종 효과 완성"));
             Object.DestroyImmediate(presenter.gameObject);
         }
 
@@ -289,8 +290,9 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.Play(Model(2, ProgressionRewardKind.WeaponLevel, WeaponAffixTier.Standard));
 
             Assert.That(presenter.ScrollOpenFraction, Is.GreaterThan(.5f));
-            Assert.That(presenter.AccumulatedSummary,
-                Is.EqualTo("지금까지 적용된 효과 · Damage +24%"));
+            Assert.That(presenter.AccumulatedSummary, Is.EqualTo("적용 후 누적 효과"));
+            Assert.That(TextValue(RectNamed(presenter, "Affix Summary Row")),
+                Does.Contain("Damage +24%"));
             yield return new WaitForSecondsRealtime(.14f);
             Assert.That(presenter.ScrollOpenFraction, Is.EqualTo(1f).Within(.01f));
             Object.Destroy(presenter.gameObject);
@@ -391,7 +393,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Support_and_evolution_keep_generic_reward_reveal()
+        public IEnumerator Support_applies_immediately_while_evolution_keeps_generic_reward_reveal()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null; yield return null;
@@ -402,9 +404,10 @@ namespace JoseonHunter.Tests.PlayMode
             affix.SetCatalogForTests(TestCatalog());
 
             yield return ChooseThroughVisibleCard(controller, choice, new UpgradeOffer("boots", UpgradeKind.Support, 1));
-            Assert.That(generic.IsRevealing, Is.True);
+            Assert.That(generic.IsRevealing, Is.False);
             Assert.That(affix.IsRevealing, Is.False);
-            yield return new WaitForSecondsRealtime(.5f);
+            controller.TickGameplayIfRunningForTests(1.01f);
+            yield return null;
 
             yield return ChooseThroughVisibleCard(controller, choice, new UpgradeOffer("gakgung_sun_piercer", UpgradeKind.Evolution, 5));
             Assert.That(generic.IsRevealing, Is.True);
@@ -490,7 +493,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Legacy_rows_appear_together_when_the_appraisal_can_be_read()
+        public IEnumerator Effect_summary_rows_appear_together_when_the_appraisal_can_be_read()
         {
             var presenter = new GameObject("Slot Lines Test").AddComponent<WeaponAffixRevealPresenter>();
             presenter.SetCatalogForTests(TestCatalog());
@@ -498,9 +501,9 @@ namespace JoseonHunter.Tests.PlayMode
             var timeline = WeaponAffixRevealTimeline.For(result);
             presenter.Play(result);
             yield return new WaitForSecondsRealtime(timeline.ReadStartsAt + .04f);
-            Assert.That(RectNamed(presenter, "Legacy Path").gameObject.activeSelf, Is.True);
-            Assert.That(RectNamed(presenter, "Legacy Stage").gameObject.activeSelf, Is.True);
-            Assert.That(RectNamed(presenter, "Legacy Next").gameObject.activeSelf, Is.True);
+            Assert.That(RectNamed(presenter, "Affix Summary Row").gameObject.activeSelf, Is.True);
+            Assert.That(RectNamed(presenter, "Growth Summary Row").gameObject.activeSelf, Is.True);
+            Assert.That(RectNamed(presenter, "Potential Summary Row").gameObject.activeSelf, Is.True);
             Assert.That(presenter.VisiblePotentialCount, Is.EqualTo(0));
             Object.Destroy(presenter.gameObject);
         }

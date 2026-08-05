@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
@@ -203,12 +204,11 @@ namespace JoseonHunter.Presentation.UI
             weaponLevel.text = $"레벨 {weapon.Level} · 현재 무기";
             weaponBehavior.text = weapon.Behavior;
             title.text = "현재 추가옵션";
-            detail.text = string.IsNullOrEmpty(weapon.GeneralAffixSummary)
-                ? "추가옵션 없음"
-                : weapon.GeneralAffixSummary;
+            detail.text = $"추가옵션 {AffixCount(weapon.GeneralAffixRolls, weapon.GeneralAffixSummary)}개";
+            detail.enableWordWrapping = false;
             detail.rectTransform.localScale = Vector3.one;
             detail.color = JoseonUiPalette.DarkPanelText;
-            accumulatedAffixSummary.text = string.Empty;
+            accumulatedAffixSummary.text = "현재 적용 효과";
             rarityFrame.enabled = false;
             finalSymbols[0].enabled = false;
             raritySealLabel.gameObject.SetActive(false);
@@ -227,7 +227,8 @@ namespace JoseonHunter.Presentation.UI
                 potentialLabels[index].gameObject.SetActive(true);
                 reelWindows[index + 1].rectTransform.anchoredPosition = PotentialRowPosition(index);
             }
-            BindLegacyRows(weapon.LegacyName, weapon.LegacyStageName, weapon.NextLegacyMilestone);
+            BindEffectRows(weapon.GeneralAffixSummary, weapon.LegacyName, weapon.LegacyStageName,
+                weapon.PotentialIds);
 
             ApplyFlatAppraisalStyle();
 
@@ -486,7 +487,8 @@ namespace JoseonHunter.Presentation.UI
             {
                 finalSymbols[index + 1].sprite = null;
             }
-            BindLegacyRows(activeModel.LegacyName, activeModel.LegacyStageName, activeModel.NextLegacyMilestone);
+            BindEffectRows(activeModel.AccumulatedAffixSummary, activeModel.LegacyName,
+                activeModel.LegacyStageName, activeModel.CurrentPotentials);
 
             burst.sprite = activeResult.NewPotentials.Count > 0
                 ? activeCatalog.PotentialRitualSeal
@@ -498,9 +500,7 @@ namespace JoseonHunter.Presentation.UI
                 ? $"레벨 {activeModel.Level} · 신규 무기"
                 : $"레벨 {activeModel.Level} · 강화 감정";
             weaponBehavior.text = activeModel.Behavior;
-            accumulatedAffixSummary.text = string.IsNullOrEmpty(activeModel.AccumulatedAffixSummary)
-                ? string.Empty
-                : "지금까지 적용된 효과 · " + activeModel.AccumulatedAffixSummary;
+            accumulatedAffixSummary.text = "적용 후 누적 효과";
             weaponIcon.sprite = activeModel.Icon != null ? activeModel.Icon : activeCatalog.ReelSymbolStat;
             weaponIcon.enabled = weaponIcon.sprite != null;
             ApplyFlatAppraisalStyle();
@@ -654,10 +654,11 @@ namespace JoseonHunter.Presentation.UI
             title.fontStyle = FontStyles.Bold;
             title.color = JoseonUiPalette.Gold;
             detail = Label("Affix Detail", shell.transform, new Vector2(80f, 105f),
-                new Vector2(600f, 62f), 42f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
+                new Vector2(600f, 62f), 38f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             detail.fontStyle = FontStyles.Bold;
+            detail.enableWordWrapping = false;
             detail.color = JoseonUiPalette.DarkPanelText;
-            accumulatedAffixSummary = Label("Accumulated Affix Summary", shell.transform,
+            accumulatedAffixSummary = Label("Effect Summary Title", shell.transform,
                 new Vector2(0f, 44f), new Vector2(740f, 24f), 18f,
                 TextAlignmentOptions.Left);
             accumulatedAffixSummary.fontStyle = FontStyles.Bold;
@@ -681,11 +682,13 @@ namespace JoseonHunter.Presentation.UI
                     finalSymbols[index + 1].transform.parent, Color.white);
                 RuntimeUiFactory.Stretch(lockedSlots[index].rectTransform, 8f, 6f, 8f, 6f);
                 lockedSlots[index].preserveAspect = false;
-                var legacyLabelName = index == 0 ? "Legacy Path" : index == 1 ? "Legacy Stage" : "Legacy Next";
-                potentialLabels[index] = Label(legacyLabelName, shell.transform,
-                    position + new Vector2(80f, 0f), new Vector2(600f, 48f), 23f,
+                var summaryLabelName = index == 0 ? "Affix Summary Row" :
+                    index == 1 ? "Growth Summary Row" : "Potential Summary Row";
+                potentialLabels[index] = Label(summaryLabelName, shell.transform,
+                    position + new Vector2(80f, 0f), new Vector2(600f, 84f), 21f,
                     TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
+                potentialLabels[index].enableWordWrapping = true;
                 potentialLabels[index].color = JoseonUiPalette.AppraisalBorder;
             }
 
@@ -714,18 +717,35 @@ namespace JoseonHunter.Presentation.UI
             root.SetActive(false);
         }
 
-        private void BindLegacyRows(string legacyName, string legacyStageName, string nextLegacyMilestone)
+        private void BindEffectRows(
+            string affixSummary,
+            string legacyName,
+            string legacyStageName,
+            IReadOnlyList<WeaponPotentialId> potentialIds)
         {
-            potentialLabels[0].text = "선택한 성장 · " + (string.IsNullOrEmpty(legacyName) ? "미선택" : legacyName);
-            potentialLabels[1].text = "현재 상태 · " + (string.IsNullOrEmpty(legacyStageName)
-                ? "무기 3레벨에서 두 방식 중 하나 선택"
-                : legacyStageName);
-            var next = string.IsNullOrEmpty(nextLegacyMilestone)
-                ? "무기 3레벨에서 두 방식 중 하나 선택"
-                : nextLegacyMilestone;
-            potentialLabels[2].text = next == "최종 효과 적용 중"
-                ? "성장 완료 · 최종 효과 적용 중"
-                : "다음 강화 · " + next;
+            potentialLabels[0].text = "누적 추가옵션\n" +
+                (string.IsNullOrWhiteSpace(affixSummary) ? "없음" : affixSummary);
+
+            var hasGrowth = !string.IsNullOrWhiteSpace(legacyName) && legacyName != "미선택";
+            var growth = hasGrowth
+                ? legacyName + (string.IsNullOrWhiteSpace(legacyStageName) ? string.Empty : " · " + legacyStageName)
+                : "선택 전";
+            potentialLabels[1].text = "성장 방식\n" + growth;
+
+            var names = new List<string>();
+            if (potentialIds != null)
+                for (var index = 0; index < potentialIds.Count; index++)
+                    names.Add(PotentialName(potentialIds[index]));
+            potentialLabels[2].text = "잠재 능력\n" + (names.Count == 0 ? "없음" : string.Join(" · ", names));
+        }
+
+        private static int AffixCount(IReadOnlyList<WeaponAffixRoll> rolls, string summary)
+        {
+            if (rolls != null && rolls.Count > 0)
+                return rolls.Count;
+            return string.IsNullOrWhiteSpace(summary)
+                ? 0
+                : summary.Split(new[] { " · " }, StringSplitOptions.RemoveEmptyEntries).Length;
         }
 
         public void ApplyPortraitLayout()
@@ -892,7 +912,7 @@ namespace JoseonHunter.Presentation.UI
                 case "fan_vacuum_edge": return "진공날";
                 case "fan_distant_thunder": return "원뢰증폭";
                 case "fan_returning_chain": return "회천연쇄";
-                default: return id.Value.Replace('_', ' ');
+                default: return "미확인 잠재";
             }
         }
 

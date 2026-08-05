@@ -306,7 +306,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(presenter.IsDetailOpen, Is.True);
             Assert.That(Time.timeScale, Is.EqualTo(1f));
-            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("피해량 +24%"));
+            Assert.That(presenter.DisplayedAffixText, Is.EqualTo("추가옵션 1개"));
             presenter.HideImmediately();
             Assert.That(Time.timeScale, Is.EqualTo(1f));
             Object.Destroy(root);
