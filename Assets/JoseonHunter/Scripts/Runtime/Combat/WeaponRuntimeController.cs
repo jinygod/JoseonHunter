@@ -66,6 +66,7 @@ namespace JoseonHunter.Runtime.Combat
         private Func<WeaponId, Sprite> spriteResolver;
         private Func<WeaponId, int, Sprite> presentationSpriteResolver;
         private Func<WeaponId, PixelHitMask> maskResolver;
+        private Func<Float2, bool> targetVisibilityResolver;
         private JangseungGeumjulVisualLibrary jangseungGeumjulVisualLibrary;
         private bool disposed;
 
@@ -119,6 +120,8 @@ namespace JoseonHunter.Runtime.Combat
         public void SetPresentationSpriteResolver(Func<WeaponId, int, Sprite> resolver) =>
             presentationSpriteResolver = resolver;
         public void SetMaskResolver(Func<WeaponId, PixelHitMask> resolver) => maskResolver = resolver;
+        public void SetTargetVisibilityResolver(Func<Float2, bool> resolver) => targetVisibilityResolver = resolver;
+        public bool IsTargetVisible(Float2 position) => targetVisibilityResolver?.Invoke(position) ?? true;
         public void SetJangseungGeumjulVisualLibrary(JangseungGeumjulVisualLibrary library) => jangseungGeumjulVisualLibrary = library;
         public JangseungGeumjulVisualLibrary JangseungGeumjulVisualLibraryForTests => jangseungGeumjulVisualLibrary;
 
@@ -155,6 +158,7 @@ namespace JoseonHunter.Runtime.Combat
             DamageService.ClearAttacks();
             spriteResolver = null;
             maskResolver = null;
+            targetVisibilityResolver = null;
             jangseungGeumjulVisualLibrary = null;
         }
 

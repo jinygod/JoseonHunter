@@ -71,7 +71,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 WeaponVisualPartIndex.Gakgung.Impact);
             effectSortingOrder = context.SortingOrder + 2;
             cooldown -= deltaTime;
-            if (cooldown <= 0f && TrySelectTarget(out var target))
+            if (cooldown <= 0f && TrySelectTarget(context.OwnerPosition, out var target))
             {
                 cooldown = CooldownSeconds;
                 Launch(context, target);
@@ -116,24 +116,37 @@ namespace JoseonHunter.Runtime.Combat.Weapons
 
         public void Dispose() { runtime.DamageService.DamageConfirmed -= OnDamageConfirmed; Reset(); projectiles.Dispose(); }
 
-        private bool TrySelectTarget(out ICombatTarget selected)
+        private bool TrySelectTarget(Float2 ownerPosition, out ICombatTarget selected)
         {
             selected = null;
             runtime.Targets.CopyTo(targets);
+            var rangeSquared = Range * Range;
             foreach (var candidate in targets)
             {
-                if (candidate == null || !candidate.IsAlive) continue;
-                if (selected == null || IsHigherPriority(candidate, selected)) selected = candidate;
+                if (candidate == null || !candidate.IsAlive ||
+                    !runtime.IsTargetVisible(candidate.WorldPosition) ||
+                    DistanceSquared(ownerPosition, candidate.WorldPosition) > rangeSquared) continue;
+                if (selected == null || IsHigherPriority(candidate, selected, ownerPosition)) selected = candidate;
             }
             return selected != null;
         }
 
-        private static bool IsHigherPriority(ICombatTarget candidate, ICombatTarget current)
+        private static bool IsHigherPriority(ICombatTarget candidate, ICombatTarget current, Float2 ownerPosition)
         {
             if (candidate.IsBoss != current.IsBoss) return candidate.IsBoss;
             if (candidate.IsElite != current.IsElite) return candidate.IsElite;
             var threat = candidate.ThreatScore.CompareTo(current.ThreatScore);
-            return threat != 0 ? threat > 0 : candidate.RuntimeId < current.RuntimeId;
+            if (threat != 0) return threat > 0;
+            var distance = DistanceSquared(ownerPosition, candidate.WorldPosition)
+                .CompareTo(DistanceSquared(ownerPosition, current.WorldPosition));
+            return distance != 0 ? distance < 0 : candidate.RuntimeId < current.RuntimeId;
+        }
+
+        private static float DistanceSquared(Float2 first, Float2 second)
+        {
+            var x = first.X - second.X;
+            var y = first.Y - second.Y;
+            return x * x + y * y;
         }
 
         private void Launch(in WeaponExecutionContext context, ICombatTarget target)

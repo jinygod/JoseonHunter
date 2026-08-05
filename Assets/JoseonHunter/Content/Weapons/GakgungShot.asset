@@ -21,11 +21,11 @@ MonoBehaviour:
   levels:
   - weaponId: gakgung_shot
     level: 1
-    baseDamage: 10
-    cooldownSeconds: 0.55
-    range: 7
+    baseDamage: 15
+    cooldownSeconds: 0.72
+    range: 22
     projectileCount: 1
-    speed: 15
+    speed: 26
     durationSeconds: 0.2
     pierce: 1
     chainCount: 0
@@ -34,11 +34,11 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: gakgung_shot
     level: 2
-    baseDamage: 12
-    cooldownSeconds: 0.52
-    range: 7.5
+    baseDamage: 19
+    cooldownSeconds: 0.69
+    range: 24
     projectileCount: 1
-    speed: 16
+    speed: 28
     durationSeconds: 0.2
     pierce: 1
     chainCount: 0
@@ -47,11 +47,11 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: gakgung_shot
     level: 3
-    baseDamage: 14
-    cooldownSeconds: 0.49
-    range: 8
+    baseDamage: 24
+    cooldownSeconds: 0.66
+    range: 26
     projectileCount: 1
-    speed: 17
+    speed: 30
     durationSeconds: 0.2
     pierce: 1
     chainCount: 0
@@ -60,11 +60,11 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: gakgung_shot
     level: 4
-    baseDamage: 16
-    cooldownSeconds: 0.46
-    range: 8.5
+    baseDamage: 30
+    cooldownSeconds: 0.63
+    range: 28
     projectileCount: 1
-    speed: 18
+    speed: 32
     durationSeconds: 0.2
     pierce: 2
     chainCount: 0
@@ -73,11 +73,11 @@ MonoBehaviour:
     criticalChance: 0
   - weaponId: gakgung_shot
     level: 5
-    baseDamage: 18
-    cooldownSeconds: 0.43
-    range: 9
+    baseDamage: 38
+    cooldownSeconds: 0.6
+    range: 30
     projectileCount: 3
-    speed: 19
+    speed: 34
     durationSeconds: 0.2
     pierce: 3
     chainCount: 0

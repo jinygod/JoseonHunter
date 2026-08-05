@@ -161,6 +161,24 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GakgungUsesApprovedLongRangeSniperProgression()
+        {
+            var levels = LoadDefinition(WeaponId.GakgungShot).Levels;
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(levels.Select(level => level.BaseDamage).ToArray(),
+                    Is.EqualTo(new[] { 15f, 19f, 24f, 30f, 38f }));
+                Assert.That(levels.Select(level => level.CooldownSeconds).ToArray(),
+                    Is.EqualTo(new[] { .72f, .69f, .66f, .63f, .60f }));
+                Assert.That(levels.Select(level => level.Range).ToArray(),
+                    Is.EqualTo(new[] { 22f, 24f, 26f, 28f, 30f }));
+                Assert.That(levels.Select(level => level.Speed).ToArray(),
+                    Is.EqualTo(new[] { 26f, 28f, 30f, 32f, 34f }));
+            });
+        }
+
+        [Test]
         public void GakgungUiUsesDedicatedSimplifiedIconInsteadOfCombatAimFrame()
         {
             var definition = LoadDefinition(WeaponId.GakgungShot);
@@ -289,7 +307,12 @@ namespace JoseonHunter.Tests.EditMode
                     ?.Invoke(controller.WeaponRuntime, new object[] { WeaponId.FrostFlask });
                 var slowProperty = typeof(FrostFlaskExecutor).GetProperty("SlowFraction");
                 Assert.That(slowProperty, Is.Not.Null);
-                Assert.That((float)slowProperty.GetValue(executor), Is.EqualTo(.35f).Within(.001f));
+                NUnitMultipleCompat.Run(() =>
+                {
+                    Assert.That((float)slowProperty.GetValue(executor), Is.EqualTo(.35f).Within(.001f));
+                    Assert.That(executor.LobDuration, Is.EqualTo(.4f).Within(.001f));
+                    Assert.That(executor.Duration, Is.EqualTo(1.4f).Within(.001f));
+                });
             }
             finally
             {

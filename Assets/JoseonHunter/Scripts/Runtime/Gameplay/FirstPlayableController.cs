@@ -926,6 +926,7 @@ namespace JoseonHunter.Runtime.Gameplay
             combatDamageService = new CombatDamageService(combatTargets);
             combatDamageService.DamageConfirmed += OnCombatDamageConfirmed;
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
+            weaponRuntime.SetTargetVisibilityResolver(IsInsideGameplayViewport);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);
@@ -1075,6 +1076,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 0.12f,
                 100f,
                 Time.deltaTime);
+        }
+
+        private bool IsInsideGameplayViewport(Float2 position)
+        {
+            if (gameplayCamera == null) return true;
+            var viewport = gameplayCamera.WorldToViewportPoint(new Vector3(position.X, position.Y, 0f));
+            return viewport.z >= 0f && viewport.x >= 0f && viewport.x <= 1f &&
+                   viewport.y >= 0f && viewport.y <= 1f;
         }
 
         private void UpdateField()
@@ -1719,7 +1728,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 else if (id.Equals(WeaponId.ThunderCrashBomb)) executor = new ThunderBombExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, 0.15f, data.Range * 0.45f, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.JangseungWard)) executor = new JangseungWardExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.ProjectileCount, data.Pierce, 0.2f, data.Level, evolved, modifiers);
                 else if (id.Equals(WeaponId.SingijeonVolley)) executor = new SingijeonExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Speed, data.ProjectileCount, data.Level, evolved, modifiers);
-                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.DurationSeconds, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers, slowFraction: data.SlowFraction);
+                else if (id.Equals(WeaponId.FrostFlask)) executor = new FrostFlaskExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, 0.4f, data.DurationSeconds, data.Range * 0.35f, data.Pierce, data.Level, evolved, modifiers, slowFraction: data.SlowFraction);
                 else if (id.Equals(WeaponId.WindThunderFan)) executor = new WindThunderFanExecutor(weaponRuntime, baseDamage, data.CooldownSeconds, data.Range, data.Knockback, data.ChainCount, data.Level, evolved, modifiers);
                 else throw new InvalidOperationException($"No executor is available for '{id}'.");
                 weaponRuntime.Register(id, executor);
@@ -2131,6 +2140,7 @@ namespace JoseonHunter.Runtime.Gameplay
 #endif
             weaponRuntime.Dispose();
             weaponRuntime = new WeaponRuntimeController(combatTargets, combatDamageService, prototypeCombatMask);
+            weaponRuntime.SetTargetVisibilityResolver(IsInsideGameplayViewport);
             weaponRuntime.SetSpriteResolver(ResolveWeaponSprite);
             weaponRuntime.SetPresentationSpriteResolver(ResolveWeaponPresentationSprite);
             weaponRuntime.SetMaskResolver(ResolveWeaponMask);

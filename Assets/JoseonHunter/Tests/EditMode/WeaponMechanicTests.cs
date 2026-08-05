@@ -230,7 +230,7 @@ namespace JoseonHunter.Tests.EditMode
 
             bow.Tick(0.01f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, 1));
             boss.MoveTo(new Float2(1f, 4f));
-            for (var tick = 2; tick < 20; tick++) bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
+            for (var tick = 2; tick < 10; tick++) bow.Tick(0.1f, new WeaponExecutionContext(new Float2(0f, 0f), root.transform, null, 0, tick));
 
             NUnitMultipleCompat.Run(() =>
             {
@@ -353,6 +353,70 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(linear.HasLastImpactContactForTests, Is.True);
             Assert.That(linear.LastImpactContactForTests.X, Is.InRange(-.5f, .5f));
+        }
+
+        [Test]
+        public void WeaponRuntimeTargetVisibilityDefaultsVisibleAndUsesConfiguredResolver()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+
+            Assert.That(runtime.IsTargetVisible(new Float2(12f, 0f)), Is.True);
+
+            runtime.SetTargetVisibilityResolver(position => position.X <= 5f);
+
+            NUnitMultipleCompat.Run(() =>
+            {
+                Assert.That(runtime.IsTargetVisible(new Float2(4f, 0f)), Is.True);
+                Assert.That(runtime.IsTargetVisible(new Float2(12f, 0f)), Is.False);
+            });
+        }
+
+        [Test]
+        public void GakgungIgnoresInvisibleBossAndSelectsVisibleTarget()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            runtime.SetTargetVisibilityResolver(position => position.X <= 5f);
+            var bow = new GakgungExecutor(runtime, 15f, .72f, 22f, 26f, 1);
+            registry.Register(new TestTarget(1, new Float2(8f, 0f), mask, isBoss: true));
+            registry.Register(new TestTarget(2, new Float2(3f, 0f), mask));
+
+            bow.Tick(.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.That(bow.LastSelectedTargetRuntimeId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void GakgungChoosesNearestTargetWhenRankAndThreatMatch()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var bow = new GakgungExecutor(runtime, 15f, .72f, 22f, 26f, 1);
+            registry.Register(new TestTarget(1, new Float2(6f, 0f), mask));
+            registry.Register(new TestTarget(2, new Float2(2f, 0f), mask));
+
+            bow.Tick(.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.That(bow.LastSelectedTargetRuntimeId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void GakgungDoesNotAcquireTargetBeyondAuthoredRange()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var bow = new GakgungExecutor(runtime, 15f, .72f, 22f, 26f, 1);
+            registry.Register(new TestTarget(1, new Float2(23f, 0f), mask, isBoss: true));
+            registry.Register(new TestTarget(2, new Float2(3f, 0f), mask));
+
+            bow.Tick(.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.That(bow.LastSelectedTargetRuntimeId, Is.EqualTo(2));
         }
 
         [Test]
