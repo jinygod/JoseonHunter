@@ -28,7 +28,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator SecondWaveContainsRatsSpiritsAndASpiritPack()
         {
             var controller = LoadGameplay();
-            controller.SetElapsedForTests(60f);
+            controller.SetElapsedForTests(180f);
             yield return null;
 
             TickSpawning(controller, 20f);
@@ -43,7 +43,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator PeakContinuousAndPackSpawnsShareTheOneHundredFortyEnemyLimit()
         {
             var controller = LoadGameplay();
-            controller.SetElapsedForTests(145f);
+            controller.SetElapsedForTests(700f);
             yield return null;
 
             TickSpawning(controller, 30f);
@@ -57,7 +57,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator NormalRoleIntroductionsExplainSpiritAndDokkaebiAtTheirRosterWindows()
         {
             var controller = LoadGameplay();
-            controller.SetElapsedForTests(45f);
+            controller.SetElapsedForTests(120f);
             yield return null;
             controller.TickSpawningForTests(.1f);
             Assert.That(controller.UiState.WaveAnnouncement,
@@ -65,7 +65,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             SceneManager.LoadScene("Gameplay");
             controller = Object.FindAnyObjectByType<FirstPlayableController>();
-            controller.SetElapsedForTests(90f);
+            controller.SetElapsedForTests(300f);
             yield return null;
             controller.TickSpawningForTests(.1f);
             Assert.That(controller.UiState.WaveAnnouncement,
@@ -76,23 +76,23 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator AuthoredSpecialEnemiesEnterAtReadableTimesAndNormalRosterStaysClean()
         {
             var controller = LoadGameplay();
-            controller.SetElapsedForTests(101.9f);
+            controller.SetElapsedForTests(419.9f);
             yield return null;
             Assert.That(controller.LivingSpecialEnemyIdsForTests, Is.Empty);
 
-            controller.RestoreElapsedForTests(102f);
+            controller.RestoreElapsedForTests(420f);
             controller.TickSpawningForTests(.1f);
             Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("shield_dokkaebi"));
 
-            controller.RestoreElapsedForTests(120f);
+            controller.RestoreElapsedForTests(510f);
             controller.TickSpawningForTests(.1f);
             Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("charging_horn_ghost"));
 
-            controller.RestoreElapsedForTests(138f);
+            controller.RestoreElapsedForTests(660f);
             controller.TickSpawningForTests(.1f);
             Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("spirit_shaman"));
 
-            controller.RestoreElapsedForTests(150f);
+            controller.RestoreElapsedForTests(735f);
             controller.TickSpawningForTests(.1f);
             Assert.That(controller.LivingSpecialEnemyIdsForTests, Does.Contain("splitting_rat"));
             Assert.That(controller.LivingNormalEnemyIdsForTests.Distinct().ToArray(),

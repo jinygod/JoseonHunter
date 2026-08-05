@@ -13,16 +13,16 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTest]
         public IEnumerator ExperienceCannotAdvancePastNaturalContentCap()
         {
-            var root = new GameObject("Level Cap Test");
-            var controller = root.AddComponent<FirstPlayableController>();
+            SceneManager.LoadScene("Gameplay");
             yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            Assert.That(controller, Is.Not.Null);
 
             controller.AddExperienceForTests(1000000);
 
             Assert.That(controller.UiState.Level, Is.EqualTo(RunLoadoutRules.MaximumPlayerLevel));
             Assert.That(controller.PendingUpgradeCountForTests,
                 Is.EqualTo(RunLoadoutRules.MaximumPlayerLevel - 2));
-            Object.Destroy(root);
         }
 
         [UnityTest]
