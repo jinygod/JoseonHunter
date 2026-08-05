@@ -58,6 +58,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public int LastArmorBreakPrimaryAttackIdForTests { get; private set; }
         public IReadOnlyList<int> SplitChildAttackIdsForTests => splitChildAttackIdsForTests;
         public IReadOnlyList<int> LevelFiveSideArrowAttackIdsForTests => levelFiveSideArrowAttackIdsForTests;
+        public int LastLevelFiveSideArrowDamageForTests { get; private set; }
         public IReadOnlyList<int> ArmorBreakApplicationAttackIdsForTests => armorBreakApplicationAttackIdsForTests;
 #endif
 
@@ -110,7 +111,8 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             transientVisualRoot = null;
 #if UNITY_INCLUDE_TESTS
             LastArmorBreakPrimaryAttackIdForTests = 0; splitChildAttackIdsForTests.Clear();
-            levelFiveSideArrowAttackIdsForTests.Clear(); armorBreakApplicationAttackIdsForTests.Clear();
+            levelFiveSideArrowAttackIdsForTests.Clear(); LastLevelFiveSideArrowDamageForTests = 0;
+            armorBreakApplicationAttackIdsForTests.Clear();
 #endif
         }
 
@@ -191,8 +193,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 true, targetDistance, target, sunLegacy ? .15f : 0f,
                 sunLegacy && Potentials.Legacy.Stage == WeaponLegacyStage.Completed ? 1.3f : 1f);
             if (Level != 5 || sunLegacy) return;
-            LaunchArrow(context, direction, -8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
-            LaunchArrow(context, direction, 8f, 1, Mathf.CeilToInt(BaseDamage), Speed, 1f, false, false, targetDistance, target);
+            var sideDamage = Mathf.CeilToInt(BaseDamage * .5f);
+#if UNITY_INCLUDE_TESTS
+            LastLevelFiveSideArrowDamageForTests = sideDamage;
+#endif
+            LaunchArrow(context, direction, -8f, 1, sideDamage, Speed, 1f, false, false, targetDistance, target);
+            LaunchArrow(context, direction, 8f, 1, sideDamage, Speed, 1f, false, false, targetDistance, target);
             LastProjectileScale = scale;
         }
 

@@ -168,9 +168,9 @@ namespace JoseonHunter.Tests.EditMode
             NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(levels.Select(level => level.BaseDamage).ToArray(),
-                    Is.EqualTo(new[] { 15f, 19f, 24f, 30f, 38f }));
+                    Is.EqualTo(new[] { 28f, 40f, 54f, 72f, 96f }));
                 Assert.That(levels.Select(level => level.CooldownSeconds).ToArray(),
-                    Is.EqualTo(new[] { .72f, .69f, .66f, .63f, .60f }));
+                    Is.EqualTo(new[] { 1.35f, 1.30f, 1.25f, 1.20f, 1.15f }));
                 Assert.That(levels.Select(level => level.Range).ToArray(),
                     Is.EqualTo(new[] { 22f, 24f, 26f, 28f, 30f }));
                 Assert.That(levels.Select(level => level.Speed).ToArray(),

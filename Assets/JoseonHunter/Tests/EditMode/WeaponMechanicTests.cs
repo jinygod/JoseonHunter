@@ -217,6 +217,20 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GakgungLevelFiveSideArrowsDealHalfOfThePrimarySniperDamage()
+        {
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            var bow = new GakgungExecutor(runtime, 100f, 10f, 10f, 10f, 5);
+            registry.Register(new TestTarget(1, new Float2(1f, 0f), mask));
+
+            bow.Tick(.01f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
+
+            Assert.That(bow.LastLevelFiveSideArrowDamageForTests, Is.EqualTo(50));
+        }
+
+        [Test]
         public void GakgungPrioritizesBossOverCloserNormalAndMissesMovedTarget()
         {
             var mask = PixelHitMask.FromRows("1");
