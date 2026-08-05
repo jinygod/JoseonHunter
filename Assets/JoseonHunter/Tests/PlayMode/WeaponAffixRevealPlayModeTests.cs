@@ -357,10 +357,10 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null; yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
-            var generic = Object.FindFirstObjectByType<RewardRevealPresenter>();
-            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var choice = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
+            var generic = Object.FindAnyObjectByType<RewardRevealPresenter>();
+            var affix = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
             affix.SetCatalogForTests(TestCatalog());
             controller.OpenUpgradeForTests();
             controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
@@ -398,10 +398,10 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null; yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
-            var generic = Object.FindFirstObjectByType<RewardRevealPresenter>();
-            var affix = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var choice = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
+            var generic = Object.FindAnyObjectByType<RewardRevealPresenter>();
+            var affix = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
             affix.SetCatalogForTests(TestCatalog());
 
             yield return ChooseThroughVisibleCard(controller, choice, new UpgradeOffer("boots", UpgradeKind.Support, 1));

@@ -22,7 +22,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             var mask = PixelHitMask.FromRows("1");
             var overBudget = new List<string>();
@@ -70,7 +70,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             controller.ConfigureSeparationLoadScenarioForTests();
             foreach (var weaponId in WeaponRoster.All)
@@ -129,7 +129,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             controller.ConfigureSeparationLoadScenarioForTests();
             controller.SetContactInvulnerabilityForTests(float.MaxValue);

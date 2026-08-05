@@ -46,7 +46,7 @@ namespace JoseonHunter.Editor.Scenes
             var library = Build();
             const string gameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
             var scene = EditorSceneManager.OpenScene(gameplayScenePath, OpenSceneMode.Single);
-            var controller = UnityEngine.Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
             if (controller == null) throw new InvalidOperationException("Gameplay scene is missing FirstPlayableController.");
             var serialized = new SerializedObject(controller);
             serialized.FindProperty("motionLibrary").objectReferenceValue = library;

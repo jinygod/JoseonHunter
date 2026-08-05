@@ -33,7 +33,7 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(data));
             SceneManager.LoadScene("Lobby");
             yield return null;
-            var presenter = Object.FindFirstObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
+            var presenter = Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
 
             Assert.That(presenter.transform.Find("Training Title").GetComponent<TMPro.TMP_Text>().text,
                 Is.EqualTo("수련"));

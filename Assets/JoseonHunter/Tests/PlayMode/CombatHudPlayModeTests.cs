@@ -82,8 +82,8 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var presenter = Object.FindFirstObjectByType<RunResultPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var presenter = Object.FindAnyObjectByType<RunResultPresenter>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(presenter, Is.Not.Null);
 
@@ -132,10 +132,10 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
-            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
-            var rewardReveal = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var bootstrap = Object.FindAnyObjectByType<FirstPlayableUiBootstrap>();
+            var choice = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
+            var rewardReveal = Object.FindAnyObjectByType<RewardRevealPresenter>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(bootstrap, Is.Not.Null);
             Assert.That(choice, Is.Not.Null);
@@ -172,8 +172,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var choice = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(choice, Is.Not.Null);
 
@@ -200,7 +200,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(scaler.matchWidthOrHeight, Is.EqualTo(.5f));
             Assert.That(root.GetComponentInChildren<CombatHudPresenter>(true), Is.Not.Null);
             Assert.That(root.GetComponentInChildren<WeaponRackPresenter>(true), Is.Not.Null);
-            Assert.That(Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None), Has.Length.EqualTo(1));
+            Assert.That(Object.FindObjectsByType<EventSystem>(FindObjectsInactive.Include), Has.Length.EqualTo(1));
             Assert.That(EventSystem.current.GetComponent<BaseInputModule>(), Is.Not.Null);
 
             bootstrap.ApplySafeArea(new Rect(0f, 120f, 1000f, 1760f), new Vector2(1000f, 2000f));
@@ -213,7 +213,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             new GameObject("Duplicate UI Test").AddComponent<FirstPlayableUiBootstrap>();
             yield return null;
-            Assert.That(Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length,
+            Assert.That(Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include).Length,
                 Is.EqualTo(1));
             Assert.That(bootstrap.BoundController, Is.Null);
             Object.Destroy(root);
@@ -340,9 +340,9 @@ namespace JoseonHunter.Tests.PlayMode
 
         private static IEnumerator DestroyBootstraps()
         {
-            foreach (var bootstrap in Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var bootstrap in Object.FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include))
                 Object.Destroy(bootstrap.gameObject);
-            foreach (var controller in Object.FindObjectsByType<FirstPlayableController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (var controller in Object.FindObjectsByType<FirstPlayableController>(FindObjectsInactive.Include))
                 Object.Destroy(controller.gameObject);
             yield return null;
         }

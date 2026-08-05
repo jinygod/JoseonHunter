@@ -19,7 +19,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator Full_loadout_can_cancel_replacement_without_mutating_the_run()
         {
             yield return LoadGameplay();
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             FillFourWeaponSlots(controller);
             WeaponReplacementState replacement = null;
             controller.WeaponReplacementOpened += state => replacement = state;
@@ -46,7 +46,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator Level_four_discard_creates_level_three_weapon_then_requires_its_legacy()
         {
             yield return LoadGameplay();
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             FillFourWeaponSlots(controller);
             WeaponLegacyChoiceState legacyChoice = null;
             controller.WeaponLegacyOpened += state => legacyChoice = state;
@@ -76,7 +76,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator Invalid_replacement_does_not_mutate_the_loadout()
         {
             yield return LoadGameplay();
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             FillFourWeaponSlots(controller);
             controller.OpenUpgradeOffersForTests(new UpgradeOffer(
                 WeaponId.FrostFlask.Value, UpgradeKind.Weapon, 1, requiresReplacement: true));
@@ -93,7 +93,7 @@ namespace JoseonHunter.Tests.PlayMode
         public IEnumerator Discard_removes_affixes_and_legacy_evolution_compatibility_state()
         {
             yield return LoadGameplay();
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             FillFourWeaponSlots(controller);
             controller.SetAffixRandomFactoryForTests((_, _, _, _) => new FixedAffixRandom());
             controller.RollWeaponAffixForTests(WeaponId.HwandoFlyingBlade);

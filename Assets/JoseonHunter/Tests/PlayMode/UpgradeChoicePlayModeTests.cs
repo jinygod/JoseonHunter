@@ -144,8 +144,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var presenter = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var presenter = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(presenter, Is.Not.Null);
 

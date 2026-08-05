@@ -75,7 +75,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
             var randomState = Random.state;
@@ -110,8 +110,8 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var bootstrap = Object.FindAnyObjectByType<FirstPlayableUiBootstrap>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(bootstrap, Is.Not.Null);
 
@@ -166,7 +166,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             var randomState = Random.state;
             var originalTimeScale = Time.timeScale;
@@ -226,7 +226,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
             var randomState = Random.state;
@@ -283,7 +283,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
             var randomState = Random.state;

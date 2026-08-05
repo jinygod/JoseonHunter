@@ -27,7 +27,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetAffixRandomFactoryForTests((_, _, _, _) => new JackpotAffixRandom());
             for (var weaponLevel = 1; weaponLevel <= 5; weaponLevel++)
             {
@@ -62,7 +62,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetAffixRandomFactoryForTests((_, _, _, _) => new FixedAffixRandom());
             ProgressionRewardEvent reward = default;
             controller.UpgradeChosen += candidate => reward = candidate;
@@ -103,7 +103,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetAffixRandomFactoryForTests((_, _, _, _) => new JackpotAffixRandom());
             controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
             Assert.That(controller.TryChooseUpgrade(0), Is.True);

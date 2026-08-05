@@ -90,7 +90,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetWeaponLevelForTests(WeaponId.HwandoFlyingBlade, 5);
             var preChoiceRuntime = controller.WeaponRuntime;
             var preChoiceExecutor = preChoiceRuntime.ExecutorForTests(WeaponId.HwandoFlyingBlade);
@@ -240,7 +240,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var target = controller.SpawnEnemyForTests(new Vector2(2f, 0f));
             var executor = new ThunderBombExecutor(controller.WeaponRuntime, 10f, 10f, 4f, 0.5f, 0.15f, 1.8f, 5, true);
             var damageCount = 0;
@@ -303,7 +303,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var target = controller.SpawnEnemyForTests(Vector2.zero);
             var executor = new JangseungWardExecutor(controller.WeaponRuntime, 10f, 10f, 4f, 4, 0, .2f, 5, true);
             executor.Tick(.4f, new WeaponExecutionContext(default, null, null, 0, 1));

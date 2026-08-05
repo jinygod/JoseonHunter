@@ -26,7 +26,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Bootstrap");
 
             yield return WaitForScene("Lobby", 5f);
-            var loader = Object.FindFirstObjectByType<BootstrapLoadingPresenter>();
+            var loader = Object.FindAnyObjectByType<BootstrapLoadingPresenter>();
             Assert.That(loader, Is.Not.Null);
             Assert.That(loader.OpaqueForTests, Is.True);
             var hero = loader.transform.Find("Han Yeonhwa Loading Art").GetComponent<Image>();
@@ -35,7 +35,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return WaitForProgress(loader, 5f);
             Assert.That(loader.ProgressForTests, Is.EqualTo(1f).Within(.001f));
             yield return WaitForLoaderRemoval(5f);
-            Assert.That(Object.FindFirstObjectByType<BootstrapLoadingPresenter>(), Is.Null);
+            Assert.That(Object.FindAnyObjectByType<BootstrapLoadingPresenter>(), Is.Null);
             Assert.That(MetaGameSession.Current, Is.Not.Null);
             Assert.That(MetaGameSession.Current.Data.SchemaVersion, Is.EqualTo(2));
         }
@@ -48,8 +48,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             Assert.That(GameplayReadySignal.IsReady, Is.True);
-            Assert.That(Object.FindFirstObjectByType<FirstPlayableController>(), Is.Not.Null);
-            Assert.That(Object.FindFirstObjectByType<BootstrapLoadingPresenter>(), Is.Null);
+            Assert.That(Object.FindAnyObjectByType<FirstPlayableController>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<BootstrapLoadingPresenter>(), Is.Null);
         }
 
         [UnityTest]
@@ -63,7 +63,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             yield return WaitForScene("Bootstrap", 5f);
             var startedAt = Time.realtimeSinceStartup;
-            var loader = Object.FindFirstObjectByType<BootstrapLoadingPresenter>();
+            var loader = Object.FindAnyObjectByType<BootstrapLoadingPresenter>();
             Assert.That(loader, Is.Not.Null);
             Assert.That(loader.OpaqueForTests, Is.True);
             yield return WaitForScene("Gameplay", 5f);
@@ -86,7 +86,7 @@ namespace JoseonHunter.Tests.PlayMode
         private static IEnumerator WaitForLoaderRemoval(float timeoutSeconds)
         {
             var deadline = Time.realtimeSinceStartup + timeoutSeconds;
-            while (Object.FindFirstObjectByType<BootstrapLoadingPresenter>() != null &&
+            while (Object.FindAnyObjectByType<BootstrapLoadingPresenter>() != null &&
                    Time.realtimeSinceStartup < deadline)
             {
                 yield return null;

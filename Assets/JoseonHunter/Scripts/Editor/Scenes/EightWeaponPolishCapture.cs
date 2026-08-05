@@ -323,7 +323,7 @@ namespace JoseonHunter.Editor.Scenes
                 caseIndex = 0;
                 weaponFilter = CaptureSessionState.WeaponFilter;
                 readabilityCapture = CaptureSessionState.IsReadabilityCapture;
-                controller = Object.FindFirstObjectByType<FirstPlayableController>();
+                controller = Object.FindAnyObjectByType<FirstPlayableController>();
                 if (controller == null)
                     throw new InvalidOperationException("Gameplay scene did not create FirstPlayableController.");
 
@@ -405,7 +405,7 @@ namespace JoseonHunter.Editor.Scenes
                     }
                     if (currentCase.Scenario == ReadabilityScenario.GeumjulClosureImpact)
                     {
-                        var presenter = Object.FindFirstObjectByType<GeumjulTrailPresenter>();
+                        var presenter = Object.FindAnyObjectByType<GeumjulTrailPresenter>();
                         if (presenter == null) throw new InvalidOperationException("Gameplay scene did not create GeumjulTrailPresenter.");
                         presenter.PlayClosure(NearlyClosedGeumjulPolygon());
                     }
@@ -467,7 +467,7 @@ namespace JoseonHunter.Editor.Scenes
                 CapturePredicateKind.SpecialEvolved => IsSpecialEvolvedPhaseActive(),
                 CapturePredicateKind.SunPiercer => IsSunPiercerActive(),
                 CapturePredicateKind.HwandoContact => CapturePhasePolicy.HasActiveHwandoContactCue(
-                    Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)),
+                    Object.FindObjectsByType<SpriteRenderer>()),
                 CapturePredicateKind.NearPlayerPresentation => HasActiveWeaponPresentation(),
                 CapturePredicateKind.WeaponPresentation => HasActiveWeaponPresentation(),
                 _ => false
@@ -493,7 +493,7 @@ namespace JoseonHunter.Editor.Scenes
                        singijeon.FocusProjectileCount > 0 &&
                        singijeon.ActiveProjectileCount > 0;
             if (!currentCase.WeaponId.Equals(WeaponId.JangseungWard)) return false;
-            return Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)
+            return Object.FindObjectsByType<SpriteRenderer>()
                        .Any(renderer => renderer != null &&
                                         renderer.gameObject.name == "Jangseung Evolved Guardian Burst" &&
                                         renderer.gameObject.activeInHierarchy);
@@ -508,7 +508,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static bool HasActiveWeaponPresentation()
         {
-            return Object.FindObjectsByType<SpriteRenderer>(FindObjectsSortMode.None)
+            return Object.FindObjectsByType<SpriteRenderer>()
                 .Any(renderer => renderer != null &&
                                  renderer.enabled &&
                                  renderer.gameObject.activeInHierarchy &&
@@ -598,7 +598,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void PrepareGeumjulScenario(ReadabilityScenario scenario)
         {
-            var presenter = Object.FindFirstObjectByType<GeumjulTrailPresenter>();
+            var presenter = Object.FindAnyObjectByType<GeumjulTrailPresenter>();
             if (presenter == null) throw new InvalidOperationException("Gameplay scene did not create GeumjulTrailPresenter.");
             var polygon = NearlyClosedGeumjulPolygon();
             presenter.SetTrail(polygon, .48f);
@@ -619,7 +619,7 @@ namespace JoseonHunter.Editor.Scenes
         {
             if (stage != CaptureStage.MeaningfulPhase) return;
             var boundary = CapturePhasePolicy.SelectJangseungBoundary(
-                Object.FindObjectsByType<LineRenderer>(FindObjectsSortMode.None));
+                Object.FindObjectsByType<LineRenderer>());
             if (boundary == null || readabilityStep >= 2) return;
             var enemy = ((IEnumerable)EnemiesField.GetValue(controller)).Cast<object>().FirstOrDefault();
             var enemyObject = enemy?.GetType().GetField("Object", BindingFlags.Instance | BindingFlags.Public)?.GetValue(enemy) as GameObject;
@@ -643,11 +643,11 @@ namespace JoseonHunter.Editor.Scenes
                     CaptureAndAdvance();
                     return true;
                 case ReadabilityScenario.GeumjulClosureReady:
-                    if (Object.FindFirstObjectByType<GeumjulTrailPresenter>()?.IsClosureReadyForTests != true) return false;
+                    if (Object.FindAnyObjectByType<GeumjulTrailPresenter>()?.IsClosureReadyForTests != true) return false;
                     CaptureAndAdvance();
                     return true;
                 case ReadabilityScenario.GeumjulClosureImpact:
-                    if (Object.FindFirstObjectByType<GeumjulTrailPresenter>()?.ActiveClosureVisualCountForTests <= 0) return false;
+                    if (Object.FindAnyObjectByType<GeumjulTrailPresenter>()?.ActiveClosureVisualCountForTests <= 0) return false;
                     CaptureAndAdvance();
                     return true;
                 default:
@@ -657,7 +657,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void CaptureCamera(CaptureCase captureCase)
         {
-            var camera = Camera.main ?? Object.FindFirstObjectByType<Camera>();
+            var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
             if (camera == null) throw new InvalidOperationException("Gameplay capture requires an active camera.");
 
             RenderTexture renderTexture = null;

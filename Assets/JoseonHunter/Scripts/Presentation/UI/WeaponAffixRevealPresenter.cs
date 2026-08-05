@@ -205,7 +205,7 @@ namespace JoseonHunter.Presentation.UI
             weaponBehavior.text = weapon.Behavior;
             title.text = "현재 적용 효과";
             detail.text = $"추가옵션 {AffixCount(weapon.GeneralAffixRolls, weapon.GeneralAffixSummary)}개";
-            detail.enableWordWrapping = false;
+            detail.textWrappingMode = TextWrappingModes.NoWrap;
             detail.rectTransform.localScale = Vector3.one;
             detail.color = JoseonUiPalette.DarkPanelText;
             accumulatedAffixSummary.text = "현재 적용 효과";
@@ -656,7 +656,7 @@ namespace JoseonHunter.Presentation.UI
             detail = Label("Affix Detail", shell.transform, new Vector2(80f, 105f),
                 new Vector2(600f, 62f), 38f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             detail.fontStyle = FontStyles.Bold;
-            detail.enableWordWrapping = false;
+            detail.textWrappingMode = TextWrappingModes.NoWrap;
             detail.color = JoseonUiPalette.DarkPanelText;
             accumulatedAffixSummary = Label("Effect Summary Title", shell.transform,
                 new Vector2(0f, 44f), new Vector2(740f, 24f), 18f,
@@ -688,7 +688,7 @@ namespace JoseonHunter.Presentation.UI
                     position + new Vector2(80f, 0f), new Vector2(600f, 84f), 21f,
                     TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
-                potentialLabels[index].enableWordWrapping = true;
+                potentialLabels[index].textWrappingMode = TextWrappingModes.Normal;
                 potentialLabels[index].color = JoseonUiPalette.AppraisalBorder;
             }
 

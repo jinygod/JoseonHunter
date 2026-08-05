@@ -48,7 +48,7 @@ namespace JoseonHunter.Presentation.UI
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneLoaded += OnSceneLoaded;
-            if (FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length != 0)
+            if (FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include).Length != 0)
                 return;
 
             new GameObject("First Playable UI").AddComponent<FirstPlayableUiBootstrap>();
@@ -168,7 +168,7 @@ namespace JoseonHunter.Presentation.UI
             var screenSize = new Vector2(Screen.width, Screen.height);
             if (safeArea != lastSafeArea || screenSize != lastScreenSize) ApplySafeArea(safeArea, screenSize);
 
-            if (boundController == null) BindController(FindFirstObjectByType<FirstPlayableController>());
+            if (boundController == null) BindController(FindAnyObjectByType<FirstPlayableController>());
             if (boundController == null || Time.unscaledTime < nextRenderTime) return;
 
             nextRenderTime = Time.unscaledTime + RenderInterval;
@@ -512,7 +512,7 @@ namespace JoseonHunter.Presentation.UI
 
         private static void EnsureEventSystem()
         {
-            var systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var systems = FindObjectsByType<EventSystem>(FindObjectsInactive.Include);
             EventSystem eventSystem = systems.Length > 0 ? systems[0] : null;
             if (eventSystem == null)
             {

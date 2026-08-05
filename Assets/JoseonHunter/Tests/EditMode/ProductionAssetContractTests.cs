@@ -3,6 +3,7 @@ using System.IO;
 using JoseonHunter.Editor.AssetProduction;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.Build;
 
 namespace JoseonHunter.Tests.EditMode
 {
@@ -41,7 +42,7 @@ namespace JoseonHunter.Tests.EditMode
                 Is.EqualTo(AndroidSdkVersions.AndroidApiLevel36));
             Assert.That(PlayerSettings.Android.targetArchitectures,
                 Is.EqualTo(AndroidArchitecture.ARM64));
-            Assert.That(PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android),
+            Assert.That(PlayerSettings.GetScriptingBackend(NamedBuildTarget.Android),
                 Is.EqualTo(ScriptingImplementation.IL2CPP));
         }
 

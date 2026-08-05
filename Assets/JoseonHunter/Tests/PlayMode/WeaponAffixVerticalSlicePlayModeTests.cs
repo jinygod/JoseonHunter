@@ -30,10 +30,10 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var choice = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
-            var reveal = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
-            var rack = Object.FindFirstObjectByType<WeaponRackPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var choice = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
+            var reveal = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
+            var rack = Object.FindAnyObjectByType<WeaponRackPresenter>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(choice, Is.Not.Null);
             Assert.That(reveal, Is.Not.Null);

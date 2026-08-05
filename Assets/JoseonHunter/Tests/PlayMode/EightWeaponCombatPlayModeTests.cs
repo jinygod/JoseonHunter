@@ -49,11 +49,11 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(controller.RegisteredWeaponIds.Single().Value, Is.EqualTo("hwando_flying_blade"));
             Assert.That(controller.WeaponRuntime, Is.Not.Null);
-            Assert.That(Object.FindFirstObjectByType<DamageNumberPool>(), Is.Not.Null);
+            Assert.That(Object.FindAnyObjectByType<DamageNumberPool>(), Is.Not.Null);
 
             controller.OpenUpgradeOffersForTests(new UpgradeOffer(
                 WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));

@@ -95,7 +95,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void CaptureCamera()
         {
-            var camera = Camera.main ?? Object.FindFirstObjectByType<Camera>();
+            var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
             if (camera == null) throw new InvalidOperationException("Gameplay capture requires an active camera.");
 
             var renderTexture = new RenderTexture(CaptureWidth, CaptureHeight, 24, RenderTextureFormat.ARGB32);

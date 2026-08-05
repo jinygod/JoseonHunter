@@ -1,4 +1,5 @@
 using System.IO;
+using JoseonHunter.Editor.AssetProduction;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -82,14 +83,15 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(texture.mipmapEnabled, Is.False);
             Assert.That(texture.spritePixelsPerUnit, Is.EqualTo(32f));
             Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple));
-            Assert.That(texture.spritesheet, Has.Length.EqualTo(12));
-            for (var frame = 0; frame < texture.spritesheet.Length; frame++)
+            var sprites = SpriteSheetMetadata.Read(texture);
+            Assert.That(sprites, Has.Length.EqualTo(12));
+            for (var frame = 0; frame < sprites.Length; frame++)
             {
-                var sprite = texture.spritesheet[frame];
-                Assert.That(sprite.name, Is.EqualTo("import_profile_test_" + frame.ToString("D2")));
-                Assert.That(sprite.rect, Is.EqualTo(new Rect((frame % 4) * 64, (frame / 4) * 64, 64, 64)));
-                Assert.That(sprite.alignment, Is.EqualTo((int)SpriteAlignment.Custom));
-                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+                var sprite = sprites[frame];
+                Assert.That(sprite.Name, Is.EqualTo("import_profile_test_" + frame.ToString("D2")));
+                Assert.That(sprite.Rect, Is.EqualTo(new Rect((frame % 4) * 64, (frame / 4) * 64, 64, 64)));
+                Assert.That(sprite.Alignment, Is.EqualTo(SpriteAlignment.Custom));
+                Assert.That(sprite.Pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
             }
         }
 
@@ -160,12 +162,13 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(texture.mipmapEnabled, Is.False);
             Assert.That(texture.spritePixelsPerUnit, Is.EqualTo(32f));
             Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple));
-            Assert.That(texture.spritesheet, Has.Length.EqualTo(38));
-            foreach (var sprite in texture.spritesheet)
+            var sprites = SpriteSheetMetadata.Read(texture);
+            Assert.That(sprites, Has.Length.EqualTo(38));
+            foreach (var sprite in sprites)
             {
-                Assert.That(sprite.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
-                Assert.That(sprite.alignment, Is.EqualTo((int)SpriteAlignment.Custom));
-                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+                Assert.That(sprite.Rect.size, Is.EqualTo(new Vector2(64f, 64f)));
+                Assert.That(sprite.Alignment, Is.EqualTo(SpriteAlignment.Custom));
+                Assert.That(sprite.Pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
             }
         }
 
@@ -179,12 +182,13 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(texture, Is.Not.Null);
             Assert.That(texture.filterMode, Is.EqualTo(FilterMode.Point));
             Assert.That(texture.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple));
-            Assert.That(texture.spritesheet, Has.Length.EqualTo(38));
-            foreach (var sprite in texture.spritesheet)
+            var sprites = SpriteSheetMetadata.Read(texture);
+            Assert.That(sprites, Has.Length.EqualTo(38));
+            foreach (var sprite in sprites)
             {
-                Assert.That(sprite.name, Does.StartWith(characterId + "_"));
-                Assert.That(sprite.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
-                Assert.That(sprite.pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
+                Assert.That(sprite.Name, Does.StartWith(characterId + "_"));
+                Assert.That(sprite.Rect.size, Is.EqualTo(new Vector2(64f, 64f)));
+                Assert.That(sprite.Pivot, Is.EqualTo(new Vector2(0.5f, 0.125f)));
             }
         }
 

@@ -59,7 +59,7 @@ namespace JoseonHunter.Editor.Scenes
                 bootstrap.BuildShell();
 
                 AssignSprites(canvasObject);
-                var eventSystem = UnityEngine.Object.FindFirstObjectByType<EventSystem>();
+                var eventSystem = UnityEngine.Object.FindAnyObjectByType<EventSystem>();
                 if (eventSystem == null) throw new InvalidOperationException("Lobby EventSystem was not created.");
                 eventSystem.name = "EventSystem";
                 if (eventSystem.gameObject.scene != scene) SceneManager.MoveGameObjectToScene(eventSystem.gameObject, scene);

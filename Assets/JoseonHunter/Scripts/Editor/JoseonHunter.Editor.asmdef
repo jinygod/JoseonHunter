@@ -7,6 +7,7 @@
     "JoseonHunter.Runtime",
     "JoseonHunter.Presentation",
     "JoseonHunter.Infrastructure",
+    "Unity.2D.Sprite.Editor",
     "Unity.TextMeshPro",
     "Unity.RenderPipelines.Universal.Runtime"
   ],

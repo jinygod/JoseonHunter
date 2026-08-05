@@ -41,7 +41,7 @@ namespace JoseonHunter.Presentation.Combat
             textMesh = GetComponent<TextMeshPro>();
             textMesh.font = RuntimeFontCatalog.For(RuntimeFontRole.Damage);
             textMesh.alignment = TextAlignmentOptions.Center;
-            textMesh.enableWordWrapping = false;
+            textMesh.textWrappingMode = TextWrappingModes.NoWrap;
             textMesh.fontSize = NormalFontSize;
             textMesh.sortingOrder = 30;
             textMesh.outlineWidth = .20f;

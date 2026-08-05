@@ -100,7 +100,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetWeaponLevelForTests(JoseonHunter.Domain.Combat.WeaponId.HwandoFlyingBlade, 4);
             controller.SetWeaponLevelForTests(JoseonHunter.Domain.Combat.WeaponId.GakgungShot, 2);
             controller.SetWeaponLevelForTests(JoseonHunter.Domain.Combat.WeaponId.TalismanThrow, 2);
@@ -111,13 +111,13 @@ namespace JoseonHunter.Tests.PlayMode
             controller.TryChooseUpgrade(0);
             yield return null;
 
-            var replacement = Object.FindFirstObjectByType<WeaponReplacementPresenter>();
+            var replacement = Object.FindAnyObjectByType<WeaponReplacementPresenter>();
             Assert.That(replacement.IsOpen, Is.True);
             replacement.GetComponentsInChildren<Button>(true)
                 .Single(button => button.name == "Replacement Choice 0").onClick.Invoke();
             yield return null;
 
-            var legacy = Object.FindFirstObjectByType<WeaponLegacyChoicePresenter>();
+            var legacy = Object.FindAnyObjectByType<WeaponLegacyChoicePresenter>();
             Assert.That(replacement.IsOpen, Is.False);
             Assert.That(legacy.IsOpen, Is.True);
             legacy.GetComponentsInChildren<Button>(true)
@@ -126,10 +126,10 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(legacy.IsOpen, Is.False);
             Assert.That(controller.Flow.State, Is.EqualTo(JoseonHunter.Domain.Runs.GameFlowState.AugmentResult));
-            var appraisal = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            var appraisal = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
             Assert.That(appraisal.IsRevealing, Is.True);
             appraisal.HideImmediately();
-            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            var bootstrap = Object.FindAnyObjectByType<FirstPlayableUiBootstrap>();
             Object.Destroy(controller.gameObject);
             if (bootstrap != null) Object.Destroy(bootstrap.gameObject);
             yield return null;

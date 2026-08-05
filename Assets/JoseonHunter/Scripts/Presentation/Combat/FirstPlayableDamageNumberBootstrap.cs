@@ -16,7 +16,7 @@ namespace JoseonHunter.Presentation.Combat
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureBootstrap()
         {
-            if (FindObjectOfType<FirstPlayableDamageNumberBootstrap>() != null) return;
+            if (FindAnyObjectByType<FirstPlayableDamageNumberBootstrap>() != null) return;
             var bootstrap = new GameObject("First Playable Damage Number Bootstrap");
             DontDestroyOnLoad(bootstrap);
             bootstrap.AddComponent<FirstPlayableDamageNumberBootstrap>();
@@ -24,7 +24,7 @@ namespace JoseonHunter.Presentation.Combat
 
         private void Update()
         {
-            if (controller == null) controller = FindObjectOfType<FirstPlayableController>();
+            if (controller == null) controller = FindAnyObjectByType<FirstPlayableController>();
             var service = controller == null ? null : controller.CombatDamageService;
             if (ReferenceEquals(service, boundService)) return;
 

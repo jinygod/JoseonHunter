@@ -17,7 +17,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.ConfigureSeparationLoadScenarioForTests();
             var target = controller.SpawnEnemyForTests(Vector2.right);
             var request = WeaponDamageRequest.Create(
@@ -41,7 +41,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.ConfigureSeparationLoadScenarioForTests();
             var target = controller.SpawnEnemyForTests(Vector2.right);
             var request = WeaponDamageRequest.Create(

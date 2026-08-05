@@ -32,7 +32,7 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
-            var presenter = Object.FindFirstObjectByType<PatrolPresenter>();
+            var presenter = Object.FindAnyObjectByType<PatrolPresenter>();
 
             presenter.SelectStartingWeaponForTests(WeaponId.GakgungShot);
 
@@ -113,7 +113,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         private static GameObject FindIncludingInactive(string name) =>
-            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
                 .Single(transform => transform.name == name).gameObject;
 
         private sealed class MemoryRepository : ISaveRepository

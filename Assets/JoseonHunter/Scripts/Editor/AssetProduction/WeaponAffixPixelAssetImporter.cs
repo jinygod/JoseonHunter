@@ -193,11 +193,11 @@ namespace JoseonHunter.Editor.AssetProduction
             importer.isReadable = true;
             importer.alphaIsTransparency = true;
             ClearPlatformOverrides(importer);
-            importer.spritesheet = new[]
+            SpriteSheetMetadata.Write(importer, new[]
             {
                 Slice("reel_frame", 0, 64), Slice("empty_line_frame", 64, 64), Slice("high_frame", 128, 64), Slice("perfect_frame", 192, 64),
                 Slice("jackpot_burst_1", 0, 0), Slice("jackpot_burst_2", 64, 0), Slice("jackpot_burst_3", 128, 0), Slice("rarity_flash", 192, 0)
-            };
+            });
             importer.SaveAndReimport();
         }
 
@@ -284,13 +284,8 @@ namespace JoseonHunter.Editor.AssetProduction
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
         }
 
-        private static SpriteMetaData Slice(string name, float x, float y) => new SpriteMetaData
-        {
-            name = name,
-            rect = new Rect(x, y, 64f, 64f),
-            alignment = (int)SpriteAlignment.Center,
-            pivot = new Vector2(.5f, .5f)
-        };
+        private static SpriteSliceMetadata Slice(string name, float x, float y) =>
+            new(name, new Rect(x, y, 64f, 64f), SpriteAlignment.Center, new Vector2(.5f, .5f));
 
         private static string MaskPathFor(WeaponPotentialId id) =>
             "Assets/JoseonHunter/Art/Weapons/Runtime/Potentials/Masks/" + id.Value + "-hit-mask.png";

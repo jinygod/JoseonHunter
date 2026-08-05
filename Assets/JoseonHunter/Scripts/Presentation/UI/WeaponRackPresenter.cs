@@ -105,7 +105,7 @@ namespace JoseonHunter.Presentation.UI
             slot.LevelStars = RuntimeUiFactory.Text("Level Stars", slot.Root.transform, string.Empty, 17f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             slot.LevelStars.color = JoseonUiPalette.Gold;
-            slot.LevelStars.enableWordWrapping = false;
+            slot.LevelStars.textWrappingMode = TextWrappingModes.NoWrap;
             slot.LevelStars.raycastTarget = false;
             slot.LevelStars.rectTransform.anchorMin = slot.LevelStars.rectTransform.anchorMax = new Vector2(.5f, 0f);
             slot.LevelStars.rectTransform.pivot = new Vector2(.5f, 0f);

@@ -163,7 +163,7 @@ namespace JoseonHunter.Presentation.UI
         {
             var text = Text(name, parent, string.Empty, fontSize, TextAlignmentOptions.Left, role);
             Position(text.rectTransform, new Vector2(0f, 1f), position, size, new Vector2(0f, 1f));
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TextWrappingModes.Normal;
             return text;
         }
 

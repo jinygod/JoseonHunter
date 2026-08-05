@@ -77,8 +77,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var reward = Object.FindAnyObjectByType<RewardRevealPresenter>();
             var startingSpeed = controller.StartingMoveSpeedForTests;
             controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
             Assert.That(controller.TryChooseUpgrade(0), Is.True);
@@ -106,8 +106,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var reward = Object.FindAnyObjectByType<RewardRevealPresenter>();
             controller.OpenUpgradeOffersForTests(new UpgradeOffer("boots", UpgradeKind.Support, 1));
             Assert.That(controller.TryChooseUpgrade(0), Is.True);
             controller.AddExperienceForTests(100);

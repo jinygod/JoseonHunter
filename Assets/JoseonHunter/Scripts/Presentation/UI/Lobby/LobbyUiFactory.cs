@@ -45,7 +45,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             text.fontSize = size;
             text.color = Ink;
             text.alignment = alignment;
-            text.enableWordWrapping = true;
+            text.textWrappingMode = TextWrappingModes.Normal;
             text.raycastTarget = false;
             var font = RuntimeFontCatalog.For(title ? RuntimeFontRole.Title : RuntimeFontRole.Body);
             if (font != null) text.font = font;

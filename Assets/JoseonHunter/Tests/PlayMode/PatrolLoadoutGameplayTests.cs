@@ -33,7 +33,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
 
             Assert.That(controller.RegisteredWeaponIds.Single(), Is.EqualTo(WeaponId.GakgungShot));
             Assert.That(controller.LegacySnapshotForTests(WeaponId.GakgungShot).PathId,
@@ -50,7 +50,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
 
             Assert.That(controller.StartingMaximumHealthForTests, Is.EqualTo(110f).Within(.01f));
             Assert.That(controller.StartingDamageMultiplierForTests, Is.EqualTo(1.10f).Within(.001f));

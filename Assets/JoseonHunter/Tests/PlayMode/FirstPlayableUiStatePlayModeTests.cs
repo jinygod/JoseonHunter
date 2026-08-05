@@ -30,7 +30,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
             controller.EndRunForTests(false);
@@ -48,7 +48,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
 
             var opened = 0;

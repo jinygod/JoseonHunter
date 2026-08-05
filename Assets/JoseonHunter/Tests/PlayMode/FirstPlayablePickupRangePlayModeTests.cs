@@ -14,7 +14,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var setup = LoadPickupAt(new Vector2(1f, 0f));
             while (setup.MoveNext()) yield return setup.Current;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var pickup = GameObject.Find("Experience Flame");
             Assert.That(controller, Is.Not.Null);
             Assert.That(pickup, Is.Not.Null);
@@ -33,7 +33,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var setup = LoadPickupAt(new Vector2(1f, 0f));
             while (setup.MoveNext()) yield return setup.Current;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var pickup = GameObject.Find("Experience Flame");
             Assert.That(controller, Is.Not.Null);
             Assert.That(pickup, Is.Not.Null);
@@ -51,7 +51,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var setup = LoadPickupAt(new Vector2(.5f, 0f));
             while (setup.MoveNext()) yield return setup.Current;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var pickup = GameObject.Find("Experience Flame");
             Assert.That(controller, Is.Not.Null);
             Assert.That(pickup, Is.Not.Null);
@@ -67,7 +67,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var setup = LoadPickupAt(new Vector2(.57f, 0f));
             while (setup.MoveNext()) yield return setup.Current;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var pickup = GameObject.Find("Experience Flame");
             Assert.That(controller, Is.Not.Null);
             Assert.That(pickup, Is.Not.Null);
@@ -89,7 +89,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             controller.ConfigureSeparationLoadScenarioForTests();
 
@@ -104,7 +104,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             controller.ConfigureSeparationLoadScenarioForTests();
             var target = controller.SpawnEnemyForTests(position);

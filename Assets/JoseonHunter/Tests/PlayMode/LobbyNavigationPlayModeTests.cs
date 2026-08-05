@@ -30,7 +30,7 @@ namespace JoseonHunter.Tests.PlayMode
         {
             SceneManager.LoadScene("Lobby");
             yield return null;
-            var lobby = Object.FindFirstObjectByType<LobbyBootstrap>();
+            var lobby = Object.FindAnyObjectByType<LobbyBootstrap>();
             Assert.That(lobby, Is.Not.Null);
 
             var navigation = GameObject.Find("Bottom Navigation");
@@ -84,7 +84,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         private static GameObject FindIncludingInactive(string name) =>
-            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
                 .Single(transform => transform.name == name).gameObject;
 
         private sealed class MemoryRepository : ISaveRepository

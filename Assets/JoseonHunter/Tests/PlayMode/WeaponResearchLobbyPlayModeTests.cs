@@ -37,7 +37,7 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(repository);
             SceneManager.LoadScene("Lobby");
             yield return null;
-            var presenter = Object.FindFirstObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
+            var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
 
             Assert.That(presenter.WeaponCountForTests, Is.EqualTo(8));
             Assert.That(presenter.StyleCountForTests, Is.EqualTo(3));
@@ -72,7 +72,7 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(data));
             SceneManager.LoadScene("Lobby");
             yield return null;
-            var presenter = Object.FindFirstObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
+            var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
 
             var icon = presenter.transform.Find("Selected Weapon Icon").GetComponent<Image>();
             Assert.That(icon.sprite, Is.Not.Null);

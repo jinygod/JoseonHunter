@@ -22,7 +22,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 2);
             WeaponLegacyChoiceState opened = null;
             controller.WeaponLegacyOpened += state => opened = state;
@@ -66,7 +66,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
             yield return null;
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             controller.SetWeaponLevelForTests(WeaponId.GakgungShot, 2);
             controller.OpenUpgradeOffersForTests(new UpgradeOffer(
                 WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 3));

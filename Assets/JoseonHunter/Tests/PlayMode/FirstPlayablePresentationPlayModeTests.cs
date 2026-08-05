@@ -50,7 +50,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             try
             {
                 Assert.That(controller, Is.Not.Null);
@@ -101,8 +101,8 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
-            var previousPresenter = Object.FindFirstObjectByType<GeumjulTrailPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var previousPresenter = Object.FindAnyObjectByType<GeumjulTrailPresenter>();
             Assert.That(controller, Is.Not.Null);
             Assert.That(previousPresenter, Is.Not.Null);
             var previousMaterial = previousPresenter.CachedMaterialForTests;
@@ -114,7 +114,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(previousPresenter == null, Is.True);
             Assert.That(previousMaterial == null, Is.True);
-            Assert.That(Object.FindObjectsByType<GeumjulTrailPresenter>(FindObjectsSortMode.None), Has.Length.EqualTo(1));
+            Assert.That(Object.FindObjectsByType<GeumjulTrailPresenter>(), Has.Length.EqualTo(1));
         }
 
         [UnityTest]
@@ -123,7 +123,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Gameplay");
             yield return null;
 
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             var libraryField = typeof(FirstPlayableController)
                 .GetField("jangseungGeumjulVisuals", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(controller, Is.Not.Null);

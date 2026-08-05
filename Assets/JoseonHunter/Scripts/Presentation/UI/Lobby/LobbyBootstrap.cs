@@ -135,7 +135,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         private static void EnsureEventSystem()
         {
-            var eventSystem = Object.FindFirstObjectByType<EventSystem>();
+            var eventSystem = Object.FindAnyObjectByType<EventSystem>();
             if (eventSystem == null) eventSystem = new GameObject("EventSystem", typeof(EventSystem)).GetComponent<EventSystem>();
             if (eventSystem.GetComponent<InputSystemUIInputModule>() == null)
                 eventSystem.gameObject.AddComponent<InputSystemUIInputModule>();

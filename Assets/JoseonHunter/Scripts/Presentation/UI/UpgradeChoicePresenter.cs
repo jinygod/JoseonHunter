@@ -217,7 +217,7 @@ namespace JoseonHunter.Presentation.UI
             card.Behavior = Label("Behavior", card.Button.transform, new Vector2(220f, -114f),
                 new Vector2(620f, 48f), 18f, TextAlignmentOptions.Left);
             card.Behavior.color = JoseonUiPalette.Ink;
-            card.Behavior.enableWordWrapping = true;
+            card.Behavior.textWrappingMode = TextWrappingModes.Normal;
             card.Delta = Label("Delta", card.Button.transform, new Vector2(220f, -190f),
                 new Vector2(620f, 28f), 20f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
             card.Glyph.color = JoseonUiPalette.Ink;

@@ -30,12 +30,10 @@ namespace JoseonHunter.Tests.PlayMode
             for (var frame = 0; frame < 12 && (Screen.width != originalResolution.x || Screen.height != originalResolution.y); frame++)
                 yield return null;
             Assert.That(Application.isBatchMode || new Vector2Int(Screen.width, Screen.height) == originalResolution, Is.True);
-            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            var bootstrap = Object.FindAnyObjectByType<FirstPlayableUiBootstrap>();
             if (bootstrap != null) bootstrap.ApplySafeArea(originalSafeArea, originalResolution);
-            foreach (var reward in Object.FindObjectsByType<RewardRevealPresenter>(FindObjectsInactive.Include,
-                FindObjectsSortMode.None)) reward.HideImmediately();
-            foreach (var affix in Object.FindObjectsByType<WeaponAffixRevealPresenter>(FindObjectsInactive.Include,
-                FindObjectsSortMode.None)) affix.HideImmediately();
+            foreach (var reward in Object.FindObjectsByType<RewardRevealPresenter>(FindObjectsInactive.Include)) reward.HideImmediately();
+            foreach (var affix in Object.FindObjectsByType<WeaponAffixRevealPresenter>(FindObjectsInactive.Include)) affix.HideImmediately();
             bootstrap?.BoundController?.CancelUiModalPresentation();
             Canvas.ForceUpdateCanvases();
             yield return null;
@@ -48,7 +46,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
 
-            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
+            var bootstrap = Object.FindAnyObjectByType<FirstPlayableUiBootstrap>();
             var scaler = bootstrap.GetComponent<CanvasScaler>();
             Assert.That(scaler.referenceResolution, Is.EqualTo(new Vector2(1080f, 1920f)));
             Assert.That(scaler.matchWidthOrHeight, Is.EqualTo(.5f));
@@ -58,13 +56,13 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(canvasRect.rect.size.y, Is.EqualTo(actualCanvas.y).Within(.1f));
             Assert.That(bootstrap.transform.Find("Modal Layer"), Is.Not.Null);
             Assert.That(bootstrap.ModalSafeAreaContainer, Is.Not.Null);
-            var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var reward = Object.FindAnyObjectByType<RewardRevealPresenter>();
             reward.Play(new ProgressionRewardEvent("boots", null, 1, ProgressionRewardKind.Support,
                 "능력 강화", "+12%", null));
-            var appraisal = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
-            var controller = Object.FindFirstObjectByType<FirstPlayableController>();
+            var appraisal = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
             appraisal.ShowDetails(controller.UiState.Weapons[0]);
-            var legacy = Object.FindFirstObjectByType<WeaponLegacyChoicePresenter>();
+            var legacy = Object.FindAnyObjectByType<WeaponLegacyChoicePresenter>();
             legacy.Open(new WeaponLegacyChoiceState("frost_flask", "서리병", new[]
             {
                 new WeaponLegacyChoiceView(WeaponLegacyPathId.FrostMist, "빙무", "서리 안개",
@@ -72,7 +70,7 @@ namespace JoseonHunter.Tests.PlayMode
                 new WeaponLegacyChoiceView(WeaponLegacyPathId.FrostShatter, "파쇄", "착지 폭발",
                     "연쇄 파쇄", "지속시간 감소", null)
             }), _ => true);
-            var replacement = Object.FindFirstObjectByType<WeaponReplacementPresenter>();
+            var replacement = Object.FindAnyObjectByType<WeaponReplacementPresenter>();
             replacement.Open(new WeaponReplacementState("frost_flask", "서리병", new[]
             {
                 new WeaponReplacementChoiceView("one", "환도 비검", 4, "월식", null),
@@ -147,8 +145,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             yield return null;
 
-            var bootstrap = Object.FindFirstObjectByType<FirstPlayableUiBootstrap>();
-            var upgrade = Object.FindFirstObjectByType<UpgradeChoicePresenter>();
+            var bootstrap = Object.FindAnyObjectByType<FirstPlayableUiBootstrap>();
+            var upgrade = Object.FindAnyObjectByType<UpgradeChoicePresenter>();
             upgrade.BuildForTests();
             Canvas.ForceUpdateCanvases();
             foreach (var card in upgrade.GetComponentsInChildren<Button>(true))
@@ -158,10 +156,10 @@ namespace JoseonHunter.Tests.PlayMode
                     card.name);
             }
 
-            var appraisal = Object.FindFirstObjectByType<WeaponAffixRevealPresenter>();
+            var appraisal = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
             Assert.That(appraisal.transform.IsChildOf(bootstrap.ModalSafeAreaContainer), Is.True);
 
-            var reward = Object.FindFirstObjectByType<RewardRevealPresenter>();
+            var reward = Object.FindAnyObjectByType<RewardRevealPresenter>();
             reward.Play(new ProgressionRewardEvent("boots", null, 1, ProgressionRewardKind.Support,
                 "능력 강화", "+12%", null));
             yield return null;

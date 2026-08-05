@@ -114,10 +114,10 @@ namespace JoseonHunter.Editor.AssetImport
             {
                 texture.spriteImportMode = SpriteImportMode.Multiple;
                 var isFrontFacing = assetPath.StartsWith(FrontFacingCharacterRuntimeRoot, System.StringComparison.Ordinal);
-                texture.spritesheet = CharacterSprites(
+                SpriteSheetMetadata.Write(texture, CharacterSprites(
                     System.IO.Path.GetFileNameWithoutExtension(assetPath),
                     isFrontFacing ? 12 : 38,
-                    isFrontFacing ? 4 : 6);
+                    isFrontFacing ? 4 : 6));
             }
             else
             {
@@ -223,18 +223,16 @@ namespace JoseonHunter.Editor.AssetImport
                 || path.StartsWith(AppraisalUiRoot, System.StringComparison.Ordinal);
         }
 
-        private static SpriteMetaData[] CharacterSprites(string characterId, int frameCount, int columns)
+        private static SpriteSliceMetadata[] CharacterSprites(string characterId, int frameCount, int columns)
         {
-            var sprites = new SpriteMetaData[frameCount];
+            var sprites = new SpriteSliceMetadata[frameCount];
             for (var frame = 0; frame < sprites.Length; frame++)
             {
-                sprites[frame] = new SpriteMetaData
-                {
-                    name = characterId + "_" + frame.ToString("D2"),
-                    rect = new Rect((frame % columns) * 64, (frame / columns) * 64, 64, 64),
-                    alignment = (int)SpriteAlignment.Custom,
-                    pivot = new Vector2(0.5f, 0.125f)
-                };
+                sprites[frame] = new SpriteSliceMetadata(
+                    characterId + "_" + frame.ToString("D2"),
+                    new Rect((frame % columns) * 64, (frame / columns) * 64, 64, 64),
+                    SpriteAlignment.Custom,
+                    new Vector2(0.5f, 0.125f));
             }
             return sprites;
         }
