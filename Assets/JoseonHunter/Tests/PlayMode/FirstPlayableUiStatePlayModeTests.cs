@@ -1,4 +1,5 @@
 using System.Collections;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -9,6 +10,21 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class FirstPlayableUiStatePlayModeTests
     {
+        [UnityTest]
+        public IEnumerator ExperienceCannotAdvancePastNaturalContentCap()
+        {
+            var root = new GameObject("Level Cap Test");
+            var controller = root.AddComponent<FirstPlayableController>();
+            yield return null;
+
+            controller.AddExperienceForTests(1000000);
+
+            Assert.That(controller.UiState.Level, Is.EqualTo(RunLoadoutRules.MaximumPlayerLevel));
+            Assert.That(controller.PendingUpgradeCountForTests,
+                Is.EqualTo(RunLoadoutRules.MaximumPlayerLevel - 2));
+            Object.Destroy(root);
+        }
+
         [UnityTest]
         public IEnumerator EndedRunStateCanOnlyRestartThroughThePublicEntryPoint()
         {

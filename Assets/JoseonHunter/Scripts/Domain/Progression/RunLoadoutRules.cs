@@ -6,6 +6,7 @@ namespace JoseonHunter.Domain.Progression
     {
         public const int WeaponSlotLimit = 4;
         public const int SupportSlotLimit = 3;
+        public const int MaximumPlayerLevel = 35;
 
         public static int ReplacementLevel(int discardedLevel)
         {

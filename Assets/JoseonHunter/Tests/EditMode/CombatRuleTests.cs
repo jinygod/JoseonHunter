@@ -31,11 +31,11 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(clamped.FinalDamage, Is.EqualTo(1));
         }
 
-        [TestCase(1, 15)]
-        [TestCase(2, 24)]
-        [TestCase(5, 63)]
-        [TestCase(10, 168)]
-        [TestCase(22, 624)]
+        [TestCase(1, 10)]
+        [TestCase(2, 13)]
+        [TestCase(5, 24)]
+        [TestCase(10, 53)]
+        [TestCase(22, 173)]
         public void ExperienceCurveUsesScalableThresholds(int level, int expected)
         {
             Assert.That(ExperienceCurve.GetThresholdForNextLevel(level), Is.EqualTo(expected));
@@ -46,6 +46,18 @@ namespace JoseonHunter.Tests.EditMode
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() =>
                 ExperienceCurve.GetThresholdForNextLevel(0));
+        }
+
+        [TestCase(8, 186)]
+        [TestCase(16, 772)]
+        [TestCase(26, 2457)]
+        [TestCase(34, 4879)]
+        public void ExperienceCurveMatchesFifteenMinuteMilestoneBudgets(int completedLevels, int expectedTotal)
+        {
+            var total = Enumerable.Range(1, completedLevels)
+                .Sum(ExperienceCurve.GetThresholdForNextLevel);
+
+            Assert.That(total, Is.EqualTo(expectedTotal));
         }
 
         [Test]

@@ -172,6 +172,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public int MidBossSpawnCountForTests { get; private set; }
         public int FinalBossSpawnCountForTests { get; private set; }
         public int PackSpawnCountForTests { get; private set; }
+        public int PendingUpgradeCountForTests => pendingUpgradeCount;
         public IReadOnlyDictionary<WeaponId, int> RunMasterySnapshotForTests => runWeaponKillLedger.Snapshot();
         public float StartingMaximumHealthForTests => playerMaxHealth;
         public float StartingDamageMultiplierForTests => runDamageMultiplier;
@@ -2109,14 +2110,19 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void AddExperience(int amount)
         {
+            if (level >= RunLoadoutRules.MaximumPlayerLevel) return;
             experience += Mathf.Max(0, Mathf.CeilToInt(amount * runExperienceMultiplier));
-            while (experience >= experienceToNext)
+            while (level < RunLoadoutRules.MaximumPlayerLevel && experience >= experienceToNext)
             {
                 experience -= experienceToNext;
                 level++;
-                experienceToNext = ExperienceCurve.GetThresholdForNextLevel(level);
+                experienceToNext = level < RunLoadoutRules.MaximumPlayerLevel
+                    ? ExperienceCurve.GetThresholdForNextLevel(level)
+                    : 0;
                 pendingUpgradeCount++;
             }
+
+            if (level >= RunLoadoutRules.MaximumPlayerLevel) experience = 0;
 
             if (!upgradeOpen && !awaitingUpgradePresentationClose && upgradeQueueGraceRemaining <= 0f)
                 OpenNextPendingUpgrade();

@@ -8,7 +8,7 @@ namespace JoseonHunter.Domain.Progression
         {
             if (level < 1) throw new ArgumentOutOfRangeException(nameof(level));
 
-            var threshold = 8L + 6L * level + (long)level * level;
+            var threshold = 8L + 2L * level + (long)level * level / 4L;
             return threshold >= int.MaxValue ? int.MaxValue : (int)threshold;
         }
     }
