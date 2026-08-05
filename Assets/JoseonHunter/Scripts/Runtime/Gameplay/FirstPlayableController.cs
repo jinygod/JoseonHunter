@@ -1329,7 +1329,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     : BossCombatRole.FirstMidBoss;
             var baseHealth = isBoss ? 6000f :
                 isMidBoss ? (midBossTier >= 2 ? 1400f : 450f) :
-                Mathf.Lerp(18f, 42f, elapsed / PrototypeDurationSeconds);
+                EnemyHealthCurve.BaseHealthAt(elapsed);
             var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier;
             var displayScale = isBoss || isMidBoss
                 ? VisualScale.NormalEnemyScale * BossScaleProfile.MultiplierFor(bossRole)
