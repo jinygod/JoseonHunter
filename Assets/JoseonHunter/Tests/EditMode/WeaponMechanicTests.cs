@@ -992,7 +992,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void FrostFieldLevelFiveGrowsBeforeItShatters()
+        public void FrostFieldUsesRestrainedSnowflakeFramesInsteadOfLargeCrystalGrowth()
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
@@ -1002,14 +1002,12 @@ namespace JoseonHunter.Tests.EditMode
             var context = new WeaponExecutionContext(default, root.transform, null, 0, 1);
 
             frost.Tick(.1f, context);
-            var start = frost.LastFieldVisualScale;
             frost.Tick(.09f, context);
 
             NUnitMultipleCompat.Run(() =>
             {
-                Assert.That(start, Is.EqualTo(.65f).Within(.001f));
-                Assert.That(frost.LastFieldVisualScale, Is.GreaterThan(start));
-                Assert.That(frost.FirstVisualPartIndexForTests, Is.InRange(6, 10));
+                Assert.That(frost.FirstVisualPartIndexForTests, Is.InRange(14, 15));
+                Assert.That(frost.LastFieldVisualScale, Is.LessThanOrEqualTo(1f));
             });
         }
 
@@ -1054,8 +1052,9 @@ namespace JoseonHunter.Tests.EditMode
             NUnitMultipleCompat.Run(() =>
             {
                 Assert.That(target.SlowApplications, Is.GreaterThan(0));
-                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Tick), Is.EqualTo(3));
+                Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Tick), Is.EqualTo(1));
                 Assert.That(target.FreezeCount, Is.EqualTo(1));
+                Assert.That(target.LastFreezeDuration, Is.EqualTo(.3f).Within(.001f));
             });
 
             target.MoveTo(new Float2(4f, 0f));
@@ -1075,7 +1074,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void FrostLandingBurstsBeforeHalfDamageFieldTicksAndUsesAuthoredSlow()
+        public void FrostLandingAndHalfSecondTicksDealLightControlDamageAndUseAuthoredSlow()
         {
             var mask = PixelHitMask.FromRows("1");
             var registry = new CombatTargetRegistry();
@@ -1092,14 +1091,16 @@ namespace JoseonHunter.Tests.EditMode
             frost.Tick(.1f, new WeaponExecutionContext(default, root.transform, null, 0, 1));
 
             var landing = events.Single(confirmed => confirmed.Phase == ContactPhase.Blast);
-            Assert.That(landing.FinalDamage, Is.EqualTo(10));
+            Assert.That(landing.FinalDamage, Is.EqualTo(2));
 
             frost.Tick(.25f, new WeaponExecutionContext(default, root.transform, null, 0, 2));
+            Assert.That(events.Count(confirmed => confirmed.Phase == ContactPhase.Tick), Is.Zero);
+            frost.Tick(.25f, new WeaponExecutionContext(default, root.transform, null, 0, 3));
 
             var fieldTick = events.Single(confirmed => confirmed.Phase == ContactPhase.Tick);
             NUnitMultipleCompat.Run(() =>
             {
-                Assert.That(fieldTick.FinalDamage, Is.EqualTo(5));
+                Assert.That(fieldTick.FinalDamage, Is.EqualTo(2));
                 Assert.That(target.LastSlowStrength, Is.EqualTo(.35f).Within(.001f));
             });
         }
@@ -1618,6 +1619,7 @@ namespace JoseonHunter.Tests.EditMode
             public int ActiveSlowSourceCount => slowSources.Count;
             public float LastSlowStrength { get; private set; }
             public float LastSlowDecay { get; private set; }
+            public float LastFreezeDuration { get; private set; }
             private readonly Dictionary<int, float> slowSources = new Dictionary<int, float>();
             public PixelHitMask HurtMask => mask;
             public PixelMaskTransform HurtMaskTransform => PixelMaskTransform.Translation(WorldPosition.X, WorldPosition.Y);
@@ -1627,7 +1629,7 @@ namespace JoseonHunter.Tests.EditMode
             public void ApplyKnockback(Float2 direction, float force) => KnockbackCount++;
             public void ApplyFrostSlow(int sourceId, float strength) { slowSources[sourceId] = strength; SlowApplications++; LastSlowStrength = StrongestSlow(); }
             public void RemoveFrostSlow(int sourceId, float decaySeconds) { slowSources.Remove(sourceId); LastSlowStrength = StrongestSlow(); LastSlowDecay = decaySeconds; }
-            public void ApplyFreeze(int sourceId, float durationSeconds) => FreezeCount++;
+            public void ApplyFreeze(int sourceId, float durationSeconds) { FreezeCount++; LastFreezeDuration = durationSeconds; }
             private float StrongestSlow() { var result = 1f; foreach (var source in slowSources) result = Mathf.Min(result, source.Value); return slowSources.Count == 0 ? 0f : result; }
         }
     }

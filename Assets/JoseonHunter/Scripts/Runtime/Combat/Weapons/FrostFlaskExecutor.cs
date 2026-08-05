@@ -20,7 +20,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
     public sealed class FrostFlaskExecutor : IWeaponExecutor, IWeaponEvolutionProfile
     {
         public const int MaximumFields = 4;
-        private const float TickInterval = 0.25f;
+        private const float TickInterval = 0.5f;
         private const float FreezeResidence = 0.75f;
         private const float SlowDecaySeconds = 0.35f;
         private readonly WeaponRuntimeController runtime;
@@ -65,7 +65,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         public bool AllStoredTargetsResolvedOnce { get; private set; }
         public float LastFieldVisualScale { get; private set; } = 1f;
 #if UNITY_INCLUDE_TESTS
-        public float LegacyLandingDamageForTests => Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? LegacySourceDamage * 1.5f : BaseDamage;
+        public float LegacyLandingDamageForTests => Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? LegacySourceDamage * 1.5f : BaseDamage * .2f;
         public int CompletedBloomCountForTests { get; private set; }
         public int LastLegacyShatterTargetCountForTests { get; private set; }
         public int FirstVisualPartIndexForTests => fields.Count == 0 ? -1 : fields[0].VisualPartIndex;
@@ -186,12 +186,12 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     status.ApplyFrostSlow(field.Attack.InstanceId, SlowFraction);
                     if (residence >= FreezeResidence && field.Frozen.Add(target.RuntimeId))
                     {
-                        status.ApplyFreeze(field.Attack.InstanceId, 0.2f);
+                        status.ApplyFreeze(field.Attack.InstanceId, 0.3f);
                         if (IsEvolved) field.StoredFrozen.Add(target.RuntimeId);
                     }
                 }
                 if (field.ActiveAge + 0.0001f >= field.NextDamageAge &&
-                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage * .5f), false, contact, ContactPhase.Tick, context.SimulationTick,
+                    runtime.DamageService.TryApply(WeaponDamageRequest.Create(field.Attack, WeaponId.FrostFlask, target, Mathf.CeilToInt(BaseDamage * .2f), false, contact, ContactPhase.Tick, context.SimulationTick,
                         traits: Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? WeaponHitTrait.None : WeaponHitTrait.Explosion,
                         attackOrigin: field.Landing), out _))
                     RecordLegacyFrostHit(target);
@@ -200,12 +200,6 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (!inside.Contains(previous) && runtime.Targets.TryGet(previous, out var target) && target is IFrostStatusTarget status) status.RemoveFrostSlow(field.Attack.InstanceId, SlowDecaySeconds);
             field.Inside.Clear(); foreach (var id in inside) field.Inside.Add(id);
             if (field.ActiveAge + 0.0001f >= field.NextDamageAge) field.NextDamageAge += TickInterval;
-            if (!IsEvolved && Level == 5)
-            {
-                field.SpikeTimer += activeStep;
-                while (field.SpikeTimer >= 0.5f) { field.SpikeTimer -= 0.5f; RaiseSpike(field, context, false); }
-                UpdateFieldVisual(field, context, LastFieldVisualScale);
-            }
             if (field.ActiveAge + .00001f >= Duration) Expire(field, context, step - activeStep);
         }
 
@@ -273,7 +267,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                         burst,
                         WeaponId.FrostFlask,
                         target,
-                        Mathf.CeilToInt(Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? LegacySourceDamage * 1.5f : BaseDamage),
+                        Mathf.CeilToInt(Potentials.Legacy.Is(WeaponLegacyPathId.FrostShatter) ? LegacySourceDamage * 1.5f : BaseDamage * .2f),
                         false,
                         contact,
                         ContactPhase.Blast,
@@ -466,27 +460,15 @@ namespace JoseonHunter.Runtime.Combat.Weapons
         private void UpdateFieldVisual(Field field, in WeaponExecutionContext context, float radiusScale)
         {
             if (field.Visual == null) return;
-            var warning = !IsEvolved && Level == 5 && .5f - field.SpikeTimer <= .12f;
-            if (warning)
-            {
-                var warningProgress = Mathf.Clamp01((field.SpikeTimer - .38f) / .12f);
-                field.VisualPartIndex = FrameFromProgress(
-                    WeaponVisualPartIndex.FrostFlask.Impact,
-                    WeaponVisualPartIndex.FrostFlask.ImpactFrameCount,
-                    warningProgress);
-            }
-            else
-            {
-                field.VisualPartIndex = FrameFromProgress(
-                    WeaponVisualPartIndex.FrostFlask.Field,
-                    WeaponVisualPartIndex.FrostFlask.FieldFrameCount,
-                    Mathf.Clamp01(field.ActiveAge / .18f));
-            }
+            field.VisualPartIndex = WeaponVisualPartIndex.FrostFlask.Impact + 3 +
+                (Mathf.FloorToInt(field.ActiveAge * 4f) & 1);
             var renderer = field.Visual.GetComponent<SpriteRenderer>();
             renderer.sprite = context.PresentationSpriteFor(WeaponId.FrostFlask, field.VisualPartIndex);
             field.Visual.transform.position = new Vector3(field.Landing.X, field.Landing.Y, 0f);
-            field.Visual.transform.localScale = ScaleSpriteToWorldDiameter(renderer.sprite, Radius * 2f * radiusScale);
-            renderer.color = new Color(.62f, .92f, 1f, .82f);
+            var scale = ScaleSpriteToWorldDiameter(renderer.sprite, Radius * 2f * radiusScale);
+            scale.y *= .58f;
+            field.Visual.transform.localScale = scale;
+            renderer.color = new Color(.62f, .92f, 1f, .46f);
         }
 
         private void PlayLandingFragments(Field field, in WeaponExecutionContext context)
@@ -600,7 +582,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
             public float Age { get; set; }
             public float ActiveAge { get; set; }
             public float SpikeTimer { get; set; }
-            public float NextDamageAge { get; set; }
+            public float NextDamageAge { get; set; } = TickInterval;
             public bool Active { get; set; }
             public bool Expired { get; set; }
             public bool AttackRetired { get; set; }
