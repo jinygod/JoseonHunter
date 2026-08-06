@@ -104,6 +104,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.FeedbackTextForTests, Is.EqualTo("계정 레벨 8에서 추가 수련이 열립니다."));
         }
 
+        [UnityTest]
+        public IEnumerator TrainingNamesThePermanentMaximumAtOneHundredTotalRanks()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.AccountExperience = AccountProgression.TotalExperienceForLevel(20);
+            data.Coins = 10000;
+            data.CommonTrainingRanks[CommonTrainingId.Vitality.ToString()] = 20;
+            data.CommonTrainingRanks[CommonTrainingId.Power.ToString()] = 20;
+            data.CommonTrainingRanks[CommonTrainingId.Footwork.ToString()] = 20;
+            data.CommonTrainingRanks[CommonTrainingId.Learning.ToString()] = 20;
+            data.CommonTrainingRanks[CommonTrainingId.Guard.ToString()] = 20;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            var presenter = Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
+
+            presenter.SelectForTests(CommonTrainingId.Resonance);
+
+            Assert.That(presenter.PurchaseInteractableForTests, Is.False);
+            Assert.That(presenter.FeedbackTextForTests, Is.EqualTo("총 수련 최대치에 도달했습니다."));
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;

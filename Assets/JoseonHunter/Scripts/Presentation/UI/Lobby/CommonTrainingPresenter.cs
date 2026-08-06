@@ -139,7 +139,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 : result.Error == ProgressionError.InsufficientCoins
                     ? "엽전이 부족합니다."
                     : result.Error == ProgressionError.AccountLevelRequired
-                        ? $"계정 레벨 {new CommonTrainingProgression(session.Data).NextCapacityLevel}에서 추가 수련이 열립니다."
+                        ? CapacityFeedback(new CommonTrainingProgression(session.Data))
                     : result.Error == ProgressionError.MaximumReached
                         ? "이미 최대 단계입니다."
                         : "저장하지 못했습니다. 다시 시도해 주세요.";
@@ -178,7 +178,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 : $"필요 엽전 {cost:N0} · 강화 후 {Math.Max(0, session.Data.Coins - cost):N0}";
             purchaseButton.interactable = !trackMaximum && !capacityReached;
             if (!trackMaximum && capacityReached)
-                feedbackText.text = $"계정 레벨 {progression.NextCapacityLevel}에서 추가 수련이 열립니다.";
+                feedbackText.text = CapacityFeedback(progression);
             for (var index = 0; index < trainingButtons.Length; index++)
             {
                 var id = (CommonTrainingId)index;
@@ -203,5 +203,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
         }
 
         private static string FormatPercent(float bonus) => (bonus * 100f).ToString("0.#");
+
+        private static string CapacityFeedback(CommonTrainingProgression progression) =>
+            progression.Capacity >= CommonTrainingProgression.MaximumTotalRanks
+                ? "총 수련 최대치에 도달했습니다."
+                : $"계정 레벨 {progression.NextCapacityLevel}에서 추가 수련이 열립니다.";
     }
 }
