@@ -42,6 +42,16 @@
 - 상업적 사용: 허용
 - 저작자 표시: 선택 사항
 
+## OpenGameArt — Battle Sound Effects
+
+- 원본: https://opengameart.org/content/battle-sound-effects
+- 파일: `ExternalAssets/Audio/OpenGameArt/battle_sound_effects_0.zip`
+- SHA-256: `44E3D26B2378D2EB3A4F28B4C5CBC71908AD13C7389038348DBE9B8CDE4F4C05`
+- 내용: 활 발사음 1개와 무기 휘두름음 3개
+- 라이선스: Creative Commons Zero 1.0 (CC0) 조건으로 사용
+- 상업적 사용: 허용
+- 저작자 표시: 선택 사항
+
 ## 선별 원칙
 
 - 동일한 역할의 소리를 전부 Unity에 넣지 않고 2~5개 변형만 사용한다.
