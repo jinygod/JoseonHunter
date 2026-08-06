@@ -73,3 +73,11 @@
 - `Bootstrap` now owns `Prefabs/UI/BootstrapLoading.prefab`. It loads Gameplay asynchronously, displays real Unity load progress, remains opaque for at least 0.35 seconds and until `GameplayReadySignal`, waits one rendered frame in player builds, then fades with unscaled time. Direct Gameplay entry remains supported for Editor iteration and tests.
 - Gameplay scenes intentionally remain composition-light: the field chunks, player, enemies, weapons, pickups, and most UI are created or pooled at runtime. Stable compositions introduced here live in `Prefabs/World` and `Prefabs/UI`; gameplay rules remain in Domain, runtime ownership in Runtime, and UI in Presentation.
 - Latest evidence: `Docs/Verification/2026-08-02-infinite-battlefield-wave-loading.md`. EditMode passed 559/559, the related integrated PlayMode surface passed 39/39, the 140-enemy headless measurement had 16.690 ms p95 and 0 B movement-tick allocation, and the Android ARM64 IL2CPP development APK built successfully. Physical-device frame pacing, GPU, memory, and thermal profiling remain outstanding.
+
+## Account level and common training expansion handoff (2026-08-06)
+
+- Save schema 3 adds cumulative account experience while preserving schema 1 and 2 compatibility. Legacy saves receive at least the account level required by their existing total common-training ranks, so purchased training is never locked after migration.
+- Account level spans 1 through 100. Run settlement awards capped time and kill experience plus a victory bonus; abandonment receives 25%. Account experience is committed in the same atomic copy/save transaction as coins, weapon mastery, and records.
+- Common training now has six 20-rank tracks with a shared 100-rank cap. Capacity is `min(account level * 5, 100)`; the first five rank effects and costs remain unchanged, and rank 20 reaches a 15% effect.
+- Lobby runtime composition upgrades the existing serialized header with an account badge, Korean account name, and green experience bar without modifying the Lobby scene. Training and run-result presenters expose the new progression in Korean.
+- Latest evidence: `Docs/Verification/2026-08-06-account-level-training-expansion.md`. Final full EditMode passed 717/717 and full PlayMode passed 251/251 under BelowNormal priority and four-core affinity. Android device visual verification remains outstanding.
