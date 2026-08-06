@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Globalization;
+using JoseonHunter.Domain;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Infrastructure.Save;
 using NUnit.Framework;
@@ -30,7 +31,7 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(result.Source, Is.EqualTo(LoadSource.Defaults));
             Assert.That(result.Error, Is.EqualTo(SaveError.None));
-            Assert.That(result.Data.SchemaVersion, Is.EqualTo(3));
+            Assert.That(result.Data.SchemaVersion, Is.EqualTo(ProjectIdentity.SaveSchemaVersion));
         }
 
         [Test]

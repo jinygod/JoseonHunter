@@ -90,6 +90,25 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(repository.SaveCalls, Is.EqualTo(2));
         }
 
+        [UnityTest]
+        public IEnumerator StageOneNormalVictoryResultExplainsBothNewlyUnlockedPaths()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+
+            controller.AwardRunProgressForTests(WeaponId.GakgungShot, 10, 10);
+            controller.EndRunForTests(true);
+            yield return null;
+
+            var summary = GameObject.Find("Result Summary")?.GetComponent<TMPro.TMP_Text>();
+            Assert.That(summary, Is.Not.Null);
+            Assert.That(summary.text, Does.Contain("귀곡 들판 · 보통"));
+            Assert.That(summary.text, Does.Contain("새 지역: 도깨비 고개 · 보통"));
+            Assert.That(summary.text, Does.Contain("새 난이도: 귀곡 들판 · 흉조"));
+        }
+
         private static IEnumerator WaitForScene(string sceneName)
         {
             for (var frame = 0; frame < 240 && SceneManager.GetActiveScene().name != sceneName; frame++)

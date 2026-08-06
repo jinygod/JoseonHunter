@@ -6,6 +6,7 @@ using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
+using JoseonHunter.Domain.Save;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Content;
 using JoseonHunter.Runtime.Combat;
@@ -134,6 +135,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private int accountExperienceEarned;
         private int accountLevelBefore = 1;
         private int accountLevelAfter = 1;
+        private int settlementCoinsEarned;
+        private int settlementMasteryEarned;
+        private readonly List<string> newlyUnlockedNodes = new List<string>();
         private bool returningToLobby;
         private RunSettlement pendingSettlement;
         private StagePacingTimeline stageTimeline;
@@ -1042,6 +1046,9 @@ namespace JoseonHunter.Runtime.Gameplay
             accountExperienceEarned = 0;
             accountLevelBefore = 1;
             accountLevelAfter = 1;
+            settlementCoinsEarned = 0;
+            settlementMasteryEarned = 0;
+            newlyUnlockedNodes.Clear();
             returningToLobby = false;
 
             player = CreateCombatantObject(
@@ -2858,7 +2865,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons,
                 waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity, runEnded, victory,
                 RunMasteryTotal(), settlementFailed, accountExperienceEarned,
-                accountLevelBefore, accountLevelAfter);
+                accountLevelBefore, accountLevelAfter,
+                StageCatalog.TryGet(activeStageSelection.StageId, out var activeStage)
+                    ? activeStage.DisplayName
+                    : string.Empty,
+                StageDifficultyNames.DisplayName(activeStageSelection.Difficulty),
+                settlementCoinsEarned,
+                settlementMasteryEarned,
+                newlyUnlockedNodes);
         }
 
         private static string LegacyStageName(WeaponLegacyStage stage) => stage switch
@@ -3127,7 +3141,17 @@ namespace JoseonHunter.Runtime.Gameplay
             }
 
             var before = AccountProgression.StateFor(session.Data.AccountExperience);
+            var unlockedBefore = UnlockedStageKeys(session.Data);
+            var rewardProfile = StageDifficultyProfile.For(pendingSettlement.StageSelection.Difficulty);
             var pendingAccountReward = AccountProgression.RewardFor(pendingSettlement);
+            var pendingCoinReward = rewardProfile.ScaleReward(
+                pendingSettlement.Coins,
+                rewardProfile.CoinRewardMultiplier);
+            var pendingMasteryReward = 0;
+            foreach (var mastery in pendingSettlement.Mastery.Values)
+                pendingMasteryReward += rewardProfile.ScaleReward(
+                    mastery,
+                    rewardProfile.MasteryRewardMultiplier);
             var result = session.CommitRun(pendingSettlement);
             settlementSucceeded = result.Success;
             settlementFailed = !result.Success;
@@ -3135,11 +3159,18 @@ namespace JoseonHunter.Runtime.Gameplay
             if (result.Success)
             {
                 accountExperienceEarned = pendingAccountReward;
+                settlementCoinsEarned = pendingCoinReward;
+                settlementMasteryEarned = pendingMasteryReward;
                 accountLevelAfter = AccountProgression.StateFor(session.Data.AccountExperience).Level;
+                newlyUnlockedNodes.Clear();
+                AppendNewUnlockLabels(unlockedBefore, session.Data, newlyUnlockedNodes);
             }
             else
             {
                 accountExperienceEarned = 0;
+                settlementCoinsEarned = 0;
+                settlementMasteryEarned = 0;
+                newlyUnlockedNodes.Clear();
                 accountLevelAfter = before.Level;
             }
             return result.Success;
@@ -3150,6 +3181,45 @@ namespace JoseonHunter.Runtime.Gameplay
             var total = 0;
             foreach (var points in runWeaponKillLedger.Snapshot().Values) total += points;
             return total;
+        }
+
+        private static HashSet<string> UnlockedStageKeys(SaveDataV1 data)
+        {
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            var records = StageClearRecordData.DomainRecords(data.StageClearRecords);
+            foreach (var stage in StageCatalog.All)
+            {
+                foreach (StageDifficulty difficulty in Enum.GetValues(typeof(StageDifficulty)))
+                {
+                    var selection = new StageSelection(stage.Id, difficulty);
+                    if (StageUnlockRules.IsUnlocked(selection, records)) result.Add(selection.ToString());
+                }
+            }
+            return result;
+        }
+
+        private static void AppendNewUnlockLabels(
+            HashSet<string> before,
+            SaveDataV1 after,
+            List<string> destination)
+        {
+            var unlockedAfter = UnlockedStageKeys(after);
+            for (var stageIndex = 1; stageIndex < StageCatalog.All.Count; stageIndex++)
+            {
+                var selection = new StageSelection(StageCatalog.All[stageIndex].Id, StageDifficulty.Normal);
+                if (before.Contains(selection.ToString()) || !unlockedAfter.Contains(selection.ToString())) continue;
+                destination.Add($"새 지역: {StageCatalog.All[stageIndex].DisplayName} · 보통");
+            }
+            for (var stageIndex = 0; stageIndex < StageCatalog.All.Count; stageIndex++)
+            {
+                foreach (var difficulty in new[] { StageDifficulty.Omen, StageDifficulty.GreatOmen })
+                {
+                    var selection = new StageSelection(StageCatalog.All[stageIndex].Id, difficulty);
+                    if (before.Contains(selection.ToString()) || !unlockedAfter.Contains(selection.ToString())) continue;
+                    destination.Add($"새 난이도: {StageCatalog.All[stageIndex].DisplayName} · " +
+                        StageDifficultyNames.DisplayName(difficulty));
+                }
+            }
         }
 
         private PixelHitMask MaskFor(SpriteRenderer renderer)

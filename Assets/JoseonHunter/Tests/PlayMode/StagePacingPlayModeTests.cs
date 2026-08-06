@@ -168,8 +168,10 @@ namespace JoseonHunter.Tests.PlayMode
             controller.SpawnEnemyForLifecycleTests();
 
             Assert.That(controller.ActiveStageDifficultyForTests, Is.EqualTo(StageDifficulty.Omen));
-            Assert.That(controller.LastSpawnHealthForTests, Is.EqualTo(18f * 1.35f).Within(.01f));
-            Assert.That(controller.LastSpawnContactDamageForTests, Is.EqualTo(10f * 1.15f).Within(.01f));
+            Assert.That(controller.LastSpawnHealthForTests,
+                Is.EqualTo(18f * .75f * 1.35f).Within(.01f));
+            Assert.That(controller.LastSpawnContactDamageForTests,
+                Is.EqualTo(10f * .80f * 1.15f).Within(.01f));
             Assert.That(controller.ActiveEnemyCapForTests, Is.LessThanOrEqualTo(140));
             Assert.That(controller.NextSpawnIntervalForTests, Is.LessThan(.22f));
         }

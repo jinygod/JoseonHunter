@@ -28,11 +28,12 @@ namespace JoseonHunter.Presentation.UI
             title.text = state.Victory ? "승전" : "전투 종료";
             var lines = new List<string>
             {
+                $"{state.StageDisplayName} · {state.DifficultyDisplayName}",
                 $"생존 시간  {state.Elapsed:0.0}초",
                 $"처치  {state.Kills}",
                 $"도달 레벨  {state.Level}",
-                $"획득 엽전  {state.Coins}",
-                $"획득 숙련도  {state.RunMasteryEarned}"
+                $"획득 엽전  {state.SettlementCoinsEarned}",
+                $"획득 숙련도  {state.SettlementMasteryEarned}"
             };
             if (state.SettlementFailed)
             {
@@ -45,6 +46,7 @@ namespace JoseonHunter.Presentation.UI
                     lines.Add($"계정 레벨 {AccountProgression.MaximumLevel} · 최대");
                 else if (state.AccountLevelAfter != state.AccountLevelBefore)
                     lines.Add($"계정 레벨 {state.AccountLevelBefore} → {state.AccountLevelAfter}");
+                foreach (var unlocked in state.NewlyUnlockedNodes) lines.Add(unlocked);
             }
             summary.text = string.Join("\n", lines);
             lobbyReturnLabel.text = state.SettlementFailed ? "다시 저장" : "로비로 돌아가기";

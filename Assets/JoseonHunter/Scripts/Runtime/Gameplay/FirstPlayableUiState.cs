@@ -14,7 +14,10 @@ namespace JoseonHunter.Runtime.Gameplay
             string waveAnnouncement = null, float waveAnnouncementRemaining = 0f,
             int waveAnnouncementIntensity = 0, bool runEnded = false, bool victory = false,
             int runMasteryEarned = 0, bool settlementFailed = false,
-            int accountExperienceEarned = 0, int accountLevelBefore = 1, int accountLevelAfter = 1)
+            int accountExperienceEarned = 0, int accountLevelBefore = 1, int accountLevelAfter = 1,
+            string stageDisplayName = "귀곡 들판", string difficultyDisplayName = "보통",
+            int settlementCoinsEarned = 0, int settlementMasteryEarned = 0,
+            IEnumerable<string> newlyUnlockedNodes = null)
         {
             Level = level; Experience = experience; ExperienceToNext = experienceToNext; Coins = coins; Kills = kills;
             Elapsed = elapsed; Duration = duration; Health = health; MaximumHealth = maximumHealth;
@@ -30,6 +33,11 @@ namespace JoseonHunter.Runtime.Gameplay
             AccountExperienceEarned = accountExperienceEarned;
             AccountLevelBefore = accountLevelBefore;
             AccountLevelAfter = accountLevelAfter;
+            StageDisplayName = stageDisplayName ?? string.Empty;
+            DifficultyDisplayName = difficultyDisplayName ?? string.Empty;
+            SettlementCoinsEarned = settlementCoinsEarned;
+            SettlementMasteryEarned = settlementMasteryEarned;
+            NewlyUnlockedNodes = Array.AsReadOnly((newlyUnlockedNodes ?? Array.Empty<string>()).ToArray());
         }
 
         public int Level { get; }
@@ -56,6 +64,11 @@ namespace JoseonHunter.Runtime.Gameplay
         public int AccountExperienceEarned { get; }
         public int AccountLevelBefore { get; }
         public int AccountLevelAfter { get; }
+        public string StageDisplayName { get; }
+        public string DifficultyDisplayName { get; }
+        public int SettlementCoinsEarned { get; }
+        public int SettlementMasteryEarned { get; }
+        public IReadOnlyList<string> NewlyUnlockedNodes { get; }
     }
 
     public readonly struct UpgradeChoiceView
