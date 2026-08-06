@@ -57,7 +57,7 @@ public void LevelTwentyStartsAtTwelveThousandNineHundredFiftyEight()
 }
 ```
 
-음수 입력 정규화, 레벨 1 요구치 100, 250 누적 경험치가 레벨 3의 10/268인지, 최대 레벨 고정, 덧셈 오버플로 거부를 각각 독립 테스트한다.
+음수 입력 정규화, 레벨 1 요구치 100, 250 누적 경험치가 레벨 3의 8/188인지, 최대 레벨 고정, 덧셈 오버플로 거부를 각각 독립 테스트한다.
 
 - [ ] **Step 2: Run RED**
 
@@ -258,7 +258,7 @@ int accountLevelAfter = 1
 
 - [ ] **Step 1: Write failing lobby UI tests**
 
-누적 경험치 250인 세션에서 레벨 3, 이름 `요괴 사냥꾼`, 경험치 `10 / 268`, fillAmount `10/268`을 확인한다. 계정 레벨 7·총 수련 24는 `총 수련 24/35 · 계정 7레벨 한도`, `활력 8/20`, 현재 11.8%, 다음 12.4%를 표시해야 한다. 한도 도달 시 버튼 비활성화와 `계정 레벨 8에서 추가 수련이 열립니다`를 확인한다.
+누적 경험치 250인 세션에서 레벨 3, 이름 `요괴 사냥꾼`, 경험치 `8 / 188`, fillAmount `8/188`을 확인한다. 계정 레벨 7·총 수련 24는 `총 수련 24/35 · 계정 7레벨 한도`, `활력 8/20`, 현재 11.8%, 다음 12.4%를 표시해야 한다. 한도 도달 시 버튼 비활성화와 `계정 레벨 8에서 추가 수련이 열립니다`를 확인한다.
 
 - [ ] **Step 2: Run `LobbyNavigationPlayModeTests` and `CommonTrainingLobbyPlayModeTests` RED**
 - [ ] **Step 3: Build the account header**
