@@ -33,7 +33,7 @@ namespace JoseonHunter.Tests.EditMode
 
             var loaded = new JsonSaveRepository(directory).Load();
 
-            Assert.That(loaded.Data.SchemaVersion, Is.EqualTo(2));
+            Assert.That(loaded.Data.SchemaVersion, Is.EqualTo(3));
             Assert.That(loaded.Data.Coins, Is.EqualTo(777));
             Assert.That(loaded.Data.EquipmentLevels["weapon_01"], Is.EqualTo(4));
             Assert.That(loaded.Data.InvestigationClues, Contains.Item("clue_03"));
@@ -41,10 +41,11 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void SchemaTwoRoundTripPreservesMasteryStylesTrainingAndLoadouts()
+        public void SchemaThreeRoundTripPreservesMasteryStylesTrainingAccountAndLoadouts()
         {
             var data = SaveDataV1.CreateDefaults();
             data.Coins = 321;
+            data.AccountExperience = 12958;
             data.WeaponMasteryPoints[WeaponId.FrostFlask.Value] = 4567;
             data.UnlockedWeaponStyles.Add(WeaponLegacyPathId.FrostMist.Value);
             data.CommonTrainingRanks[CommonTrainingId.Power.ToString()] = 3;
@@ -58,12 +59,45 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(repository.Save(data).Success, Is.True);
             var loaded = repository.Load().Data;
 
-            Assert.That(loaded.SchemaVersion, Is.EqualTo(2));
+            Assert.That(loaded.SchemaVersion, Is.EqualTo(3));
+            Assert.That(loaded.AccountExperience, Is.EqualTo(12958));
             Assert.That(loaded.WeaponMasteryPoints[WeaponId.FrostFlask.Value], Is.EqualTo(4567));
             Assert.That(loaded.UnlockedWeaponStyles, Contains.Item(WeaponLegacyPathId.FrostMist.Value));
             Assert.That(loaded.CommonTrainingRanks[CommonTrainingId.Power.ToString()], Is.EqualTo(3));
             Assert.That(loaded.PatrolLoadouts[1].Name, Is.EqualTo("빙무 순찰"));
             Assert.That(loaded.ActivePatrolLoadoutIndex, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SchemaTwoTrainingMigratesToEnoughAccountExperienceWithoutLosingProgress()
+        {
+            Directory.CreateDirectory(directory);
+            const string payload = "{\"schemaVersion\":2,\"coins\":555,\"commonTrainingRanks\":[{\"key\":\"Vitality\",\"value\":5},{\"key\":\"Power\",\"value\":5},{\"key\":\"Footwork\",\"value\":5},{\"key\":\"Learning\",\"value\":2}]}";
+            var envelope = "{\"payload\":\"" + payload.Replace("\\", "\\\\").Replace("\"", "\\\"") +
+                           "\",\"checksum\":\"" + SaveChecksum.ForCanonicalPayload(payload) + "\"}";
+            File.WriteAllText(Path.Combine(directory, "progression.json"), envelope);
+
+            var loaded = new JsonSaveRepository(directory).Load().Data;
+
+            Assert.That(loaded.SchemaVersion, Is.EqualTo(3));
+            Assert.That(AccountProgression.StateFor(loaded.AccountExperience).Level, Is.EqualTo(4));
+            Assert.That(loaded.AccountExperience, Is.EqualTo(AccountProgression.TotalExperienceForLevel(4)));
+            Assert.That(loaded.CommonTrainingRanks[CommonTrainingId.Learning.ToString()], Is.EqualTo(2));
+            Assert.That(loaded.Coins, Is.EqualTo(555));
+        }
+
+        [Test]
+        public void SaveDataCopyAndCopyFromPreserveAccountExperience()
+        {
+            var source = SaveDataV1.CreateDefaults();
+            source.AccountExperience = 777;
+
+            var copy = source.Copy();
+            var destination = SaveDataV1.CreateDefaults();
+            destination.CopyFrom(copy);
+
+            Assert.That(copy.AccountExperience, Is.EqualTo(777));
+            Assert.That(destination.AccountExperience, Is.EqualTo(777));
         }
 
         [Test]

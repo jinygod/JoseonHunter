@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using JoseonHunter.Domain;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
 using UnityEngine;
 
@@ -71,7 +73,9 @@ namespace JoseonHunter.Infrastructure.Save
                 var envelope = JsonUtility.FromJson<SaveEnvelope>(File.ReadAllText(path, Encoding.UTF8));
                 if (envelope == null || string.IsNullOrEmpty(envelope.payload) || envelope.checksum != SaveChecksum.ForCanonicalPayload(envelope.payload)) return false;
                 var document = JsonUtility.FromJson<SaveDocument>(envelope.payload);
-                if (document == null || (document.schemaVersion != 1 && document.schemaVersion != 2)) return false;
+                if (document == null ||
+                    (document.schemaVersion != 1 && document.schemaVersion != 2 && document.schemaVersion != 3))
+                    return false;
                 data = document.ToData();
                 return true;
             }
@@ -98,6 +102,7 @@ namespace JoseonHunter.Infrastructure.Save
         [Serializable] private sealed class SaveDocument
         {
             public int schemaVersion;
+            public int accountExperience;
             public int coins;
             public string ownedHero;
             public string equippedHero;
@@ -129,7 +134,10 @@ namespace JoseonHunter.Infrastructure.Save
 
             public static SaveDocument From(SaveDataV1 data) => new SaveDocument
             {
-                schemaVersion = 2,
+                schemaVersion = ProjectIdentity.SaveSchemaVersion,
+                accountExperience = Math.Max(0, Math.Min(
+                    AccountProgression.TotalExperienceForLevel(AccountProgression.MaximumLevel),
+                    data.AccountExperience)),
                 coins = Math.Max(0, data.Coins),
                 ownedHero = data.OwnedHero,
                 equippedHero = data.EquippedHero,
@@ -163,7 +171,7 @@ namespace JoseonHunter.Infrastructure.Save
             public SaveDataV1 ToData()
             {
                 var data = SaveDataV1.CreateDefaults();
-                data.SchemaVersion = 2;
+                data.SchemaVersion = ProjectIdentity.SaveSchemaVersion;
                 data.Coins = Math.Max(0, coins);
                 data.OwnedHero = ownedHero ?? data.OwnedHero;
                 data.EquippedHero = equippedHero ?? data.EquippedHero;
@@ -190,10 +198,28 @@ namespace JoseonHunter.Infrastructure.Save
                 data.UnlockedWeaponStyles = List(unlockedWeaponStyles);
                 Overlay(data.CommonTrainingRanks, commonTrainingRanks);
                 Overlay(data.CommonTrainingSpentCoins, commonTrainingSpentCoins);
+                data.AccountExperience = MigratedAccountExperience(data);
                 if (patrolLoadouts != null && patrolLoadouts.Length > 0)
                     data.PatrolLoadouts = NormalizeLoadouts(patrolLoadouts);
                 data.ActivePatrolLoadoutIndex = Math.Max(0, Math.Min(data.PatrolLoadouts.Count - 1, activePatrolLoadoutIndex));
                 return data;
+            }
+
+            private int MigratedAccountExperience(SaveDataV1 data)
+            {
+                var maximum = AccountProgression.TotalExperienceForLevel(AccountProgression.MaximumLevel);
+                if (schemaVersion >= 3)
+                    return Math.Max(0, Math.Min(maximum, accountExperience));
+
+                var totalRanks = 0;
+                foreach (CommonTrainingId id in Enum.GetValues(typeof(CommonTrainingId)))
+                {
+                    if (data.CommonTrainingRanks.TryGetValue(id.ToString(), out var rank))
+                        totalRanks += Math.Max(0, Math.Min(CommonTrainingProgression.MaximumRankPerTrack, rank));
+                }
+
+                var minimumLevel = Math.Max(1, Math.Min(20, (totalRanks + 4) / 5));
+                return AccountProgression.TotalExperienceForLevel(minimumLevel);
             }
 
             private static PatrolLoadoutDocument FromLoadout(PatrolLoadoutData data) => new PatrolLoadoutDocument

@@ -37,7 +37,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return WaitForLoaderRemoval(5f);
             Assert.That(Object.FindAnyObjectByType<BootstrapLoadingPresenter>(), Is.Null);
             Assert.That(MetaGameSession.Current, Is.Not.Null);
-            Assert.That(MetaGameSession.Current.Data.SchemaVersion, Is.EqualTo(2));
+            Assert.That(MetaGameSession.Current.Data.SchemaVersion, Is.EqualTo(3));
         }
 
         [UnityTest]

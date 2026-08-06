@@ -30,7 +30,7 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(result.Source, Is.EqualTo(LoadSource.Defaults));
             Assert.That(result.Error, Is.EqualTo(SaveError.None));
-            Assert.That(result.Data.SchemaVersion, Is.EqualTo(2));
+            Assert.That(result.Data.SchemaVersion, Is.EqualTo(3));
         }
 
         [Test]

@@ -23,7 +23,7 @@ namespace JoseonHunter.Domain.Save
     [Serializable]
     public sealed class SaveDataV1
     {
-        public int SchemaVersion = 2;
+        public int SchemaVersion = ProjectIdentity.SaveSchemaVersion;
         public int AccountExperience;
         public int Coins;
         public string OwnedHero = "hunter";
