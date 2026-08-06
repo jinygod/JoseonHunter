@@ -38,6 +38,7 @@ sysinfo.txt
 /Artifacts/
 /tmp/
 /.utmp/
+/ExternalAssets/
 
 # Platform build artifacts
 *.apk
