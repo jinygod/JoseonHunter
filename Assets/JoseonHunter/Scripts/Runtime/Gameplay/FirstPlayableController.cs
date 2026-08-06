@@ -177,6 +177,13 @@ namespace JoseonHunter.Runtime.Gameplay
         public event Action<WeaponLegacyChoiceState> WeaponLegacyOpened;
         public event Action<ProgressionRewardEvent> UpgradeChosen;
         public event Action RunReset;
+        public event Action ExperienceCollected;
+        public event Action YeopjeonCollected;
+        public event Action MagnetCollected;
+        public event Action PlayerLevelIncreased;
+        public event Action BossWarningStarted;
+        public event Action BossAppeared;
+        public event Action BossDefeated;
 
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
@@ -1618,11 +1625,13 @@ namespace JoseonHunter.Runtime.Gameplay
             ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FinalBossWarning, () =>
             {
                 finalBossWarning = true;
+                BossWarningStarted?.Invoke();
                 ShowWaveAnnouncement("강대한 요기가 다가옵니다", 3, 1.8f);
             });
             ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FinalBoss, () =>
             {
                 SpawnBoss();
+                BossAppeared?.Invoke();
                 ShowWaveAnnouncement("최종보스 · 타락한 장군", 3, 1.8f);
             });
         }
@@ -2095,6 +2104,7 @@ namespace JoseonHunter.Runtime.Gameplay
             kills++;
             if (wasBoss)
             {
+                BossDefeated?.Invoke();
                 if (!confirmedWeaponDamage) EndRun(true);
                 return;
             }
@@ -2393,15 +2403,18 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (pickup.Kind == PickupKind.Yeopjeon)
                 {
                     coins += pickup.Value;
+                    YeopjeonCollected?.Invoke();
                 }
                 else if (pickup.Kind == PickupKind.Experience)
                 {
                     AddExperience(pickup.Value);
                     TriggerExperienceAbsorbFlash();
+                    ExperienceCollected?.Invoke();
                 }
                 else
                 {
                     CollectMagnet();
+                    MagnetCollected?.Invoke();
                 }
 
                 ReleasePickupAt(index);
@@ -2465,6 +2478,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     ? ExperienceCurve.GetThresholdForNextLevel(level)
                     : 0;
                 pendingUpgradeCount++;
+                PlayerLevelIncreased?.Invoke();
             }
 
             if (level >= RunLoadoutRules.MaximumPlayerLevel) experience = 0;

@@ -7,6 +7,7 @@ using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Runtime.Meta;
+using JoseonHunter.Runtime.Audio;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -251,6 +252,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Build();
             session = value;
             refreshHeader = onChanged;
+            GameAudioButtonFeedback.Attach(patrolButton, GameAudioCueId.UiConfirm);
             LoadCurrentWeapon();
             LoadCurrentStage();
 

@@ -1,5 +1,7 @@
 using JoseonHunter.Runtime.Gameplay;
 using JoseonHunter.Domain.Runs;
+using JoseonHunter.Presentation.Audio;
+using JoseonHunter.Runtime.Audio;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -169,6 +171,9 @@ namespace JoseonHunter.Presentation.UI
             if (safeArea != lastSafeArea || screenSize != lastScreenSize) ApplySafeArea(safeArea, screenSize);
 
             if (boundController == null) BindController(FindAnyObjectByType<FirstPlayableController>());
+            if (boundController != null && GameAudioDirector.Instance != null)
+                GameAudioDirector.Instance.SetCombatEnabled(boundController.Flow != null &&
+                                                            boundController.Flow.IsGameplayRunning);
             if (boundController == null || Time.unscaledTime < nextRenderTime) return;
 
             nextRenderTime = Time.unscaledTime + RenderInterval;
@@ -181,7 +186,11 @@ namespace JoseonHunter.Presentation.UI
                 {
                     resultWasOpen = state.RunEnded;
                     SetBackgroundRaycastsEnabled(!resultWasOpen);
-                    if (resultWasOpen) SetModalScrimVisible(false);
+                    if (resultWasOpen)
+                    {
+                        SetModalScrimVisible(false);
+                        PlayCue(state.Victory ? GameAudioCueId.Victory : GameAudioCueId.Defeat);
+                    }
                 }
                 var signature = WeaponSignature(state);
                 if (signature == weaponSignature) return;
@@ -200,6 +209,13 @@ namespace JoseonHunter.Presentation.UI
             boundController.WeaponReplacementOpened += OpenWeaponReplacement;
             boundController.WeaponLegacyOpened += OpenWeaponLegacyChoice;
             boundController.UpgradeChosen += OnUpgradeChosen;
+            boundController.ExperienceCollected += OnExperienceCollected;
+            boundController.YeopjeonCollected += OnYeopjeonCollected;
+            boundController.MagnetCollected += OnMagnetCollected;
+            boundController.PlayerLevelIncreased += OnPlayerLevelIncreased;
+            boundController.BossWarningStarted += OnBossWarningStarted;
+            boundController.BossAppeared += OnBossAppeared;
+            boundController.BossDefeated += OnBossDefeated;
             boundController.RunReset += CloseUpgradeChoice;
             boundController.RunReset += CloseRewardReveal;
             boundController.RunReset += CloseAbandonWithoutFlowChange;
@@ -212,6 +228,13 @@ namespace JoseonHunter.Presentation.UI
             boundController.WeaponReplacementOpened -= OpenWeaponReplacement;
             boundController.WeaponLegacyOpened -= OpenWeaponLegacyChoice;
             boundController.UpgradeChosen -= OnUpgradeChosen;
+            boundController.ExperienceCollected -= OnExperienceCollected;
+            boundController.YeopjeonCollected -= OnYeopjeonCollected;
+            boundController.MagnetCollected -= OnMagnetCollected;
+            boundController.PlayerLevelIncreased -= OnPlayerLevelIncreased;
+            boundController.BossWarningStarted -= OnBossWarningStarted;
+            boundController.BossAppeared -= OnBossAppeared;
+            boundController.BossDefeated -= OnBossDefeated;
             boundController.RunReset -= CloseUpgradeChoice;
             boundController.RunReset -= CloseRewardReveal;
             boundController.RunReset -= CloseAbandonWithoutFlowChange;
@@ -292,6 +315,7 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnUpgradeChosen(ProgressionRewardEvent reward)
         {
+            PlayCue(GameAudioCueId.UpgradeSelected);
             using (FirstPlayableProfilerMarkers.UiModal.Auto())
             {
                 var requiresRewardPresentation = reward.Kind != ProgressionRewardKind.Support;
@@ -309,6 +333,20 @@ namespace JoseonHunter.Presentation.UI
                 }
             }
 
+        }
+
+        private static void OnExperienceCollected() => PlayCue(GameAudioCueId.ExperiencePickup);
+        private static void OnYeopjeonCollected() => PlayCue(GameAudioCueId.YeopjeonPickup);
+        private static void OnMagnetCollected() => PlayCue(GameAudioCueId.MagnetPickup);
+        private static void OnPlayerLevelIncreased() => PlayCue(GameAudioCueId.LevelUp);
+        private static void OnBossWarningStarted() => PlayCue(GameAudioCueId.BossWarning);
+        private static void OnBossAppeared() => PlayCue(GameAudioCueId.BossAppear);
+        private static void OnBossDefeated() => PlayCue(GameAudioCueId.BossDefeat);
+
+        private static void PlayCue(GameAudioCueId cue)
+        {
+            GameAudioDirector.EnsureExists();
+            GameAudioDirector.Instance?.TryPlay(cue);
         }
 
         private void CloseRewardReveal()

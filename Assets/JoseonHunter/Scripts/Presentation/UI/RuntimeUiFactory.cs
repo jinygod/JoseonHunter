@@ -38,7 +38,9 @@ namespace JoseonHunter.Presentation.UI
         public static Button Button(string name, Transform parent, Color color)
         {
             var image = Image(name, parent, color);
-            return image.gameObject.AddComponent<Button>();
+            var button = image.gameObject.AddComponent<Button>();
+            GameAudioButtonFeedback.Attach(button);
+            return button;
         }
 
         public static void Stretch(RectTransform rect, float left, float bottom, float right, float top)

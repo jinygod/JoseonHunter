@@ -5,6 +5,8 @@ using JoseonHunter.Domain.Geumjul;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Presentation.Audio;
+using JoseonHunter.Runtime.Audio;
 using UnityEngine;
 
 namespace JoseonHunter.Presentation.Combat
@@ -189,7 +191,16 @@ namespace JoseonHunter.Presentation.Combat
 
         private void OnDamageConfirmed(ConfirmedDamageEvent confirmed)
         {
-            var request = new FeedbackRequest(confirmed.IsCritical, isTargetAlive != null && !isTargetAlive(confirmed.TargetRuntimeId),
+            var killed = isTargetAlive != null && !isTargetAlive(confirmed.TargetRuntimeId);
+            if (flow == null || flow.IsGameplayRunning)
+            {
+                GameAudioDirector.EnsureExists();
+                var audio = GameAudioDirector.Instance;
+                audio?.TryPlayWeapon(confirmed.WeaponId, confirmed.AttackInstanceId);
+                audio?.TryPlay(confirmed.IsCritical ? GameAudioCueId.CriticalHit : GameAudioCueId.NormalHit);
+            }
+
+            var request = new FeedbackRequest(confirmed.IsCritical, killed,
                 confirmed.IsBossTarget, ReducedEffects);
             var profile = CombatFeedbackBudget.Resolve(request);
             if (profile.ShowContactFlash) ShowFlash(confirmed.ContactPoint, profile.Intensity);

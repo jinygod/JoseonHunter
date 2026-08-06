@@ -70,6 +70,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             colors.selectedColor = colors.highlightedColor;
             colors.disabledColor = new Color(background.r, background.g, background.b, .45f);
             button.colors = colors;
+            GameAudioButtonFeedback.Attach(button);
             var text = Text("Label", image.transform, label, size);
             text.color = foreground;
             Stretch(text.rectTransform, 12f, 6f, 12f, 6f);

@@ -12,8 +12,7 @@ namespace JoseonHunter.Tests.PlayMode
         [UnitySetUp]
         public IEnumerator SetUp()
         {
-            foreach (var director in Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include,
-                         FindObjectsSortMode.None))
+            foreach (var director in Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include))
                 Object.Destroy(director.gameObject);
             yield return null;
         }
@@ -21,8 +20,7 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
-            foreach (var director in Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include,
-                         FindObjectsSortMode.None))
+            foreach (var director in Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include))
                 Object.Destroy(director.gameObject);
             yield return null;
         }
@@ -34,8 +32,8 @@ namespace JoseonHunter.Tests.PlayMode
             GameAudioDirector.EnsureExists();
             yield return null;
 
-            Assert.That(Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include,
-                FindObjectsSortMode.None), Has.Length.EqualTo(1));
+            Assert.That(Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include),
+                Has.Length.EqualTo(1));
             Assert.That(GameAudioDirector.Instance, Is.Not.Null);
             Assert.That(GameAudioDirector.Instance.SourceCount, Is.EqualTo(12));
         }
@@ -49,8 +47,8 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             Assert.That(GameAudioDirector.Instance, Is.SameAs(original));
-            Assert.That(Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include,
-                FindObjectsSortMode.None), Has.Length.EqualTo(1));
+            Assert.That(Object.FindObjectsByType<GameAudioDirector>(FindObjectsInactive.Include),
+                Has.Length.EqualTo(1));
         }
 
         [UnityTest]

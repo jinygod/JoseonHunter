@@ -21,6 +21,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private void Awake()
         {
             BuildShell();
+            GameAudioButtonFeedback.AttachAll(transform);
             Bind(MetaGameSession.EnsureExists());
             ApplySafeArea();
         }
