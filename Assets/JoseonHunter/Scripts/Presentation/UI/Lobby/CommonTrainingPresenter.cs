@@ -15,6 +15,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
         [SerializeField] private TMP_Text nextText;
         [SerializeField] private TMP_Text costText;
         [SerializeField] private TMP_Text feedbackText;
+        [SerializeField] private TMP_Text capacityText;
         [SerializeField] private Button purchaseButton;
         [SerializeField] private Button resetButton;
         private MetaGameSession session;
@@ -24,19 +25,33 @@ namespace JoseonHunter.Presentation.UI.Lobby
         public string CurrentTextForTests => currentText.text;
         public string NextTextForTests => nextText.text;
         public string CostTextForTests => costText.text;
+        public string CapacityTextForTests => capacityText.text;
+        public string FeedbackTextForTests => feedbackText.text;
+        public bool PurchaseInteractableForTests => purchaseButton.interactable;
+        public string ButtonTextForTests(CommonTrainingId id) =>
+            trainingButtons[(int)id].GetComponentInChildren<TMP_Text>().text;
 
         public void Build()
         {
-            if (transform.Find("Training Title") != null) return;
+            if (transform.Find("Training Title") != null)
+            {
+                EnsureExpandedView();
+                return;
+            }
             var title = LobbyUiFactory.Text("Training Title", transform, "수련", 34f,
                 TextAlignmentOptions.Center, true);
             title.color = LobbyUiFactory.AntiqueGold;
             LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
                 Vector2.zero, Vector2.zero);
             var description = LobbyUiFactory.Text("Training Description", transform,
-                "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 10%입니다.", 19f);
+                "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 15%입니다.", 19f);
             description.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(description.rectTransform, new Vector2(.06f, .82f), new Vector2(.94f, .90f),
+                Vector2.zero, Vector2.zero);
+            capacityText = LobbyUiFactory.Text("Training Capacity", transform, string.Empty, 18f,
+                TextAlignmentOptions.Center, true);
+            capacityText.color = LobbyUiFactory.AntiqueGold;
+            LobbyUiFactory.Anchor(capacityText.rectTransform, new Vector2(.06f, .78f), new Vector2(.94f, .83f),
                 Vector2.zero, Vector2.zero);
 
             var gridRoot = LobbyUiFactory.Rect("Training Grid", transform);
@@ -89,6 +104,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void Initialize(MetaGameSession value, Action onChanged)
         {
+            EnsureExpandedView();
             session = value;
             refreshHeader = onChanged;
             for (var index = 0; index < trainingButtons.Length; index++)
@@ -122,6 +138,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 ? "수련 성과가 모든 출전에 적용됩니다."
                 : result.Error == ProgressionError.InsufficientCoins
                     ? "엽전이 부족합니다."
+                    : result.Error == ProgressionError.AccountLevelRequired
+                        ? $"계정 레벨 {new CommonTrainingProgression(session.Data).NextCapacityLevel}에서 추가 수련이 열립니다."
                     : result.Error == ProgressionError.MaximumReached
                         ? "이미 최대 단계입니다."
                         : "저장하지 못했습니다. 다시 시도해 주세요.";
@@ -144,20 +162,46 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private void Refresh()
         {
             if (session == null) return;
-            var key = selected.ToString();
-            var rank = session.Data.CommonTrainingRanks.TryGetValue(key, out var value) ? value : 0;
+            var progression = new CommonTrainingProgression(session.Data);
+            var rank = progression.Rank(selected);
             var effect = LobbyViewModels.TrainingEffect(selected);
-            currentText.text = $"현재 {effect} +{rank * 2}%";
-            nextText.text = rank >= 5 ? "최대 단계에 도달했습니다" : $"강화 후 {effect} +{(rank + 1) * 2}%";
-            costText.text = rank >= 5 ? "추가 엽전 필요 없음" : $"필요 엽전 {CommonTrainingProgression.Costs[rank]:N0}";
-            purchaseButton.interactable = rank < 5;
+            var trackMaximum = rank >= CommonTrainingProgression.MaximumRankPerTrack;
+            var capacityReached = progression.TotalRanks >= progression.Capacity;
+            capacityText.text = $"총 수련 {progression.TotalRanks}/{progression.Capacity} · 계정 {AccountProgression.StateFor(session.Data.AccountExperience).Level}레벨 한도";
+            currentText.text = $"현재 {effect} +{FormatPercent(CommonTrainingProgression.BonusForRank(rank))}%";
+            nextText.text = trackMaximum
+                ? "최대 단계에 도달했습니다"
+                : $"강화 후 {effect} +{FormatPercent(CommonTrainingProgression.BonusForRank(rank + 1))}%";
+            var cost = trackMaximum ? 0 : CommonTrainingProgression.CostForRank(rank + 1);
+            costText.text = trackMaximum
+                ? "추가 엽전 필요 없음"
+                : $"필요 엽전 {cost:N0} · 강화 후 {Math.Max(0, session.Data.Coins - cost):N0}";
+            purchaseButton.interactable = !trackMaximum && !capacityReached;
+            if (!trackMaximum && capacityReached)
+                feedbackText.text = $"계정 레벨 {progression.NextCapacityLevel}에서 추가 수련이 열립니다.";
             for (var index = 0; index < trainingButtons.Length; index++)
             {
                 var id = (CommonTrainingId)index;
-                var idRank = session.Data.CommonTrainingRanks.TryGetValue(id.ToString(), out var idValue) ? idValue : 0;
+                var idRank = progression.Rank(id);
                 trainingButtons[index].GetComponentInChildren<TMP_Text>().text =
-                    $"{LobbyViewModels.TrainingName(id)}\n{idRank}/5";
+                    $"{LobbyViewModels.TrainingName(id)}\n{idRank}/{CommonTrainingProgression.MaximumRankPerTrack}";
             }
         }
+
+        private void EnsureExpandedView()
+        {
+            var description = transform.Find("Training Description")?.GetComponent<TMP_Text>();
+            if (description != null)
+                description.text = "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 15%입니다.";
+            capacityText = transform.Find("Training Capacity")?.GetComponent<TMP_Text>();
+            if (capacityText != null) return;
+            capacityText = LobbyUiFactory.Text("Training Capacity", transform, string.Empty, 18f,
+                TextAlignmentOptions.Center, true);
+            capacityText.color = LobbyUiFactory.AntiqueGold;
+            LobbyUiFactory.Anchor(capacityText.rectTransform, new Vector2(.06f, .78f), new Vector2(.94f, .83f),
+                Vector2.zero, Vector2.zero);
+        }
+
+        private static string FormatPercent(float bonus) => (bonus * 100f).ToString("0.#");
     }
 }

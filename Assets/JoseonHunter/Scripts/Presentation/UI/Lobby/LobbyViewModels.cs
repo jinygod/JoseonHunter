@@ -23,8 +23,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             CommonTrainingId.Power => "완력",
             CommonTrainingId.Footwork => "보법",
             CommonTrainingId.Learning => "학습",
-            CommonTrainingId.Guard => "호신",
-            _ => "감응"
+            CommonTrainingId.Guard => "수호",
+            _ => "공명"
         };
 
         internal static string TrainingEffect(CommonTrainingId id) => id switch

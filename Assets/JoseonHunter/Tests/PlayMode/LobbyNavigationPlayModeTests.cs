@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using JoseonHunter.Domain.Save;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
@@ -62,6 +63,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(coinText.text, Is.EqualTo("155"));
             Assert.That(coinText.text, Does.Not.Contain("엽전"));
             Assert.That(coinText.text, Does.Not.Contain("냥"));
+        }
+
+        [UnityTest]
+        public IEnumerator HeaderShowsAccountLevelNameAndCurrentExperienceProgress()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.AccountExperience = 250;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var level = GameObject.Find("Account Level")?.GetComponent<TMPro.TMP_Text>();
+            var accountName = GameObject.Find("Account Name")?.GetComponent<TMPro.TMP_Text>();
+            var experienceText = GameObject.Find("Account Experience Text")?.GetComponent<TMPro.TMP_Text>();
+            var experienceFill = GameObject.Find("Account Experience Fill")?.GetComponent<Image>();
+
+            Assert.That(level, Is.Not.Null);
+            Assert.That(level.text, Is.EqualTo("3"));
+            Assert.That(accountName.text, Is.EqualTo("요괴 사냥꾼"));
+            Assert.That(experienceText.text, Is.EqualTo("8 / 188"));
+            Assert.That(experienceFill.fillAmount, Is.EqualTo(8f / 188f).Within(.001f));
+            Assert.That(GameObject.Find("Lobby Title"), Is.Null);
         }
 
         [UnityTest]

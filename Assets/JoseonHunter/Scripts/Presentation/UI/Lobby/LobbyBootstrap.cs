@@ -1,4 +1,5 @@
 using JoseonHunter.Runtime.Meta;
+using JoseonHunter.Domain.Progression;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -11,6 +12,9 @@ namespace JoseonHunter.Presentation.UI.Lobby
     public sealed class LobbyBootstrap : MonoBehaviour
     {
         private TMP_Text coinText;
+        private TMP_Text accountLevelText;
+        private TMP_Text accountExperienceText;
+        private Image accountExperienceFill;
         private RectTransform safeArea;
         private Rect lastSafeArea;
 
@@ -28,7 +32,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void BuildShell()
         {
-            if (transform.Find("Safe Area") != null) return;
+            if (transform.Find("Safe Area") != null)
+            {
+                safeArea = transform.Find("Safe Area") as RectTransform;
+                EnsureAccountHeader();
+                return;
+            }
             var canvas = GetComponent<Canvas>() ?? gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 20;
@@ -66,6 +75,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 Vector2.zero, Vector2.zero);
             LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.80f, .1f), new Vector2(.96f, .9f),
                 Vector2.zero, Vector2.zero);
+            EnsureAccountHeader();
 
             var stageContent = LobbyUiFactory.Rect("Stage Content", safeArea);
             LobbyUiFactory.Anchor(stageContent, new Vector2(.02f, .12f), new Vector2(.98f, .895f),
@@ -111,6 +121,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
         {
             safeArea = transform.Find("Safe Area") as RectTransform;
             coinText = transform.Find("Safe Area/Header/Coin Text")?.GetComponent<TMP_Text>();
+            EnsureAccountHeader();
+            accountLevelText = transform.Find("Safe Area/Header/Account Badge/Account Level")?.GetComponent<TMP_Text>();
+            accountExperienceText = transform.Find("Safe Area/Header/Account Experience/Account Experience Text")?.GetComponent<TMP_Text>();
+            accountExperienceFill = transform.Find("Safe Area/Header/Account Experience/Account Experience Fill")?.GetComponent<Image>();
             foreach (var research in GetComponentsInChildren<WeaponResearchPresenter>(true)) research.Initialize(session, RefreshHeader);
             foreach (var patrol in GetComponentsInChildren<PatrolPresenter>(true)) patrol.Initialize(session, RefreshHeader);
             foreach (var training in GetComponentsInChildren<CommonTrainingPresenter>(true)) training.Initialize(session, RefreshHeader);
@@ -119,8 +133,60 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         private void RefreshHeader()
         {
-            if (coinText != null && MetaGameSession.Current != null)
-                coinText.text = $"{MetaGameSession.Current.Data.Coins:N0}";
+            var session = MetaGameSession.Current;
+            if (session == null) return;
+            if (coinText != null) coinText.text = $"{session.Data.Coins:N0}";
+
+            var account = AccountProgression.StateFor(session.Data.AccountExperience);
+            if (accountLevelText != null) accountLevelText.text = account.Level.ToString();
+            if (accountExperienceText != null)
+                accountExperienceText.text = account.IsMaximumLevel
+                    ? "최대 레벨"
+                    : $"{account.CurrentLevelExperience:N0} / {account.NextLevelRequirement:N0}";
+            if (accountExperienceFill != null)
+                accountExperienceFill.fillAmount = account.IsMaximumLevel
+                    ? 1f
+                    : account.NextLevelRequirement <= 0
+                        ? 0f
+                        : (float)account.CurrentLevelExperience / account.NextLevelRequirement;
+        }
+
+        private void EnsureAccountHeader()
+        {
+            var header = transform.Find("Safe Area/Header");
+            if (header == null) return;
+            var oldTitle = header.Find("Lobby Title");
+            if (oldTitle != null) oldTitle.gameObject.SetActive(false);
+            if (header.Find("Account Badge") != null) return;
+
+            var badge = LobbyUiFactory.Image("Account Badge", header, LobbyUiFactory.Crimson);
+            LobbyUiFactory.Anchor(badge.rectTransform, new Vector2(.025f, .17f), new Vector2(.14f, .83f),
+                Vector2.zero, Vector2.zero);
+            accountLevelText = LobbyUiFactory.Text("Account Level", badge.transform, "1", 26f,
+                TextAlignmentOptions.Center, true);
+            accountLevelText.color = LobbyUiFactory.Gold;
+            LobbyUiFactory.Stretch(accountLevelText.rectTransform);
+
+            var accountName = LobbyUiFactory.Text("Account Name", header, "요괴 사냥꾼", 20f,
+                TextAlignmentOptions.Left, true);
+            accountName.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Anchor(accountName.rectTransform, new Vector2(.16f, .48f), new Vector2(.62f, .88f),
+                Vector2.zero, Vector2.zero);
+
+            var experience = LobbyUiFactory.Image("Account Experience", header, new Color(.04f, .05f, .055f, 1f));
+            LobbyUiFactory.Anchor(experience.rectTransform, new Vector2(.16f, .17f), new Vector2(.64f, .43f),
+                Vector2.zero, Vector2.zero);
+            accountExperienceFill = LobbyUiFactory.Image("Account Experience Fill", experience.transform,
+                new Color(.22f, .66f, .30f, 1f));
+            LobbyUiFactory.Stretch(accountExperienceFill.rectTransform);
+            accountExperienceFill.type = Image.Type.Filled;
+            accountExperienceFill.fillMethod = Image.FillMethod.Horizontal;
+            accountExperienceFill.fillOrigin = 0;
+            accountExperienceFill.fillAmount = 0f;
+            accountExperienceText = LobbyUiFactory.Text("Account Experience Text", experience.transform,
+                "0 / 100", 13f, TextAlignmentOptions.Center, true);
+            accountExperienceText.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Stretch(accountExperienceText.rectTransform);
         }
 
         private void ApplySafeArea()
