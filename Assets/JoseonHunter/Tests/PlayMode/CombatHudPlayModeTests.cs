@@ -56,7 +56,9 @@ namespace JoseonHunter.Tests.PlayMode
             presenter.LobbyReturnRequested += () => returns++;
             presenter.Render(new FirstPlayableUiState(6, 0, 10, 13, 42,
                 83.4f, 180f, 0f, 100f, false, false, 0f, 0f,
-                System.Array.Empty<WeaponSlotView>(), runEnded: true, victory: false));
+                System.Array.Empty<WeaponSlotView>(), runEnded: true, victory: false,
+                runMasteryEarned: 42, accountExperienceEarned: 420,
+                accountLevelBefore: 7, accountLevelAfter: 8));
 
             Assert.That(TextNamed(root, "Result Title"), Is.EqualTo("전투 종료"));
             var summary = TextNamed(root, "Result Summary");
@@ -64,6 +66,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(summary, Does.Contain("처치"));
             Assert.That(summary, Does.Contain("도달 레벨"));
             Assert.That(summary, Does.Contain("획득 엽전"));
+            Assert.That(summary, Does.Contain("계정 경험치 +420"));
+            Assert.That(summary, Does.Contain("계정 레벨 7 → 8"));
             Assert.That(TextNamed(root, "Lobby Return Label"), Is.EqualTo("로비로 돌아가기"));
             Assert.That(ImageNamed(root, "Result Panel").color.a, Is.EqualTo(1f));
             Assert.That(AllText(root), Does.Not.Match("Run|Restart|Survived|Try again"));
@@ -73,6 +77,40 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(button, Is.Not.Null);
             button.onClick.Invoke();
             Assert.That(returns, Is.EqualTo(1));
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RunResultOmitsUnchangedLevelAndShowsMaximumAccountLevel()
+        {
+            var root = new GameObject("Maximum Account Result Test");
+            var presenter = root.AddComponent<RunResultPresenter>();
+            presenter.Render(new FirstPlayableUiState(10, 0, 10, 96, 611,
+                900f, 900f, 100f, 100f, false, false, 0f, 0f,
+                System.Array.Empty<WeaponSlotView>(), runEnded: true, victory: true,
+                accountExperienceEarned: 500, accountLevelBefore: 100, accountLevelAfter: 100));
+
+            var summary = TextNamed(root, "Result Summary");
+            Assert.That(summary, Does.Contain("계정 경험치 +500"));
+            Assert.That(summary, Does.Contain("계정 레벨 100 · 최대"));
+            Assert.That(summary, Does.Not.Contain("100 → 100"));
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void FailedRunResultDoesNotClaimUnsavedAccountExperience()
+        {
+            var root = new GameObject("Failed Account Result Test");
+            var presenter = root.AddComponent<RunResultPresenter>();
+            presenter.Render(new FirstPlayableUiState(4, 0, 10, 5, 20,
+                60f, 900f, 0f, 100f, false, false, 0f, 0f,
+                System.Array.Empty<WeaponSlotView>(), runEnded: true,
+                settlementFailed: true, accountExperienceEarned: 600,
+                accountLevelBefore: 2, accountLevelAfter: 3));
+
+            var summary = TextNamed(root, "Result Summary");
+            Assert.That(summary, Does.Not.Contain("계정 경험치"));
+            Assert.That(summary, Does.Contain("전투 기록을 저장하지 못했습니다"));
             Object.DestroyImmediate(root);
         }
 

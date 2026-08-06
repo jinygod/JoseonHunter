@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
 using UnityEngine;
@@ -24,13 +26,27 @@ namespace JoseonHunter.Presentation.UI
             if (!state.RunEnded) return;
 
             title.text = state.Victory ? "승전" : "전투 종료";
-            summary.text =
-                $"생존 시간  {state.Elapsed:0.0}초\n\n" +
-                $"처치  {state.Kills}\n\n" +
-                $"도달 레벨  {state.Level}\n\n" +
-                $"획득 엽전  {state.Coins}\n\n" +
-                $"획득 숙련도  {state.RunMasteryEarned}" +
-                (state.SettlementFailed ? "\n\n전투 기록을 저장하지 못했습니다. 다시 시도해 주세요." : string.Empty);
+            var lines = new List<string>
+            {
+                $"생존 시간  {state.Elapsed:0.0}초",
+                $"처치  {state.Kills}",
+                $"도달 레벨  {state.Level}",
+                $"획득 엽전  {state.Coins}",
+                $"획득 숙련도  {state.RunMasteryEarned}"
+            };
+            if (state.SettlementFailed)
+            {
+                lines.Add("전투 기록을 저장하지 못했습니다. 다시 시도해 주세요.");
+            }
+            else
+            {
+                lines.Add($"계정 경험치 +{state.AccountExperienceEarned:N0}");
+                if (state.AccountLevelAfter >= AccountProgression.MaximumLevel)
+                    lines.Add($"계정 레벨 {AccountProgression.MaximumLevel} · 최대");
+                else if (state.AccountLevelAfter != state.AccountLevelBefore)
+                    lines.Add($"계정 레벨 {state.AccountLevelBefore} → {state.AccountLevelAfter}");
+            }
+            summary.text = string.Join("\n", lines);
             lobbyReturnLabel.text = state.SettlementFailed ? "다시 저장" : "로비로 돌아가기";
         }
 
