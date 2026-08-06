@@ -6,6 +6,7 @@ using System.Text;
 using JoseonHunter.Domain;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
+using JoseonHunter.Domain.Runs;
 using UnityEngine;
 
 namespace JoseonHunter.Infrastructure.Save
@@ -74,7 +75,8 @@ namespace JoseonHunter.Infrastructure.Save
                 if (envelope == null || string.IsNullOrEmpty(envelope.payload) || envelope.checksum != SaveChecksum.ForCanonicalPayload(envelope.payload)) return false;
                 var document = JsonUtility.FromJson<SaveDocument>(envelope.payload);
                 if (document == null ||
-                    (document.schemaVersion != 1 && document.schemaVersion != 2 && document.schemaVersion != 3))
+                    (document.schemaVersion != 1 && document.schemaVersion != 2 &&
+                     document.schemaVersion != 3 && document.schemaVersion != 4))
                     return false;
                 data = document.ToData();
                 return true;
@@ -99,11 +101,23 @@ namespace JoseonHunter.Infrastructure.Save
             public StringEntry[] weaponStyleIds;
             public string difficultyId;
         }
+        [Serializable] private sealed class StageClearRecordDocument
+        {
+            public string stageId;
+            public string difficulty;
+            public bool victory;
+            public float bestElapsed;
+            public int bestKills;
+            public int bestLevel;
+        }
         [Serializable] private sealed class SaveDocument
         {
             public int schemaVersion;
             public int accountExperience;
             public int coins;
+            public string selectedStageId;
+            public string selectedStageDifficulty;
+            public StageClearRecordDocument[] stageClearRecords;
             public string ownedHero;
             public string equippedHero;
             public Entry[] equipmentLevels;
@@ -139,6 +153,9 @@ namespace JoseonHunter.Infrastructure.Save
                     AccountProgression.TotalExperienceForLevel(AccountProgression.MaximumLevel),
                     data.AccountExperience)),
                 coins = Math.Max(0, data.Coins),
+                selectedStageId = data.SelectedStageId,
+                selectedStageDifficulty = data.SelectedStageDifficulty,
+                stageClearRecords = StageClearRecords(data.StageClearRecords),
                 ownedHero = data.OwnedHero,
                 equippedHero = data.EquippedHero,
                 equipmentLevels = Entries(data.EquipmentLevels),
@@ -188,6 +205,8 @@ namespace JoseonHunter.Infrastructure.Save
                 data.UnlockedRecipes = List(unlockedRecipes);
                 data.UnlockedAppearances = List(unlockedAppearances);
                 data.BestPatrolResults = Dictionary(bestPatrolResults);
+                data.StageClearRecords = NormalizeStageClearRecords(stageClearRecords, data.BestPatrolResults);
+                NormalizeSelectedStage(data);
                 data.TutorialCompleted = tutorialCompleted;
                 data.AccessibilityEnabled = accessibilityEnabled;
                 data.AudioVolume = audioVolume;
@@ -203,6 +222,37 @@ namespace JoseonHunter.Infrastructure.Save
                     data.PatrolLoadouts = NormalizeLoadouts(patrolLoadouts);
                 data.ActivePatrolLoadoutIndex = Math.Max(0, Math.Min(data.PatrolLoadouts.Count - 1, activePatrolLoadoutIndex));
                 return data;
+            }
+
+            private void NormalizeSelectedStage(SaveDataV1 data)
+            {
+                var fallback = new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
+                if (string.IsNullOrWhiteSpace(selectedStageId) ||
+                    !StageDifficultyNames.TryParse(selectedStageDifficulty, out var difficulty))
+                {
+                    ApplySelection(data, fallback);
+                    return;
+                }
+
+                var stageId = new StageId(selectedStageId);
+                if (!StageCatalog.TryGet(stageId, out var definition))
+                {
+                    ApplySelection(data, fallback);
+                    return;
+                }
+
+                var selection = new StageSelection(definition.Id, difficulty);
+                if (!StageUnlockRules.IsUnlocked(
+                        selection,
+                        StageClearRecordData.DomainRecords(data.StageClearRecords)))
+                    selection = fallback;
+                ApplySelection(data, selection);
+            }
+
+            private static void ApplySelection(SaveDataV1 data, StageSelection selection)
+            {
+                data.SelectedStageId = selection.StageId.Value;
+                data.SelectedStageDifficulty = StageDifficultyNames.StorageId(selection.Difficulty);
             }
 
             private int MigratedAccountExperience(SaveDataV1 data)
@@ -229,6 +279,68 @@ namespace JoseonHunter.Infrastructure.Save
                 weaponStyleIds = StringEntries(data.WeaponStyleIds),
                 difficultyId = data.DifficultyId
             };
+
+            private static StageClearRecordDocument[] StageClearRecords(IEnumerable<StageClearRecordData> records) =>
+                (records ?? Array.Empty<StageClearRecordData>())
+                .Where(record => record != null)
+                .Select(record => new StageClearRecordDocument
+                {
+                    stageId = record.StageId,
+                    difficulty = record.Difficulty,
+                    victory = record.Victory,
+                    bestElapsed = Math.Max(0f, record.BestElapsed),
+                    bestKills = Math.Max(0, record.BestKills),
+                    bestLevel = Math.Max(0, record.BestLevel)
+                }).ToArray();
+
+            private List<StageClearRecordData> NormalizeStageClearRecords(
+                StageClearRecordDocument[] documents,
+                Dictionary<string, int> patrolResults)
+            {
+                var result = new List<StageClearRecordData>();
+                foreach (var document in documents ?? Array.Empty<StageClearRecordDocument>())
+                {
+                    if (document == null || string.IsNullOrWhiteSpace(document.stageId) ||
+                        string.IsNullOrWhiteSpace(document.difficulty)) continue;
+                    MergeStageRecord(result, new StageClearRecordData
+                    {
+                        StageId = document.stageId,
+                        Difficulty = document.difficulty,
+                        Victory = document.victory,
+                        BestElapsed = Math.Max(0f, document.bestElapsed),
+                        BestKills = Math.Max(0, document.bestKills),
+                        BestLevel = Math.Max(0, document.bestLevel)
+                    });
+                }
+
+                if (schemaVersion < 4 && patrolResults.TryGetValue("victory_kills", out var victoryKills))
+                {
+                    MergeStageRecord(result, StageClearRecordData.From(StageClearRecord.Victory(
+                        new StageSelection(StageId.GwigokField, StageDifficulty.Normal),
+                        StagePacingTimeline.CanonicalDurationSeconds,
+                        Math.Max(0, victoryKills),
+                        0)));
+                }
+                return result;
+            }
+
+            private static void MergeStageRecord(List<StageClearRecordData> records, StageClearRecordData candidate)
+            {
+                if (!candidate.TryToDomain(out var domainCandidate))
+                {
+                    records.Add(candidate);
+                    return;
+                }
+
+                for (var index = 0; index < records.Count; index++)
+                {
+                    if (!records[index].TryToDomain(out var existing) ||
+                        !existing.Selection.Equals(domainCandidate.Selection)) continue;
+                    records[index] = StageClearRecordData.From(existing.Merge(domainCandidate));
+                    return;
+                }
+                records.Add(candidate);
+            }
 
             private static List<PatrolLoadoutData> NormalizeLoadouts(PatrolLoadoutDocument[] documents)
             {

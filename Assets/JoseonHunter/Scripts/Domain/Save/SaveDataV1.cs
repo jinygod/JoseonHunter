@@ -1,8 +1,76 @@
 using System;
 using System.Collections.Generic;
+using JoseonHunter.Domain.Runs;
 
 namespace JoseonHunter.Domain.Save
 {
+    [Serializable]
+    public sealed class StageClearRecordData
+    {
+        public string StageId;
+        public string Difficulty;
+        public bool Victory;
+        public float BestElapsed;
+        public int BestKills;
+        public int BestLevel;
+
+        public StageClearRecordData Copy() => new StageClearRecordData
+        {
+            StageId = StageId,
+            Difficulty = Difficulty,
+            Victory = Victory,
+            BestElapsed = BestElapsed,
+            BestKills = BestKills,
+            BestLevel = BestLevel
+        };
+
+        public bool TryToDomain(out StageClearRecord record)
+        {
+            record = default;
+            if (string.IsNullOrWhiteSpace(StageId) ||
+                !StageDifficultyNames.TryParse(Difficulty, out var difficulty)) return false;
+            var candidate = new Runs.StageId(StageId);
+            if (!StageCatalog.TryGet(candidate, out var definition)) return false;
+            record = new StageClearRecord(
+                new StageSelection(definition.Id, difficulty),
+                Victory,
+                Math.Max(0f, BestElapsed),
+                Math.Max(0, BestKills),
+                Math.Max(0, BestLevel));
+            return true;
+        }
+
+        public static StageClearRecordData From(StageClearRecord record) => new StageClearRecordData
+        {
+            StageId = record.Selection.StageId.Value,
+            Difficulty = StageDifficultyNames.StorageId(record.Selection.Difficulty),
+            Victory = record.VictoryAchieved,
+            BestElapsed = record.BestElapsed,
+            BestKills = record.BestKills,
+            BestLevel = record.BestLevel
+        };
+
+        public static List<StageClearRecord> DomainRecords(IEnumerable<StageClearRecordData> source)
+        {
+            var result = new List<StageClearRecord>();
+            if (source == null) return result;
+            foreach (var data in source)
+            {
+                if (data == null || !data.TryToDomain(out var record)) continue;
+                var merged = false;
+                for (var index = 0; index < result.Count; index++)
+                {
+                    if (!result[index].Selection.Equals(record.Selection)) continue;
+                    result[index] = result[index].Merge(record);
+                    merged = true;
+                    break;
+                }
+                if (!merged) result.Add(record);
+            }
+            return result;
+        }
+    }
+
     [Serializable]
     public sealed class PatrolLoadoutData
     {
@@ -26,6 +94,9 @@ namespace JoseonHunter.Domain.Save
         public int SchemaVersion = ProjectIdentity.SaveSchemaVersion;
         public int AccountExperience;
         public int Coins;
+        public string SelectedStageId = StageId.GwigokField.Value;
+        public string SelectedStageDifficulty = "normal";
+        public List<StageClearRecordData> StageClearRecords = new List<StageClearRecordData>();
         public string OwnedHero = "hunter";
         public string EquippedHero = "hunter";
         public Dictionary<string, int> EquipmentLevels = new Dictionary<string, int>();
@@ -96,6 +167,8 @@ namespace JoseonHunter.Domain.Save
             var copy = new SaveDataV1
             {
                 SchemaVersion = SchemaVersion, AccountExperience = AccountExperience, Coins = Coins, OwnedHero = OwnedHero, EquippedHero = EquippedHero,
+                SelectedStageId = SelectedStageId, SelectedStageDifficulty = SelectedStageDifficulty,
+                StageClearRecords = StageClearRecords.ConvertAll(record => record.Copy()),
                 TutorialCompleted = TutorialCompleted, AccessibilityEnabled = AccessibilityEnabled, AudioVolume = AudioVolume,
                 EquipmentLevels = new Dictionary<string, int>(EquipmentLevels), EquipmentQualities = new Dictionary<string, int>(EquipmentQualities),
                 EquipmentFragments = new Dictionary<string, int>(EquipmentFragments), EvolutionNodeRanks = new Dictionary<string, int>(EvolutionNodeRanks), EvolutionSpentCoins = new Dictionary<string, int>(EvolutionSpentCoins),
@@ -115,6 +188,7 @@ namespace JoseonHunter.Domain.Save
         {
             var copy = source.Copy();
             SchemaVersion = copy.SchemaVersion; AccountExperience = copy.AccountExperience; Coins = copy.Coins; OwnedHero = copy.OwnedHero; EquippedHero = copy.EquippedHero;
+            SelectedStageId = copy.SelectedStageId; SelectedStageDifficulty = copy.SelectedStageDifficulty; StageClearRecords = copy.StageClearRecords;
             EquipmentLevels = copy.EquipmentLevels; EquipmentQualities = copy.EquipmentQualities; EquipmentFragments = copy.EquipmentFragments;
             EvolutionNodeRanks = copy.EvolutionNodeRanks; EvolutionSpentCoins = copy.EvolutionSpentCoins; InvestigationClues = copy.InvestigationClues; ClaimedInvestigationMilestones = copy.ClaimedInvestigationMilestones;
             MonsterCompendiumEntries = copy.MonsterCompendiumEntries; UnlockedHeroes = copy.UnlockedHeroes; UnlockedDifficulties = copy.UnlockedDifficulties;

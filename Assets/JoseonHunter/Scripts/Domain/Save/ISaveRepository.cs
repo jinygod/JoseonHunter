@@ -7,7 +7,7 @@ namespace JoseonHunter.Domain.Save
     public readonly struct SaveResult { public SaveResult(bool success, SaveError error) { Success = success; Error = error; } public bool Success { get; } public SaveError Error { get; } }
     public enum LoadSource { Current, Backup, Defaults }
     public enum SaveError { None, Corrupt, InsufficientStorage, IoFailure }
-    public enum AutoSaveTrigger { RunResult, EquipmentPurchase, EvolutionPurchase, WeaponStylePurchase, CommonTrainingPurchase, LoadoutChanged, SettingsChanged, AppPaused }
+    public enum AutoSaveTrigger { RunResult, EquipmentPurchase, EvolutionPurchase, WeaponStylePurchase, CommonTrainingPurchase, LoadoutChanged, StageSelectionChanged, SettingsChanged, AppPaused }
     public sealed class AutoSaveOrchestrator
     {
         private readonly ISaveRepository repository;
@@ -20,6 +20,20 @@ namespace JoseonHunter.Domain.Save
         public TransactionResult PurchaseWeaponStyle(Combat.WeaponId weaponId, Progression.WeaponLegacyPathId styleId) { return Apply(copy => new Progression.WeaponMasteryProgression(copy).Purchase(weaponId, styleId)); }
         public TransactionResult PurchaseCommonTraining(Progression.CommonTrainingId id) { return Apply(copy => new Progression.CommonTrainingProgression(copy).Purchase(id)); }
         public TransactionResult ResetCommonTraining() { return Apply(copy => new Progression.CommonTrainingProgression(copy).Reset()); }
+        public TransactionResult SaveStageSelection(Runs.StageSelection selection)
+        {
+            return Apply(copy =>
+            {
+                if (!Runs.StageCatalog.TryGet(selection.StageId, out _) ||
+                    !Runs.StageUnlockRules.IsUnlocked(
+                        selection,
+                        StageClearRecordData.DomainRecords(copy.StageClearRecords)))
+                    return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidSelection);
+                copy.SelectedStageId = selection.StageId.Value;
+                copy.SelectedStageDifficulty = Runs.StageDifficultyNames.StorageId(selection.Difficulty);
+                return new Progression.ProgressionResult(true, Progression.ProgressionError.None);
+            });
+        }
         public TransactionResult SaveLoadout(int index, Progression.PatrolLoadout loadout)
         {
             if (loadout == null) throw new ArgumentNullException(nameof(loadout));

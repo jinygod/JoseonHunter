@@ -5,6 +5,7 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Infrastructure.Save;
+using JoseonHunter.Domain.Runs;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Meta
@@ -21,6 +22,14 @@ namespace JoseonHunter.Runtime.Meta
         public SaveDataV1 Data { get { EnsureInitialized(); return data; } }
         public GameSceneRouter Router { get; private set; }
         public PatrolLoadout ActiveLoadout { get { EnsureInitialized(); return BuildActiveLoadout(data); } }
+        public StageSelection ActiveStageSelection
+        {
+            get
+            {
+                EnsureInitialized();
+                return ResolveStageSelection(data);
+            }
+        }
 
         public static MetaGameSession EnsureExists(ISaveRepository repository = null)
         {
@@ -71,6 +80,12 @@ namespace JoseonHunter.Runtime.Meta
         {
             EnsureInitialized();
             return autosave.ResetCommonTraining();
+        }
+
+        public TransactionResult SaveStageSelection(StageSelection selection)
+        {
+            EnsureInitialized();
+            return autosave.SaveStageSelection(selection);
         }
 
         public TransactionResult SaveLoadout(int index, PatrolLoadout loadout)
@@ -134,6 +149,20 @@ namespace JoseonHunter.Runtime.Meta
             var name = string.IsNullOrWhiteSpace(dto.Name) ? "순찰대 " + (index + 1) : dto.Name;
             var difficulty = string.IsNullOrWhiteSpace(dto.DifficultyId) ? "normal" : dto.DifficultyId;
             return new PatrolLoadout(name, startingWeapon, styles, difficulty);
+        }
+
+        private static StageSelection ResolveStageSelection(SaveDataV1 source)
+        {
+            var fallback = new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
+            if (string.IsNullOrWhiteSpace(source.SelectedStageId) ||
+                !StageDifficultyNames.TryParse(source.SelectedStageDifficulty, out var difficulty))
+                return fallback;
+            var stageId = new StageId(source.SelectedStageId);
+            if (!StageCatalog.TryGet(stageId, out var definition)) return fallback;
+            var selection = new StageSelection(definition.Id, difficulty);
+            return StageUnlockRules.IsUnlocked(selection, StageClearRecordData.DomainRecords(source.StageClearRecords))
+                ? selection
+                : fallback;
         }
     }
 }
