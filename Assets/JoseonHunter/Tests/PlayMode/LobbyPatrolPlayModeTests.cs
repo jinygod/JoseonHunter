@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Save;
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
@@ -52,7 +53,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             var stage = GameObject.Find("Stage Name");
             Assert.That(stage, Is.Not.Null);
-            Assert.That(stage.GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("출전 준비"));
+            Assert.That(stage.GetComponent<TMPro.TMP_Text>().text, Does.Contain("귀곡 들판"));
 
             var start = GameObject.Find("Start Patrol");
             Assert.That(start, Is.Not.Null);
@@ -110,6 +111,54 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(overlay.activeSelf, Is.False);
             Assert.That(GameObject.Find("Starting Weapon Name").GetComponent<TMPro.TMP_Text>().text,
                 Is.EqualTo("각궁"));
+        }
+
+        [UnityTest]
+        public IEnumerator NewAccountShowsStageOneWithKoreanDifficultyLocks()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            Assert.That(GameObject.Find("Stage Name").GetComponent<TMPro.TMP_Text>().text,
+                Does.Contain("귀곡 들판"));
+            Assert.That(GameObject.Find("Difficulty Normal").GetComponentInChildren<TMPro.TMP_Text>().text,
+                Does.Contain("보통"));
+            Assert.That(GameObject.Find("Difficulty Omen").GetComponentInChildren<TMPro.TMP_Text>().text,
+                Does.Contain("흉조"));
+
+            GameObject.Find("Difficulty Omen").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.That(GameObject.Find("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
+                Is.EqualTo("이 장 보통 승리 시 해금"));
+            Assert.That(MetaGameSession.Current.ActiveStageSelection,
+                Is.EqualTo(new StageSelection(StageId.GwigokField, StageDifficulty.Normal)));
+        }
+
+        [UnityTest]
+        public IEnumerator StageOneNormalClearOpensOmenAndStageTwoButBlocksUnfinishedContent()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 500, 35)));
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            GameObject.Find("Difficulty Omen").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+            Assert.That(MetaGameSession.Current.ActiveStageSelection.Difficulty,
+                Is.EqualTo(StageDifficulty.Omen));
+
+            GameObject.Find("Next Stage").GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.That(GameObject.Find("Stage Name").GetComponent<TMPro.TMP_Text>().text,
+                Does.Contain("도깨비 고개"));
+            Assert.That(GameObject.Find("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
+                Is.EqualTo("아직 준비 중인 지역입니다"));
+            Assert.That(GameObject.Find("Start Patrol").GetComponent<Button>().interactable, Is.False);
         }
 
         private static GameObject FindIncludingInactive(string name) =>

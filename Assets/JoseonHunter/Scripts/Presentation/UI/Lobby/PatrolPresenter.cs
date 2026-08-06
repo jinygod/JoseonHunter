@@ -4,6 +4,8 @@ using System.Linq;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Runs;
+using JoseonHunter.Domain.Save;
 using JoseonHunter.Runtime.Meta;
 using TMPro;
 using UnityEngine;
@@ -23,19 +25,50 @@ namespace JoseonHunter.Presentation.UI.Lobby
         [SerializeField] private GameObject weaponSelectionOverlay;
         [SerializeField] private Button closeWeaponSelectionButton;
         [SerializeField] private Button patrolButton;
+        [SerializeField] private TMP_Text stageNameText;
+        [SerializeField] private TMP_Text stageStatusText;
+        [SerializeField] private Button previousStageButton;
+        [SerializeField] private Button nextStageButton;
+        [SerializeField] private Button normalDifficultyButton;
+        [SerializeField] private Button omenDifficultyButton;
+        [SerializeField] private Button greatOmenDifficultyButton;
 
         private MetaGameSession session;
         private Action refreshHeader;
         private WeaponId selectedWeapon = WeaponId.HwandoFlyingBlade;
+        private int viewedStageIndex;
+        private StageDifficulty viewedDifficulty = StageDifficulty.Normal;
+        private string stageFeedback = string.Empty;
 
         public void Build()
         {
-            if (transform.Find("Stage Name") != null) return;
+            if (transform.Find("Stage Name") != null)
+            {
+                BindExistingView();
+                EnsureStageControls();
+                return;
+            }
 
-            var title = LobbyUiFactory.Text("Stage Name", transform, "출전 준비", 34f,
+            var title = LobbyUiFactory.Text("Stage Name", transform, "1장 · 귀곡 들판", 34f,
                 TextAlignmentOptions.Center, true);
+            stageNameText = title;
             title.color = LobbyUiFactory.Gold;
-            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .84f), new Vector2(.96f, .96f),
+            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.18f, .87f), new Vector2(.82f, .96f),
+                Vector2.zero, Vector2.zero);
+
+            previousStageButton = LobbyUiFactory.Button("Previous Stage", transform, "◀", 28f,
+                LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
+            LobbyUiFactory.Anchor(previousStageButton.GetComponent<RectTransform>(), new Vector2(.05f, .87f),
+                new Vector2(.17f, .96f), Vector2.zero, Vector2.zero);
+            nextStageButton = LobbyUiFactory.Button("Next Stage", transform, "▶", 28f,
+                LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
+            LobbyUiFactory.Anchor(nextStageButton.GetComponent<RectTransform>(), new Vector2(.83f, .87f),
+                new Vector2(.95f, .96f), Vector2.zero, Vector2.zero);
+
+            stageStatusText = LobbyUiFactory.Text("Stage Status", transform, string.Empty, 17f,
+                TextAlignmentOptions.Center, true);
+            stageStatusText.color = LobbyUiFactory.HanjiLight;
+            LobbyUiFactory.Anchor(stageStatusText.rectTransform, new Vector2(.08f, .81f), new Vector2(.92f, .87f),
                 Vector2.zero, Vector2.zero);
 
             var shadowRect = new GameObject("Patrol Hero Shadow", typeof(RectTransform), typeof(CanvasRenderer),
@@ -43,17 +76,24 @@ namespace JoseonHunter.Presentation.UI.Lobby
             shadowRect.SetParent(transform, false);
             shadowRect.GetComponent<PixelOvalGraphic>().color = new Color(0f, 0f, 0f, .17f);
             shadowRect.GetComponent<PixelOvalGraphic>().raycastTarget = false;
-            LobbyUiFactory.Anchor(shadowRect, new Vector2(.34f, .50f), new Vector2(.66f, .55f),
+            LobbyUiFactory.Anchor(shadowRect, new Vector2(.34f, .56f), new Vector2(.66f, .61f),
                 Vector2.zero, Vector2.zero);
 
             heroImage = LobbyUiFactory.Image("Patrol Hero", transform, Color.white);
             heroImage.preserveAspect = true;
-            LobbyUiFactory.Anchor(heroImage.rectTransform, new Vector2(.31f, .52f), new Vector2(.69f, .82f),
+            LobbyUiFactory.Anchor(heroImage.rectTransform, new Vector2(.31f, .58f), new Vector2(.69f, .81f),
                 Vector2.zero, Vector2.zero);
 
+            normalDifficultyButton = CreateDifficultyButton(
+                "Difficulty Normal", "보통", new Vector2(.07f, .48f), new Vector2(.35f, .56f));
+            omenDifficultyButton = CreateDifficultyButton(
+                "Difficulty Omen", "흉조", new Vector2(.36f, .48f), new Vector2(.64f, .56f));
+            greatOmenDifficultyButton = CreateDifficultyButton(
+                "Difficulty Great Omen", "대흉", new Vector2(.65f, .48f), new Vector2(.93f, .56f));
+
             weaponSelectorButton = LobbyUiFactory.Button("Starting Weapon Selector", transform, string.Empty, 23f);
-            LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .34f),
-                new Vector2(.85f, .48f), Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .31f),
+                new Vector2(.85f, .43f), Vector2.zero, Vector2.zero);
             var selectorLabel = weaponSelectorButton.GetComponentInChildren<TMP_Text>(true);
             selectorLabel.name = "Starting Weapon Name";
             selectorLabel.alignment = TextAlignmentOptions.MidlineLeft;
@@ -77,14 +117,85 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
             patrolButton = LobbyUiFactory.Button("Start Patrol", transform, "출전", 31f,
                 LobbyUiFactory.Gold, LobbyUiFactory.Ink);
-            LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .10f),
-                new Vector2(.78f, .29f), Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .09f),
+                new Vector2(.78f, .27f), Vector2.zero, Vector2.zero);
             feedbackText = LobbyUiFactory.Text("Patrol Feedback", transform, string.Empty, 18f);
             feedbackText.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.04f, .03f), new Vector2(.96f, .09f),
                 Vector2.zero, Vector2.zero);
 
             BuildWeaponSelectionOverlay();
+        }
+
+        private Button CreateDifficultyButton(string name, string label, Vector2 minimum, Vector2 maximum)
+        {
+            var button = LobbyUiFactory.Button(name, transform, label, 21f,
+                LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+            LobbyUiFactory.Anchor(button.GetComponent<RectTransform>(), minimum, maximum,
+                Vector2.zero, Vector2.zero);
+            return button;
+        }
+
+        private void BindExistingView()
+        {
+            stageNameText = transform.Find("Stage Name")?.GetComponent<TMP_Text>();
+            heroImage = transform.Find("Patrol Hero")?.GetComponent<Image>();
+            weaponSelectorButton = transform.Find("Starting Weapon Selector")?.GetComponent<Button>();
+            weaponIcon = transform.Find("Starting Weapon Selector/Starting Weapon Icon")?.GetComponent<Image>();
+            weaponText = transform.Find("Starting Weapon Selector/Starting Weapon Name")?.GetComponent<TMP_Text>();
+            feedbackText = transform.Find("Patrol Feedback")?.GetComponent<TMP_Text>();
+            patrolButton = transform.Find("Start Patrol")?.GetComponent<Button>();
+            weaponSelectionOverlay = transform.Find("Weapon Selection Overlay")?.gameObject;
+            closeWeaponSelectionButton = transform.Find(
+                "Weapon Selection Overlay/Weapon Selection Panel/Close Weapon Selection")?.GetComponent<Button>();
+        }
+
+        private void EnsureStageControls()
+        {
+            if (stageNameText != null)
+                LobbyUiFactory.Anchor(stageNameText.rectTransform, new Vector2(.18f, .87f), new Vector2(.82f, .96f),
+                    Vector2.zero, Vector2.zero);
+
+            previousStageButton = transform.Find("Previous Stage")?.GetComponent<Button>() ??
+                LobbyUiFactory.Button("Previous Stage", transform, "◀", 28f,
+                    LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
+            LobbyUiFactory.Anchor(previousStageButton.GetComponent<RectTransform>(), new Vector2(.05f, .87f),
+                new Vector2(.17f, .96f), Vector2.zero, Vector2.zero);
+            nextStageButton = transform.Find("Next Stage")?.GetComponent<Button>() ??
+                LobbyUiFactory.Button("Next Stage", transform, "▶", 28f,
+                    LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
+            LobbyUiFactory.Anchor(nextStageButton.GetComponent<RectTransform>(), new Vector2(.83f, .87f),
+                new Vector2(.95f, .96f), Vector2.zero, Vector2.zero);
+
+            stageStatusText = transform.Find("Stage Status")?.GetComponent<TMP_Text>();
+            if (stageStatusText == null)
+            {
+                stageStatusText = LobbyUiFactory.Text("Stage Status", transform, string.Empty, 17f,
+                    TextAlignmentOptions.Center, true);
+                stageStatusText.color = LobbyUiFactory.HanjiLight;
+            }
+            LobbyUiFactory.Anchor(stageStatusText.rectTransform, new Vector2(.08f, .81f), new Vector2(.92f, .87f),
+                Vector2.zero, Vector2.zero);
+
+            normalDifficultyButton = transform.Find("Difficulty Normal")?.GetComponent<Button>() ??
+                CreateDifficultyButton("Difficulty Normal", "보통", new Vector2(.07f, .48f), new Vector2(.35f, .56f));
+            omenDifficultyButton = transform.Find("Difficulty Omen")?.GetComponent<Button>() ??
+                CreateDifficultyButton("Difficulty Omen", "흉조", new Vector2(.36f, .48f), new Vector2(.64f, .56f));
+            greatOmenDifficultyButton = transform.Find("Difficulty Great Omen")?.GetComponent<Button>() ??
+                CreateDifficultyButton("Difficulty Great Omen", "대흉", new Vector2(.65f, .48f), new Vector2(.93f, .56f));
+
+            var shadow = transform.Find("Patrol Hero Shadow") as RectTransform;
+            if (shadow != null)
+                LobbyUiFactory.Anchor(shadow, new Vector2(.34f, .56f), new Vector2(.66f, .61f), Vector2.zero, Vector2.zero);
+            if (heroImage != null)
+                LobbyUiFactory.Anchor(heroImage.rectTransform, new Vector2(.31f, .58f), new Vector2(.69f, .81f),
+                    Vector2.zero, Vector2.zero);
+            if (weaponSelectorButton != null)
+                LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .31f),
+                    new Vector2(.85f, .43f), Vector2.zero, Vector2.zero);
+            if (patrolButton != null)
+                LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .09f),
+                    new Vector2(.78f, .27f), Vector2.zero, Vector2.zero);
         }
 
         private void BuildWeaponSelectionOverlay()
@@ -137,16 +248,28 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void Initialize(MetaGameSession value, Action onChanged)
         {
+            Build();
             session = value;
             refreshHeader = onChanged;
             LoadCurrentWeapon();
+            LoadCurrentStage();
 
             weaponSelectorButton.onClick.RemoveAllListeners();
             closeWeaponSelectionButton.onClick.RemoveAllListeners();
             patrolButton.onClick.RemoveAllListeners();
+            previousStageButton.onClick.RemoveAllListeners();
+            nextStageButton.onClick.RemoveAllListeners();
+            normalDifficultyButton.onClick.RemoveAllListeners();
+            omenDifficultyButton.onClick.RemoveAllListeners();
+            greatOmenDifficultyButton.onClick.RemoveAllListeners();
             weaponSelectorButton.onClick.AddListener(OpenWeaponSelection);
             closeWeaponSelectionButton.onClick.AddListener(CloseWeaponSelection);
             patrolButton.onClick.AddListener(StartPatrol);
+            previousStageButton.onClick.AddListener(() => BrowseStage(-1));
+            nextStageButton.onClick.AddListener(() => BrowseStage(1));
+            normalDifficultyButton.onClick.AddListener(() => SelectDifficulty(StageDifficulty.Normal));
+            omenDifficultyButton.onClick.AddListener(() => SelectDifficulty(StageDifficulty.Omen));
+            greatOmenDifficultyButton.onClick.AddListener(() => SelectDifficulty(StageDifficulty.GreatOmen));
             BindWeaponOptions();
             Refresh();
         }
@@ -185,6 +308,47 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (string.IsNullOrEmpty(selectedWeapon.Value)) selectedWeapon = WeaponId.HwandoFlyingBlade;
         }
 
+        private void LoadCurrentStage()
+        {
+            var selection = session.ActiveStageSelection;
+            viewedStageIndex = Mathf.Max(0, StageCatalog.IndexOf(selection.StageId));
+            viewedDifficulty = selection.Difficulty;
+            stageFeedback = string.Empty;
+        }
+
+        private void BrowseStage(int direction)
+        {
+            viewedStageIndex = Mathf.Clamp(viewedStageIndex + direction, 0, StageCatalog.All.Count - 1);
+            viewedDifficulty = StageDifficulty.Normal;
+            stageFeedback = string.Empty;
+            Refresh();
+        }
+
+        private void SelectDifficulty(StageDifficulty difficulty)
+        {
+            var selection = new StageSelection(StageCatalog.All[viewedStageIndex].Id, difficulty);
+            var records = StageClearRecordData.DomainRecords(session.Data.StageClearRecords);
+            if (!StageUnlockRules.IsUnlocked(selection, records))
+            {
+                stageFeedback = StageUnlockRules.LockReason(selection, records);
+                Refresh();
+                return;
+            }
+
+            var result = session.SaveStageSelection(selection);
+            if (!result.Success)
+            {
+                stageFeedback = "출전 정보를 저장하지 못했습니다";
+                Refresh();
+                return;
+            }
+
+            viewedDifficulty = difficulty;
+            stageFeedback = string.Empty;
+            refreshHeader?.Invoke();
+            Refresh();
+        }
+
         private void OpenWeaponSelection()
         {
             weaponSelectionOverlay.transform.SetAsLastSibling();
@@ -213,7 +377,23 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         private void StartPatrol()
         {
-            if (session.Router.IsRouting || !SaveCurrentWeapon()) return;
+            if (session.Router.IsRouting) return;
+            var definition = StageCatalog.All[viewedStageIndex];
+            var selection = new StageSelection(definition.Id, viewedDifficulty);
+            var records = StageClearRecordData.DomainRecords(session.Data.StageClearRecords);
+            if (!StageUnlockRules.IsUnlocked(selection, records))
+            {
+                stageFeedback = StageUnlockRules.LockReason(selection, records);
+                Refresh();
+                return;
+            }
+            if (!definition.HasPlayableContent)
+            {
+                stageFeedback = "아직 준비 중인 지역입니다";
+                Refresh();
+                return;
+            }
+            if (!session.SaveStageSelection(selection).Success || !SaveCurrentWeapon()) return;
             patrolButton.interactable = false;
             session.SetPendingDestination("Gameplay");
             StartCoroutine(LoadBootstrap());
@@ -237,6 +417,56 @@ namespace JoseonHunter.Presentation.UI.Lobby
             weaponText.text = LobbyViewModels.WeaponName(selectedWeapon);
             weaponIcon.sprite = ResolveWeaponSprite(selectedWeapon);
             weaponIcon.enabled = weaponIcon.sprite != null;
+
+            var definition = StageCatalog.All[viewedStageIndex];
+            var selection = new StageSelection(definition.Id, viewedDifficulty);
+            var records = StageClearRecordData.DomainRecords(session.Data.StageClearRecords);
+            var unlocked = StageUnlockRules.IsUnlocked(selection, records);
+            stageNameText.text = $"{viewedStageIndex + 1}장 · {definition.DisplayName}";
+            stageStatusText.text = $"15분 생존 · {StageDifficultyNames.DisplayName(viewedDifficulty)}";
+            previousStageButton.interactable = viewedStageIndex > 0;
+            nextStageButton.interactable = viewedStageIndex < StageCatalog.All.Count - 1;
+            RefreshDifficultyButton(normalDifficultyButton, StageDifficulty.Normal, records);
+            RefreshDifficultyButton(omenDifficultyButton, StageDifficulty.Omen, records);
+            RefreshDifficultyButton(greatOmenDifficultyButton, StageDifficulty.GreatOmen, records);
+            patrolButton.interactable = unlocked && definition.HasPlayableContent && !session.Router.IsRouting;
+
+            if (!string.IsNullOrEmpty(stageFeedback))
+                feedbackText.text = stageFeedback;
+            else if (!unlocked)
+                feedbackText.text = StageUnlockRules.LockReason(selection, records);
+            else if (!definition.HasPlayableContent)
+                feedbackText.text = "아직 준비 중인 지역입니다";
+            else
+                feedbackText.text = string.Empty;
+        }
+
+        private void RefreshDifficultyButton(
+            Button button,
+            StageDifficulty difficulty,
+            System.Collections.Generic.IReadOnlyCollection<StageClearRecord> records)
+        {
+            var selection = new StageSelection(StageCatalog.All[viewedStageIndex].Id, difficulty);
+            var unlocked = StageUnlockRules.IsUnlocked(selection, records);
+            var selected = viewedDifficulty == difficulty;
+            button.interactable = true;
+            var background = button.targetGraphic as Image;
+            if (background != null)
+                background.color = selected
+                    ? LobbyUiFactory.Gold
+                    : unlocked
+                        ? LobbyUiFactory.NightInk
+                        : new Color(.10f, .10f, .11f, 1f);
+            var label = button.GetComponentInChildren<TMP_Text>(true);
+            if (label != null)
+            {
+                label.text = unlocked
+                    ? StageDifficultyNames.DisplayName(difficulty)
+                    : StageDifficultyNames.DisplayName(difficulty) + " · 잠김";
+                label.color = selected ? LobbyUiFactory.Ink : unlocked
+                    ? LobbyUiFactory.HanjiLight
+                    : new Color(.48f, .46f, .42f, 1f);
+            }
         }
 
         private void OnDisable()
