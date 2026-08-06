@@ -100,6 +100,7 @@ public static class AccountProgression
 ### Task 2: Training Rank 20 and Account-Gated Capacity
 
 **Files:**
+- Modify: `Assets/JoseonHunter/Scripts/Domain/Save/SaveDataV1.cs`
 - Modify: `Assets/JoseonHunter/Scripts/Domain/Progression/CommonTrainingProgression.cs`
 - Modify: `Assets/JoseonHunter/Scripts/Domain/Progression/EquipmentProgression.cs`
 - Modify: `Assets/JoseonHunter/Scripts/Runtime/Gameplay/FirstPlayableController.cs`
@@ -147,7 +148,7 @@ public static float BonusForRank(int rank);
 public float DamageTakenMultiplier();
 ```
 
-`Purchase`는 트랙 최대치, 총 한도, 엽전, 오버플로 순으로 검사한다. `FirstPlayableController`는 기존 10% 하한 대신 `DamageTakenMultiplier()`를 사용한다.
+`SaveDataV1`에는 런타임 권위 값 `AccountExperience`를 먼저 추가하고 `Copy`/`CopyFrom`에 포함한다. 영속 문서 스키마와 구버전 이관은 Task 3에서 담당한다. `Purchase`는 트랙 최대치, 총 한도, 엽전, 오버플로 순으로 검사한다. `FirstPlayableController`는 기존 10% 하한 대신 `DamageTakenMultiplier()`를 사용한다.
 
 - [ ] **Step 4: Run focused EditMode GREEN, then PlayMode `PatrolLoadoutGameplayTests` GREEN**
 - [ ] **Step 5: Stage only listed files, commit `feat: expand account-gated common training`, and push**
