@@ -24,6 +24,7 @@ namespace JoseonHunter.Domain.Save
     public sealed class SaveDataV1
     {
         public int SchemaVersion = 2;
+        public int AccountExperience;
         public int Coins;
         public string OwnedHero = "hunter";
         public string EquippedHero = "hunter";
@@ -94,7 +95,7 @@ namespace JoseonHunter.Domain.Save
         {
             var copy = new SaveDataV1
             {
-                SchemaVersion = SchemaVersion, Coins = Coins, OwnedHero = OwnedHero, EquippedHero = EquippedHero,
+                SchemaVersion = SchemaVersion, AccountExperience = AccountExperience, Coins = Coins, OwnedHero = OwnedHero, EquippedHero = EquippedHero,
                 TutorialCompleted = TutorialCompleted, AccessibilityEnabled = AccessibilityEnabled, AudioVolume = AudioVolume,
                 EquipmentLevels = new Dictionary<string, int>(EquipmentLevels), EquipmentQualities = new Dictionary<string, int>(EquipmentQualities),
                 EquipmentFragments = new Dictionary<string, int>(EquipmentFragments), EvolutionNodeRanks = new Dictionary<string, int>(EvolutionNodeRanks), EvolutionSpentCoins = new Dictionary<string, int>(EvolutionSpentCoins),
@@ -113,7 +114,7 @@ namespace JoseonHunter.Domain.Save
         public void CopyFrom(SaveDataV1 source)
         {
             var copy = source.Copy();
-            SchemaVersion = copy.SchemaVersion; Coins = copy.Coins; OwnedHero = copy.OwnedHero; EquippedHero = copy.EquippedHero;
+            SchemaVersion = copy.SchemaVersion; AccountExperience = copy.AccountExperience; Coins = copy.Coins; OwnedHero = copy.OwnedHero; EquippedHero = copy.EquippedHero;
             EquipmentLevels = copy.EquipmentLevels; EquipmentQualities = copy.EquipmentQualities; EquipmentFragments = copy.EquipmentFragments;
             EvolutionNodeRanks = copy.EvolutionNodeRanks; EvolutionSpentCoins = copy.EvolutionSpentCoins; InvestigationClues = copy.InvestigationClues; ClaimedInvestigationMilestones = copy.ClaimedInvestigationMilestones;
             MonsterCompendiumEntries = copy.MonsterCompendiumEntries; UnlockedHeroes = copy.UnlockedHeroes; UnlockedDifficulties = copy.UnlockedDifficulties;

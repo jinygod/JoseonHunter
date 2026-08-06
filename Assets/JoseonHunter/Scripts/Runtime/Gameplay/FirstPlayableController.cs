@@ -187,6 +187,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public float StartingDamageMultiplierForTests => runDamageMultiplier;
         public float StartingMoveSpeedForTests => moveSpeed;
         public float StartingPickupRadiusForTests => pickupRadius;
+        public float StartingIncomingDamageMultiplierForTests => runIncomingDamageMultiplier;
         public bool RunEndedForTests => runEnded;
         public bool VictoryForTests => victory;
         public bool SettlementSucceededForTests => settlementSucceeded;
@@ -986,9 +987,8 @@ namespace JoseonHunter.Runtime.Gameplay
             runDamageMultiplier = training?.Multiplier(CommonTrainingId.Power) ?? 1f;
             var movementMultiplier = training?.Multiplier(CommonTrainingId.Footwork) ?? 1f;
             runExperienceMultiplier = training?.Multiplier(CommonTrainingId.Learning) ?? 1f;
-            var guardMultiplier = training?.Multiplier(CommonTrainingId.Guard) ?? 1f;
             var resonanceMultiplier = training?.Multiplier(CommonTrainingId.Resonance) ?? 1f;
-            runIncomingDamageMultiplier = Mathf.Clamp(2f - guardMultiplier, .9f, 1f);
+            runIncomingDamageMultiplier = training?.DamageTakenMultiplier() ?? 1f;
             playerMaxHealth = 100f * vitalityMultiplier;
             playerHealth = playerMaxHealth;
             moveSpeed = 2.4f * movementMultiplier;

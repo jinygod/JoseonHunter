@@ -58,6 +58,20 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.StartingPickupRadiusForTests, Is.EqualTo(.638f).Within(.001f));
         }
 
+        [UnityTest]
+        public IEnumerator RankTwentyGuardAppliesFullFifteenPercentDamageReduction()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.CommonTrainingRanks[CommonTrainingId.Guard.ToString()] = 20;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+
+            Assert.That(controller.StartingIncomingDamageMultiplierForTests, Is.EqualTo(.85f).Within(.001f));
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;

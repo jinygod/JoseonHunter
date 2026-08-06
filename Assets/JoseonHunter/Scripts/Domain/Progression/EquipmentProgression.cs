@@ -3,7 +3,7 @@ using JoseonHunter.Domain.Save;
 
 namespace JoseonHunter.Domain.Progression
 {
-    public enum ProgressionError { None, InsufficientCoins, InsufficientFragments, InsufficientMastery, UnknownId, InvalidAmount, InvalidSelection, MaximumReached, AlreadyUnlocked }
+    public enum ProgressionError { None, InsufficientCoins, InsufficientFragments, InsufficientMastery, UnknownId, InvalidAmount, InvalidSelection, MaximumReached, AlreadyUnlocked, AccountLevelRequired }
     public readonly struct ProgressionResult { public ProgressionResult(bool success, ProgressionError error) { Success = success; Error = error; } public bool Success { get; } public ProgressionError Error { get; } }
     public sealed class EquipmentProgression
     {
