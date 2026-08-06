@@ -14,12 +14,11 @@ namespace JoseonHunter.Presentation.Audio
             var catalog = new GameAudioClipCatalog();
             catalog.Add(GameAudioCueId.UiClick, "Audio/CC0/UI/ui_click");
             catalog.Add(GameAudioCueId.UiConfirm, "Audio/CC0/UI/ui_confirm");
-            catalog.Add(GameAudioCueId.UiCancel, "Audio/CC0/UI/ui_cancel");
+            catalog.Add(GameAudioCueId.UiCancel, "Audio/CC0/UI/ui_click");
             catalog.Add(GameAudioCueId.ExperiencePickup, "Audio/CC0/Pickups/experience");
             catalog.Add(GameAudioCueId.YeopjeonPickup,
                 "Audio/CC0/Pickups/yeopjeon_1",
-                "Audio/CC0/Pickups/yeopjeon_2",
-                "Audio/CC0/Pickups/yeopjeon_3");
+                "Audio/CC0/Pickups/yeopjeon_2");
             catalog.Add(GameAudioCueId.MagnetPickup, "Audio/CC0/Pickups/magnet");
             catalog.Add(GameAudioCueId.LevelUp, "Audio/CC0/Pickups/level_up");
             catalog.Add(GameAudioCueId.UpgradeSelected, "Audio/CC0/UI/ui_confirm");
@@ -28,19 +27,17 @@ namespace JoseonHunter.Presentation.Audio
             catalog.Add(GameAudioCueId.ThunderBomb, "Audio/CC0/Weapons/thunder_bomb");
             catalog.Add(GameAudioCueId.FrostFlask, "Audio/CC0/Weapons/frost_flask");
             catalog.Add(GameAudioCueId.WindThunderFan, "Audio/CC0/Weapons/wind_fan");
-            catalog.Add(GameAudioCueId.Talisman, "Audio/CC0/Weapons/talisman");
+            catalog.Add(GameAudioCueId.Talisman, "Audio/CC0/Pickups/magnet");
             catalog.Add(GameAudioCueId.Jangseung, "Audio/CC0/Weapons/jangseung");
             catalog.Add(GameAudioCueId.Geumjul, "Audio/CC0/Weapons/geumjul");
             catalog.Add(GameAudioCueId.Singijeon, "Audio/CC0/Weapons/singijeon");
-            catalog.Add(GameAudioCueId.NormalHit,
-                "Audio/CC0/Combat/hit_soft_1",
-                "Audio/CC0/Combat/hit_soft_2");
+            catalog.Add(GameAudioCueId.NormalHit, "Audio/CC0/Combat/hit_soft_1");
             catalog.Add(GameAudioCueId.CriticalHit, "Audio/CC0/Combat/hit_critical");
-            catalog.Add(GameAudioCueId.BossWarning, "Audio/CC0/Combat/boss_warning");
-            catalog.Add(GameAudioCueId.BossAppear, "Audio/CC0/Combat/boss_warning");
+            catalog.Add(GameAudioCueId.BossWarning, "Audio/CC0/Weapons/geumjul");
+            catalog.Add(GameAudioCueId.BossAppear, "Audio/CC0/Weapons/geumjul");
             catalog.Add(GameAudioCueId.BossDefeat, "Audio/CC0/Combat/boss_defeat");
             catalog.Add(GameAudioCueId.Victory, "Audio/CC0/Pickups/level_up");
-            catalog.Add(GameAudioCueId.Defeat, "Audio/CC0/Combat/boss_warning");
+            catalog.Add(GameAudioCueId.Defeat, "Audio/CC0/Weapons/geumjul");
             return catalog;
         }
 

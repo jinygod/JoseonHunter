@@ -10,6 +10,7 @@ namespace JoseonHunter.Editor.AssetImport
         private const string MusicRoot = "Assets/JoseonHunter/Audio/Music/";
         private const string SfxRoot = "Assets/JoseonHunter/Audio/SFX/";
         private const string UiAudioRoot = "Assets/JoseonHunter/Audio/UI/";
+        private const string RuntimeCc0AudioRoot = "Assets/JoseonHunter/Resources/Audio/CC0/";
         private const string UiArtRoot = "Assets/JoseonHunter/Art/UI/";
         private const string AffixJackpotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/";
         private const string MicroSlotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot/";
@@ -259,8 +260,10 @@ namespace JoseonHunter.Editor.AssetImport
         private void OnPreprocessAudio()
         {
             var isMusic = assetPath.StartsWith(MusicRoot, System.StringComparison.Ordinal);
+            var isRuntimeCc0 = assetPath.StartsWith(RuntimeCc0AudioRoot, System.StringComparison.Ordinal);
             var isSfx = assetPath.StartsWith(SfxRoot, System.StringComparison.Ordinal)
-                || assetPath.StartsWith(UiAudioRoot, System.StringComparison.Ordinal);
+                || assetPath.StartsWith(UiAudioRoot, System.StringComparison.Ordinal)
+                || isRuntimeCc0;
             if (!isMusic && !isSfx)
             {
                 return;
@@ -273,8 +276,10 @@ namespace JoseonHunter.Editor.AssetImport
                 : AudioClipLoadType.DecompressOnLoad;
             settings.compressionFormat = AudioCompressionFormat.Vorbis;
             settings.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
+            settings.preloadAudioData = !isMusic;
+            if (isRuntimeCc0) settings.quality = .70f;
             audio.defaultSampleSettings = settings;
-            audio.forceToMono = false;
+            audio.forceToMono = isRuntimeCc0;
         }
 
         private static bool IsBilinearArt(string path)

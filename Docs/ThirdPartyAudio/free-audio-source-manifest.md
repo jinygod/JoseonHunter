@@ -58,3 +58,28 @@
 - UI, 획득, 무기, 피격, 보스 경고 그룹으로 분류한다.
 - 모바일 동시 재생량과 빌드 용량을 줄이기 위해 짧은 효과음은 Vorbis 압축 및 메모리 로드 정책을 별도로 적용한다.
 - 배경 음악은 조선 민속 판타지 분위기와 맞는 무료 음원을 아직 찾지 못했으므로 이번 원본 묶음에 포함하지 않는다.
+
+## 실제 Unity 편입 목록
+
+아래 18개만 `Assets/JoseonHunter/Resources/Audio/CC0`에 편입했다. 동일 파일을 여러 게임 큐에서 재사용하므로 UI 취소, 부적, 우두머리 경고처럼 전용 복사본이 필요 없는 역할은 별도 에셋을 만들지 않았다.
+
+| Unity 파일 | 원본 파일 | 용도 |
+|---|---|---|
+| `UI/ui_click.ogg` | Kenney UI `click1.ogg` | 일반 클릭·취소 |
+| `UI/ui_confirm.ogg` | Kenney UI `click3.ogg` | 확인·출전·증강 확정 |
+| `Pickups/experience.ogg` | 80 RPG `item_gem_01.ogg` | 경험치 획득 |
+| `Pickups/yeopjeon_1.ogg` | 80 RPG `item_coins_01.ogg` | 엽전 획득 변형 1 |
+| `Pickups/yeopjeon_2.ogg` | 80 RPG `item_coins_02.ogg` | 엽전 획득 변형 2 |
+| `Pickups/magnet.ogg` | 80 RPG `spell_01.ogg` | 자석·주술 부적 |
+| `Pickups/level_up.ogg` | 80 RPG `item_gem_04.ogg` | 레벨업·승전 |
+| `Weapons/gakgung.wav` | Battle SFX `Bow.wav` | 각궁 |
+| `Weapons/hwando.wav` | Battle SFX `swish_2.wav` | 환도 비검 |
+| `Weapons/thunder_bomb.ogg` | 80 RPG `spell_fire_03.ogg` | 벽력탄 |
+| `Weapons/frost_flask.ogg` | 80 RPG `spell_02.ogg` | 서리병 |
+| `Weapons/wind_fan.wav` | Battle SFX `swish_3.wav` | 풍뢰선 |
+| `Weapons/jangseung.ogg` | Kenney Impact `impactWood_heavy_000.ogg` | 장승진 |
+| `Weapons/geumjul.ogg` | Kenney Impact `impactBell_heavy_000.ogg` | 금줄·우두머리 경고 |
+| `Weapons/singijeon.ogg` | 80 RPG `spell_fire_01.ogg` | 신기전 |
+| `Combat/hit_soft_1.ogg` | Kenney Impact `impactSoft_medium_000.ogg` | 일반 피격 |
+| `Combat/hit_critical.ogg` | Kenney Impact `impactPunch_heavy_000.ogg` | 치명타 |
+| `Combat/boss_defeat.ogg` | Kenney Impact `impactMetal_heavy_000.ogg` | 우두머리 격파 |

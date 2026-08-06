@@ -31,7 +31,7 @@ namespace JoseonHunter.Presentation.Audio
         public static void EnsureExists()
         {
             if (instance != null) return;
-            var existing = FindFirstObjectByType<GameAudioDirector>(FindObjectsInactive.Include);
+            var existing = FindAnyObjectByType<GameAudioDirector>(FindObjectsInactive.Include);
             if (existing != null)
             {
                 instance = existing;
