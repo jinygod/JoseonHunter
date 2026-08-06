@@ -7,6 +7,20 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class FirstPlayableUiStateTests
     {
         [Test]
+        public void RunResultStateCarriesAccountRewardAndLevelTransition()
+        {
+            var state = new FirstPlayableUiState(
+                6, 0, 10, 13, 42, 83.4f, 900f, 0f, 100f,
+                false, false, 0f, 0f, System.Array.Empty<WeaponSlotView>(),
+                runEnded: true, victory: true, runMasteryEarned: 42,
+                accountExperienceEarned: 420, accountLevelBefore: 7, accountLevelAfter: 8);
+
+            Assert.That(state.AccountExperienceEarned, Is.EqualTo(420));
+            Assert.That(state.AccountLevelBefore, Is.EqualTo(7));
+            Assert.That(state.AccountLevelAfter, Is.EqualTo(8));
+        }
+
+        [Test]
         public void Upgrade_choice_state_copies_source_items()
         {
             var source = new[]

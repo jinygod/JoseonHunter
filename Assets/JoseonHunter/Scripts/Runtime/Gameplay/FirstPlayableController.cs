@@ -131,6 +131,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool settlementPrepared;
         private bool settlementSucceeded;
         private bool settlementFailed;
+        private int accountExperienceEarned;
+        private int accountLevelBefore = 1;
+        private int accountLevelAfter = 1;
         private bool returningToLobby;
         private RunSettlement pendingSettlement;
         private StagePacingTimeline stageTimeline;
@@ -1021,6 +1024,9 @@ namespace JoseonHunter.Runtime.Gameplay
             settlementPrepared = false;
             settlementSucceeded = false;
             settlementFailed = false;
+            accountExperienceEarned = 0;
+            accountLevelBefore = 1;
+            accountLevelAfter = 1;
             returningToLobby = false;
 
             player = CreateCombatantObject(
@@ -2823,7 +2829,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 playerHealth, playerMaxHealth, finalBossWarning && !bossSpawned, bossAlive,
                 boss != null ? boss.Health : 0f, boss != null ? boss.MaximumHealth : 0f, weapons,
                 waveAnnouncement, waveAnnouncementTimer, waveAnnouncementIntensity, runEnded, victory,
-                RunMasteryTotal(), settlementFailed);
+                RunMasteryTotal(), settlementFailed, accountExperienceEarned,
+                accountLevelBefore, accountLevelAfter);
         }
 
         private static string LegacyStageName(WeaponLegacyStage stage) => stage switch
@@ -3090,9 +3097,22 @@ namespace JoseonHunter.Runtime.Gameplay
                 return true;
             }
 
+            var before = AccountProgression.StateFor(session.Data.AccountExperience);
+            var pendingAccountReward = AccountProgression.RewardFor(pendingSettlement);
             var result = session.CommitRun(pendingSettlement);
             settlementSucceeded = result.Success;
             settlementFailed = !result.Success;
+            accountLevelBefore = before.Level;
+            if (result.Success)
+            {
+                accountExperienceEarned = pendingAccountReward;
+                accountLevelAfter = AccountProgression.StateFor(session.Data.AccountExperience).Level;
+            }
+            else
+            {
+                accountExperienceEarned = 0;
+                accountLevelAfter = before.Level;
+            }
             return result.Success;
         }
 

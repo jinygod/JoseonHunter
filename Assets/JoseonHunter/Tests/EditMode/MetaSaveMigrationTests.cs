@@ -155,6 +155,26 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(data.Coins, Is.EqualTo(17));
             Assert.That(data.WeaponMasteryPoints[WeaponId.FrostFlask.Value], Is.EqualTo(9));
             Assert.That(data.BestPatrolResults["patrol_kills"], Is.EqualTo(21));
+            Assert.That(data.AccountExperience, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void FailedRunSaveLeavesEveryLiveRewardIncludingAccountExperienceUnchanged()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 10;
+            data.AccountExperience = 77;
+            var autosave = new AutoSaveOrchestrator(new AlwaysFailRepository(), data);
+            var settlement = new RunSettlement(
+                new Dictionary<WeaponId, int> { [WeaponId.GakgungShot] = 4 },
+                5, 800, 900f, true, false);
+
+            var result = autosave.CommitRun(settlement);
+
+            Assert.That(result.SaveError, Is.EqualTo(SaveError.IoFailure));
+            Assert.That(data.Coins, Is.EqualTo(10));
+            Assert.That(data.AccountExperience, Is.EqualTo(77));
+            Assert.That(data.WeaponMasteryPoints[WeaponId.GakgungShot.Value], Is.Zero);
         }
 
         private sealed class AlwaysFailRepository : ISaveRepository

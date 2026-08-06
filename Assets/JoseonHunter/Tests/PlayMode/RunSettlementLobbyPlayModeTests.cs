@@ -45,6 +45,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(121));
             Assert.That(MetaGameSession.Current.Data.WeaponMasteryPoints[WeaponId.GakgungShot.Value], Is.EqualTo(13));
+            Assert.That(MetaGameSession.Current.Data.AccountExperience, Is.EqualTo(3));
             Assert.That(repository.SaveCalls, Is.EqualTo(1));
         }
 
@@ -79,11 +80,13 @@ namespace JoseonHunter.Tests.PlayMode
             controller.EndRunForTests(false);
             Assert.That(controller.UiState.SettlementFailed, Is.True);
             Assert.That(MetaGameSession.Current.Data.Coins, Is.Zero);
+            Assert.That(MetaGameSession.Current.Data.AccountExperience, Is.Zero);
 
             controller.ReturnToLobby();
             yield return WaitForScene("Lobby");
             Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(5));
             Assert.That(MetaGameSession.Current.Data.WeaponMasteryPoints[WeaponId.FrostFlask.Value], Is.EqualTo(4));
+            Assert.That(MetaGameSession.Current.Data.AccountExperience, Is.EqualTo(1));
             Assert.That(repository.SaveCalls, Is.EqualTo(2));
         }
 

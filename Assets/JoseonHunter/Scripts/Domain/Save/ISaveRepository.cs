@@ -49,9 +49,14 @@ namespace JoseonHunter.Domain.Save
         {
             return Apply(copy =>
             {
+                var accountReward = Progression.AccountProgression.RewardFor(settlement);
+                if (!Progression.AccountProgression.TryAdd(
+                        copy.AccountExperience, accountReward, out var nextAccountExperience))
+                    return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
                 var nextCoins = (long)copy.Coins + settlement.Coins;
                 if (nextCoins > int.MaxValue) return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
                 copy.Coins = (int)nextCoins;
+                copy.AccountExperience = nextAccountExperience;
                 foreach (var pair in settlement.Mastery)
                 {
                     var current = copy.WeaponMasteryPoints.TryGetValue(pair.Key.Value, out var value) ? value : 0;
