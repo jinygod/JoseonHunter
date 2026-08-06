@@ -3,6 +3,7 @@ using JoseonHunter.Presentation.Audio;
 using JoseonHunter.Runtime.Audio;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 namespace JoseonHunter.Tests.PlayMode
@@ -68,6 +69,21 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator SceneTransitionsKeepExactlyOneEnabledAudioListener()
+        {
+            GameAudioDirector.EnsureExists();
+
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            Assert.That(EnabledListenerCount(), Is.EqualTo(1));
+
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            Assert.That(EnabledListenerCount(), Is.EqualTo(1));
+        }
+
+        [UnityTest]
         public IEnumerator MissingNoneCueReturnsFalseWithoutThrowing()
         {
             GameAudioDirector.EnsureExists();
@@ -88,6 +104,17 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(director.CanRequest(GameAudioCueId.NormalHit), Is.False);
             Assert.That(director.CanRequest(GameAudioCueId.Gakgung), Is.False);
             Assert.That(director.CanRequest(GameAudioCueId.UiClick), Is.True);
+        }
+
+        private static int EnabledListenerCount()
+        {
+            var count = 0;
+            foreach (var listener in Object.FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude))
+            {
+                if (listener.enabled && listener.gameObject.activeInHierarchy) count++;
+            }
+
+            return count;
         }
     }
 }

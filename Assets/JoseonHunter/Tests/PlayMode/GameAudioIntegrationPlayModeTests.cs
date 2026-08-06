@@ -49,18 +49,10 @@ namespace JoseonHunter.Tests.PlayMode
             var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
             Assert.That(controller, Is.Not.Null);
             GameAudioDirector.Instance.ResetRequestCountsForTests();
-            LogAssert.ignoreFailingMessages = true;
-            try
-            {
-                controller.SpawnExperiencePickupForTests(Vector2.zero, 1);
-                controller.TickGameplayIfRunningForTests(.02f);
-                controller.AddExperienceForTests(1000);
-                yield return null;
-            }
-            finally
-            {
-                LogAssert.ignoreFailingMessages = false;
-            }
+            controller.SpawnExperiencePickupForTests(Vector2.zero, 1);
+            controller.TickGameplayIfRunningForTests(.02f);
+            controller.AddExperienceForTests(1000);
+            yield return null;
 
             Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.ExperiencePickup),
                 Is.EqualTo(1));
@@ -76,17 +68,9 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
             GameAudioDirector.Instance.ResetRequestCountsForTests();
-            LogAssert.ignoreFailingMessages = true;
-            try
-            {
-                controller.AdvanceStageForTests(0f, 900f);
-                controller.DefeatFinalBossForTests();
-                yield return null;
-            }
-            finally
-            {
-                LogAssert.ignoreFailingMessages = false;
-            }
+            controller.AdvanceStageForTests(0f, 900f);
+            controller.DefeatFinalBossForTests();
+            yield return null;
 
             Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.BossWarning),
                 Is.EqualTo(1));
@@ -108,18 +92,10 @@ namespace JoseonHunter.Tests.PlayMode
             var feedback = feedbackObject.AddComponent<CombatFeedbackDirector>();
             feedback.Bind(service);
             audio.ResetRequestCountsForTests();
-            LogAssert.ignoreFailingMessages = true;
-            try
-            {
-                Assert.That(service.TryApply(WeaponDamageRequest.Create(
-                    71, WeaponId.GakgungShot, target, 5, false, new Float2(0f, 0f),
-                    ContactPhase.Direct, 1), out _), Is.True);
-                yield return null;
-            }
-            finally
-            {
-                LogAssert.ignoreFailingMessages = false;
-            }
+            Assert.That(service.TryApply(WeaponDamageRequest.Create(
+                71, WeaponId.GakgungShot, target, 5, false, new Float2(0f, 0f),
+                ContactPhase.Direct, 1), out _), Is.True);
+            yield return null;
 
             Assert.That(audio.RequestCountForTests(GameAudioCueId.Gakgung), Is.EqualTo(1));
             Assert.That(audio.RequestCountForTests(GameAudioCueId.NormalHit), Is.EqualTo(1));

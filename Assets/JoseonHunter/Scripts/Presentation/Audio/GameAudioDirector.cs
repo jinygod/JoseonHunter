@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Runtime.Audio;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace JoseonHunter.Presentation.Audio
 {
@@ -18,6 +19,7 @@ namespace JoseonHunter.Presentation.Audio
         private readonly Dictionary<GameAudioCueId, int> requestCounts = new Dictionary<GameAudioCueId, int>();
 #endif
         private AudioSource[] sources;
+        private AudioListener fallbackListener;
         private GameAudioPriority[] sourcePriorities;
         private GameAudioClipCatalog catalog;
         private GameAudioPlaybackBudget budget;
@@ -51,6 +53,9 @@ namespace JoseonHunter.Presentation.Audio
 
             instance = this;
             DontDestroyOnLoad(gameObject);
+            fallbackListener = gameObject.AddComponent<AudioListener>();
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            RefreshFallbackListener();
             budget = new GameAudioPlaybackBudget(PoolSize);
             catalog = GameAudioClipCatalog.LoadDefault();
             sources = new AudioSource[PoolSize];
@@ -68,7 +73,27 @@ namespace JoseonHunter.Presentation.Audio
 
         private void OnDestroy()
         {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
             if (instance == this) instance = null;
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode) => RefreshFallbackListener();
+
+        private void RefreshFallbackListener()
+        {
+            if (fallbackListener == null) return;
+
+            var hasEnabledSceneListener = false;
+            foreach (var listener in FindObjectsByType<AudioListener>(FindObjectsInactive.Exclude))
+            {
+                if (listener == fallbackListener || !listener.enabled || !listener.gameObject.activeInHierarchy)
+                    continue;
+
+                hasEnabledSceneListener = true;
+                break;
+            }
+
+            fallbackListener.enabled = !hasEnabledSceneListener;
         }
 
         public void SetCombatEnabled(bool enabled) => combatEnabled = enabled;
