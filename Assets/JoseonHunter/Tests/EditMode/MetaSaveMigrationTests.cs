@@ -171,6 +171,52 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void OmenVictoryAppliesEveryRewardMultiplierAndWritesOneClearRecord()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 500, 35)));
+            var repository = new RecordingRepository();
+            var autosave = new AutoSaveOrchestrator(repository, data);
+            var settlement = new RunSettlement(
+                new Dictionary<WeaponId, int> { [WeaponId.GakgungShot] = 10 },
+                10, 800, 900f, true, false,
+                new StageSelection(StageId.GwigokField, StageDifficulty.Omen), 35);
+
+            var result = autosave.CommitRun(settlement);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(data.Coins, Is.EqualTo(14));
+            Assert.That(data.AccountExperience, Is.EqualTo(750));
+            Assert.That(data.WeaponMasteryPoints[WeaponId.GakgungShot.Value], Is.EqualTo(12));
+            Assert.That(data.StageClearRecords.Count, Is.EqualTo(2));
+            Assert.That(data.StageClearRecords[1].Difficulty, Is.EqualTo("omen"));
+            Assert.That(data.StageClearRecords[1].BestKills, Is.EqualTo(800));
+            Assert.That(data.StageClearRecords[1].BestLevel, Is.EqualTo(35));
+        }
+
+        [Test]
+        public void FailedDifficultySettlementRollsBackRewardsAndClearRecord()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 500, 35)));
+            var autosave = new AutoSaveOrchestrator(new AlwaysFailRepository(), data);
+            var settlement = new RunSettlement(
+                new Dictionary<WeaponId, int> { [WeaponId.GakgungShot] = 10 },
+                10, 800, 900f, true, false,
+                new StageSelection(StageId.GwigokField, StageDifficulty.Omen), 35);
+
+            var result = autosave.CommitRun(settlement);
+
+            Assert.That(result.SaveError, Is.EqualTo(SaveError.IoFailure));
+            Assert.That(data.Coins, Is.Zero);
+            Assert.That(data.AccountExperience, Is.Zero);
+            Assert.That(data.WeaponMasteryPoints[WeaponId.GakgungShot.Value], Is.Zero);
+            Assert.That(data.StageClearRecords.Count, Is.EqualTo(1));
+        }
+
+        [Test]
         public void FailedStyleSaveLeavesLiveCoinsAndUnlocksUnchanged()
         {
             var data = SaveDataV1.CreateDefaults();

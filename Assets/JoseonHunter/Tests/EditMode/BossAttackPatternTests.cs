@@ -61,6 +61,36 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(enraged.RecoveryDurationSeconds(.49f), Is.LessThan(healthy.RecoveryDurationSeconds(1f)));
         }
 
+        [Test]
+        public void GreatOmenAddsMidBossPatternsAndKeepsWarningsReadable()
+        {
+            var firstMidBoss = new BossAttackController(BossCombatRole.FirstMidBoss, 0f, 2);
+            var secondMidBoss = new BossAttackController(BossCombatRole.SecondMidBoss, 0f, 2);
+
+            Assert.That(BeginAndFinishAttack(firstMidBoss), Is.EqualTo(BossAttackKind.SuppressionSlam));
+            Assert.That(BeginAndFinishAttack(firstMidBoss), Is.EqualTo(BossAttackKind.SpiritVolley));
+            Assert.That(BeginAndFinishAttack(secondMidBoss), Is.EqualTo(BossAttackKind.BloodCharge));
+            Assert.That(BeginAndFinishAttack(secondMidBoss), Is.EqualTo(BossAttackKind.SuppressionSlam));
+
+            var warning = firstMidBoss.Tick(10f, default, new Float2(2f, 0f), 1f);
+            Assert.That(warning.WarningDurationSeconds, Is.GreaterThanOrEqualTo(.7f));
+        }
+
+        [Test]
+        public void DifficultyPressureShortensRecoveryWithoutChangingBaseWarningDuration()
+        {
+            var normal = new BossAttackController(BossCombatRole.FinalBoss, 0f, 0);
+            var omen = new BossAttackController(BossCombatRole.FinalBoss, 0f, 1);
+            var greatOmen = new BossAttackController(BossCombatRole.FinalBoss, 0f, 2);
+
+            Assert.That(omen.RecoveryDurationSeconds(1f),
+                Is.EqualTo(normal.RecoveryDurationSeconds(1f) * .88f).Within(.001f));
+            Assert.That(greatOmen.RecoveryDurationSeconds(1f),
+                Is.EqualTo(normal.RecoveryDurationSeconds(1f) * .75f).Within(.001f));
+            Assert.That(greatOmen.Tick(.01f, default, new Float2(2f, 0f), 1f).WarningDurationSeconds,
+                Is.EqualTo(.95f).Within(.001f));
+        }
+
         private static BossAttackKind BeginAndFinishAttack(BossAttackController controller)
         {
             var warning = controller.Tick(10f, default, new Float2(2f, 0f), 1f);
@@ -71,4 +101,3 @@ namespace JoseonHunter.Tests.EditMode
         }
     }
 }
-

@@ -73,6 +73,7 @@ namespace JoseonHunter.Domain.Combat
     public sealed class BossAttackController
     {
         private readonly BossCombatRole role;
+        private readonly int pressureTier;
         private BossAttackPhase phase = BossAttackPhase.Chase;
         private BossAttackKind kind;
         private Float2 lockedTarget;
@@ -80,12 +81,15 @@ namespace JoseonHunter.Domain.Combat
         private float warningDurationSeconds;
         private int attackOrdinal;
 
-        public BossAttackController(BossCombatRole role, float initialCooldownSeconds = .8f)
+        public BossAttackController(BossCombatRole role, float initialCooldownSeconds = .8f, int pressureTier = 0)
         {
             if (float.IsNaN(initialCooldownSeconds) || float.IsInfinity(initialCooldownSeconds) ||
                 initialCooldownSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(initialCooldownSeconds));
+            if (pressureTier < 0 || pressureTier > 2)
+                throw new ArgumentOutOfRangeException(nameof(pressureTier));
             this.role = role;
+            this.pressureTier = pressureTier;
             phaseSecondsRemaining = initialCooldownSeconds;
         }
 
@@ -140,9 +144,10 @@ namespace JoseonHunter.Domain.Combat
         public float RecoveryDurationSeconds(float healthFraction)
         {
             var baseDuration = role == BossCombatRole.FinalBoss ? 1f : 1.2f;
-            return role == BossCombatRole.FinalBoss && healthFraction < .5f
-                ? baseDuration * .65f
-                : baseDuration;
+            var phaseTwoThreshold = pressureTier >= 2 ? .65f : .5f;
+            if (role == BossCombatRole.FinalBoss && healthFraction < phaseTwoThreshold)
+                baseDuration *= .65f;
+            return baseDuration * (pressureTier == 1 ? .88f : pressureTier >= 2 ? .75f : 1f);
         }
 
         private void BeginTelegraph(Float2 playerPosition)
@@ -156,8 +161,20 @@ namespace JoseonHunter.Domain.Combat
 
         private BossAttackKind SelectNextAttack()
         {
-            if (role == BossCombatRole.FirstMidBoss) return BossAttackKind.SuppressionSlam;
-            if (role == BossCombatRole.SecondMidBoss) return BossAttackKind.BloodCharge;
+            if (role == BossCombatRole.FirstMidBoss)
+            {
+                if (pressureTier < 2) return BossAttackKind.SuppressionSlam;
+                return attackOrdinal++ % 2 == 0
+                    ? BossAttackKind.SuppressionSlam
+                    : BossAttackKind.SpiritVolley;
+            }
+            if (role == BossCombatRole.SecondMidBoss)
+            {
+                if (pressureTier < 2) return BossAttackKind.BloodCharge;
+                return attackOrdinal++ % 2 == 0
+                    ? BossAttackKind.BloodCharge
+                    : BossAttackKind.SuppressionSlam;
+            }
             var selected = attackOrdinal++ % 3;
             return selected == 0
                 ? BossAttackKind.BloodCharge
@@ -178,4 +195,3 @@ namespace JoseonHunter.Domain.Combat
             attack == BossAttackKind.BloodCharge ? .45f : .08f;
     }
 }
-

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using NUnit.Framework;
+using JoseonHunter.Domain.Runs;
 
 namespace JoseonHunter.Tests.EditMode
 {
@@ -18,6 +19,20 @@ namespace JoseonHunter.Tests.EditMode
                 new Dictionary<WeaponId, int>(), 0, kills, seconds, victory, abandoned);
 
             Assert.That(AccountProgression.RewardFor(settlement), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void OmenAndGreatOmenMultiplyAccountExperienceAfterBaseReward()
+        {
+            var omen = new RunSettlement(
+                new Dictionary<WeaponId, int>(), 0, 800, 900f, true, false,
+                new StageSelection(StageId.GwigokField, StageDifficulty.Omen), 35);
+            var greatOmen = new RunSettlement(
+                new Dictionary<WeaponId, int>(), 0, 800, 900f, true, false,
+                new StageSelection(StageId.GwigokField, StageDifficulty.GreatOmen), 35);
+
+            Assert.That(AccountProgression.RewardFor(omen), Is.EqualTo(750));
+            Assert.That(AccountProgression.RewardFor(greatOmen), Is.EqualTo(900));
         }
 
         [Test]

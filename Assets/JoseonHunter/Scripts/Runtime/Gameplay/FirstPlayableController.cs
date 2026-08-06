@@ -137,6 +137,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool returningToLobby;
         private RunSettlement pendingSettlement;
         private StagePacingTimeline stageTimeline;
+        private StageSelection activeStageSelection =
+            new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
+        private StageDifficultyProfile activeDifficultyProfile =
+            StageDifficultyProfile.For(StageDifficulty.Normal);
         private int processedStageMilestones;
         private bool finalBossWarning;
         private string waveAnnouncement = string.Empty;
@@ -191,6 +195,13 @@ namespace JoseonHunter.Runtime.Gameplay
         public float StartingMoveSpeedForTests => moveSpeed;
         public float StartingPickupRadiusForTests => pickupRadius;
         public float StartingIncomingDamageMultiplierForTests => runIncomingDamageMultiplier;
+        public StageDifficulty ActiveStageDifficultyForTests => activeStageSelection.Difficulty;
+        public float LastSpawnHealthForTests { get; private set; }
+        public float LastSpawnContactDamageForTests { get; private set; }
+        public int ActiveEnemyCapForTests => activeDifficultyProfile.ScaleActiveCap(
+            WaveSchedule.For(RunClock.PhaseAt(elapsed)).ActiveCap);
+        public float NextSpawnIntervalForTests => activeDifficultyProfile.ScaleSpawnInterval(
+            EnemyDensityProfile.SpawnInterval(stageTimeline.Sample(elapsed)));
         public bool RunEndedForTests => runEnded;
         public bool VictoryForTests => victory;
         public bool SettlementSucceededForTests => settlementSucceeded;
@@ -946,6 +957,10 @@ namespace JoseonHunter.Runtime.Gameplay
             weaponLevels.Clear();
             var metaSession = MetaGameSession.Current;
             var patrolLoadout = metaSession != null ? metaSession.ActiveLoadout : null;
+            activeStageSelection = metaSession != null
+                ? metaSession.ActiveStageSelection
+                : new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
+            activeDifficultyProfile = StageDifficultyProfile.For(activeStageSelection.Difficulty);
             var startingWeapon = patrolLoadout != null
                 ? patrolLoadout.StartingWeapon
                 : WeaponId.HwandoFlyingBlade;
@@ -1152,24 +1167,25 @@ namespace JoseonHunter.Runtime.Gameplay
             ShowNormalRoleAnnouncements();
 
             var activeEnemyCount = ActiveCombatEnemyCount();
-            var availableSlots = Mathf.Max(0, wave.ActiveCap - activeEnemyCount);
+            var activeCap = activeDifficultyProfile.ScaleActiveCap(wave.ActiveCap);
+            var availableSlots = Mathf.Max(0, activeCap - activeEnemyCount);
             if (waveSpawnDirector.TryCreateIntroduction(elapsed, availableSlots, out var introduction))
             {
-                for (var index = 0; index < introduction.SpawnCount && activeEnemyCount < wave.ActiveCap; index++)
+                for (var index = 0; index < introduction.SpawnCount && activeEnemyCount < activeCap; index++)
                 {
                     SpawnEnemy(false, 0, introduction.ContentId);
                     activeEnemyCount++;
                 }
             }
 
-            availableSlots = Mathf.Max(0, wave.ActiveCap - activeEnemyCount);
+            availableSlots = Mathf.Max(0, activeCap - activeEnemyCount);
             if (waveSpawnDirector.TryCreatePack(elapsed, availableSlots, out var pack))
             {
-                activeEnemyCount += SpawnPack(pack, wave.ActiveCap, activeEnemyCount);
+                activeEnemyCount += SpawnPack(pack, activeCap, activeEnemyCount);
             }
 
             var pacing = stageTimeline.Sample(elapsed);
-            if (activeEnemyCount >= wave.ActiveCap)
+            if (activeEnemyCount >= activeCap)
             {
                 return;
             }
@@ -1180,10 +1196,11 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
-            spawnTimer = EnemyDensityProfile.SpawnInterval(pacing);
+            spawnTimer = activeDifficultyProfile.ScaleSpawnInterval(
+                EnemyDensityProfile.SpawnInterval(pacing));
             var batchSize = EnemyDensityProfile.BatchSize(pacing);
             for (var index = 0;
-                 index < batchSize && activeEnemyCount < wave.ActiveCap;
+                 index < batchSize && activeEnemyCount < activeCap;
                  index++)
             {
                 CountLivingEnemyKinds(out var livingNormal, out var livingSpecial);
@@ -1287,7 +1304,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
             var pacing = stageTimeline.Sample(elapsed);
             var isElite = !isBoss && !isMidBoss && elapsed >= 60f &&
-                          UnityEngine.Random.value < pacing.EliteChance;
+                          UnityEngine.Random.value < Mathf.Clamp01(
+                              pacing.EliteChance + activeDifficultyProfile.EliteChanceBonus);
 #if UNITY_INCLUDE_TESTS
             if (!isBoss && !isMidBoss && forceEliteForTests.HasValue)
             {
@@ -1336,7 +1354,10 @@ namespace JoseonHunter.Runtime.Gameplay
             var baseHealth = isBoss ? 6000f :
                 isMidBoss ? (midBossTier >= 2 ? 1400f : 450f) :
                 EnemyHealthCurve.BaseHealthAt(elapsed);
-            var health = isBoss || isMidBoss ? baseHealth : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier;
+            var health = (isBoss || isMidBoss
+                ? baseHealth
+                : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier) *
+                activeDifficultyProfile.EnemyHealthMultiplier;
             var displayScale = isBoss || isMidBoss
                 ? VisualScale.NormalEnemyScale * BossScaleProfile.MultiplierFor(bossRole)
                 : VisualScale.ScaleFor(rank);
@@ -1367,15 +1388,18 @@ namespace JoseonHunter.Runtime.Gameplay
                 Speed = (isBoss ? .98f :
                     isMidBoss ? (midBossTier >= 2 ? 1.08f : 1f) :
                     Mathf.Lerp(0.775f, 1.325f, elapsed / PrototypeDurationSeconds) * rank.SpeedMultiplier) * archetypeProfile.SpeedMultiplier,
-                ContactDamage = (isBoss ? 24f :
+                ContactDamage = ((isBoss ? 24f :
                     isMidBoss ? (midBossTier >= 2 ? 20f : 16f) :
-                    10f * rank.ContactDamageMultiplier) * archetypeProfile.ContactMultiplier,
+                    10f * rank.ContactDamageMultiplier) * archetypeProfile.ContactMultiplier) *
+                    activeDifficultyProfile.EnemyDamageMultiplier,
                 IsBoss = rank.IsBoss,
                 IsElite = rank.IsElite,
                 IsMidBoss = isMidBoss,
                 MidBossTier = midBossTier,
                 BossRole = bossRole,
-                BossAttack = isBoss || isMidBoss ? new BossAttackController(bossRole, 1.2f) : null,
+                BossAttack = isBoss || isMidBoss
+                    ? new BossAttackController(bossRole, 1.2f, activeDifficultyProfile.BossPressureTier)
+                    : null,
                 ContactRadius = isBoss || isMidBoss
                     ? BossScaleProfile.ContactRadius(VisualScale.NormalContactRadius, bossRole)
                     : VisualScale.ContactRadiusFor(rank),
@@ -1385,6 +1409,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 SpecialFrames = specialFrames,
                 Facing = player == null ? Vector2.left : ((Vector2)player.transform.position - position).normalized
             };
+#if UNITY_INCLUDE_TESTS
+            LastSpawnHealthForTests = state.Health;
+            LastSpawnContactDamageForTests = state.ContactDamage;
+#endif
             if (rank.IsElite || isMidBoss)
             {
                 state.HealthFill = CreateHealthBar(enemyObject.transform);
@@ -3084,7 +3112,8 @@ namespace JoseonHunter.Runtime.Gameplay
             if (!settlementPrepared)
             {
                 pendingSettlement = new RunSettlement(
-                    runWeaponKillLedger.Snapshot(), coins, kills, elapsed, victory, abandoned);
+                    runWeaponKillLedger.Snapshot(), coins, kills, elapsed, victory, abandoned,
+                    activeStageSelection, level);
                 settlementPrepared = true;
             }
             if (settlementSucceeded) return true;

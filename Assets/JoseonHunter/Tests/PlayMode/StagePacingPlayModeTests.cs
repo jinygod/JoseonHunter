@@ -1,5 +1,8 @@
 using System.Collections;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Domain.Runs;
+using JoseonHunter.Domain.Save;
+using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -9,6 +12,18 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class StagePacingPlayModeTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            if (MetaGameSession.Current != null) Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (MetaGameSession.Current != null) Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
         [UnityTest]
         public IEnumerator FifteenMinuteMilestonesSpawnEachMidBossOnce()
         {
@@ -137,6 +152,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.UiState.BossMaximumHealth, Is.EqualTo(6000f));
         }
 
+        [UnityTest]
+        public IEnumerator OmenSelectionScalesSpawnedEnemyAndDensityWithoutBreakingTheMobileCap()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 500, 35)));
+            data.SelectedStageId = StageId.GwigokField.Value;
+            data.SelectedStageDifficulty = "omen";
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+
+            controller.SpawnEnemyForLifecycleTests();
+
+            Assert.That(controller.ActiveStageDifficultyForTests, Is.EqualTo(StageDifficulty.Omen));
+            Assert.That(controller.LastSpawnHealthForTests, Is.EqualTo(18f * 1.35f).Within(.01f));
+            Assert.That(controller.LastSpawnContactDamageForTests, Is.EqualTo(10f * 1.15f).Within(.01f));
+            Assert.That(controller.ActiveEnemyCapForTests, Is.LessThanOrEqualTo(140));
+            Assert.That(controller.NextSpawnIntervalForTests, Is.LessThan(.22f));
+        }
+
         private static Rect ViewportBounds(Camera camera)
         {
             var bottomLeft = camera.ViewportToWorldPoint(Vector3.zero);
@@ -174,6 +211,18 @@ namespace JoseonHunter.Tests.PlayMode
             public int MidBossTier { get; }
             public bool ForceElite { get; }
             public float Margin { get; }
+        }
+
+        private sealed class MemoryRepository : ISaveRepository
+        {
+            private SaveDataV1 stored;
+            public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
+            public LoadResult Load() => new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
+            public SaveResult Save(SaveDataV1 data)
+            {
+                stored = data.Copy();
+                return new SaveResult(true, SaveError.None);
+            }
         }
     }
 }

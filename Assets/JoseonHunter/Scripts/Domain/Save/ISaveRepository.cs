@@ -63,26 +63,50 @@ namespace JoseonHunter.Domain.Save
         {
             return Apply(copy =>
             {
+                var records = StageClearRecordData.DomainRecords(copy.StageClearRecords);
+                if (!Runs.StageUnlockRules.IsUnlocked(settlement.StageSelection, records))
+                    return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidSelection);
+                var profile = Runs.StageDifficultyProfile.For(settlement.StageSelection.Difficulty);
                 var accountReward = Progression.AccountProgression.RewardFor(settlement);
                 if (!Progression.AccountProgression.TryAdd(
                         copy.AccountExperience, accountReward, out var nextAccountExperience))
                     return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
-                var nextCoins = (long)copy.Coins + settlement.Coins;
+                var earnedCoins = profile.ScaleReward(settlement.Coins, profile.CoinRewardMultiplier);
+                var nextCoins = (long)copy.Coins + earnedCoins;
                 if (nextCoins > int.MaxValue) return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
                 copy.Coins = (int)nextCoins;
                 copy.AccountExperience = nextAccountExperience;
                 foreach (var pair in settlement.Mastery)
                 {
                     var current = copy.WeaponMasteryPoints.TryGetValue(pair.Key.Value, out var value) ? value : 0;
-                    var next = (long)current + pair.Value;
+                    var earnedMastery = profile.ScaleReward(pair.Value, profile.MasteryRewardMultiplier);
+                    var next = (long)current + earnedMastery;
                     if (next > int.MaxValue) return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
                     copy.WeaponMasteryPoints[pair.Key.Value] = (int)next;
                 }
                 var recordKey = settlement.Victory ? "victory_kills" : "patrol_kills";
                 if (!copy.BestPatrolResults.TryGetValue(recordKey, out var best) || settlement.Kills > best)
                     copy.BestPatrolResults[recordKey] = settlement.Kills;
+                MergeStageRecord(copy, new Runs.StageClearRecord(
+                    settlement.StageSelection,
+                    settlement.Victory,
+                    settlement.Elapsed,
+                    settlement.Kills,
+                    settlement.Level));
                 return new Progression.ProgressionResult(true, Progression.ProgressionError.None);
             });
+        }
+        private static void MergeStageRecord(SaveDataV1 data, Runs.StageClearRecord candidate)
+        {
+            for (var index = 0; index < data.StageClearRecords.Count; index++)
+            {
+                var stored = data.StageClearRecords[index];
+                if (stored == null || !stored.TryToDomain(out var existing) ||
+                    !existing.Selection.Equals(candidate.Selection)) continue;
+                data.StageClearRecords[index] = StageClearRecordData.From(existing.Merge(candidate));
+                return;
+            }
+            data.StageClearRecords.Add(StageClearRecordData.From(candidate));
         }
         private TransactionResult Apply(Func<SaveDataV1, Progression.ProgressionResult> mutate) { if (live == null) throw new InvalidOperationException("A live save is required."); var copy = live.Copy(); var result = mutate(copy); if (!result.Success) return new TransactionResult(false, result.Error, SaveError.None); var save = repository.Save(copy); if (!save.Success) return new TransactionResult(false, Progression.ProgressionError.None, save.Error); live.CopyFrom(copy); return new TransactionResult(true, Progression.ProgressionError.None, SaveError.None); }
     }

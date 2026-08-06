@@ -1,4 +1,5 @@
 using System;
+using JoseonHunter.Domain.Runs;
 
 namespace JoseonHunter.Domain.Progression
 {
@@ -34,7 +35,9 @@ namespace JoseonHunter.Domain.Progression
             var timeExperience = (int)Math.Min(150d, Math.Floor(settlement.Elapsed / 6d));
             var killExperience = Math.Min(200, settlement.Kills / 4);
             var reward = timeExperience + killExperience + (settlement.Victory ? 250 : 0);
-            return settlement.Abandoned ? reward / 4 : reward;
+            var baseReward = settlement.Abandoned ? reward / 4 : reward;
+            var profile = StageDifficultyProfile.For(settlement.StageSelection.Difficulty);
+            return profile.ScaleReward(baseReward, profile.AccountExperienceMultiplier);
         }
 
         public static int RequiredForNextLevel(int level)
