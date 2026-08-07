@@ -3,7 +3,9 @@ using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
+using JoseonHunter.Domain.Save;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -13,8 +15,53 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class WeaponLegacyFlowPlayModeTests
     {
+        [SetUp]
+        public void ClearMetaSession()
+        {
+            if (MetaGameSession.Current != null)
+                Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
         [TearDown]
-        public void RestoreTimeScale() => Time.timeScale = 1f;
+        public void RestoreState()
+        {
+            Time.timeScale = 1f;
+            if (MetaGameSession.Current != null)
+                Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Meta_equipped_venom_activates_only_at_levels_four_and_five()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+
+            controller.SetWeaponLevelForTests(WeaponId.HwandoFlyingBlade, 3);
+            Assert.That(controller.LegacySnapshotForTests(
+                WeaponId.HwandoFlyingBlade).Stage, Is.EqualTo(WeaponLegacyStage.None));
+            var dormant = controller.UiState.Weapons.Single(
+                weapon => weapon.Id == WeaponId.HwandoFlyingBlade.Value);
+            Assert.That(dormant.LegacyName, Is.EqualTo("독니"));
+            Assert.That(dormant.NextLegacyMilestone, Does.Contain("4레벨에 발현"));
+
+            controller.SetWeaponLevelForTests(WeaponId.HwandoFlyingBlade, 4);
+            Assert.That(controller.LegacySnapshotForTests(
+                WeaponId.HwandoFlyingBlade).Stage, Is.EqualTo(WeaponLegacyStage.Reinforced));
+            var reinforced = controller.UiState.Weapons.Single(
+                weapon => weapon.Id == WeaponId.HwandoFlyingBlade.Value);
+            Assert.That(reinforced.LegacyStageName, Is.EqualTo("독니 발현"));
+            Assert.That(reinforced.NextLegacyMilestone, Does.Contain("혈독난무"));
+
+            controller.SetWeaponLevelForTests(WeaponId.HwandoFlyingBlade, 5);
+            Assert.That(controller.LegacySnapshotForTests(
+                WeaponId.HwandoFlyingBlade).Stage, Is.EqualTo(WeaponLegacyStage.Completed));
+            var completed = controller.UiState.Weapons.Single(
+                weapon => weapon.Id == WeaponId.HwandoFlyingBlade.Value);
+            Assert.That(completed.LegacyStageName, Is.EqualTo("혈독난무 완성"));
+        }
 
         [UnityTest]
         public IEnumerator Level_three_upgrade_waits_for_one_matching_legacy_choice()
@@ -77,6 +124,20 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(controller.LegacySnapshotForTests(WeaponId.GakgungShot).HasPath, Is.False);
             Assert.That(controller.IsWeaponDiscardedForTests(WeaponId.GakgungShot), Is.False);
+        }
+
+        private sealed class MemoryRepository : ISaveRepository
+        {
+            private SaveDataV1 stored;
+
+            public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
+            public LoadResult Load() =>
+                new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
+            public SaveResult Save(SaveDataV1 data)
+            {
+                stored = data.Copy();
+                return new SaveResult(true, SaveError.None);
+            }
         }
     }
 }

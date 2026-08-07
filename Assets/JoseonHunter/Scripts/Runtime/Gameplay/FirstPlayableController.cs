@@ -2888,9 +2888,39 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 var weaponId = new WeaponId(weapon.Key);
                 var legacy = weaponLegacyState.SnapshotFor(weaponId, weapon.Value);
-                var legacyName = legacy.HasPath && WeaponLegacyCatalog.TryGet(legacy.PathId, out var definition)
-                    ? definition.DisplayName
-                    : "미선택";
+                var hasEquippedPath = weaponLegacyState.TryGetEquippedPath(
+                    weaponId, out var equippedPath);
+                WeaponLegacyDefinition equippedDefinition = null;
+                if (hasEquippedPath)
+                    WeaponLegacyCatalog.TryGet(equippedPath, out equippedDefinition);
+                var legacyName = equippedDefinition != null
+                    ? equippedDefinition.DisplayName
+                    : legacy.HasPath &&
+                      WeaponLegacyCatalog.TryGet(legacy.PathId, out var activeDefinition)
+                        ? activeDefinition.DisplayName
+                        : "미선택";
+                var legacyStageName = LegacyStageName(legacy.Stage);
+                var nextLegacyMilestone = NextLegacyMilestone(legacy.Stage);
+                if (equippedDefinition != null)
+                {
+                    if (legacy.Stage == WeaponLegacyStage.None)
+                    {
+                        legacyStageName = "4레벨에 진화 발현";
+                        nextLegacyMilestone =
+                            $"{equippedDefinition.DisplayName} 장착 · 무기 4레벨에 발현";
+                    }
+                    else if (legacy.Stage == WeaponLegacyStage.Reinforced)
+                    {
+                        legacyStageName = $"{equippedDefinition.DisplayName} 발현";
+                        nextLegacyMilestone =
+                            $"무기 5레벨에 {equippedDefinition.CompletionName} 완성";
+                    }
+                    else if (legacy.Stage == WeaponLegacyStage.Completed)
+                    {
+                        legacyStageName = $"{equippedDefinition.CompletionName} 완성";
+                        nextLegacyMilestone = "최종 효과 적용 중";
+                    }
+                }
                 weapons.Add(new WeaponSlotView(
                     weapon.Key,
                     WeaponDisplayName(weapon.Key),
@@ -2901,8 +2931,8 @@ namespace JoseonHunter.Runtime.Gameplay
                     profile == null ? null : profile.GeneralRolls.Select(roll => roll.Tier),
                     WeaponBehavior(weapon.Key),
                     legacyName,
-                    LegacyStageName(legacy.Stage),
-                    NextLegacyMilestone(legacy.Stage),
+                    legacyStageName,
+                    nextLegacyMilestone,
                     profile?.GeneralRolls));
             }
 

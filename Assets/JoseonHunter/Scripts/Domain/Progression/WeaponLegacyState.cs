@@ -23,9 +23,19 @@ namespace JoseonHunter.Domain.Progression
 
         public WeaponLegacySnapshot SnapshotFor(WeaponId weaponId, int weaponLevel)
         {
-            if (!selectedPaths.TryGetValue(weaponId, out var pathId) ||
-                (weaponLevel < 3 && !equippedFromRunStart.Contains(weaponId)))
+            if (!selectedPaths.TryGetValue(weaponId, out var pathId))
                 return default;
+
+            if (equippedFromRunStart.Contains(weaponId))
+            {
+                if (weaponLevel < 4) return default;
+                return new WeaponLegacySnapshot(pathId,
+                    weaponLevel >= 5
+                        ? WeaponLegacyStage.Completed
+                        : WeaponLegacyStage.Reinforced);
+            }
+
+            if (weaponLevel < 3) return default;
 
             var stage = weaponLevel >= 5
                 ? WeaponLegacyStage.Completed
@@ -33,6 +43,15 @@ namespace JoseonHunter.Domain.Progression
                     ? WeaponLegacyStage.Reinforced
                     : WeaponLegacyStage.Chosen;
             return new WeaponLegacySnapshot(pathId, stage);
+        }
+
+        public bool TryGetEquippedPath(WeaponId weaponId, out WeaponLegacyPathId pathId)
+        {
+            if (equippedFromRunStart.Contains(weaponId) &&
+                selectedPaths.TryGetValue(weaponId, out pathId))
+                return true;
+            pathId = default;
+            return false;
         }
 
         public bool EquipForRun(WeaponId weaponId, WeaponLegacyPathId pathId)

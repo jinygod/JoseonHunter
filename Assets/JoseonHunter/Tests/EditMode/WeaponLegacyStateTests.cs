@@ -6,6 +6,27 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class WeaponLegacyStateTests
     {
+        [TestCase(1, WeaponLegacyStage.None)]
+        [TestCase(2, WeaponLegacyStage.None)]
+        [TestCase(3, WeaponLegacyStage.None)]
+        [TestCase(4, WeaponLegacyStage.Reinforced)]
+        [TestCase(5, WeaponLegacyStage.Completed)]
+        public void Equipped_path_activates_at_four_and_completes_at_five(
+            int weaponLevel,
+            WeaponLegacyStage expectedStage)
+        {
+            var state = new WeaponLegacyState();
+            Assert.That(state.EquipForRun(
+                WeaponId.HwandoFlyingBlade,
+                WeaponLegacyPathId.HwandoVenom), Is.True);
+
+            Assert.That(state.TryGetEquippedPath(
+                WeaponId.HwandoFlyingBlade, out var path), Is.True);
+            Assert.That(path, Is.EqualTo(WeaponLegacyPathId.HwandoVenom));
+            Assert.That(state.SnapshotFor(
+                WeaponId.HwandoFlyingBlade, weaponLevel).Stage, Is.EqualTo(expectedStage));
+        }
+
         [Test]
         public void A_weapon_accepts_one_matching_path_and_rejects_the_opposite_path()
         {
