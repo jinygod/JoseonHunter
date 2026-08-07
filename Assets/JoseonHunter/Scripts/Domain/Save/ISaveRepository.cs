@@ -66,12 +66,11 @@ namespace JoseonHunter.Domain.Save
                 var records = StageClearRecordData.DomainRecords(copy.StageClearRecords);
                 if (!Runs.StageUnlockRules.IsUnlocked(settlement.StageSelection, records))
                     return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidSelection);
-                var profile = Runs.StageDifficultyProfile.For(settlement.StageSelection.Difficulty);
                 var accountReward = Progression.AccountProgression.RewardFor(settlement);
                 if (!Progression.AccountProgression.TryAdd(
                         copy.AccountExperience, accountReward, out var nextAccountExperience))
                     return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
-                var earnedCoins = profile.ScaleReward(settlement.Coins, profile.CoinRewardMultiplier);
+                var earnedCoins = Runs.StageRewardCalculator.Coins(settlement.Coins, settlement.StageSelection);
                 var nextCoins = (long)copy.Coins + earnedCoins;
                 if (nextCoins > int.MaxValue) return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
                 copy.Coins = (int)nextCoins;
@@ -79,7 +78,7 @@ namespace JoseonHunter.Domain.Save
                 foreach (var pair in settlement.Mastery)
                 {
                     var current = copy.WeaponMasteryPoints.TryGetValue(pair.Key.Value, out var value) ? value : 0;
-                    var earnedMastery = profile.ScaleReward(pair.Value, profile.MasteryRewardMultiplier);
+                    var earnedMastery = Runs.StageRewardCalculator.Mastery(pair.Value, settlement.StageSelection);
                     var next = (long)current + earnedMastery;
                     if (next > int.MaxValue) return new Progression.ProgressionResult(false, Progression.ProgressionError.InvalidAmount);
                     copy.WeaponMasteryPoints[pair.Key.Value] = (int)next;

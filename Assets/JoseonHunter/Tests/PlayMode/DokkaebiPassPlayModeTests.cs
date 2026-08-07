@@ -66,6 +66,23 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(controller.LivingNormalEnemyIdsForTests, Is.All.EqualTo("club_dokkaebi"));
         }
 
+        [UnityTest]
+        public IEnumerator StageRiskProfileScalesHealthDamageAndExperienceOnce()
+        {
+            LoadDokkaebiPass();
+            yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+
+            controller.SetElapsedForTests(0f);
+            controller.SpawnSpecialEnemyForTests("club_dokkaebi", Vector2.zero);
+
+            Assert.That(controller.LastSpawnHealthForTests,
+                Is.EqualTo(18f * 2f * 1.35f).Within(.01f));
+            Assert.That(controller.LastSpawnContactDamageForTests,
+                Is.EqualTo(10f * 1.15f * 1.12f).Within(.01f));
+            Assert.That(controller.LastSpawnExperienceForTests, Is.EqualTo(2));
+        }
+
         private static void LoadDokkaebiPass()
         {
             var data = SaveDataV1.CreateDefaults();

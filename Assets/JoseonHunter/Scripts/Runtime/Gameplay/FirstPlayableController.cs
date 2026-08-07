@@ -240,6 +240,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public StageDifficulty ActiveStageDifficultyForTests => activeStageSelection.Difficulty;
         public float LastSpawnHealthForTests { get; private set; }
         public float LastSpawnContactDamageForTests { get; private set; }
+        public int LastSpawnExperienceForTests { get; private set; }
         public int ActiveStageProjectileCountForTests => stageProjectilePool?.ActiveCount ?? 0;
         public int ActiveStageHazardCountForTests => stageHazardPool?.ActiveCount ?? 0;
         public int StageProjectileCapacityForTests => stageProjectilePool?.Capacity ?? 0;
@@ -1528,7 +1529,8 @@ namespace JoseonHunter.Runtime.Gameplay
             var health = (isBoss || isMidBoss
                 ? baseHealth
                 : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier) *
-                activeDifficultyProfile.EnemyHealthMultiplier;
+                activeDifficultyProfile.EnemyHealthMultiplier *
+                activeStageCombat.Stats.EnemyHealthMultiplier;
             var displayScale = isBoss || isMidBoss
                 ? VisualScale.NormalEnemyScale *
                   (stageBoss != null ? stageBoss.VisualScale : BossScaleProfile.MultiplierFor(bossRole))
@@ -1563,7 +1565,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 ContactDamage = ((isBoss ? 24f :
                     isMidBoss ? (midBossTier >= 2 ? 20f : 16f) :
                     10f * rank.ContactDamageMultiplier) * archetypeProfile.ContactMultiplier) *
-                    activeDifficultyProfile.EnemyDamageMultiplier,
+                    activeDifficultyProfile.EnemyDamageMultiplier *
+                    activeStageCombat.Stats.EnemyDamageMultiplier,
                 IsBoss = rank.IsBoss,
                 IsElite = rank.IsElite,
                 IsMidBoss = isMidBoss,
@@ -1577,7 +1580,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 ContactRadius = isBoss || isMidBoss
                     ? BossScaleProfile.ContactRadius(VisualScale.NormalContactRadius, bossRole)
                     : VisualScale.ContactRadiusFor(rank),
-                ExperienceValue = isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue,
+                ExperienceValue = activeStageCombat.Stats.ScaleEnemyExperience(
+                    isMidBoss ? (midBossTier >= 2 ? 20 : 12) : rank.ExperienceValue),
                 ContentId = resolvedContentId,
                 ArchetypeProfile = archetypeProfile,
                 SpecialFrames = specialFrames,
@@ -1586,6 +1590,7 @@ namespace JoseonHunter.Runtime.Gameplay
 #if UNITY_INCLUDE_TESTS
             LastSpawnHealthForTests = state.Health;
             LastSpawnContactDamageForTests = state.ContactDamage;
+            LastSpawnExperienceForTests = state.ExperienceValue;
 #endif
             if (rank.IsElite || isMidBoss)
             {
@@ -3601,16 +3606,13 @@ namespace JoseonHunter.Runtime.Gameplay
 
             var before = AccountProgression.StateFor(session.Data.AccountExperience);
             var unlockedBefore = UnlockedStageKeys(session.Data);
-            var rewardProfile = StageDifficultyProfile.For(pendingSettlement.StageSelection.Difficulty);
             var pendingAccountReward = AccountProgression.RewardFor(pendingSettlement);
-            var pendingCoinReward = rewardProfile.ScaleReward(
-                pendingSettlement.Coins,
-                rewardProfile.CoinRewardMultiplier);
+            var pendingCoinReward = StageRewardCalculator.Coins(
+                pendingSettlement.Coins, pendingSettlement.StageSelection);
             var pendingMasteryReward = 0;
             foreach (var mastery in pendingSettlement.Mastery.Values)
-                pendingMasteryReward += rewardProfile.ScaleReward(
-                    mastery,
-                    rewardProfile.MasteryRewardMultiplier);
+                pendingMasteryReward += StageRewardCalculator.Mastery(
+                    mastery, pendingSettlement.StageSelection);
             var result = session.CommitRun(pendingSettlement);
             settlementSucceeded = result.Success;
             settlementFailed = !result.Success;

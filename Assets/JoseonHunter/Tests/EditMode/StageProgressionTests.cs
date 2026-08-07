@@ -60,16 +60,16 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void CatalogHasThreeOrderedStagesAndOnlyStageOneContentIsReady()
+        public void CatalogHasThreeOrderedPlayableStages()
         {
             Assert.That(StageCatalog.All.Count, Is.EqualTo(3));
             Assert.That(StageCatalog.All[0].Id, Is.EqualTo(StageId.GwigokField));
             Assert.That(StageCatalog.All[0].DisplayName, Is.EqualTo("귀곡 들판"));
             Assert.That(StageCatalog.All[0].HasPlayableContent, Is.True);
-            Assert.That(StageCatalog.All[1].DisplayName, Is.EqualTo("도깨비 고개"));
-            Assert.That(StageCatalog.All[1].HasPlayableContent, Is.False);
-            Assert.That(StageCatalog.All[2].DisplayName, Is.EqualTo("월식 왕릉"));
-            Assert.That(StageCatalog.All[2].HasPlayableContent, Is.False);
+            Assert.That(StageCatalog.All[1].DisplayName, Is.EqualTo("도깨비 고갯길"));
+            Assert.That(StageCatalog.All[1].HasPlayableContent, Is.True);
+            Assert.That(StageCatalog.All[2].DisplayName, Is.EqualTo("월식 고분"));
+            Assert.That(StageCatalog.All[2].HasPlayableContent, Is.True);
         }
 
         [TestCase(StageDifficulty.Normal, 1f, 1f, 1f, 1f, 1f, 1f, 0)]

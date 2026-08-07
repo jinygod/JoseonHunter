@@ -70,8 +70,8 @@ namespace JoseonHunter.Domain.Runs
         private static readonly IReadOnlyList<StageDefinition> Definitions = new[]
         {
             new StageDefinition(StageId.GwigokField, "귀곡 들판", true),
-            new StageDefinition(StageId.DokkaebiPass, "도깨비 고개", false),
-            new StageDefinition(StageId.MoonlitTomb, "월식 왕릉", false)
+            new StageDefinition(StageId.DokkaebiPass, "도깨비 고갯길", true),
+            new StageDefinition(StageId.MoonlitTomb, "월식 고분", true)
         };
 
         public static IReadOnlyList<StageDefinition> All => Definitions;

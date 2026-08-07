@@ -36,8 +36,7 @@ namespace JoseonHunter.Domain.Progression
             var killExperience = Math.Min(200, settlement.Kills / 4);
             var reward = timeExperience + killExperience + (settlement.Victory ? 250 : 0);
             var baseReward = settlement.Abandoned ? reward / 4 : reward;
-            var profile = StageDifficultyProfile.For(settlement.StageSelection.Difficulty);
-            return profile.ScaleReward(baseReward, profile.AccountExperienceMultiplier);
+            return StageRewardCalculator.AccountExperience(baseReward, settlement.StageSelection);
         }
 
         public static int RequiredForNextLevel(int level)

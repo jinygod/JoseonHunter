@@ -10,11 +10,17 @@ namespace JoseonHunter.Domain.Runs
             Array.AsReadOnly(new[]
             {
                 new StageCombatDefinition(StageId.GwigokField, WaveSchedule.Profile,
-                    StageBattlefieldDefinition.Infinite("gwigok_field"), StageBossCatalog.For(StageId.GwigokField), true),
+                    StageBattlefieldDefinition.Infinite("gwigok_field"), StageBossCatalog.For(StageId.GwigokField),
+                    new StageStatProfile(1f, 1f, 1f),
+                    new StageRewardProfile(1f, 1f, 1f), true),
                 new StageCombatDefinition(StageId.DokkaebiPass, CreateDokkaebiPassWaves(),
-                    StageBattlefieldDefinition.Bounded(72f, 112f, "dokkaebi_pass"), StageBossCatalog.For(StageId.DokkaebiPass), false),
+                    StageBattlefieldDefinition.Bounded(72f, 112f, "dokkaebi_pass"), StageBossCatalog.For(StageId.DokkaebiPass),
+                    new StageStatProfile(1.35f, 1.12f, 1.15f),
+                    new StageRewardProfile(1.25f, 1.25f, 1.25f), true),
                 new StageCombatDefinition(StageId.MoonlitTomb, CreateMoonlitTombWaves(),
-                    StageBattlefieldDefinition.Bounded(84f, 84f, "moonlit_tomb"), StageBossCatalog.For(StageId.MoonlitTomb), false)
+                    StageBattlefieldDefinition.Bounded(84f, 84f, "moonlit_tomb"), StageBossCatalog.For(StageId.MoonlitTomb),
+                    new StageStatProfile(1.70f, 1.25f, 1.30f),
+                    new StageRewardProfile(1.55f, 1.55f, 1.55f), true)
             });
 
         public static StageCombatDefinition For(StageId stageId)

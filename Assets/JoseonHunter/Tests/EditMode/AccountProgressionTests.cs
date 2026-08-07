@@ -36,6 +36,20 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void LaterStageMultipliesAccountExperienceExactlyOnce()
+        {
+            var stageTwo = new RunSettlement(
+                new Dictionary<WeaponId, int>(), 0, 800, 900f, true, false,
+                new StageSelection(StageId.DokkaebiPass, StageDifficulty.Normal), 35);
+            var stageThree = new RunSettlement(
+                new Dictionary<WeaponId, int>(), 0, 800, 900f, true, false,
+                new StageSelection(StageId.MoonlitTomb, StageDifficulty.Normal), 35);
+
+            Assert.That(AccountProgression.RewardFor(stageTwo), Is.EqualTo(750));
+            Assert.That(AccountProgression.RewardFor(stageThree), Is.EqualTo(930));
+        }
+
+        [Test]
         public void RequiredExperienceUsesApprovedCurveAtBoundaries()
         {
             Assert.That(AccountProgression.RequiredForNextLevel(1), Is.EqualTo(100));

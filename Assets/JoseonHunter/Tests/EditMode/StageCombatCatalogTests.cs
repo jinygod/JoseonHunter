@@ -46,5 +46,26 @@ namespace JoseonHunter.Tests.EditMode
             Assert.Throws<System.Collections.Generic.KeyNotFoundException>(() =>
                 StageCombatCatalog.For(new StageId("unknown_stage")));
         }
+
+        [TestCase("stage_01_gwigok_field", 1f, 1f, 1f, 1f)]
+        [TestCase("stage_02_dokkaebi_pass", 1.35f, 1.12f, 1.15f, 1.25f)]
+        [TestCase("stage_03_moonlit_tomb", 1.70f, 1.25f, 1.30f, 1.55f)]
+        public void StageProfilesMatchApprovedRiskAndReward(
+            string stageId,
+            float health,
+            float damage,
+            float experience,
+            float reward)
+        {
+            var combat = StageCombatCatalog.For(new StageId(stageId));
+
+            Assert.That(combat.PresentationReady, Is.True);
+            Assert.That(combat.Stats.EnemyHealthMultiplier, Is.EqualTo(health).Within(.001f));
+            Assert.That(combat.Stats.EnemyDamageMultiplier, Is.EqualTo(damage).Within(.001f));
+            Assert.That(combat.Stats.EnemyExperienceMultiplier, Is.EqualTo(experience).Within(.001f));
+            Assert.That(combat.Rewards.CoinMultiplier, Is.EqualTo(reward).Within(.001f));
+            Assert.That(combat.Rewards.AccountExperienceMultiplier, Is.EqualTo(reward).Within(.001f));
+            Assert.That(combat.Rewards.MasteryMultiplier, Is.EqualTo(reward).Within(.001f));
+        }
     }
 }

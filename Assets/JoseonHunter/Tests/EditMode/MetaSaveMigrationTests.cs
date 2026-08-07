@@ -217,6 +217,26 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void StageTwoNormalAppliesStageRewardsExactlyOnce()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 500, 35)));
+            var autosave = new AutoSaveOrchestrator(new RecordingRepository(), data);
+            var settlement = new RunSettlement(
+                new Dictionary<WeaponId, int> { [WeaponId.GakgungShot] = 10 },
+                10, 800, 900f, true, false,
+                new StageSelection(StageId.DokkaebiPass, StageDifficulty.Normal), 35);
+
+            var result = autosave.CommitRun(settlement);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(data.Coins, Is.EqualTo(13));
+            Assert.That(data.AccountExperience, Is.EqualTo(750));
+            Assert.That(data.WeaponMasteryPoints[WeaponId.GakgungShot.Value], Is.EqualTo(13));
+        }
+
+        [Test]
         public void FailedDifficultySettlementRollsBackRewardsAndClearRecord()
         {
             var data = SaveDataV1.CreateDefaults();
