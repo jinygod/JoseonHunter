@@ -37,6 +37,33 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void SelectorNeverEmitsParallelCatalogEvolutionOffers()
+        {
+            var state = new UpgradeState(
+                new Dictionary<string, int>
+                {
+                    [WeaponId.HwandoFlyingBlade.Value] = 4,
+                    [WeaponId.GakgungShot.Value] = 3
+                },
+                new Dictionary<string, int>(),
+                new HashSet<string>(WeaponEvolutionCatalog.All.Select(item => item.Id)),
+                new HashSet<string>(),
+                new HashSet<string>(),
+                new HashSet<string> { WeaponId.HwandoFlyingBlade.Value });
+
+            for (var seed = 0; seed < 100; seed++)
+            {
+                var offers = UpgradeSelector.Select(state, seed, 12);
+                Assert.That(offers.Any(offer => offer.Kind == UpgradeKind.Evolution),
+                    Is.False,
+                    $"Seed {seed}");
+                Assert.That(offers.Any(offer =>
+                    offer.Id == WeaponId.HwandoFlyingBlade.Value &&
+                    offer.NextLevel == 5), Is.True);
+            }
+        }
+
+        [Test]
         public void Full_loadout_marks_new_weapon_for_replacement_and_never_offers_discarded_weapon()
         {
             var state = new UpgradeState(
