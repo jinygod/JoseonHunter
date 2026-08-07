@@ -81,3 +81,13 @@
 - Common training now has six 20-rank tracks with a shared 100-rank cap. Capacity is `min(account level * 5, 100)`; the first five rank effects and costs remain unchanged, and rank 20 reaches a 15% effect.
 - Lobby runtime composition upgrades the existing serialized header with an account badge, Korean account name, and green experience bar without modifying the Lobby scene. Training and run-result presenters expose the new progression in Korean.
 - Latest evidence: `Docs/Verification/2026-08-06-account-level-training-expansion.md`. Final full EditMode passed 717/717 and full PlayMode passed 251/251 under BelowNormal priority and four-core affinity. Android device visual verification remains outstanding.
+
+## Background music handoff (2026-08-07)
+
+- Long-form music is intentionally separate from the pooled one-shot `GameAudioDirector`. Persistent `GameMusicDirector` owns exactly two looping, non-spatial `AudioSource` components and crossfades with unscaled time.
+- The serialized catalog is `Assets/JoseonHunter/Resources/Audio/GameMusicCatalog.asset`. The six CC0 OGG assets live under `Assets/JoseonHunter/Audio/Music/CC0/` and use stereo Vorbis Streaming, background loading, disabled preload, and quality `0.55`.
+- Roles are Lobby, CombatEarly, CombatMid, CombatLate, MidBoss, and FinalBoss. Normal combat boundaries are exactly 300 and 600 seconds. Encounter priority is ended, final boss, active mid-boss count, then the current phase.
+- Lobby requests its role in `LobbyBootstrap.Awake`. `FirstPlayableController` publishes phase and mid-boss lifecycle events; `FirstPlayableUiBootstrap` resolves overrides, preserves music through pause, and fades it on victory, defeat, or confirmed abandon.
+- Current music scope is only the lobby and playable `귀곡 들판`. Do not add placeholder tracks for locked/unimplemented stages or difficulty variants; extend the catalog when those stage identities are authored.
+- Source provenance is in `Docs/ThirdPartyAudio/free-audio-source-manifest.md` and `Docs/Assets/audio-rights-ledger.csv`.
+- Latest evidence: `Docs/Verification/2026-08-07-background-music.md`. Final EditMode passed 796/796, final PlayMode passed 278/278, and an Android ARM64 IL2CPP development APK built successfully. Physical-device listening, streaming stability, memory, and thermal behavior remain outstanding.
