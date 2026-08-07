@@ -91,3 +91,12 @@
 - Current music scope is only the lobby and playable `귀곡 들판`. Do not add placeholder tracks for locked/unimplemented stages or difficulty variants; extend the catalog when those stage identities are authored.
 - Source provenance is in `Docs/ThirdPartyAudio/free-audio-source-manifest.md` and `Docs/Assets/audio-rights-ledger.csv`.
 - Latest evidence: `Docs/Verification/2026-08-07-background-music.md`. Final EditMode passed 796/796, final PlayMode passed 278/278, and an Android ARM64 IL2CPP development APK built successfully. Physical-device listening, streaming stability, memory, and thermal behavior remain outstanding.
+
+## Weapon evolution onboarding handoff (2026-08-07)
+
+- Hwando Flying Blade starts with both `Venom` and `Moon Eclipse` paths unlocked for new and migrated saves. Exactly one path is equipped before sortie; a missing selection defaults to Venom. The other seven weapons retain their mastery and coin research gates.
+- Equipped-path state is deliberately separate from active combat stage. Weapon levels 1–3 run the base executor, level 4 activates the equipped path through the reinforced behavior, and level 5 activates its completed behavior.
+- Upgrade offers label level 4 as evolution activation and level 5 as final evolution. A level-5-ready equipped weapon is guaranteed in the three-card offer until selected; the old parallel evolution offer path is not emitted by the production selector.
+- Final-evolution offers use an explicit presentation tier and path ID. The presenter supplies an opaque ink/crimson backdrop, gold final frame, muted standard cards, unscaled input lock, and a subtle pulse without relying on weapon-name string matching.
+- All 16 legacy paths declare at least two changed behavior dimensions among rhythm, geometry, enemy response, and payoff. Existing executor regressions remained green, so no additional balance tuning was introduced in this milestone.
+- Latest evidence: `Docs/Verification/2026-08-07-weapon-evolution-onboarding.md`. Full EditMode passed 806/806, full PlayMode passed 282/282, and the Android ARM64 IL2CPP development APK built successfully. Physical-device evolution readability, feel, frame pacing, and thermal verification remain outstanding.
