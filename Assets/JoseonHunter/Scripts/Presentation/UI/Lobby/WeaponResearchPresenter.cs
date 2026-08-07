@@ -116,6 +116,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public string SelectedStyleStateForTests(int index) => StateFor(index);
         public void ActivateStyleForTests(int index) => ActivateStyle(index);
+        public void SelectWeaponForTests(int index) => SelectWeapon(index);
 
         private void SelectWeapon(int index)
         {
@@ -169,6 +170,9 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var equipped = session.ActiveLoadout.StyleFor(weaponId);
             if (style.IsBase) return string.IsNullOrEmpty(equipped.Value) ? "장착 중" : "기본식";
             if (equipped.Equals(style.LegacyPathId)) return "장착 중";
+            if (style.IsStarterUnlocked &&
+                session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value))
+                return "처음부터 해금";
             if (session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value)) return "해금 완료";
             if (styleIndex == 2 &&
                 !session.Data.UnlockedWeaponStyles.Contains(
@@ -192,9 +196,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             selectedWeaponIcon.enabled = selectedWeaponIcon.sprite != null;
             var firstUnlocked = session.Data.UnlockedWeaponStyles.Contains(styles[1].LegacyPathId.Value);
             var nextRequired = firstUnlocked ? styles[2].RequiredMastery : styles[1].RequiredMastery;
-            masteryText.text = $"숙련도 {mastery:N0} / {nextRequired:N0}";
+            var starterPaths = styles.Skip(1).All(style => style.IsStarterUnlocked);
+            masteryText.text = starterPaths
+                ? "독니와 월식 · 처음부터 해금"
+                : $"숙련도 {mastery:N0} / {nextRequired:N0}";
             masteryProgressFill.anchorMax = new Vector2(
-                Mathf.Clamp01(nextRequired <= 0 ? 1f : mastery / (float)nextRequired), 1f);
+                starterPaths ? 1f : Mathf.Clamp01(nextRequired <= 0 ? 1f : mastery / (float)nextRequired), 1f);
             masteryProgressFill.offsetMin = Vector2.zero;
             masteryProgressFill.offsetMax = Vector2.zero;
             for (var index = 0; index < styleButtons.Length; index++)
@@ -203,6 +210,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 string line;
                 if (style.IsBase)
                     line = $"{style.DisplayName} · {StateFor(index)}\n처음부터 사용 가능";
+                else if (style.IsStarterUnlocked)
+                    line = $"{style.DisplayName} · {StateFor(index)}\n처음부터 해금 · 눌러서 장착";
                 else if (index == 2 && !firstUnlocked)
                     line = $"{style.DisplayName} · 잠김\n2단계 연구 완료 시 해금";
                 else

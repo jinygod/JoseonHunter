@@ -32,12 +32,13 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var data = SaveDataV1.CreateDefaults();
             data.Coins = 800;
-            data.WeaponMasteryPoints[WeaponId.HwandoFlyingBlade.Value] = 2000;
+            data.WeaponMasteryPoints[WeaponId.GakgungShot.Value] = 2000;
             var repository = new MemoryRepository(data);
             MetaGameSession.EnsureExists(repository);
             SceneManager.LoadScene("Lobby");
             yield return null;
             var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
+            presenter.SelectWeaponForTests(1);
 
             Assert.That(presenter.WeaponCountForTests, Is.EqualTo(8));
             Assert.That(presenter.StyleCountForTests, Is.EqualTo(3));
@@ -59,7 +60,7 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(MetaGameSession.Current.Data.Coins, Is.Zero);
             Assert.That(MetaGameSession.Current.Data.UnlockedWeaponStyles,
-                Contains.Item(WeaponLegacyPathId.HwandoVenom.Value));
+                Contains.Item(WeaponLegacyPathId.GakgungSunPiercer.Value));
             Assert.That(presenter.SelectedStyleStateForTests(1), Is.EqualTo("장착 중"));
         }
 
@@ -68,11 +69,12 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var data = SaveDataV1.CreateDefaults();
             data.Coins = 9999;
-            data.WeaponMasteryPoints[WeaponId.HwandoFlyingBlade.Value] = 564;
+            data.WeaponMasteryPoints[WeaponId.GakgungShot.Value] = 564;
             MetaGameSession.EnsureExists(new MemoryRepository(data));
             SceneManager.LoadScene("Lobby");
             yield return null;
             var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
+            presenter.SelectWeaponForTests(1);
 
             var icon = presenter.transform.Find("Selected Weapon Icon").GetComponent<Image>();
             Assert.That(icon.sprite, Is.Not.Null);
@@ -86,6 +88,28 @@ namespace JoseonHunter.Tests.PlayMode
 
             var feedback = presenter.transform.Find("Research Feedback").GetComponent<TMPro.TMP_Text>();
             Assert.That(feedback.text, Is.EqualTo("2단계 연구 완료 시 해금"));
+        }
+
+        [UnityTest]
+        public IEnumerator HwandoStarterPathsSwitchWithoutSpendingCoins()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 155;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(
+                FindObjectsInactive.Include);
+
+            Assert.That(presenter.SelectedStyleStateForTests(1), Is.EqualTo("장착 중"));
+            Assert.That(presenter.SelectedStyleStateForTests(2), Is.EqualTo("처음부터 해금"));
+
+            presenter.ActivateStyleForTests(2);
+
+            Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(155));
+            Assert.That(MetaGameSession.Current.ActiveLoadout.StyleFor(
+                    WeaponId.HwandoFlyingBlade),
+                Is.EqualTo(WeaponLegacyPathId.HwandoMoonEclipse));
         }
 
         private sealed class MemoryRepository : ISaveRepository
