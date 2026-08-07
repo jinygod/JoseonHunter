@@ -69,8 +69,50 @@ namespace JoseonHunter.Domain.Progression
             var tuning = new Dictionary<WeaponLegacyTuningKey, float>();
             foreach (var value in values) tuning.Add(value.Key, value.Value);
             return new WeaponLegacyDefinition(id, weaponId, displayName, combatStyle, benefit, cost,
-                levelFourSummary, completionName, completionSummary, tuning);
+                levelFourSummary, completionName, completionSummary, DimensionsFor(id), tuning);
         }
+
+        private static IReadOnlyList<EvolutionDimension> DimensionsFor(WeaponLegacyPathId id)
+        {
+            if (id.Equals(WeaponLegacyPathId.HwandoVenom))
+                return Pair(EvolutionDimension.EnemyResponse, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.HwandoMoonEclipse))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.GakgungSunPiercer))
+                return Pair(EvolutionDimension.Rhythm, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.GakgungSplitFletching))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.Rhythm);
+            if (id.Equals(WeaponLegacyPathId.TalismanHeavenSeal))
+                return Pair(EvolutionDimension.EnemyResponse, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.TalismanGhostBurst))
+                return Pair(EvolutionDimension.Rhythm, EvolutionDimension.Geometry);
+            if (id.Equals(WeaponLegacyPathId.ThunderPrison))
+                return Pair(EvolutionDimension.EnemyResponse, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.ThunderEarthCurrent))
+                return Pair(EvolutionDimension.Rhythm, EvolutionDimension.EnemyResponse);
+            if (id.Equals(WeaponLegacyPathId.JangseungFourGuardians))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.EnemyResponse);
+            if (id.Equals(WeaponLegacyPathId.JangseungGuardianDescent))
+                return Pair(EvolutionDimension.Rhythm, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.SingijeonFireDragon))
+                return Pair(EvolutionDimension.Rhythm, EvolutionDimension.Geometry);
+            if (id.Equals(WeaponLegacyPathId.SingijeonFireNet))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.FrostMist))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.EnemyResponse);
+            if (id.Equals(WeaponLegacyPathId.FrostShatter))
+                return Pair(EvolutionDimension.EnemyResponse, EvolutionDimension.Payoff);
+            if (id.Equals(WeaponLegacyPathId.FanVacuum))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.EnemyResponse);
+            if (id.Equals(WeaponLegacyPathId.FanHeavenThunder))
+                return Pair(EvolutionDimension.Geometry, EvolutionDimension.Rhythm);
+            throw new ArgumentOutOfRangeException(nameof(id), id.Value, "Unknown weapon legacy path.");
+        }
+
+        private static IReadOnlyList<EvolutionDimension> Pair(
+            EvolutionDimension first,
+            EvolutionDimension second) =>
+            Array.AsReadOnly(new[] { first, second });
 
         private static IReadOnlyDictionary<WeaponLegacyPathId, WeaponLegacyDefinition> BuildById()
         {

@@ -26,6 +26,17 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void EveryPathChangesAtLeastTwoDistinctCombatDimensions()
+        {
+            foreach (var path in WeaponLegacyCatalog.All)
+            {
+                Assert.That(path.ChangedDimensions.Distinct().Count(),
+                    Is.GreaterThanOrEqualTo(2),
+                    path.Id.Value);
+            }
+        }
+
+        [Test]
         public void Approved_path_ids_keep_their_weapon_and_primary_multiplier()
         {
             AssertPath(WeaponLegacyPathId.HwandoVenom, WeaponId.HwandoFlyingBlade, .80f);

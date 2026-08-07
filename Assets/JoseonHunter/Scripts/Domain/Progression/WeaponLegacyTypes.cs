@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using JoseonHunter.Domain.Combat;
 
 namespace JoseonHunter.Domain.Progression
@@ -89,6 +90,7 @@ namespace JoseonHunter.Domain.Progression
             string levelFourSummary,
             string completionName,
             string completionSummary,
+            IReadOnlyList<EvolutionDimension> changedDimensions,
             IReadOnlyDictionary<WeaponLegacyTuningKey, float> tuning)
         {
             Id = id;
@@ -100,6 +102,9 @@ namespace JoseonHunter.Domain.Progression
             LevelFourSummary = Required(levelFourSummary, nameof(levelFourSummary));
             CompletionName = Required(completionName, nameof(completionName));
             CompletionSummary = Required(completionSummary, nameof(completionSummary));
+            if (changedDimensions == null)
+                throw new ArgumentNullException(nameof(changedDimensions));
+            ChangedDimensions = Array.AsReadOnly(changedDimensions.Distinct().ToArray());
             this.tuning = tuning == null
                 ? new ReadOnlyDictionary<WeaponLegacyTuningKey, float>(new Dictionary<WeaponLegacyTuningKey, float>())
                 : new ReadOnlyDictionary<WeaponLegacyTuningKey, float>(new Dictionary<WeaponLegacyTuningKey, float>(tuning));
@@ -114,6 +119,7 @@ namespace JoseonHunter.Domain.Progression
         public string LevelFourSummary { get; }
         public string CompletionName { get; }
         public string CompletionSummary { get; }
+        public IReadOnlyList<EvolutionDimension> ChangedDimensions { get; }
         public float DirectDamageMultiplier => Value(WeaponLegacyTuningKey.DirectDamageMultiplier, 1f);
         public float Value(WeaponLegacyTuningKey key, float fallback = 0f) =>
             tuning.TryGetValue(key, out var value) ? value : fallback;
