@@ -184,7 +184,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     traits: vacuum ? WeaponHitTrait.Wind | WeaponHitTrait.Pull : WeaponHitTrait.Wind, attackOrigin: castOrigin), out _))
                 {
                     marked.Add(target); LastWindContactCount++;
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount, false, .62f, PresentationSequenceKind.WindMark);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Field, WeaponVisualPartIndex.WindThunderFan.FieldFrameCount, false, .96f, PresentationSequenceKind.WindMark);
                     if (Potentials.HasPotential(WeaponPotentialId.FanVacuumEdge) && TryPotentialContact(WeaponPotentialId.FanVacuumEdge, target, contact)) RefreshBleed(target, contact);
                     if (vacuum) AddVacuumBleed(target, contact, context);
                 }
@@ -211,7 +211,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                     runtime.AffixStatuses.ApplyTimedStatus(target.RuntimeId, CombatStatusKind.Shock, 2f, 1, WeaponId.WindThunderFan);
                     LastLightningContactCount++;
                     lightningPresentationTimes.Add(0f);
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f, PresentationSequenceKind.OutboundLightning);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, 1.25f, PresentationSequenceKind.OutboundLightning);
                 }
             }
             LastLightningSimulationTick = context.SimulationTick;
@@ -252,7 +252,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 {
                     LastLightningContactCount++;
                     lightningPresentationTimes.Add(outboundElapsed);
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, .9f, PresentationSequenceKind.OutboundLightning);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, false, 1.25f, PresentationSequenceKind.OutboundLightning);
                     if (successfulOutboundTargetIdSet.Add(target.RuntimeId)) successfulOutboundTargetIds.Add(target.RuntimeId);
                 }
                 outboundStrikeTimes.Add(outboundElapsed);
@@ -297,7 +297,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                 if (hit)
                 {
                     LastInboundContactCount++;
-                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, true, .72f, PresentationSequenceKind.Inbound);
+                    PlayContactSequence(context, contact, WeaponVisualPartIndex.WindThunderFan.Impact, WeaponVisualPartIndex.WindThunderFan.ImpactFrameCount, true, 1.08f, PresentationSequenceKind.Inbound);
                     if (Potentials.HasPotential(WeaponPotentialId.FanReturningChain) && !target.IsAlive && TryPotentialContact(WeaponPotentialId.FanReturningChain, target, contact) && !pendingChain.Scheduled) ScheduleChain(target);
                 }
             }
@@ -324,7 +324,7 @@ namespace JoseonHunter.Runtime.Combat.Weapons
                             castOrigin.Y + direction.Y * Range * progress,
                             0f),
                         Quaternion.Euler(0f, 0f, degrees),
-                        new Vector3(Mathf.Lerp(.58f, 1.05f, progress), Mathf.Lerp(.42f, .72f, progress), 1f) *
+                        new Vector3(Mathf.Lerp(.84f, 1.38f, progress), Mathf.Lerp(.62f, .92f, progress), 1f) *
                         WeaponPresentationScale.For(
                             WeaponId.WindThunderFan,
                             WeaponVisualStage.Projectile,

@@ -243,6 +243,37 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FanLevelOneGustUsesReadableMinimumScale()
+        {
+            var root = new GameObject("Fan readability root");
+            var texture = new Texture2D(1, 1);
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), Vector2.one * .5f, 1f);
+            var mask = PixelHitMask.FromRows("1");
+            var registry = new CombatTargetRegistry();
+            var runtime = new WeaponRuntimeController(registry, new CombatDamageService(registry), mask);
+            registry.Register(new TestTarget(1, new Float2(.5f, 0f), mask));
+            var fan = new WindThunderFanExecutor(runtime, 10f, 10f, 2f, 1f, 1, 1);
+            var context = new WeaponExecutionContext(default, root.transform, sprite, null,
+                (_, _) => sprite, null, 0, 1);
+
+            fan.Tick(.01f, context);
+            yield return null;
+
+            var visibleGust = root.GetComponentsInChildren<SpriteRenderer>()
+                .Where(renderer => renderer.gameObject.activeSelf)
+                .Select(renderer => renderer.transform.localScale.x)
+                .DefaultIfEmpty(0f)
+                .Max();
+            Assert.That(visibleGust, Is.GreaterThanOrEqualTo(.5f));
+
+            fan.Dispose();
+            runtime.Dispose();
+            Object.Destroy(root);
+            Object.Destroy(sprite);
+            Object.Destroy(texture);
+        }
+
+        [UnityTest]
         public IEnumerator FanGustMarksAndLightningUseCanonicalFramesWithoutExtraContacts()
         {
             var root = new GameObject("Fan presentation root");
