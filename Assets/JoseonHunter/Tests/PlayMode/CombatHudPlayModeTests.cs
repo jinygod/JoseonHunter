@@ -320,11 +320,28 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(slot.GetComponent<RectTransform>().rect.width, Is.EqualTo(124f).Within(.01f));
             Assert.That(slot.GetComponent<RectTransform>().rect.height, Is.EqualTo(124f).Within(.01f));
             Assert.That(TextNamed(slot.gameObject, "Level Stars"), Is.EqualTo("★★★"));
-            var border = slot.Find("Quality Border").GetComponent<Image>();
-            Assert.That(border.color, Is.EqualTo(WeaponRackPresenter.ColorFor(WeaponAffixQualityBand.Blue)));
+            Assert.That(slot.GetComponent<Image>().color.a, Is.EqualTo(0f));
+            var expectedQualityColor = WeaponRackPresenter.ColorFor(WeaponAffixQualityBand.Blue);
+            foreach (var edgeName in new[] { "Top", "Bottom", "Left", "Right" })
+            {
+                var shadow = slot.Find("Frame Shadow " + edgeName)?.GetComponent<Image>();
+                var edge = slot.Find("Quality Frame " + edgeName)?.GetComponent<Image>();
+                Assert.That(shadow, Is.Not.Null, edgeName + " shadow");
+                Assert.That(edge, Is.Not.Null, edgeName + " quality edge");
+                Assert.That(edge.color, Is.EqualTo(expectedQualityColor));
+            }
+            for (var cornerIndex = 0; cornerIndex < 4; cornerIndex++)
+            {
+                var corner = slot.Find("Quality Corner " + cornerIndex)?.GetComponent<Image>();
+                Assert.That(corner, Is.Not.Null, "quality corner " + cornerIndex);
+                Assert.That(corner.color, Is.EqualTo(expectedQualityColor));
+            }
             var potential = slot.Find("Potential Cell 0").GetComponent<Image>();
             Assert.That(potential.gameObject.activeSelf, Is.True);
             Assert.That(potential.sprite, Is.Not.Null);
+            Assert.That(potential.rectTransform.anchorMin, Is.EqualTo(Vector2.one));
+            Assert.That(potential.rectTransform.anchorMax, Is.EqualTo(Vector2.one));
+            Assert.That(potential.rectTransform.anchoredPosition.x, Is.LessThan(0f));
             Object.Destroy(root);
         }
 

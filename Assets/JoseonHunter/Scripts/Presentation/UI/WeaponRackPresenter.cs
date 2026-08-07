@@ -19,7 +19,7 @@ namespace JoseonHunter.Presentation.UI
         private sealed class Slot
         {
             public GameObject Root;
-            public Image Border;
+            public Image[] QualityFrameParts;
             public Image Icon;
             public TextMeshProUGUI LevelStars;
             public Image[] PotentialCells;
@@ -31,7 +31,6 @@ namespace JoseonHunter.Presentation.UI
 
         private readonly List<Slot> slots = new();
         private readonly Dictionary<string, Slot> slotsByWeaponId = new();
-        private Sprite frameSprite;
         private WeaponAffixPresentationCatalogAsset affixCatalog;
 
         public event Action<WeaponSlotView> WeaponSelected;
@@ -71,7 +70,6 @@ namespace JoseonHunter.Presentation.UI
 
         private void ResolveAssets()
         {
-            if (frameSprite == null) frameSprite = Resources.Load<Sprite>("UI/compact_weapon_slot");
             if (affixCatalog == null)
                 affixCatalog = Resources.Load<WeaponAffixPresentationCatalogAsset>("WeaponAffixPresentationCatalog");
         }
@@ -84,15 +82,37 @@ namespace JoseonHunter.Presentation.UI
             slot.Button = slot.Root.AddComponent<Button>();
             slot.Button.transition = Selectable.Transition.ColorTint;
             slot.Button.onClick.AddListener(() => WeaponSelected?.Invoke(slot.View));
+            slot.Button.targetGraphic = rootImage;
             var rect = slot.Root.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0f);
             rect.pivot = new Vector2(.5f, 0f);
 
-            slot.Border = RuntimeUiFactory.Image("Quality Border", slot.Root.transform, Color.white);
-            slot.Border.sprite = frameSprite;
-            slot.Border.type = Image.Type.Sliced;
-            RuntimeUiFactory.Stretch(slot.Border.rectTransform, 0f, 0f, 0f, 0f);
-            slot.Button.targetGraphic = slot.Border;
+            CreateFrameEdge("Frame Shadow Top", slot.Root.transform, FrameSide.Top, 2f, 10f,
+                new Color(.035f, .025f, .02f, .92f));
+            CreateFrameEdge("Frame Shadow Bottom", slot.Root.transform, FrameSide.Bottom, 2f, 10f,
+                new Color(.035f, .025f, .02f, .92f));
+            CreateFrameEdge("Frame Shadow Left", slot.Root.transform, FrameSide.Left, 2f, 10f,
+                new Color(.035f, .025f, .02f, .92f));
+            CreateFrameEdge("Frame Shadow Right", slot.Root.transform, FrameSide.Right, 2f, 10f,
+                new Color(.035f, .025f, .02f, .92f));
+
+            slot.QualityFrameParts = new Image[8];
+            slot.QualityFrameParts[0] = CreateFrameEdge("Quality Frame Top", slot.Root.transform,
+                FrameSide.Top, 5f, 5f, Color.white);
+            slot.QualityFrameParts[1] = CreateFrameEdge("Quality Frame Bottom", slot.Root.transform,
+                FrameSide.Bottom, 5f, 5f, Color.white);
+            slot.QualityFrameParts[2] = CreateFrameEdge("Quality Frame Left", slot.Root.transform,
+                FrameSide.Left, 5f, 5f, Color.white);
+            slot.QualityFrameParts[3] = CreateFrameEdge("Quality Frame Right", slot.Root.transform,
+                FrameSide.Right, 5f, 5f, Color.white);
+            slot.QualityFrameParts[4] = CreateCorner("Quality Corner 0", slot.Root.transform,
+                new Vector2(0f, 1f), new Vector2(1f, -1f));
+            slot.QualityFrameParts[5] = CreateCorner("Quality Corner 1", slot.Root.transform,
+                Vector2.one, new Vector2(-1f, -1f));
+            slot.QualityFrameParts[6] = CreateCorner("Quality Corner 2", slot.Root.transform,
+                Vector2.zero, Vector2.one);
+            slot.QualityFrameParts[7] = CreateCorner("Quality Corner 3", slot.Root.transform,
+                new Vector2(1f, 0f), new Vector2(-1f, 1f));
 
             slot.Icon = RuntimeUiFactory.Image("Icon", slot.Root.transform, Color.white);
             slot.Icon.rectTransform.anchorMin = slot.Icon.rectTransform.anchorMax = new Vector2(.5f, .5f);
@@ -116,9 +136,9 @@ namespace JoseonHunter.Presentation.UI
             for (var potentialIndex = 0; potentialIndex < slot.PotentialCells.Length; potentialIndex++)
             {
                 var cell = RuntimeUiFactory.Image("Potential Cell " + potentialIndex, slot.Root.transform, Color.white);
-                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = new Vector2(.5f, 1f);
-                cell.rectTransform.pivot = new Vector2(.5f, 1f);
-                cell.rectTransform.anchoredPosition = new Vector2((potentialIndex - 1) * 22f, -7f);
+                cell.rectTransform.anchorMin = cell.rectTransform.anchorMax = Vector2.one;
+                cell.rectTransform.pivot = Vector2.one;
+                cell.rectTransform.anchoredPosition = new Vector2(-9f, -9f - potentialIndex * 21f);
                 cell.rectTransform.sizeDelta = new Vector2(18f, 18f);
                 cell.preserveAspect = true;
                 cell.raycastTarget = false;
@@ -126,6 +146,58 @@ namespace JoseonHunter.Presentation.UI
                 slot.PotentialCells[potentialIndex] = cell;
             }
             return slot;
+        }
+
+        private enum FrameSide
+        {
+            Top,
+            Bottom,
+            Left,
+            Right
+        }
+
+        private static Image CreateFrameEdge(
+            string name,
+            Transform parent,
+            FrameSide side,
+            float inset,
+            float thickness,
+            Color color)
+        {
+            var image = RuntimeUiFactory.Image(name, parent, color);
+            image.raycastTarget = false;
+            var rect = image.rectTransform;
+            if (side == FrameSide.Top || side == FrameSide.Bottom)
+            {
+                var anchorY = side == FrameSide.Top ? 1f : 0f;
+                rect.anchorMin = new Vector2(0f, anchorY);
+                rect.anchorMax = new Vector2(1f, anchorY);
+                rect.pivot = new Vector2(.5f, anchorY);
+                rect.offsetMin = new Vector2(inset, side == FrameSide.Top ? -thickness - inset : inset);
+                rect.offsetMax = new Vector2(-inset, side == FrameSide.Top ? -inset : thickness + inset);
+            }
+            else
+            {
+                var anchorX = side == FrameSide.Right ? 1f : 0f;
+                rect.anchorMin = new Vector2(anchorX, 0f);
+                rect.anchorMax = new Vector2(anchorX, 1f);
+                rect.pivot = new Vector2(anchorX, .5f);
+                rect.offsetMin = new Vector2(side == FrameSide.Right ? -thickness - inset : inset, inset);
+                rect.offsetMax = new Vector2(side == FrameSide.Right ? -inset : thickness + inset, -inset);
+            }
+            return image;
+        }
+
+        private static Image CreateCorner(string name, Transform parent, Vector2 anchor, Vector2 inwardDirection)
+        {
+            var image = RuntimeUiFactory.Image(name, parent, Color.white);
+            image.raycastTarget = false;
+            var rect = image.rectTransform;
+            rect.anchorMin = rect.anchorMax = anchor;
+            rect.pivot = anchor;
+            rect.sizeDelta = new Vector2(14f, 14f);
+            rect.anchoredPosition = inwardDirection * 3f;
+            return image;
         }
 
         public void ApplyPortraitLayout()
@@ -153,8 +225,10 @@ namespace JoseonHunter.Presentation.UI
             slot.WeaponId = weapon.Id;
             slot.View = weapon;
             if (!string.IsNullOrEmpty(slot.WeaponId)) slotsByWeaponId[slot.WeaponId] = slot;
-            slot.Border.color = ColorFor(WeaponAffixQuality.BandFor(
+            var qualityColor = ColorFor(WeaponAffixQuality.BandFor(
                 WeaponAffixQuality.Score(weapon.GeneralAffixRolls)));
+            for (var index = 0; index < slot.QualityFrameParts.Length; index++)
+                slot.QualityFrameParts[index].color = qualityColor;
             slot.Icon.sprite = weapon.Icon;
             slot.Icon.enabled = weapon.Icon != null;
             slot.LevelStars.text = new string('★', Mathf.Clamp(weapon.Level, 1, 5));
@@ -186,12 +260,12 @@ namespace JoseonHunter.Presentation.UI
             {
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
-                slot.Border.transform.localScale = Vector3.one * pulse;
+                slot.Root.transform.localScale = Vector3.one * pulse;
                 yield return null;
             }
 
             slot.PulseRoutine = null;
-            if (slot.Border != null) slot.Border.transform.localScale = Vector3.one;
+            if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
         }
 
         private void StopPulse(Slot slot)
@@ -199,7 +273,6 @@ namespace JoseonHunter.Presentation.UI
             if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
             slot.PulseRoutine = null;
             if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
-            if (slot.Border != null) slot.Border.transform.localScale = Vector3.one;
         }
     }
 }
