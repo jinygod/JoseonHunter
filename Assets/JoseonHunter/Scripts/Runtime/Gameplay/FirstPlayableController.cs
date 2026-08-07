@@ -184,6 +184,14 @@ namespace JoseonHunter.Runtime.Gameplay
         public event Action BossWarningStarted;
         public event Action BossAppeared;
         public event Action BossDefeated;
+        public event Action PlayerDamaged;
+        public event Action PlayerDefeated;
+        public event Action EliteAppeared;
+        public event Action EliteDefeated;
+        public event Action WaveWarningStarted;
+        public event Action<BossAttackKind> BossAttackExecuted;
+        public event Action TreasureAppeared;
+        public event Action TreasureOpened;
 
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
@@ -400,6 +408,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (enemies.Count != 0) ApplyEnemyDamage(enemies[enemies.Count - 1], float.MaxValue);
         }
         public void SetContactInvulnerabilityForTests(float seconds) => contactInvulnerability = Mathf.Max(0f, seconds);
+        public void DamagePlayerForTests(float amount) => ApplyBossDamageToPlayer(amount);
         public float ContactInvulnerabilityForTests => contactInvulnerability;
         public int LastSeparationAgentCountForTests { get; private set; }
         private readonly List<Vector2> livingEnemyPositionsForTests = new List<Vector2>();
@@ -1442,6 +1451,7 @@ namespace JoseonHunter.Runtime.Gameplay
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
+            if (isElite && !isMidBoss) EliteAppeared?.Invoke();
             ShowSpecialEnemyGuide(archetypeProfile);
             if (isBoss || isMidBoss) bossAlive = true;
         }
@@ -1561,6 +1571,7 @@ namespace JoseonHunter.Runtime.Gameplay
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
+            TreasureAppeared?.Invoke();
         }
 
         private void SpawnBoss()
@@ -1673,6 +1684,7 @@ namespace JoseonHunter.Runtime.Gameplay
             waveAnnouncement = message ?? string.Empty;
             waveAnnouncementIntensity = Mathf.Clamp(intensity, 1, 3);
             waveAnnouncementTimer = Mathf.Max(0f, duration);
+            if (waveAnnouncement.Length > 0) WaveWarningStarted?.Invoke();
         }
 
         private void UpdateEnemies(float delta)
@@ -1750,16 +1762,10 @@ namespace JoseonHunter.Runtime.Gameplay
                     if (Vector2.Distance(enemy.Object.transform.position, playerPosition) <= hitDistance &&
                         contactInvulnerability <= 0f)
                     {
-                        playerHealth = Mathf.Max(0f, playerHealth -
-                            enemy.ContactDamage * enemy.ContactDamageMultiplier * enemy.AuraMultiplier * runIncomingDamageMultiplier);
-                        UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
-                        contactInvulnerability = 0.55f;
-                        StartCoroutine(FlashPlayer());
-                        if (playerHealth <= 0f)
-                        {
-                            EndRun(false);
-                            return;
-                        }
+                        ApplyPlayerDamage(
+                            enemy.ContactDamage * enemy.ContactDamageMultiplier * enemy.AuraMultiplier,
+                            .55f);
+                        if (runEnded) return;
                     }
                 }
             }
@@ -1803,6 +1809,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
             if (snapshot.ExecuteStarted)
             {
+                BossAttackExecuted?.Invoke(snapshot.Kind);
                 enemy.BossAttackHitApplied = false;
                 enemy.ChargeStart = enemyPosition;
                 if (snapshot.Kind == BossAttackKind.SuppressionSlam)
@@ -1895,12 +1902,24 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ApplyBossDamageToPlayer(float amount)
         {
+            ApplyPlayerDamage(amount, .35f);
+        }
+
+        private void ApplyPlayerDamage(float amount, float invulnerabilitySeconds)
+        {
             if (contactInvulnerability > 0f || playerHealth <= 0f) return;
-            playerHealth = Mathf.Max(0f, playerHealth - amount * runIncomingDamageMultiplier);
+            var damage = Mathf.Max(0f, amount * runIncomingDamageMultiplier);
+            if (damage <= 0f) return;
+            playerHealth = Mathf.Max(0f, playerHealth - damage);
             UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
-            contactInvulnerability = .35f;
+            contactInvulnerability = Mathf.Max(0f, invulnerabilitySeconds);
             StartCoroutine(FlashPlayer());
-            if (playerHealth <= 0f) EndRun(false);
+            PlayerDamaged?.Invoke();
+            if (playerHealth <= 0f)
+            {
+                PlayerDefeated?.Invoke();
+                EndRun(false);
+            }
         }
 
         private void ApplyShamanAura(EnemyState shaman)
@@ -2081,9 +2100,12 @@ namespace JoseonHunter.Runtime.Gameplay
             }
             if (wasTreasure)
             {
+                TreasureOpened?.Invoke();
                 ScatterTreasure(deathPosition);
                 return;
             }
+
+            if (enemy.IsElite && !wasMidBoss) EliteDefeated?.Invoke();
 
             for (var child = 0; child < splitResult.SplitChildren; child++)
             {

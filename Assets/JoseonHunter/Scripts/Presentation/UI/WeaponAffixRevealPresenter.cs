@@ -70,6 +70,8 @@ namespace JoseonHunter.Presentation.UI
         private bool confirmRequested;
         private bool completed;
         private bool readOnlyDetail;
+        private bool appraisalRevealAnnounced;
+        private int lastAppraisalCount = int.MinValue;
         private WeaponAffixPresentationCatalogAsset catalogForTests;
 
 #if UNITY_INCLUDE_TESTS
@@ -109,6 +111,8 @@ namespace JoseonHunter.Presentation.UI
                 : reelWindows[index + 1].rectTransform.anchoredPosition.y;
         public event Action RevealCompleted;
         public event Action DetailClosed;
+        public event Action AppraisalTicked;
+        public event Action AppraisalRevealed;
 
         public void Play(WeaponAffixRollResult result)
         {
@@ -146,6 +150,8 @@ namespace JoseonHunter.Presentation.UI
             finishAt = timeline.Duration;
             TensionScale = 1f;
             VisiblePotentialCount = 0;
+            appraisalRevealAnnounced = false;
+            lastAppraisalCount = int.MinValue;
 
             BindSprites();
             ResetVisuals();
@@ -335,9 +341,22 @@ namespace JoseonHunter.Presentation.UI
             var verdictVisible = time >= timeline.TierRevealsAt;
             SetFinalAffixVisible(verdictVisible);
             var countProgress = Mathf.InverseLerp(timeline.CountStartsAt, timeline.CountEndsAt, time);
+            var displayedValue = WeaponAppraisalPresentation.DisplayValueAt(
+                activeResult.General.Value, countProgress);
+            if (time >= timeline.CountStartsAt && time <= timeline.CountEndsAt &&
+                displayedValue != lastAppraisalCount)
+            {
+                lastAppraisalCount = displayedValue;
+                AppraisalTicked?.Invoke();
+            }
+            if (verdictVisible && !appraisalRevealAnnounced)
+            {
+                appraisalRevealAnnounced = true;
+                AppraisalRevealed?.Invoke();
+            }
             detail.text = WeaponAffixValueFormatter.Describe(
                 activeResult.General,
-                WeaponAppraisalPresentation.DisplayValueAt(activeResult.General.Value, countProgress));
+                displayedValue);
             title.text = verdictVisible ? TierName(activeResult.General.Tier) : "추가옵션 감정 중";
             detail.rectTransform.localScale = Vector3.one * CountPulseScaleAt(time, countProgress);
             detail.color = Color.Lerp(JoseonUiPalette.DarkPanelText, JoseonUiPalette.Gold,

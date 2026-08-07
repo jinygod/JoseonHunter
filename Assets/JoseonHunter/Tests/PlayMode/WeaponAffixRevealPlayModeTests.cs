@@ -9,6 +9,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using JoseonHunter.Runtime.Gameplay;
 using JoseonHunter.Domain.Combat;
+using JoseonHunter.Presentation.Audio;
+using JoseonHunter.Runtime.Audio;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -313,6 +315,28 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AppraisalEmitsCountTicksAndOneFinalReveal()
+        {
+            var presenter = new GameObject("Appraisal Audio Event Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            var ticks = 0;
+            var reveals = 0;
+            presenter.AppraisalTicked += () => ticks++;
+            presenter.AppraisalRevealed += () => reveals++;
+            var result = new WeaponAffixRollResult(
+                new WeaponAffixRoll(WeaponAffixStat.Area, WeaponAffixTier.Perfect, 20d),
+                System.Array.Empty<WeaponPotentialId>());
+
+            presenter.Play(result);
+            yield return new WaitForSecondsRealtime(WeaponAffixRevealPresenter.DurationFor(result) + .04f);
+
+            Assert.That(ticks, Is.GreaterThan(1));
+            Assert.That(reveals, Is.EqualTo(1));
+            Object.Destroy(presenter.gameObject);
+        }
+
+        [UnityTest]
         public IEnumerator Skip_is_idempotent_and_does_not_change_the_roll_result()
         {
             var presenter = new GameObject("Affix Reveal Test").AddComponent<WeaponAffixRevealPresenter>();
@@ -362,6 +386,8 @@ namespace JoseonHunter.Tests.PlayMode
             var generic = Object.FindAnyObjectByType<RewardRevealPresenter>();
             var affix = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
             affix.SetCatalogForTests(TestCatalog());
+            GameAudioDirector.EnsureExists();
+            GameAudioDirector.Instance.ResetRequestCountsForTests();
             controller.OpenUpgradeForTests();
             controller.SetUpgradeOffersForTests(new UpgradeOffer(WeaponId.GakgungShot.Value, UpgradeKind.Weapon, 1));
             yield return new WaitForSecondsRealtime(.35f);
@@ -382,6 +408,10 @@ namespace JoseonHunter.Tests.PlayMode
             affix.Skip();
             yield return new WaitForSecondsRealtime(1.16f);
             Assert.That(affix.IsAwaitingConfirmation, Is.True);
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.AppraisalTick),
+                Is.GreaterThan(1));
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.AppraisalReveal),
+                Is.EqualTo(1));
             affix.Confirm();
             yield return new WaitForSecondsRealtime(.16f);
             Assert.That(controller.IsUpgradeOpen, Is.False);

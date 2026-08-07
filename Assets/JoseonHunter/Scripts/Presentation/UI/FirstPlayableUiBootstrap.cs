@@ -1,4 +1,5 @@
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Presentation.Audio;
 using JoseonHunter.Runtime.Audio;
@@ -100,6 +101,8 @@ namespace JoseonHunter.Presentation.UI
             affixReveal = rewardRoot.gameObject.AddComponent<WeaponAffixRevealPresenter>();
             affixReveal.RevealCompleted += OnRewardRevealCompleted;
             affixReveal.DetailClosed += OnWeaponDetailsClosed;
+            affixReveal.AppraisalTicked += OnAppraisalTicked;
+            affixReveal.AppraisalRevealed += OnAppraisalRevealed;
             var upgradeRoot = RuntimeUiFactory.Rect("Upgrade Choice", modalSafeAreaContainer);
             RuntimeUiFactory.Stretch(upgradeRoot, 0f, 0f, 0f, 0f);
             upgradeChoice = upgradeRoot.gameObject.AddComponent<UpgradeChoicePresenter>();
@@ -134,7 +137,13 @@ namespace JoseonHunter.Presentation.UI
             if (weaponReplacement != null) weaponReplacement.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (weaponLegacyChoice != null) weaponLegacyChoice.PresentationClosed -= NotifyUpgradePresentationClosed;
             if (rewardReveal != null) rewardReveal.RevealCompleted -= OnRewardRevealCompleted;
-            if (affixReveal != null) affixReveal.DetailClosed -= OnWeaponDetailsClosed;
+            if (affixReveal != null)
+            {
+                affixReveal.RevealCompleted -= OnRewardRevealCompleted;
+                affixReveal.DetailClosed -= OnWeaponDetailsClosed;
+                affixReveal.AppraisalTicked -= OnAppraisalTicked;
+                affixReveal.AppraisalRevealed -= OnAppraisalRevealed;
+            }
             if (weaponRack != null) weaponRack.WeaponSelected -= OpenWeaponDetails;
             if (combatHud != null) combatHud.ReturnRequested -= OpenAbandonConfirmation;
             if (runResult != null) runResult.LobbyReturnRequested -= OnLobbyReturnRequested;
@@ -216,6 +225,14 @@ namespace JoseonHunter.Presentation.UI
             boundController.BossWarningStarted += OnBossWarningStarted;
             boundController.BossAppeared += OnBossAppeared;
             boundController.BossDefeated += OnBossDefeated;
+            boundController.PlayerDamaged += OnPlayerDamaged;
+            boundController.PlayerDefeated += OnPlayerDefeated;
+            boundController.EliteAppeared += OnEliteAppeared;
+            boundController.EliteDefeated += OnEliteDefeated;
+            boundController.WaveWarningStarted += OnWaveWarningStarted;
+            boundController.BossAttackExecuted += OnBossAttackExecuted;
+            boundController.TreasureAppeared += OnTreasureAppeared;
+            boundController.TreasureOpened += OnTreasureOpened;
             boundController.RunReset += CloseUpgradeChoice;
             boundController.RunReset += CloseRewardReveal;
             boundController.RunReset += CloseAbandonWithoutFlowChange;
@@ -235,6 +252,14 @@ namespace JoseonHunter.Presentation.UI
             boundController.BossWarningStarted -= OnBossWarningStarted;
             boundController.BossAppeared -= OnBossAppeared;
             boundController.BossDefeated -= OnBossDefeated;
+            boundController.PlayerDamaged -= OnPlayerDamaged;
+            boundController.PlayerDefeated -= OnPlayerDefeated;
+            boundController.EliteAppeared -= OnEliteAppeared;
+            boundController.EliteDefeated -= OnEliteDefeated;
+            boundController.WaveWarningStarted -= OnWaveWarningStarted;
+            boundController.BossAttackExecuted -= OnBossAttackExecuted;
+            boundController.TreasureAppeared -= OnTreasureAppeared;
+            boundController.TreasureOpened -= OnTreasureOpened;
             boundController.RunReset -= CloseUpgradeChoice;
             boundController.RunReset -= CloseRewardReveal;
             boundController.RunReset -= CloseAbandonWithoutFlowChange;
@@ -342,6 +367,25 @@ namespace JoseonHunter.Presentation.UI
         private static void OnBossWarningStarted() => PlayCue(GameAudioCueId.BossWarning);
         private static void OnBossAppeared() => PlayCue(GameAudioCueId.BossAppear);
         private static void OnBossDefeated() => PlayCue(GameAudioCueId.BossDefeat);
+        private static void OnPlayerDamaged() => PlayCue(GameAudioCueId.PlayerHurt);
+        private static void OnPlayerDefeated() => PlayCue(GameAudioCueId.PlayerDefeat);
+        private static void OnEliteAppeared() => PlayCue(GameAudioCueId.EliteAppear);
+        private static void OnEliteDefeated() => PlayCue(GameAudioCueId.EliteDefeat);
+        private static void OnWaveWarningStarted() => PlayCue(GameAudioCueId.WaveWarning);
+        private static void OnTreasureAppeared() => PlayCue(GameAudioCueId.TreasureAppear);
+        private static void OnTreasureOpened() => PlayCue(GameAudioCueId.TreasureOpen);
+        private static void OnAppraisalTicked() => PlayCue(GameAudioCueId.AppraisalTick);
+        private static void OnAppraisalRevealed() => PlayCue(GameAudioCueId.AppraisalReveal);
+        private static void OnBossAttackExecuted(BossAttackKind attack)
+        {
+            PlayCue(attack switch
+            {
+                BossAttackKind.SuppressionSlam => GameAudioCueId.BossSlam,
+                BossAttackKind.BloodCharge => GameAudioCueId.BossCharge,
+                BossAttackKind.SpiritVolley => GameAudioCueId.BossVolley,
+                _ => GameAudioCueId.None
+            });
+        }
 
         private static void PlayCue(GameAudioCueId cue)
         {
@@ -428,6 +472,7 @@ namespace JoseonHunter.Presentation.UI
             if (boundController == null || boundController.UiState.RunEnded || abandonRun == null || abandonRun.IsOpen)
                 return;
             if (!boundController.Flow.TryTransition(GameFlowState.Paused)) return;
+            PlayCue(GameAudioCueId.PauseOpen);
             SetBackgroundRaycastsEnabled(false);
             SetModalScrimVisible(true);
             abandonRun.Open();

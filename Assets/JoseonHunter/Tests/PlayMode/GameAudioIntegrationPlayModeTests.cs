@@ -12,6 +12,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -78,6 +79,119 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo(1));
             Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.BossDefeat),
                 Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator PlayerDamageAndDefeatReachAudioDirectorOncePerStateChange()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
+            GameAudioDirector.Instance.ResetRequestCountsForTests();
+
+            controller.DamagePlayerForTests(12f);
+            controller.SetContactInvulnerabilityForTests(0f);
+            controller.DamagePlayerForTests(10000f);
+            yield return null;
+
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.PlayerHurt),
+                Is.EqualTo(2));
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.PlayerDefeat),
+                Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator NormalEnemyContactAlsoUsesThePlayerHurtCue()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
+            controller.ConfigureSeparationLoadScenarioForTests();
+            controller.SpawnEnemyForTests(Vector2.zero);
+            controller.SetContactInvulnerabilityForTests(0f);
+            GameAudioDirector.Instance.ResetRequestCountsForTests();
+
+            controller.UpdateEnemiesForTests(.01f);
+            yield return null;
+
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.PlayerHurt),
+                Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator EliteDeathHasAudioButNormalEnemyDeathDoesNot()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
+            controller.ConfigureSeparationLoadScenarioForTests();
+            GameAudioDirector.Instance.ResetRequestCountsForTests();
+
+            controller.ConfigureViewportSpawnForTests(0, .5f, 1f, true);
+            controller.SpawnEnemyForLifecycleTests();
+            controller.DestroyLastEnemyForLifecycleTests();
+            controller.ConfigureViewportSpawnForTests(0, .5f, 1f, false);
+            controller.SpawnEnemyForLifecycleTests();
+            controller.DestroyLastEnemyForLifecycleTests();
+            controller.ClearViewportSpawnForTests();
+            yield return null;
+
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.EliteAppear),
+                Is.EqualTo(1));
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.EliteDefeat),
+                Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator TreasureSpawnAndOpenReachDistinctAudioCues()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
+            controller.ConfigureSeparationLoadScenarioForTests();
+            GameAudioDirector.Instance.ResetRequestCountsForTests();
+
+            controller.SpawnTreasureForSeparationTests(Vector2.zero);
+            controller.DestroyLastEnemyForLifecycleTests();
+            yield return null;
+
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.TreasureAppear),
+                Is.EqualTo(1));
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.TreasureOpen),
+                Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator WaveBossAttackAndPauseEventsReachAudioDirector()
+        {
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = UnityEngine.Object.FindAnyObjectByType<FirstPlayableController>();
+            GameAudioDirector.Instance.ResetRequestCountsForTests();
+
+            controller.AdvanceStageForTests(0f, 900f);
+            for (var tick = 0; tick < 16 && !controller.RunEndedForTests; tick++)
+                controller.UpdateEnemiesForTests(.25f);
+            var pause = System.Array.Find(UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Include),
+                candidate => candidate.name == "Pause Button");
+            if (!controller.RunEndedForTests) pause.onClick.Invoke();
+            yield return null;
+
+            var bossAttackRequests =
+                GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.BossSlam) +
+                GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.BossCharge) +
+                GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.BossVolley);
+            Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.WaveWarning),
+                Is.GreaterThanOrEqualTo(1));
+            Assert.That(bossAttackRequests, Is.GreaterThanOrEqualTo(1));
+            if (!controller.RunEndedForTests)
+                Assert.That(GameAudioDirector.Instance.RequestCountForTests(GameAudioCueId.PauseOpen),
+                    Is.EqualTo(1));
         }
 
         [UnityTest]
