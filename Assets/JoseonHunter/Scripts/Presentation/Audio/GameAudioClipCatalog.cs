@@ -33,9 +33,24 @@ namespace JoseonHunter.Presentation.Audio
             catalog.Add(GameAudioCueId.Singijeon, "Audio/CC0/Weapons/singijeon");
             catalog.Add(GameAudioCueId.NormalHit, "Audio/CC0/Combat/hit_soft_1");
             catalog.Add(GameAudioCueId.CriticalHit, "Audio/CC0/Combat/hit_critical");
+            catalog.Add(GameAudioCueId.PlayerHurt,
+                "Audio/CC0/Combat/player_hurt_1",
+                "Audio/CC0/Combat/player_hurt_2");
+            catalog.Add(GameAudioCueId.PlayerDefeat, "Audio/CC0/Combat/player_defeat");
+            catalog.Add(GameAudioCueId.EliteDefeat, "Audio/CC0/Combat/elite_defeat");
             catalog.Add(GameAudioCueId.BossWarning, "Audio/CC0/Weapons/geumjul");
             catalog.Add(GameAudioCueId.BossAppear, "Audio/CC0/Weapons/geumjul");
             catalog.Add(GameAudioCueId.BossDefeat, "Audio/CC0/Combat/boss_defeat");
+            catalog.Add(GameAudioCueId.BossSlam, "Audio/CC0/Combat/boss_slam");
+            catalog.Add(GameAudioCueId.BossCharge, "Audio/CC0/Combat/boss_charge");
+            catalog.Add(GameAudioCueId.BossVolley, "Audio/CC0/Combat/boss_volley");
+            catalog.Add(GameAudioCueId.TreasureAppear, "Audio/CC0/Events/treasure_appear");
+            catalog.Add(GameAudioCueId.TreasureOpen, "Audio/CC0/Events/treasure_open");
+            catalog.Add(GameAudioCueId.WaveWarning, "Audio/CC0/Events/wave_warning");
+            catalog.Add(GameAudioCueId.EliteAppear, "Audio/CC0/Events/elite_appear");
+            catalog.Add(GameAudioCueId.PauseOpen, "Audio/CC0/UI/pause_open");
+            catalog.Add(GameAudioCueId.AppraisalTick, "Audio/CC0/UI/appraisal_tick");
+            catalog.Add(GameAudioCueId.AppraisalReveal, "Audio/CC0/UI/appraisal_reveal");
             catalog.Add(GameAudioCueId.Victory, "Audio/CC0/Pickups/level_up");
             catalog.Add(GameAudioCueId.Defeat, "Audio/CC0/Weapons/geumjul");
             return catalog;

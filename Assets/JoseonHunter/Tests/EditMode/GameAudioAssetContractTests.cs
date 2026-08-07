@@ -27,6 +27,20 @@ namespace JoseonHunter.Tests.EditMode
         [TestCase(Root + "/Combat/hit_soft_1.ogg")]
         [TestCase(Root + "/Combat/hit_critical.ogg")]
         [TestCase(Root + "/Combat/boss_defeat.ogg")]
+        [TestCase(Root + "/Combat/player_hurt_1.ogg")]
+        [TestCase(Root + "/Combat/player_hurt_2.ogg")]
+        [TestCase(Root + "/Combat/player_defeat.ogg")]
+        [TestCase(Root + "/Combat/elite_defeat.ogg")]
+        [TestCase(Root + "/Combat/boss_slam.ogg")]
+        [TestCase(Root + "/Combat/boss_charge.wav")]
+        [TestCase(Root + "/Combat/boss_volley.ogg")]
+        [TestCase(Root + "/Events/wave_warning.ogg")]
+        [TestCase(Root + "/Events/elite_appear.ogg")]
+        [TestCase(Root + "/Events/treasure_appear.ogg")]
+        [TestCase(Root + "/Events/treasure_open.ogg")]
+        [TestCase(Root + "/UI/pause_open.ogg")]
+        [TestCase(Root + "/UI/appraisal_tick.ogg")]
+        [TestCase(Root + "/UI/appraisal_reveal.ogg")]
         public void RequiredClipExistsAndUsesMobileShortSfxProfile(string path)
         {
             var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
@@ -44,10 +58,10 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void RuntimeAudioFolderContainsOnlyTheEighteenApprovedClips()
+        public void RuntimeAudioFolderContainsOnlyTheThirtyTwoApprovedClips()
         {
             var guids = AssetDatabase.FindAssets("t:AudioClip", new[] { Root });
-            Assert.That(guids, Has.Length.EqualTo(18));
+            Assert.That(guids, Has.Length.EqualTo(32));
             foreach (var guid in guids)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);

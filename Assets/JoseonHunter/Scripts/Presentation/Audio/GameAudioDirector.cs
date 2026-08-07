@@ -211,9 +211,26 @@ namespace JoseonHunter.Presentation.Audio
             return count;
         }
 
-        private static bool IsCombatCue(GameAudioCueId cue) =>
-            (cue >= GameAudioCueId.Gakgung && cue <= GameAudioCueId.CriticalHit) ||
-            (cue >= GameAudioCueId.BossWarning && cue <= GameAudioCueId.BossDefeat);
+        private static bool IsCombatCue(GameAudioCueId cue)
+        {
+            if (cue >= GameAudioCueId.Gakgung && cue <= GameAudioCueId.EliteDefeat) return true;
+            switch (cue)
+            {
+                case GameAudioCueId.BossWarning:
+                case GameAudioCueId.BossAppear:
+                case GameAudioCueId.BossDefeat:
+                case GameAudioCueId.BossSlam:
+                case GameAudioCueId.BossCharge:
+                case GameAudioCueId.BossVolley:
+                case GameAudioCueId.TreasureAppear:
+                case GameAudioCueId.TreasureOpen:
+                case GameAudioCueId.WaveWarning:
+                case GameAudioCueId.EliteAppear:
+                    return true;
+                default:
+                    return false;
+            }
+        }
 
         private static float VolumeFor(GameAudioCueId cue)
         {
@@ -221,6 +238,7 @@ namespace JoseonHunter.Presentation.Audio
             {
                 case GameAudioCueId.ExperiencePickup:
                 case GameAudioCueId.NormalHit:
+                case GameAudioCueId.AppraisalTick:
                     return .42f;
                 case GameAudioCueId.UiClick:
                 case GameAudioCueId.YeopjeonPickup:
@@ -228,7 +246,14 @@ namespace JoseonHunter.Presentation.Audio
                 case GameAudioCueId.BossWarning:
                 case GameAudioCueId.BossAppear:
                 case GameAudioCueId.BossDefeat:
+                case GameAudioCueId.PlayerDefeat:
+                case GameAudioCueId.BossSlam:
+                case GameAudioCueId.BossCharge:
+                case GameAudioCueId.BossVolley:
                     return .82f;
+                case GameAudioCueId.PlayerHurt:
+                case GameAudioCueId.EliteDefeat:
+                    return .72f;
                 default:
                     return .68f;
             }

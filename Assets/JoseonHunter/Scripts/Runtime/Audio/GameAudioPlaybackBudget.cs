@@ -91,13 +91,26 @@ namespace JoseonHunter.Runtime.Audio
                 case GameAudioCueId.BossWarning:
                 case GameAudioCueId.BossAppear:
                 case GameAudioCueId.BossDefeat:
+                case GameAudioCueId.PlayerDefeat:
+                case GameAudioCueId.EliteDefeat:
+                case GameAudioCueId.BossSlam:
+                case GameAudioCueId.BossCharge:
+                case GameAudioCueId.BossVolley:
                 case GameAudioCueId.Victory:
                 case GameAudioCueId.Defeat:
+                case GameAudioCueId.AppraisalReveal:
                     return GameAudioPriority.High;
                 case GameAudioCueId.UiClick:
                 case GameAudioCueId.UiCancel:
                 case GameAudioCueId.UpgradeSelected:
                 case GameAudioCueId.CriticalHit:
+                case GameAudioCueId.PlayerHurt:
+                case GameAudioCueId.TreasureAppear:
+                case GameAudioCueId.TreasureOpen:
+                case GameAudioCueId.WaveWarning:
+                case GameAudioCueId.EliteAppear:
+                case GameAudioCueId.PauseOpen:
+                case GameAudioCueId.AppraisalTick:
                     return GameAudioPriority.Medium;
                 default:
                     return GameAudioPriority.Low;
@@ -118,6 +131,22 @@ namespace JoseonHunter.Runtime.Audio
                     return .10f;
                 case GameAudioCueId.NormalHit:
                     return .05f;
+                case GameAudioCueId.PlayerHurt:
+                    return .12f;
+                case GameAudioCueId.EliteDefeat:
+                    return .16f;
+                case GameAudioCueId.WaveWarning:
+                case GameAudioCueId.EliteAppear:
+                    return .45f;
+                case GameAudioCueId.BossSlam:
+                case GameAudioCueId.BossCharge:
+                case GameAudioCueId.BossVolley:
+                    return .20f;
+                case GameAudioCueId.TreasureAppear:
+                case GameAudioCueId.TreasureOpen:
+                    return .20f;
+                case GameAudioCueId.AppraisalTick:
+                    return .04f;
                 default:
                     return 0f;
             }

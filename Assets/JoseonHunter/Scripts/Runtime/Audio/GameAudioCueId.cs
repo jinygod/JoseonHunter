@@ -22,11 +22,24 @@ namespace JoseonHunter.Runtime.Audio
         Singijeon = 28,
         NormalHit = 40,
         CriticalHit = 41,
+        PlayerHurt = 42,
+        PlayerDefeat = 43,
+        EliteDefeat = 44,
         BossWarning = 50,
         BossAppear = 51,
         BossDefeat = 52,
         Victory = 53,
-        Defeat = 54
+        Defeat = 54,
+        BossSlam = 55,
+        BossCharge = 56,
+        BossVolley = 57,
+        TreasureAppear = 60,
+        TreasureOpen = 61,
+        WaveWarning = 62,
+        EliteAppear = 63,
+        PauseOpen = 70,
+        AppraisalTick = 71,
+        AppraisalReveal = 72
     }
 
     public enum GameAudioPriority
