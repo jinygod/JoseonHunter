@@ -104,28 +104,7 @@ namespace JoseonHunter.Tests.EditMode
                 foreach (var path in Directory.GetFiles(root, "*.png", SearchOption.AllDirectories))
                 {
                     var assetPath = path.Replace('\\', '/');
-                    const string fragmentedTelegraph =
-                        "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Fan/fan_target_01.png";
-                    const string secondFragmentedTelegraph =
-                        "Assets/JoseonHunter/Art/Weapons/Runtime/Polish/Fan/fan_target_03.png";
-                    if (assetPath == fragmentedTelegraph)
-                    {
-                        var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
-                        Assert.That(components, Is.EquivalentTo(new[] { 2754, 739, 1 }), assetPath);
-                        Assert.That(components.Count(component => component >= 414), Is.EqualTo(2), assetPath);
-                    }
-                    else if (assetPath == secondFragmentedTelegraph)
-                    {
-                        var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
-                        var expectedComponents = new[]
-                        {
-                            636, 291, 32, 22, 18, 14, 11, 10, 7, 7, 6, 5, 5, 5, 5, 5, 5,
-                            4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2,
-                            2, 2, 2, 2, 2, 2, 2
-                        }.Concat(Enumerable.Repeat(1, 35));
-                        Assert.That(components.OrderByDescending(component => component), Is.EqualTo(expectedComponents), assetPath);
-                    }
-                    else if (TryGetReviewedMultiPartVfx(assetPath, out var contract))
+                    if (TryGetReviewedMultiPartVfx(assetPath, out var contract))
                     {
                         var components = SinglePngAssetValidator.MeasureOpaqueComponents(assetPath);
                         Assert.That(components.Count, Is.EqualTo(contract.ExpectedComponentCount), assetPath);
