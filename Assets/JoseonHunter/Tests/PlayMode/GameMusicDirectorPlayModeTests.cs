@@ -10,13 +10,23 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class GameMusicDirectorPlayModeTests
     {
+        private GameObject listenerObject;
+
         [UnitySetUp]
         public IEnumerator SetUp()
         {
             foreach (var existing in Object.FindObjectsByType<GameMusicDirector>(FindObjectsInactive.Include))
                 Object.Destroy(existing.gameObject);
             yield return null;
+            listenerObject = new GameObject("Game Music Test Listener", typeof(AudioListener));
             GameMusicDirector.EnsureExists();
+            yield return null;
+        }
+
+        [UnityTearDown]
+        public IEnumerator TearDown()
+        {
+            if (listenerObject != null) Object.Destroy(listenerObject);
             yield return null;
         }
 

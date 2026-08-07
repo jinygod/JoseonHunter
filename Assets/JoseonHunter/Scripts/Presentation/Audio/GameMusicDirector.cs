@@ -28,7 +28,7 @@ namespace JoseonHunter.Presentation.Audio
         {
             if (instance != null) return;
 
-            var existing = FindFirstObjectByType<GameMusicDirector>(FindObjectsInactive.Include);
+            var existing = FindAnyObjectByType<GameMusicDirector>(FindObjectsInactive.Include);
             if (existing != null)
             {
                 existing.Initialize();
