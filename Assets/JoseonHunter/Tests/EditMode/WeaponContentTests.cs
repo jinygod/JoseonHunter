@@ -192,6 +192,19 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void WindThunderFanUiUsesDedicatedSimplifiedIconInsteadOfCombatGustFrame()
+        {
+            var definition = LoadDefinition(WeaponId.WindThunderFan);
+            var uiIcon = new SerializedObject(definition).FindProperty("uiIcon");
+
+            Assert.That(uiIcon, Is.Not.Null);
+            Assert.That(uiIcon.objectReferenceValue, Is.Not.Null);
+            Assert.That(uiIcon.objectReferenceValue, Is.Not.SameAs(definition.PresentationSprites[0]));
+            Assert.That(AssetDatabase.GetAssetPath(uiIcon.objectReferenceValue),
+                Does.EndWith("wind_thunder_fan/ui-icon.png"));
+        }
+
+        [Test]
         public void ThunderCrashBombUsesApprovedAreaDamageCurve()
         {
             var definition = LoadDefinition(WeaponId.ThunderCrashBomb);
