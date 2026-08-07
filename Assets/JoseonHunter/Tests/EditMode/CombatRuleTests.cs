@@ -110,6 +110,32 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void EveryThirdLevelGuaranteesChosenStartingWeaponUntilLevelThree()
+        {
+            var state = State(
+                weapons: new Dictionary<string, int>
+                {
+                    [WeaponId.HwandoFlyingBlade.Value] = 1,
+                    [WeaponId.GakgungShot.Value] = 2,
+                    [WeaponId.FrostFlask.Value] = 1
+                });
+
+            for (var seed = 0; seed < 100; seed++)
+            {
+                var offers = UpgradeSelector.Select(
+                    state, seed, playerLevel: 6, WeaponId.HwandoFlyingBlade.Value);
+
+                Assert.That(offers.Any(offer =>
+                        offer.Id == WeaponId.HwandoFlyingBlade.Value && offer.NextLevel == 2),
+                    Is.True,
+                    $"Seed {seed}");
+                Assert.That(offers.Count(offer => offer.Kind == UpgradeKind.Weapon),
+                    Is.EqualTo(1),
+                    $"Seed {seed}");
+            }
+        }
+
+        [Test]
         public void MaxedAndLockedEvolutionsNeverAppear()
         {
             var state = State(

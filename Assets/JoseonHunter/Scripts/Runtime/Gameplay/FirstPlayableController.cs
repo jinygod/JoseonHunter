@@ -63,6 +63,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly Dictionary<int, EnemyMasteryClass> pendingMasteryDeaths = new Dictionary<int, EnemyMasteryClass>();
         private PendingWeaponChoice pendingWeaponChoice;
         private int affixRollOrdinal;
+        private WeaponId startingWeaponId = WeaponId.HwandoFlyingBlade;
 #if UNITY_INCLUDE_TESTS
         private Func<WeaponId, int, int, int, IAffixRandom> affixRandomFactoryForTests;
         private int? spawnSideForTests;
@@ -1061,6 +1062,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var startingWeapon = patrolLoadout != null
                 ? patrolLoadout.StartingWeapon
                 : WeaponId.HwandoFlyingBlade;
+            startingWeaponId = startingWeapon;
             weaponLevels.Add(startingWeapon.Value, 1);
             supportLevels.Clear();
             unlockedUpgradeIds.Clear();
@@ -2928,7 +2930,8 @@ namespace JoseonHunter.Runtime.Gameplay
             }
             var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds,
                 acquiredEvolutionIds, discardedWeaponIds, finalEvolutionReadyWeaponIds);
-            var selected = UpgradeSelector.Select(state, level * 397 ^ kills, level);
+            var selected = UpgradeSelector.Select(
+                state, level * 397 ^ kills, level, startingWeaponId.Value);
             foreach (var offer in selected)
             {
                 upgradeOfferData.Add(offer);

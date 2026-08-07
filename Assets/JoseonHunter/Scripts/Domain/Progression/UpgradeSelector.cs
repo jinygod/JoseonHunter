@@ -15,7 +15,8 @@ namespace JoseonHunter.Domain.Progression
         public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed) =>
             Select(state, seed, 1);
 
-        public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed, int playerLevel)
+        public static IReadOnlyList<UpgradeOffer> Select(
+            UpgradeState state, int seed, int playerLevel, string startingWeaponId)
         {
             if (state == null) throw new ArgumentNullException(nameof(state));
             if (playerLevel < 1) throw new ArgumentOutOfRangeException(nameof(playerLevel));
@@ -34,6 +35,18 @@ namespace JoseonHunter.Domain.Progression
                 state.FinalEvolutionReadyWeaponIds.Contains(offer.Id));
             if (!string.IsNullOrEmpty(finalEvolution.Id))
                 offers.Add(finalEvolution);
+
+            var startingWeaponDue = playerLevel % 3 == 0 &&
+                                    !string.IsNullOrEmpty(startingWeaponId) &&
+                                    state.WeaponLevels.TryGetValue(startingWeaponId, out var startingWeaponLevel) &&
+                                    startingWeaponLevel is > 0 and < 3;
+            if (startingWeaponDue && offers.Count == 0)
+            {
+                var startingWeapon = eligible.FirstOrDefault(offer =>
+                    offer.Kind == UpgradeKind.Weapon && offer.Id == startingWeaponId);
+                if (!string.IsNullOrEmpty(startingWeapon.Id)) offers.Add(startingWeapon);
+            }
+
             var supports = eligible.Where(offer => offer.Kind == UpgradeKind.Support).ToList();
             var ownedWeapons = eligible.Where(offer =>
                 offer.Kind == UpgradeKind.Weapon && offer.NextLevel > 1).ToList();
@@ -43,7 +56,7 @@ namespace JoseonHunter.Domain.Progression
             Shuffle(ownedWeapons, random);
             Shuffle(newWeapons, random);
 
-            for (var index = 0; index < Math.Min(2, supports.Count); index++)
+            for (var index = 0; index < Math.Min(2, supports.Count) && offers.Count < 3; index++)
                 offers.Add(supports[index]);
 
             var weaponDue = playerLevel % 4 == 0 || random.NextDouble() < .25d;
@@ -51,8 +64,8 @@ namespace JoseonHunter.Domain.Progression
             {
                 var preferredWeapons = playerLevel % 2 == 0 ? newWeapons : ownedWeapons;
                 var fallbackWeapons = playerLevel % 2 == 0 ? ownedWeapons : newWeapons;
-                if (preferredWeapons.Count > 0) offers.Add(preferredWeapons[0]);
-                else if (fallbackWeapons.Count > 0) offers.Add(fallbackWeapons[0]);
+                AddFirstDistinct(offers, preferredWeapons);
+                if (offers.Count < 3) AddFirstDistinct(offers, fallbackWeapons);
             }
 
             foreach (var support in supports)
@@ -72,6 +85,9 @@ namespace JoseonHunter.Domain.Progression
 
             return new ReadOnlyCollection<UpgradeOffer>(offers);
         }
+
+        public static IReadOnlyList<UpgradeOffer> Select(UpgradeState state, int seed, int playerLevel) =>
+            Select(state, seed, playerLevel, null);
 
         private static IEnumerable<UpgradeOffer> EligibleOffers(UpgradeState state)
         {
@@ -96,6 +112,17 @@ namespace JoseonHunter.Domain.Progression
 
         private static UpgradeOffer WeaponOffer(string id, int currentLevel, bool requiresReplacement) =>
             new(id, UpgradeKind.Weapon, currentLevel + 1, requiresReplacement);
+
+        private static void AddFirstDistinct(
+            ICollection<UpgradeOffer> selected, IEnumerable<UpgradeOffer> candidates)
+        {
+            foreach (var candidate in candidates)
+            {
+                if (selected.Any(offer => offer.Id == candidate.Id)) continue;
+                selected.Add(candidate);
+                return;
+            }
+        }
 
         private static void Shuffle<T>(IList<T> items, Random random)
         {
