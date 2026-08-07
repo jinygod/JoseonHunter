@@ -9,6 +9,21 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class WeaponMasteryProgressionTests
     {
         [Test]
+        public void NewAccountUnlocksBothHwandoPathsAndEquipsVenomForFree()
+        {
+            var data = SaveDataV1.CreateDefaults();
+
+            Assert.That(data.UnlockedWeaponStyles,
+                Does.Contain(WeaponLegacyPathId.HwandoVenom.Value));
+            Assert.That(data.UnlockedWeaponStyles,
+                Does.Contain(WeaponLegacyPathId.HwandoMoonEclipse.Value));
+            Assert.That(data.PatrolLoadouts[data.ActivePatrolLoadoutIndex]
+                    .WeaponStyleIds[WeaponId.HwandoFlyingBlade.Value],
+                Is.EqualTo(WeaponLegacyPathId.HwandoVenom.Value));
+            Assert.That(data.Coins, Is.Zero);
+        }
+
+        [Test]
         public void EveryWeaponHasBaseAndTwoExistingLegacyStyles()
         {
             Assert.That(WeaponMasteryCatalog.All, Has.Count.EqualTo(WeaponRoster.All.Count));
@@ -51,7 +66,8 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(result.Error, Is.EqualTo(ProgressionError.InsufficientMastery));
             Assert.That(data.Coins, Is.EqualTo(800));
-            Assert.That(data.UnlockedWeaponStyles, Is.Empty);
+            Assert.That(data.UnlockedWeaponStyles,
+                Does.Not.Contain(WeaponLegacyPathId.GakgungSunPiercer.Value));
         }
 
         [Test]

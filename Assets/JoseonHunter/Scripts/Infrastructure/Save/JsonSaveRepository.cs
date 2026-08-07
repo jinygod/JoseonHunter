@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using JoseonHunter.Domain;
+using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Domain.Runs;
@@ -221,7 +222,32 @@ namespace JoseonHunter.Infrastructure.Save
                 if (patrolLoadouts != null && patrolLoadouts.Length > 0)
                     data.PatrolLoadouts = NormalizeLoadouts(patrolLoadouts);
                 data.ActivePatrolLoadoutIndex = Math.Max(0, Math.Min(data.PatrolLoadouts.Count - 1, activePatrolLoadoutIndex));
+                NormalizeStarterWeaponStyles(data);
                 return data;
+            }
+
+            private static void NormalizeStarterWeaponStyles(SaveDataV1 data)
+            {
+                AddUnique(data.UnlockedWeaponStyles, WeaponLegacyPathId.HwandoVenom.Value);
+                AddUnique(data.UnlockedWeaponStyles, WeaponLegacyPathId.HwandoMoonEclipse.Value);
+                foreach (var loadout in data.PatrolLoadouts)
+                {
+                    var current = loadout.WeaponStyleIds.TryGetValue(
+                        WeaponId.HwandoFlyingBlade.Value, out var value)
+                        ? value
+                        : string.Empty;
+                    if (current != WeaponLegacyPathId.HwandoVenom.Value &&
+                        current != WeaponLegacyPathId.HwandoMoonEclipse.Value)
+                    {
+                        loadout.WeaponStyleIds[WeaponId.HwandoFlyingBlade.Value] =
+                            WeaponLegacyPathId.HwandoVenom.Value;
+                    }
+                }
+            }
+
+            private static void AddUnique(List<string> values, string value)
+            {
+                if (!values.Contains(value)) values.Add(value);
             }
 
             private void NormalizeSelectedStage(SaveDataV1 data)

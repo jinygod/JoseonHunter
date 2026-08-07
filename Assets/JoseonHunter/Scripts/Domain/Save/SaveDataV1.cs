@@ -142,6 +142,8 @@ namespace JoseonHunter.Domain.Save
             data.UnlockedDifficulties.Add("normal");
             foreach (var weaponId in Combat.WeaponRoster.All)
                 data.WeaponMasteryPoints[weaponId.Value] = 0;
+            data.UnlockedWeaponStyles.Add(Progression.WeaponLegacyPathId.HwandoVenom.Value);
+            data.UnlockedWeaponStyles.Add(Progression.WeaponLegacyPathId.HwandoMoonEclipse.Value);
             foreach (Progression.CommonTrainingId id in Enum.GetValues(typeof(Progression.CommonTrainingId)))
             {
                 data.CommonTrainingRanks[id.ToString()] = 0;
@@ -157,6 +159,8 @@ namespace JoseonHunter.Domain.Save
                 };
                 foreach (var weaponId in Combat.WeaponRoster.All)
                     loadout.WeaponStyleIds[weaponId.Value] = string.Empty;
+                loadout.WeaponStyleIds[Combat.WeaponId.HwandoFlyingBlade.Value] =
+                    Progression.WeaponLegacyPathId.HwandoVenom.Value;
                 data.PatrolLoadouts.Add(loadout);
             }
             return data;

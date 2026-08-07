@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using JoseonHunter.Domain.Combat;
 
 namespace JoseonHunter.Domain.Progression
@@ -16,7 +17,8 @@ namespace JoseonHunter.Domain.Progression
             string tradeoff,
             int requiredMastery,
             int coinCost,
-            bool isBase)
+            bool isBase,
+            bool isStarterUnlocked = false)
         {
             WeaponId = weaponId;
             StyleId = styleId ?? throw new ArgumentNullException(nameof(styleId));
@@ -27,6 +29,7 @@ namespace JoseonHunter.Domain.Progression
             RequiredMastery = requiredMastery;
             CoinCost = coinCost;
             IsBase = isBase;
+            IsStarterUnlocked = isStarterUnlocked;
         }
 
         public WeaponId WeaponId { get; }
@@ -38,6 +41,7 @@ namespace JoseonHunter.Domain.Progression
         public int RequiredMastery { get; }
         public int CoinCost { get; }
         public bool IsBase { get; }
+        public bool IsStarterUnlocked { get; }
     }
 
     public static class WeaponMasteryCatalog
@@ -50,6 +54,9 @@ namespace JoseonHunter.Domain.Progression
             Definitions.TryGetValue(weaponId, out var styles)
                 ? styles
                 : Array.Empty<WeaponMasteryStyleDefinition>();
+
+        public static IReadOnlyList<WeaponMasteryStyleDefinition> StarterPathsFor(WeaponId weaponId) =>
+            Array.AsReadOnly(StylesFor(weaponId).Where(style => style.IsStarterUnlocked).ToArray());
 
         public static bool TryGet(WeaponId weaponId, WeaponLegacyPathId pathId, out WeaponMasteryStyleDefinition style)
         {
@@ -74,14 +81,17 @@ namespace JoseonHunter.Domain.Progression
                 var legacy = WeaponLegacyCatalog.PathsFor(weaponId);
                 if (legacy.Count != 2)
                     throw new InvalidOperationException($"Weapon '{weaponId.Value}' must have exactly two legacy paths.");
+                var starterUnlocked = weaponId.Equals(WeaponId.HwandoFlyingBlade);
 
                 result.Add(weaponId, Array.AsReadOnly(new[]
                 {
                     new WeaponMasteryStyleDefinition(
                         weaponId, weaponId.Value + "_base", default, "기본식",
                         "무기의 본래 운용법", "추가 효과 없음", 0, 0, true),
-                    FromLegacy(legacy[0], 2000, 800),
-                    FromLegacy(legacy[1], 8000, 2400)
+                    FromLegacy(legacy[0], starterUnlocked ? 0 : 2000,
+                        starterUnlocked ? 0 : 800, starterUnlocked),
+                    FromLegacy(legacy[1], starterUnlocked ? 0 : 8000,
+                        starterUnlocked ? 0 : 2400, starterUnlocked)
                 }));
             }
 
@@ -91,7 +101,8 @@ namespace JoseonHunter.Domain.Progression
         private static WeaponMasteryStyleDefinition FromLegacy(
             WeaponLegacyDefinition legacy,
             int requiredMastery,
-            int coinCost) =>
+            int coinCost,
+            bool isStarterUnlocked = false) =>
             new WeaponMasteryStyleDefinition(
                 legacy.WeaponId,
                 legacy.Id.Value,
@@ -101,6 +112,7 @@ namespace JoseonHunter.Domain.Progression
                 legacy.Cost,
                 requiredMastery,
                 coinCost,
-                false);
+                false,
+                isStarterUnlocked);
     }
 }

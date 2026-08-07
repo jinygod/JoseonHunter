@@ -78,6 +78,27 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void CurrentSchemaLoadAddsFreeHwandoPathsAndPreservesValidMoonEclipse()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.UnlockedWeaponStyles.Clear();
+            data.PatrolLoadouts[0].WeaponStyleIds[WeaponId.HwandoFlyingBlade.Value] =
+                WeaponLegacyPathId.HwandoMoonEclipse.Value;
+            var repository = new JsonSaveRepository(directory);
+            Assert.That(repository.Save(data).Success, Is.True);
+
+            var loaded = repository.Load().Data;
+
+            Assert.That(loaded.UnlockedWeaponStyles,
+                Does.Contain(WeaponLegacyPathId.HwandoVenom.Value));
+            Assert.That(loaded.UnlockedWeaponStyles,
+                Does.Contain(WeaponLegacyPathId.HwandoMoonEclipse.Value));
+            Assert.That(loaded.PatrolLoadouts[0].WeaponStyleIds[WeaponId.HwandoFlyingBlade.Value],
+                Is.EqualTo(WeaponLegacyPathId.HwandoMoonEclipse.Value));
+            Assert.That(loaded.Coins, Is.Zero);
+        }
+
+        [Test]
         public void SchemaTwoTrainingMigratesToEnoughAccountExperienceWithoutLosingProgress()
         {
             Directory.CreateDirectory(directory);
@@ -229,7 +250,8 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(result.SaveError, Is.EqualTo(SaveError.IoFailure));
             Assert.That(data.Coins, Is.EqualTo(800));
-            Assert.That(data.UnlockedWeaponStyles, Is.Empty);
+            Assert.That(data.UnlockedWeaponStyles,
+                Does.Not.Contain(WeaponLegacyPathId.GakgungSunPiercer.Value));
         }
 
         [Test]
