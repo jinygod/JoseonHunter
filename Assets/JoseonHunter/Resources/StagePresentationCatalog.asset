@@ -29,6 +29,22 @@ MonoBehaviour:
     sprite: {fileID: 21300000, guid: e05bec7c150a57b40a7b4c79e06f75b4, type: 3}
   - contentId: dokkaebi_king
     sprite: {fileID: 21300000, guid: 2ab47672c7f51764baeb6ea5d915915e, type: 3}
+  - contentId: tomb_attendant
+    sprite: {fileID: 21300000, guid: 374d18a91cf314b46af70c72e0a3a977, type: 3}
+  - contentId: tomb_archer_ghost
+    sprite: {fileID: 21300000, guid: f50899cafe54c064ba4a16bd1efc185b, type: 3}
+  - contentId: red_lantern_wraith
+    sprite: {fileID: 21300000, guid: 2e054205f7c4dfc4fbd0e86072ca6abb, type: 3}
+  - contentId: curse_shaman
+    sprite: {fileID: 21300000, guid: f17224b81e6d3b44c8440fef5874c497, type: 3}
+  - contentId: grave_ambusher_elite
+    sprite: {fileID: 21300000, guid: 33ce2ed813946e04fb569b64ca740344, type: 3}
+  - contentId: royal_guard_wraith
+    sprite: {fileID: 21300000, guid: 762c05b65c6392a43bcd3efdb728a8f4, type: 3}
+  - contentId: eclipse_priest
+    sprite: {fileID: 21300000, guid: 401f3925861c06a478cab5174a8c782d, type: 3}
+  - contentId: eclipse_queen
+    sprite: {fileID: 21300000, guid: 185bef02991122c46b52e199a748803a, type: 3}
   stages:
   - stageId: stage_02_dokkaebi_pass
     ground: {fileID: 21300000, guid: 60510d8b780cfec488fb98aac7daba7c, type: 3}
@@ -38,3 +54,11 @@ MonoBehaviour:
     - {fileID: 21300000, guid: f87f03ff3d667184a80e1cad3de8b9de, type: 3}
     - {fileID: 21300000, guid: d89a1afbf1d2d7e41b4bdc01fdf02fed, type: 3}
     - {fileID: 21300000, guid: b618819017e79e54ab776e5953c8f5ff, type: 3}
+  - stageId: stage_03_moonlit_tomb
+    ground: {fileID: 21300000, guid: c6ea30f770d9c3a498b53ccf968452d4, type: 3}
+    alternateGround: {fileID: 21300000, guid: 19a251147d688a64ca9f6b8da76e4804, type: 3}
+    decorations:
+    - {fileID: 21300000, guid: f7f54aa8a5d5c764fb2d55810d108340, type: 3}
+    - {fileID: 21300000, guid: 00a6442a2a656454d8d32e386607d07a, type: 3}
+    - {fileID: 21300000, guid: 67875f864aac1ca46854633f9d23daf0, type: 3}
+    - {fileID: 21300000, guid: 555b8857b251f6240946202b22272314, type: 3}
