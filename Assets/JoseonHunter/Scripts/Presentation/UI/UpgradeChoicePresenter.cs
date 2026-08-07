@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
@@ -12,7 +13,12 @@ namespace JoseonHunter.Presentation.UI
     public sealed class UpgradeChoicePresenter : MonoBehaviour
     {
         private const float CardEntranceDuration = .18f;
+        private const float FinalIntroLockDuration = .2f;
         private const float CloseDuration = .15f;
+        private static readonly Color StandardOverlay = new(.025f, .03f, .045f, .9f);
+        private static readonly Color FinalOverlay = new(.035f, .018f, .025f, 1f);
+        private static readonly Color FinalInterior = new(.22f, .055f, .035f, 1f);
+        private static readonly Color MutedInterior = new(.47f, .43f, .34f, 1f);
 
         private sealed class Card
         {
@@ -29,16 +35,22 @@ namespace JoseonHunter.Presentation.UI
 
         private readonly Card[] cards = new Card[3];
         private GameObject root;
+        private Image rootImage;
         private GameObject cardsRoot;
         private CanvasGroup overlay;
         private TextMeshProUGUI heading;
         private Coroutine openRoutine;
         private Coroutine closeRoutine;
+        private Coroutine pulseRoutine;
         private Func<int, bool> choose;
         private bool selectedChoice;
+        private bool finalEvolutionPresentation;
+        private Card finalEvolutionCard;
 
         public bool IsOpen { get; private set; }
         public bool IsChoiceLocked { get; private set; }
+        public bool IsFinalEvolutionPresentationForTests => finalEvolutionPresentation;
+        public string HeadingForTests => heading != null ? heading.text : string.Empty;
         public event Action PresentationClosed;
 
         public void BuildForTests() => Build();
@@ -47,7 +59,9 @@ namespace JoseonHunter.Presentation.UI
         {
             if (root != null) return;
 
-            root = RuntimeUiFactory.Image("Upgrade Choice Overlay", transform, new Color(0.025f, .03f, .045f, .9f)).gameObject;
+            rootImage = RuntimeUiFactory.Image(
+                "Upgrade Choice Overlay", transform, StandardOverlay);
+            root = rootImage.gameObject;
             RuntimeUiFactory.Stretch(root.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             overlay = root.AddComponent<CanvasGroup>();
             overlay.alpha = 0f;
@@ -72,9 +86,14 @@ namespace JoseonHunter.Presentation.UI
 
             choose = chooseChoice;
             selectedChoice = false;
-            IsChoiceLocked = false;
+            finalEvolutionPresentation = state.Choices.Any(choice =>
+                choice.PresentationTier == UpgradePresentationTier.FinalEvolution);
+            IsChoiceLocked = finalEvolutionPresentation;
             IsOpen = true;
-            heading.text = $"레벨 {state.Level} · 강화를 선택하세요";
+            rootImage.color = finalEvolutionPresentation ? FinalOverlay : StandardOverlay;
+            heading.text = finalEvolutionPresentation
+                ? "최종 진화가 깨어납니다"
+                : $"레벨 {state.Level} · 강화를 선택하세요";
             for (var index = 0; index < cards.Length; index++)
             {
                 var hasChoice = index < state.Choices.Count;
@@ -92,12 +111,19 @@ namespace JoseonHunter.Presentation.UI
         {
             if (openRoutine != null) StopCoroutine(openRoutine);
             if (closeRoutine != null) StopCoroutine(closeRoutine);
+            if (pulseRoutine != null) StopCoroutine(pulseRoutine);
             openRoutine = null;
             closeRoutine = null;
+            pulseRoutine = null;
             IsOpen = false;
             IsChoiceLocked = false;
             selectedChoice = false;
             choose = null;
+            finalEvolutionPresentation = false;
+            finalEvolutionCard = null;
+            for (var index = 0; index < cards.Length; index++)
+                if (cards[index] != null)
+                    cards[index].Button.transform.localScale = Vector3.one;
             if (root != null) root.SetActive(false);
         }
 
@@ -128,12 +154,16 @@ namespace JoseonHunter.Presentation.UI
                 cards[index].Button.transform.localScale = Vector3.one * .92f;
 
             elapsed = 0f;
-            while (elapsed < CardEntranceDuration)
+            var entranceDuration = finalEvolutionPresentation
+                ? FinalIntroLockDuration
+                : CardEntranceDuration;
+            while (elapsed < entranceDuration)
             {
                 elapsed += Time.unscaledDeltaTime;
                 for (var index = 0; index < cards.Length; index++)
                 {
-                    var staggered = Mathf.Clamp01(elapsed / CardEntranceDuration * 1.45f - index * .18f);
+                    var staggered = Mathf.Clamp01(
+                        elapsed / entranceDuration * 1.45f - index * .18f);
                     cards[index].Button.transform.localScale =
                         Vector3.one * Mathf.LerpUnclamped(.92f, 1f, EaseOutBack(staggered));
                 }
@@ -141,6 +171,12 @@ namespace JoseonHunter.Presentation.UI
             }
             for (var index = 0; index < cards.Length; index++)
                 cards[index].Button.transform.localScale = Vector3.one;
+            if (finalEvolutionPresentation)
+            {
+                IsChoiceLocked = false;
+                if (finalEvolutionCard != null)
+                    pulseRoutine = StartCoroutine(FinalPulseRoutine(finalEvolutionCard));
+            }
             openRoutine = null;
         }
 
@@ -155,7 +191,31 @@ namespace JoseonHunter.Presentation.UI
             }
 
             selectedChoice = true;
+            StopFinalPulse();
             closeRoutine = StartCoroutine(CloseRoutine());
+        }
+
+        private IEnumerator FinalPulseRoutine(Card card)
+        {
+            var elapsed = 0f;
+            while (IsOpen && finalEvolutionPresentation && card != null)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                var pulse = .5f + .5f * Mathf.Sin(elapsed * 4.5f);
+                card.Button.transform.localScale =
+                    Vector3.one * Mathf.Lerp(1f, 1.025f, pulse);
+                yield return null;
+            }
+            if (card != null) card.Button.transform.localScale = Vector3.one;
+            pulseRoutine = null;
+        }
+
+        private void StopFinalPulse()
+        {
+            if (pulseRoutine != null) StopCoroutine(pulseRoutine);
+            pulseRoutine = null;
+            if (finalEvolutionCard != null)
+                finalEvolutionCard.Button.transform.localScale = Vector3.one;
         }
 
         private IEnumerator CloseRoutine()
@@ -225,9 +285,11 @@ namespace JoseonHunter.Presentation.UI
             return card;
         }
 
-        private static void PopulateCard(Card card, UpgradeChoiceView choice)
+        private void PopulateCard(Card card, UpgradeChoiceView choice)
         {
+            var isFinal = choice.PresentationTier == UpgradePresentationTier.FinalEvolution;
             var accent = AccentFor(choice.Kind);
+            if (isFinal) accent = JoseonUiPalette.Gold;
             var readableAccent = Color.Lerp(accent, JoseonUiPalette.Ink, .45f);
             readableAccent.a = 1f;
             card.Accent.color = accent;
@@ -237,11 +299,21 @@ namespace JoseonHunter.Presentation.UI
             card.Name.text = choice.Name;
             card.Behavior.text = choice.Behavior;
             card.Delta.text = choice.Delta;
+            card.Interior.color = isFinal
+                ? FinalInterior
+                : finalEvolutionPresentation
+                    ? MutedInterior
+                    : JoseonUiPalette.Hanji;
+            card.Button.image.color = isFinal ? JoseonUiPalette.Gold : Color.white;
+            card.Name.color = isFinal ? JoseonUiPalette.Hanji : JoseonUiPalette.Ink;
+            card.Behavior.color = isFinal ? JoseonUiPalette.Hanji : JoseonUiPalette.Ink;
+            card.Glyph.color = isFinal ? JoseonUiPalette.Hanji : JoseonUiPalette.Ink;
             card.Icon.sprite = choice.Icon;
             card.Icon.enabled = choice.Icon != null;
             card.Glyph.gameObject.SetActive(choice.Icon == null);
             card.Glyph.text = GlyphFor(choice.Kind);
             card.Button.interactable = true;
+            if (isFinal) finalEvolutionCard = card;
         }
 
         private static Color AccentFor(UpgradeKind kind) => kind == UpgradeKind.Evolution ? JoseonUiPalette.Gold :

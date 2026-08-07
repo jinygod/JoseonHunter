@@ -1,4 +1,5 @@
 using System.Collections;
+using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
@@ -34,6 +35,29 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.IsOpen, Is.True);
 
             presenter.CloseImmediately();
+            Assert.That(Time.timeScale, Is.EqualTo(1f));
+            Object.Destroy(go);
+        }
+
+        [UnityTest]
+        public IEnumerator FinalEvolutionUsesOpaqueSpecialOverlayAndKoreanHeading()
+        {
+            var go = new GameObject("Final Evolution Presenter");
+            var presenter = go.AddComponent<UpgradeChoicePresenter>();
+            presenter.BuildForTests();
+
+            presenter.Open(FinalEvolutionChoices(), _ => true);
+            yield return new WaitForSecondsRealtime(.25f);
+
+            Assert.That(presenter.IsFinalEvolutionPresentationForTests, Is.True);
+            Assert.That(presenter.HeadingForTests,
+                Is.EqualTo("최종 진화가 깨어납니다"));
+            var overlay = go.transform.Find("Upgrade Choice Overlay").GetComponent<Image>();
+            Assert.That(overlay.color.a, Is.EqualTo(1f));
+            var finalCard = go.GetComponentsInChildren<Button>(true)[0];
+            var interior = finalCard.transform.Find("Hanji Interior").GetComponent<Image>();
+            Assert.That(interior.color.r, Is.GreaterThan(interior.color.b));
+            Assert.That(finalCard.image.color.r, Is.GreaterThan(finalCard.image.color.b));
             Assert.That(Time.timeScale, Is.EqualTo(1f));
             Object.Destroy(go);
         }
@@ -175,5 +199,27 @@ namespace JoseonHunter.Tests.PlayMode
             new UpgradeChoiceView("boots", UpgradeKind.Support, 1, "SUPPORT", "LIGHT STEPS", "Move faster", "+12%", null),
             new UpgradeChoiceView("talisman", UpgradeKind.Support, 1, "SUPPORT", "TALISMAN", "Increase maximum health", "+20", null)
         });
+
+        private static UpgradeChoiceState FinalEvolutionChoices() =>
+            new UpgradeChoiceState(12, new[]
+            {
+                new UpgradeChoiceView(
+                    WeaponId.HwandoFlyingBlade.Value,
+                    UpgradeKind.Weapon,
+                    5,
+                    "최종 진화",
+                    "환도·월식",
+                    "잔영 교차점에서 큰 폭발을 일으킵니다.",
+                    "최종 기술 완성",
+                    null,
+                    UpgradePresentationTier.FinalEvolution,
+                    WeaponLegacyPathId.HwandoMoonEclipse),
+                new UpgradeChoiceView(
+                    "boots", UpgradeKind.Support, 2, "능력 강화", "경쾌한 버선",
+                    "이동 속도 증가", "+12%", null),
+                new UpgradeChoiceView(
+                    "talisman", UpgradeKind.Support, 2, "능력 강화", "호신부적",
+                    "최대 체력 증가", "+20", null)
+            });
     }
 }
