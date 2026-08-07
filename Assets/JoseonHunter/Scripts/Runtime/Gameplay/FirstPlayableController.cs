@@ -93,6 +93,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly WeaponPixelMaskCatalog weaponMasks = new WeaponPixelMaskCatalog();
         private readonly List<WeaponId> registeredWeaponIds = new List<WeaponId>();
         private EnemySpriteRoster enemySpriteRoster;
+        private StagePresentationCatalog stagePresentationCatalog;
         private WaveSpawnDirector waveSpawnDirector;
         private Texture2D solidTexture;
         private Sprite solidSprite;
@@ -962,11 +963,26 @@ namespace JoseonHunter.Runtime.Gameplay
             if (activeStageCombat.Battlefield.IsBounded)
             {
                 boundedBattlefieldPresenter = flatField.gameObject.AddComponent<BoundedBattlefieldPresenter>();
-                boundedBattlefieldPresenter.Configure(
-                    activeStageCombat.Battlefield,
-                    presentation,
-                    solidSprite,
-                    0x4A4F5345 ^ activeStageSelection.StageId.GetHashCode());
+                if (stagePresentationCatalog != null &&
+                    stagePresentationCatalog.TryGetStage(activeStageSelection.StageId, out var stagePresentation))
+                {
+                    boundedBattlefieldPresenter.Configure(
+                        activeStageCombat.Battlefield,
+                        presentation != null ? presentation.ChunkPrefab : null,
+                        stagePresentation.Ground,
+                        stagePresentation.AlternateGround,
+                        stagePresentation.Decorations,
+                        solidSprite,
+                        0x4A4F5345 ^ activeStageSelection.StageId.GetHashCode());
+                }
+                else
+                {
+                    boundedBattlefieldPresenter.Configure(
+                        activeStageCombat.Battlefield,
+                        presentation,
+                        solidSprite,
+                        0x4A4F5345 ^ activeStageSelection.StageId.GetHashCode());
+                }
             }
             else
             {
@@ -1028,6 +1044,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 ? metaSession.ActiveStageSelection
                 : new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
             activeStageCombat = StageCombatCatalog.For(activeStageSelection.StageId);
+            stagePresentationCatalog = Resources.Load<StagePresentationCatalog>("StagePresentationCatalog");
             activeDifficultyProfile = StageDifficultyProfile.For(activeStageSelection.Difficulty);
             if (!fieldBuilt || !presentedStageId.Equals(activeStageSelection.StageId)) CreateField();
             var startingWeapon = patrolLoadout != null
@@ -1061,7 +1078,7 @@ namespace JoseonHunter.Runtime.Gameplay
             elapsed = 0f;
             stageTimeline = StagePacingTimeline.ForDuration(PrototypeDurationSeconds);
             enemySpriteRoster = new EnemySpriteRoster(enemySprite, enemySpriteAlt, enemySprites,
-                CombatChoiceVisualCatalog.LoadDefault());
+                CombatChoiceVisualCatalog.LoadDefault(), stagePresentationCatalog);
             waveSpawnDirector = new WaveSpawnDirector(activeStageCombat.Waves, RunSpawnSeed);
             processedStageMilestones = 0;
             finalBossWarning = false;
@@ -1444,7 +1461,12 @@ namespace JoseonHunter.Runtime.Gameplay
                 string.IsNullOrEmpty(normalContentId) ?
                     waveSpawnDirector.SelectNormal(elapsed) : normalContentId;
             var archetypeProfile = EnemyArchetypeProfile.ForContentId(resolvedContentId);
-            var chosenSprite = isBoss
+            Sprite stageSprite = null;
+            var hasStageSprite = stagePresentationCatalog != null &&
+                                 stagePresentationCatalog.TryGetSprite(resolvedContentId, out stageSprite);
+            var chosenSprite = hasStageSprite
+                ? stageSprite
+                : isBoss
                 ? bossSprite
                 : (isMidBoss
                     ? (midBossTier >= 2 && bossSprite != null ? bossSprite :

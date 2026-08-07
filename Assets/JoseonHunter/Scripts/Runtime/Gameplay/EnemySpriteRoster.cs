@@ -13,11 +13,14 @@ namespace JoseonHunter.Runtime.Gameplay
             new HashSet<string>(StringComparer.Ordinal);
         private readonly Sprite fallback;
         private readonly CombatChoiceVisualCatalog combatChoiceVisuals;
+        private readonly StagePresentationCatalog stagePresentation;
 
         public EnemySpriteRoster(Sprite plagueRat, Sprite legacyAlternate, IReadOnlyList<Sprite> orderedSprites,
-            CombatChoiceVisualCatalog combatChoiceVisuals = null)
+            CombatChoiceVisualCatalog combatChoiceVisuals = null,
+            StagePresentationCatalog stagePresentation = null)
         {
             this.combatChoiceVisuals = combatChoiceVisuals;
+            this.stagePresentation = stagePresentation;
             fallback = plagueRat != null ? plagueRat : legacyAlternate;
             Add("plague_rat", At(orderedSprites, 0) ?? plagueRat);
             Add("bandit", At(orderedSprites, 1) ?? legacyAlternate);
@@ -32,6 +35,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         public Sprite Resolve(string contentId)
         {
+            if (stagePresentation != null && stagePresentation.TryGetSprite(contentId, out var stageSprite))
+                return stageSprite;
             var specialFrames = combatChoiceVisuals == null ? null : combatChoiceVisuals.EnemyFrames(contentId);
             if (specialFrames != null && specialFrames.Count > 0 && specialFrames[0] != null) return specialFrames[0];
             if (!string.IsNullOrEmpty(contentId) &&

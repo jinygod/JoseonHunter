@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30ccc1b7c09735a4f8102ebb263da989, type: 3}
+  m_Name: StagePresentationCatalog
+  m_EditorClassIdentifier: JoseonHunter.Runtime::JoseonHunter.Runtime.Gameplay.StagePresentationCatalog
+  sprites:
+  - contentId: club_dokkaebi
+    sprite: {fileID: 21300000, guid: 8b450f5ca9828b7439a3eddbc703ea17, type: 3}
+  - contentId: shield_guard_dokkaebi
+    sprite: {fileID: 21300000, guid: aafd15046bdd85c42a14b0d3fa8eee77, type: 3}
+  - contentId: iron_horn_dokkaebi
+    sprite: {fileID: 21300000, guid: 1e35bdb87b73630408335ba1b0d03eb8, type: 3}
+  - contentId: stone_thrower_dokkaebi
+    sprite: {fileID: 21300000, guid: 8d84fdbcfd9ffad4a8d24912335e4119, type: 3}
+  - contentId: red_horn_elite
+    sprite: {fileID: 21300000, guid: fc1c43ab7dfe8e94dbcb48999182bf97, type: 3}
+  - contentId: one_horn_captain
+    sprite: {fileID: 21300000, guid: c22245ebc4e3e7a4ebba5f6362f84686, type: 3}
+  - contentId: iron_shield_general
+    sprite: {fileID: 21300000, guid: e05bec7c150a57b40a7b4c79e06f75b4, type: 3}
+  - contentId: dokkaebi_king
+    sprite: {fileID: 21300000, guid: 2ab47672c7f51764baeb6ea5d915915e, type: 3}
+  stages:
+  - stageId: stage_02_dokkaebi_pass
+    ground: {fileID: 21300000, guid: 60510d8b780cfec488fb98aac7daba7c, type: 3}
+    alternateGround: {fileID: 21300000, guid: 72d3c686138cecb499b1d1d284c16b56, type: 3}
+    decorations:
+    - {fileID: 21300000, guid: 90f55d2775094a645bf448bce16730fc, type: 3}
+    - {fileID: 21300000, guid: f87f03ff3d667184a80e1cad3de8b9de, type: 3}
+    - {fileID: 21300000, guid: d89a1afbf1d2d7e41b4bdc01fdf02fed, type: 3}
+    - {fileID: 21300000, guid: b618819017e79e54ab776e5953c8f5ff, type: 3}

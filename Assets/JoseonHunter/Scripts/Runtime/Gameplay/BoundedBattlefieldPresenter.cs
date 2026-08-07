@@ -1,4 +1,5 @@
 using JoseonHunter.Domain.Runs;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
@@ -20,6 +21,24 @@ namespace JoseonHunter.Runtime.Gameplay
             Sprite fallbackSprite,
             int seed)
         {
+            Configure(battlefield,
+                library != null ? library.ChunkPrefab : null,
+                library != null ? library.GroundTile : null,
+                library != null ? library.AlternateGroundTile : null,
+                library != null ? library.Decorations : System.Array.Empty<Sprite>(),
+                fallbackSprite,
+                seed);
+        }
+
+        public void Configure(
+            StageBattlefieldDefinition battlefield,
+            BattlefieldChunkView prefab,
+            Sprite primary,
+            Sprite alternate,
+            IReadOnlyList<Sprite> decorations,
+            Sprite fallbackSprite,
+            int seed)
+        {
             if (!battlefield.IsBounded)
                 throw new System.ArgumentException("A bounded battlefield definition is required.", nameof(battlefield));
 
@@ -30,10 +49,6 @@ namespace JoseonHunter.Runtime.Gameplay
             ActiveTileCount = 0;
             var columns = Mathf.CeilToInt(battlefield.Width / TileSize);
             var rows = Mathf.CeilToInt(battlefield.Height / TileSize);
-            var primary = library != null ? library.GroundTile : null;
-            var alternate = library != null ? library.AlternateGroundTile : null;
-            var decorations = library != null ? library.Decorations : System.Array.Empty<Sprite>();
-            var prefab = library != null ? library.ChunkPrefab : null;
             var startX = -(columns - 1) * TileSize * .5f;
             var startY = -(rows - 1) * TileSize * .5f;
 
