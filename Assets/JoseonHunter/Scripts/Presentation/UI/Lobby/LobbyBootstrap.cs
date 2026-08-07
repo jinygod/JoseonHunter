@@ -44,6 +44,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             {
                 safeArea = transform.Find("Safe Area") as RectTransform;
                 EnsureAccountHeader();
+                EnsureCurrencyHeader();
                 EnsureSettingsShell();
                 return;
             }
@@ -85,6 +86,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.76f, .1f), new Vector2(.89f, .9f),
                 Vector2.zero, Vector2.zero);
             EnsureAccountHeader();
+            EnsureCurrencyHeader();
 
             var stageContent = LobbyUiFactory.Rect("Stage Content", safeArea);
             LobbyUiFactory.Anchor(stageContent, new Vector2(.02f, .12f), new Vector2(.98f, .895f),
@@ -130,11 +132,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private void Bind(MetaGameSession session)
         {
             safeArea = transform.Find("Safe Area") as RectTransform;
-            coinText = transform.Find("Safe Area/Header/Coin Text")?.GetComponent<TMP_Text>();
             EnsureAccountHeader();
-            accountLevelText = transform.Find("Safe Area/Header/Account Badge/Account Level")?.GetComponent<TMP_Text>();
-            accountExperienceText = transform.Find("Safe Area/Header/Account Experience/Account Experience Text")?.GetComponent<TMP_Text>();
-            accountExperienceFill = transform.Find("Safe Area/Header/Account Experience/Account Experience Fill")?.GetComponent<Image>();
+            EnsureCurrencyHeader();
+            coinText = transform.Find("Safe Area/Header/Currency Capsule/Coin Text")?.GetComponent<TMP_Text>();
+            accountLevelText = transform.Find("Safe Area/Header/Account Profile/Account Badge/Account Level")?.GetComponent<TMP_Text>();
+            accountExperienceText = transform.Find("Safe Area/Header/Account Profile/Account Experience/Account Experience Text")?.GetComponent<TMP_Text>();
+            accountExperienceFill = transform.Find("Safe Area/Header/Account Profile/Account Experience/Account Experience Fill")?.GetComponent<Image>();
             foreach (var research in GetComponentsInChildren<WeaponResearchPresenter>(true)) research.Initialize(session, RefreshHeader);
             foreach (var patrol in GetComponentsInChildren<PatrolPresenter>(true)) patrol.Initialize(session, RefreshHeader);
             foreach (var training in GetComponentsInChildren<CommonTrainingPresenter>(true)) training.Initialize(session, RefreshHeader);
@@ -151,12 +154,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var settingsButton = existingButton ?? LobbyUiFactory.Button(
                 "Settings Button", header, string.Empty, 18f, LobbyUiFactory.Brown, LobbyUiFactory.Gold);
             LobbyUiFactory.Anchor(settingsButton.GetComponent<RectTransform>(),
-                new Vector2(.905f, .13f), new Vector2(.975f, .87f), Vector2.zero, Vector2.zero);
-            if (existingButton == null)
-            {
-                AddGearIcon(settingsButton.transform);
-                settingsButton.onClick.AddListener(OpenSettings);
-            }
+                new Vector2(.90f, .14f), new Vector2(.975f, .86f), Vector2.zero, Vector2.zero);
+            EnsureSettingsIcon(settingsButton.transform);
+            settingsButton.onClick.RemoveListener(OpenSettings);
+            settingsButton.onClick.AddListener(OpenSettings);
 
             var existingOverlay = safeArea.Find("Audio Settings Overlay");
             if (existingOverlay != null)
@@ -194,25 +195,22 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (settingsOverlay != null) settingsOverlay.SetActive(false);
         }
 
-        private static void AddGearIcon(Transform parent)
+        private static void EnsureSettingsIcon(Transform parent)
         {
-            for (var index = 0; index < 8; index++)
+            for (var index = parent.childCount - 1; index >= 0; index--)
             {
-                var tooth = LobbyUiFactory.Image("Gear Tooth " + index, parent, LobbyUiFactory.Gold);
-                var angle = index * 45f;
-                var radians = angle * Mathf.Deg2Rad;
-                var rect = tooth.rectTransform;
-                rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
-                rect.anchoredPosition = new Vector2(Mathf.Cos(radians), Mathf.Sin(radians)) * 17f;
-                rect.sizeDelta = index % 2 == 0 ? new Vector2(10f, 16f) : new Vector2(9f, 14f);
-                rect.localRotation = Quaternion.Euler(0f, 0f, angle);
+                var child = parent.GetChild(index);
+                if (!child.name.StartsWith("Gear Tooth") && child.name != "Gear Hub") continue;
+                if (Application.isPlaying) Destroy(child.gameObject);
+                else DestroyImmediate(child.gameObject);
             }
-            var hub = LobbyUiFactory.Image("Gear Hub", parent, LobbyUiFactory.Gold);
-            hub.rectTransform.anchorMin = hub.rectTransform.anchorMax = new Vector2(.5f, .5f);
-            hub.rectTransform.sizeDelta = new Vector2(28f, 28f);
-            var hole = LobbyUiFactory.Image("Gear Hole", hub.transform, LobbyUiFactory.Brown);
-            hole.rectTransform.anchorMin = hole.rectTransform.anchorMax = new Vector2(.5f, .5f);
-            hole.rectTransform.sizeDelta = new Vector2(12f, 12f);
+
+            var icon = parent.Find("Settings Icon")?.GetComponent<Image>() ??
+                       LobbyUiFactory.Image("Settings Icon", parent, Color.white);
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            icon.color = Color.white;
+            LobbyUiFactory.Stretch(icon.rectTransform, 10f, 10f, 10f, 10f);
         }
 
         private void RefreshHeader()
@@ -241,36 +239,110 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (header == null) return;
             var oldTitle = header.Find("Lobby Title");
             if (oldTitle != null) oldTitle.gameObject.SetActive(false);
-            if (header.Find("Account Badge") != null) return;
 
-            var badge = LobbyUiFactory.Image("Account Badge", header, LobbyUiFactory.Crimson);
-            LobbyUiFactory.Anchor(badge.rectTransform, new Vector2(.025f, .17f), new Vector2(.14f, .83f),
+            var profile = header.Find("Account Profile")?.GetComponent<RectTransform>();
+            if (profile == null)
+            {
+                var profileImage = LobbyUiFactory.Image("Account Profile", header,
+                    new Color(.025f, .031f, .048f, .96f));
+                profile = profileImage.rectTransform;
+            }
+            LobbyUiFactory.Anchor(profile, new Vector2(.025f, .12f), new Vector2(.59f, .88f),
                 Vector2.zero, Vector2.zero);
-            accountLevelText = LobbyUiFactory.Text("Account Level", badge.transform, "1", 26f,
-                TextAlignmentOptions.Center, true);
+
+            var badge = profile.Find("Account Badge")?.GetComponent<Image>() ??
+                        header.Find("Account Badge")?.GetComponent<Image>();
+            if (badge == null) badge = LobbyUiFactory.Image("Account Badge", profile, LobbyUiFactory.Gold);
+            else if (badge.transform.parent != profile) badge.transform.SetParent(profile, false);
+            badge.color = LobbyUiFactory.Gold;
+            LobbyUiFactory.Anchor(badge.rectTransform, new Vector2(.02f, .08f), new Vector2(.17f, .92f),
+                Vector2.zero, Vector2.zero);
+
+            var badgeInner = badge.transform.Find("Account Badge Inner")?.GetComponent<Image>() ??
+                             LobbyUiFactory.Image("Account Badge Inner", badge.transform, LobbyUiFactory.NightInk);
+            LobbyUiFactory.Stretch(badgeInner.rectTransform, 3f, 3f, 3f, 3f);
+            badgeInner.transform.SetAsFirstSibling();
+
+            accountLevelText = badge.transform.Find("Account Level")?.GetComponent<TMP_Text>() ??
+                               LobbyUiFactory.Text("Account Level", badge.transform, "1", 25f,
+                                   TextAlignmentOptions.Center, true);
             accountLevelText.color = LobbyUiFactory.Gold;
             LobbyUiFactory.Stretch(accountLevelText.rectTransform);
+            accountLevelText.transform.SetAsLastSibling();
 
-            var accountName = LobbyUiFactory.Text("Account Name", header, "요괴 사냥꾼", 20f,
-                TextAlignmentOptions.Left, true);
+            var accountName = profile.Find("Account Name")?.GetComponent<TMP_Text>() ??
+                              header.Find("Account Name")?.GetComponent<TMP_Text>();
+            if (accountName == null)
+                accountName = LobbyUiFactory.Text("Account Name", profile, "요괴 사냥꾼", 19f,
+                    TextAlignmentOptions.Left, true);
+            else if (accountName.transform.parent != profile) accountName.transform.SetParent(profile, false);
             accountName.color = LobbyUiFactory.HanjiLight;
-            LobbyUiFactory.Anchor(accountName.rectTransform, new Vector2(.16f, .48f), new Vector2(.62f, .88f),
+            accountName.fontSize = 19f;
+            accountName.textWrappingMode = TextWrappingModes.NoWrap;
+            LobbyUiFactory.Anchor(accountName.rectTransform, new Vector2(.20f, .51f), new Vector2(.98f, .93f),
                 Vector2.zero, Vector2.zero);
 
-            var experience = LobbyUiFactory.Image("Account Experience", header, new Color(.04f, .05f, .055f, 1f));
-            LobbyUiFactory.Anchor(experience.rectTransform, new Vector2(.16f, .17f), new Vector2(.64f, .43f),
+            var experience = profile.Find("Account Experience")?.GetComponent<Image>() ??
+                             header.Find("Account Experience")?.GetComponent<Image>();
+            if (experience == null)
+                experience = LobbyUiFactory.Image("Account Experience", profile,
+                    new Color(.018f, .024f, .035f, 1f));
+            else if (experience.transform.parent != profile) experience.transform.SetParent(profile, false);
+            experience.color = new Color(.018f, .024f, .035f, 1f);
+            LobbyUiFactory.Anchor(experience.rectTransform, new Vector2(.20f, .13f), new Vector2(.98f, .43f),
                 Vector2.zero, Vector2.zero);
-            accountExperienceFill = LobbyUiFactory.Image("Account Experience Fill", experience.transform,
-                new Color(.22f, .66f, .30f, 1f));
+
+            accountExperienceFill = experience.transform.Find("Account Experience Fill")?.GetComponent<Image>() ??
+                                    LobbyUiFactory.Image("Account Experience Fill", experience.transform,
+                                        new Color(.20f, .72f, .35f, 1f));
+            accountExperienceFill.color = new Color(.20f, .72f, .35f, 1f);
             LobbyUiFactory.Stretch(accountExperienceFill.rectTransform);
             accountExperienceFill.type = Image.Type.Filled;
             accountExperienceFill.fillMethod = Image.FillMethod.Horizontal;
             accountExperienceFill.fillOrigin = 0;
-            accountExperienceFill.fillAmount = 0f;
-            accountExperienceText = LobbyUiFactory.Text("Account Experience Text", experience.transform,
-                "0 / 100", 13f, TextAlignmentOptions.Center, true);
+            accountExperienceText = experience.transform.Find("Account Experience Text")?.GetComponent<TMP_Text>() ??
+                                    LobbyUiFactory.Text("Account Experience Text", experience.transform,
+                                        "0 / 100", 12f, TextAlignmentOptions.Center, true);
             accountExperienceText.color = LobbyUiFactory.HanjiLight;
+            accountExperienceText.fontSize = 12f;
             LobbyUiFactory.Stretch(accountExperienceText.rectTransform);
+            accountExperienceText.transform.SetAsLastSibling();
+        }
+
+        private void EnsureCurrencyHeader()
+        {
+            var header = transform.Find("Safe Area/Header");
+            if (header == null) return;
+
+            var capsule = header.Find("Currency Capsule")?.GetComponent<Image>();
+            if (capsule == null)
+                capsule = LobbyUiFactory.Image("Currency Capsule", header,
+                    new Color(.055f, .047f, .055f, .98f));
+            capsule.color = new Color(.055f, .047f, .055f, .98f);
+            LobbyUiFactory.Anchor(capsule.rectTransform, new Vector2(.62f, .17f), new Vector2(.875f, .83f),
+                Vector2.zero, Vector2.zero);
+
+            var icon = capsule.transform.Find("Coin Icon")?.GetComponent<Image>() ??
+                       header.Find("Coin Icon")?.GetComponent<Image>();
+            if (icon == null) icon = LobbyUiFactory.Image("Coin Icon", capsule.transform, Color.white);
+            else if (icon.transform.parent != capsule.transform) icon.transform.SetParent(capsule.transform, false);
+            icon.color = Color.white;
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            LobbyUiFactory.Anchor(icon.rectTransform, new Vector2(.035f, .10f), new Vector2(.34f, .90f),
+                Vector2.zero, Vector2.zero);
+
+            coinText = capsule.transform.Find("Coin Text")?.GetComponent<TMP_Text>() ??
+                       header.Find("Coin Text")?.GetComponent<TMP_Text>();
+            if (coinText == null)
+                coinText = LobbyUiFactory.Text("Coin Text", capsule.transform, "0", 23f,
+                    TextAlignmentOptions.Center, true);
+            else if (coinText.transform.parent != capsule.transform) coinText.transform.SetParent(capsule.transform, false);
+            coinText.color = new Color(1f, .74f, .24f, 1f);
+            coinText.fontSize = 23f;
+            coinText.textWrappingMode = TextWrappingModes.NoWrap;
+            LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.32f, .08f), new Vector2(.96f, .92f),
+                Vector2.zero, Vector2.zero);
         }
 
         private void ApplySafeArea()

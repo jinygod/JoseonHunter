@@ -24,6 +24,8 @@ namespace JoseonHunter.Editor.Scenes
             "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
         private const string CoinSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png";
+        private const string SettingsSpritePath =
+            "Assets/JoseonHunter/Art/UI/Lobby/settings_gear.png";
         private const string HeroSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
         private const string WeaponCatalogPath = "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset";
@@ -182,6 +184,12 @@ namespace JoseonHunter.Editor.Scenes
             coinIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CoinSpritePath);
             if (coinIcon.sprite == null) throw new InvalidOperationException($"Missing coin sprite: {CoinSpritePath}");
             coinIcon.preserveAspect = true;
+
+            var settingsIcon = transforms.Single(item => item.name == "Settings Icon").GetComponent<Image>();
+            settingsIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsSpritePath);
+            if (settingsIcon.sprite == null)
+                throw new InvalidOperationException($"Missing settings sprite: {SettingsSpritePath}");
+            settingsIcon.preserveAspect = true;
 
             var patrolHero = transforms.Single(item => item.name == "Patrol Hero").GetComponent<Image>();
             patrolHero.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroSpritePath);

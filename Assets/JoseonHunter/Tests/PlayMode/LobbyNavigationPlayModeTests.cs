@@ -88,6 +88,45 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator HeaderSeparatesAccountProfileCurrencyAndSettingsControls()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 155;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var header = GameObject.Find("Header")?.transform;
+            Assert.That(header, Is.Not.Null);
+            var profile = header.Find("Account Profile")?.GetComponent<RectTransform>();
+            var currency = header.Find("Currency Capsule")?.GetComponent<RectTransform>();
+            var settings = header.Find("Settings Button")?.GetComponent<RectTransform>();
+
+            Assert.That(profile, Is.Not.Null);
+            Assert.That(currency, Is.Not.Null);
+            Assert.That(settings, Is.Not.Null);
+            Assert.That(profile.anchorMax.x, Is.LessThanOrEqualTo(currency.anchorMin.x));
+            Assert.That(currency.anchorMax.x, Is.LessThanOrEqualTo(settings.anchorMin.x));
+            Assert.That(header.Find("Currency Capsule/Coin Icon"), Is.Not.Null);
+            Assert.That(header.Find("Currency Capsule/Coin Text"), Is.Not.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator LobbySettingsUsesAReadableSpriteInsteadOfComposedGearBlocks()
+        {
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var settings = GameObject.Find("Settings Button")?.transform;
+            Assert.That(settings, Is.Not.Null);
+            var icon = settings.Find("Settings Icon")?.GetComponent<Image>();
+            Assert.That(icon, Is.Not.Null);
+            Assert.That(icon.sprite, Is.Not.Null);
+            Assert.That(settings.Find("Gear Tooth 0"), Is.Null);
+            Assert.That(settings.Find("Gear Hub"), Is.Null);
+        }
+
+        [UnityTest]
         public IEnumerator LobbyGearOpensPersistentAudioControls()
         {
             var data = SaveDataV1.CreateDefaults();
@@ -108,6 +147,32 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(music.gameObject.activeInHierarchy, Is.True);
             Assert.That(music.value, Is.EqualTo(.4f).Within(.001f));
             Assert.That(effects.value, Is.EqualTo(.7f).Within(.001f));
+        }
+
+        [UnityTest]
+        public IEnumerator LobbyAudioSliderHandlesStayCompactAndInsideTheirTracks()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var settingsButton = GameObject.Find("Settings Button")?.GetComponent<Button>();
+            Assert.That(settingsButton, Is.Not.Null);
+            settingsButton.onClick.Invoke();
+            yield return null;
+
+            foreach (var slider in Object.FindObjectsByType<Slider>(FindObjectsInactive.Include))
+            {
+                var track = slider.GetComponent<RectTransform>();
+                var handle = slider.handleRect;
+                Assert.That(handle.sizeDelta.x, Is.LessThanOrEqualTo(24f), slider.name);
+                Assert.That(handle.sizeDelta.y, Is.LessThanOrEqualTo(28f), slider.name);
+                Assert.That(handle.parent.GetComponent<RectTransform>().offsetMin.x,
+                    Is.GreaterThanOrEqualTo(12f), slider.name);
+                Assert.That(handle.parent.GetComponent<RectTransform>().offsetMax.x,
+                    Is.LessThanOrEqualTo(-12f), slider.name);
+                Assert.That(track.sizeDelta.x, Is.GreaterThan(handle.sizeDelta.x), slider.name);
+            }
         }
 
         [UnityTest]

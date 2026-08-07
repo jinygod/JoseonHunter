@@ -113,10 +113,10 @@ namespace JoseonHunter.Presentation.UI
             slider.fillRect = fill.rectTransform;
 
             var handleArea = RuntimeUiFactory.Rect("Handle Slide Area", track.transform);
-            RuntimeUiFactory.Stretch(handleArea, 4f, -5f, 4f, -5f);
+            RuntimeUiFactory.Stretch(handleArea, 15f, -2f, 15f, -2f);
             var handle = RuntimeUiFactory.Image("Handle", handleArea, JoseonUiPalette.Gold);
             handle.rectTransform.anchorMin = handle.rectTransform.anchorMax = new Vector2(.5f, .5f);
-            handle.rectTransform.sizeDelta = new Vector2(30f, 38f);
+            handle.rectTransform.sizeDelta = new Vector2(20f, 26f);
             slider.handleRect = handle.rectTransform;
             slider.targetGraphic = handle;
             return slider;
