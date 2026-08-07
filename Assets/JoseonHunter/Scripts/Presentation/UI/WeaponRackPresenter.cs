@@ -19,6 +19,7 @@ namespace JoseonHunter.Presentation.UI
         private sealed class Slot
         {
             public GameObject Root;
+            public GameObject QualityBorder;
             public Image[] QualityFrameParts;
             public Image Icon;
             public TextMeshProUGUI LevelStars;
@@ -96,22 +97,25 @@ namespace JoseonHunter.Presentation.UI
             CreateFrameEdge("Frame Shadow Right", slot.Root.transform, FrameSide.Right, 2f, 10f,
                 new Color(.035f, .025f, .02f, .92f));
 
+            var qualityBorder = RuntimeUiFactory.Rect("Quality Border", slot.Root.transform);
+            RuntimeUiFactory.Stretch(qualityBorder, 0f, 0f, 0f, 0f);
+            slot.QualityBorder = qualityBorder.gameObject;
             slot.QualityFrameParts = new Image[8];
-            slot.QualityFrameParts[0] = CreateFrameEdge("Quality Frame Top", slot.Root.transform,
+            slot.QualityFrameParts[0] = CreateFrameEdge("Quality Frame Top", slot.QualityBorder.transform,
                 FrameSide.Top, 5f, 5f, Color.white);
-            slot.QualityFrameParts[1] = CreateFrameEdge("Quality Frame Bottom", slot.Root.transform,
+            slot.QualityFrameParts[1] = CreateFrameEdge("Quality Frame Bottom", slot.QualityBorder.transform,
                 FrameSide.Bottom, 5f, 5f, Color.white);
-            slot.QualityFrameParts[2] = CreateFrameEdge("Quality Frame Left", slot.Root.transform,
+            slot.QualityFrameParts[2] = CreateFrameEdge("Quality Frame Left", slot.QualityBorder.transform,
                 FrameSide.Left, 5f, 5f, Color.white);
-            slot.QualityFrameParts[3] = CreateFrameEdge("Quality Frame Right", slot.Root.transform,
+            slot.QualityFrameParts[3] = CreateFrameEdge("Quality Frame Right", slot.QualityBorder.transform,
                 FrameSide.Right, 5f, 5f, Color.white);
-            slot.QualityFrameParts[4] = CreateCorner("Quality Corner 0", slot.Root.transform,
+            slot.QualityFrameParts[4] = CreateCorner("Quality Corner 0", slot.QualityBorder.transform,
                 new Vector2(0f, 1f), new Vector2(1f, -1f));
-            slot.QualityFrameParts[5] = CreateCorner("Quality Corner 1", slot.Root.transform,
+            slot.QualityFrameParts[5] = CreateCorner("Quality Corner 1", slot.QualityBorder.transform,
                 Vector2.one, new Vector2(-1f, -1f));
-            slot.QualityFrameParts[6] = CreateCorner("Quality Corner 2", slot.Root.transform,
+            slot.QualityFrameParts[6] = CreateCorner("Quality Corner 2", slot.QualityBorder.transform,
                 Vector2.zero, Vector2.one);
-            slot.QualityFrameParts[7] = CreateCorner("Quality Corner 3", slot.Root.transform,
+            slot.QualityFrameParts[7] = CreateCorner("Quality Corner 3", slot.QualityBorder.transform,
                 new Vector2(1f, 0f), new Vector2(-1f, 1f));
 
             slot.Icon = RuntimeUiFactory.Image("Icon", slot.Root.transform, Color.white);
@@ -260,19 +264,19 @@ namespace JoseonHunter.Presentation.UI
             {
                 elapsed += Time.unscaledDeltaTime;
                 var pulse = 1f + Mathf.Sin(Mathf.Clamp01(elapsed / .24f) * Mathf.PI) * .12f;
-                slot.Root.transform.localScale = Vector3.one * pulse;
+                slot.QualityBorder.transform.localScale = Vector3.one * pulse;
                 yield return null;
             }
 
             slot.PulseRoutine = null;
-            if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.QualityBorder != null) slot.QualityBorder.transform.localScale = Vector3.one;
         }
 
         private void StopPulse(Slot slot)
         {
             if (slot.PulseRoutine != null) StopCoroutine(slot.PulseRoutine);
             slot.PulseRoutine = null;
-            if (slot.Root != null) slot.Root.transform.localScale = Vector3.one;
+            if (slot.QualityBorder != null) slot.QualityBorder.transform.localScale = Vector3.one;
         }
     }
 }

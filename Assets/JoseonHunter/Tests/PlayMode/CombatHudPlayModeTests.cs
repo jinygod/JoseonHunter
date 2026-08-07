@@ -322,17 +322,19 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextNamed(slot.gameObject, "Level Stars"), Is.EqualTo("★★★"));
             Assert.That(slot.GetComponent<Image>().color.a, Is.EqualTo(0f));
             var expectedQualityColor = WeaponRackPresenter.ColorFor(WeaponAffixQualityBand.Blue);
+            var qualityBorder = slot.Find("Quality Border");
+            Assert.That(qualityBorder, Is.Not.Null, "quality border container");
             foreach (var edgeName in new[] { "Top", "Bottom", "Left", "Right" })
             {
                 var shadow = slot.Find("Frame Shadow " + edgeName)?.GetComponent<Image>();
-                var edge = slot.Find("Quality Frame " + edgeName)?.GetComponent<Image>();
+                var edge = qualityBorder.Find("Quality Frame " + edgeName)?.GetComponent<Image>();
                 Assert.That(shadow, Is.Not.Null, edgeName + " shadow");
                 Assert.That(edge, Is.Not.Null, edgeName + " quality edge");
                 Assert.That(edge.color, Is.EqualTo(expectedQualityColor));
             }
             for (var cornerIndex = 0; cornerIndex < 4; cornerIndex++)
             {
-                var corner = slot.Find("Quality Corner " + cornerIndex)?.GetComponent<Image>();
+                var corner = qualityBorder.Find("Quality Corner " + cornerIndex)?.GetComponent<Image>();
                 Assert.That(corner, Is.Not.Null, "quality corner " + cornerIndex);
                 Assert.That(corner.color, Is.EqualTo(expectedQualityColor));
             }

@@ -16,3 +16,17 @@ assets/audio/sfx/level_up.ogg,confirmation_004.ogg,Interface Sounds,Kenney,https
 assets/audio/sfx/boss_warning.ogg,bong_001.ogg,Interface Sounds,Kenney,https://kenney.nl/assets/interface-sounds,CC0-1.0,temporary
 assets/audio/ui/confirm.ogg,select_001.ogg,Interface Sounds,Kenney,https://kenney.nl/assets/interface-sounds,CC0-1.0,temporary
 assets/audio/ui/back.ogg,back_001.ogg,Interface Sounds,Kenney,https://kenney.nl/assets/interface-sounds,CC0-1.0,temporary
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/player_hurt_1.ogg,impactSoft_medium_001.ogg,Impact Sounds,Kenney,https://www.kenney.nl/assets/impact-sounds,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/player_hurt_2.ogg,impactSoft_medium_002.ogg,Impact Sounds,Kenney,https://www.kenney.nl/assets/impact-sounds,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/player_defeat.ogg,creature_hurt_02.ogg,80 CC0 RPG SFX,OpenGameArt,https://opengameart.org/content/80-cc0-rpg-sfx,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/elite_defeat.ogg,creature_die_01.ogg,80 CC0 RPG SFX,OpenGameArt,https://opengameart.org/content/80-cc0-rpg-sfx,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/boss_slam.ogg,impactMetal_heavy_003.ogg,Impact Sounds,Kenney,https://www.kenney.nl/assets/impact-sounds,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/boss_charge.wav,swish_4.wav,Battle Sound Effects,OpenGameArt,https://opengameart.org/content/battle-sound-effects,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Combat/boss_volley.ogg,spell_fire_07.ogg,80 CC0 RPG SFX,OpenGameArt,https://opengameart.org/content/80-cc0-rpg-sfx,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Events/wave_warning.ogg,impactBell_heavy_001.ogg,Impact Sounds,Kenney,https://www.kenney.nl/assets/impact-sounds,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Events/elite_appear.ogg,creature_roar_01.ogg,80 CC0 RPG SFX,OpenGameArt,https://opengameart.org/content/80-cc0-rpg-sfx,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Events/treasure_appear.ogg,impactWood_medium_004.ogg,Impact Sounds,Kenney,https://www.kenney.nl/assets/impact-sounds,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/Events/treasure_open.ogg,handleCoins.ogg,RPG Audio,Kenney,https://www.kenney.nl/assets/rpg-audio,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/UI/pause_open.ogg,switch2.ogg,UI Audio,Kenney,https://www.kenney.nl/assets/ui-audio,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/UI/appraisal_tick.ogg,switch7.ogg,UI Audio,Kenney,https://www.kenney.nl/assets/ui-audio,CC0-1.0,approved
+Assets/JoseonHunter/Resources/Audio/CC0/UI/appraisal_reveal.ogg,item_gem_03.ogg,80 CC0 RPG SFX,OpenGameArt,https://opengameart.org/content/80-cc0-rpg-sfx,CC0-1.0,approved

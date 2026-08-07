@@ -61,7 +61,7 @@
 
 ## 실제 Unity 편입 목록
 
-아래 18개만 `Assets/JoseonHunter/Resources/Audio/CC0`에 편입했다. 동일 파일을 여러 게임 큐에서 재사용하므로 UI 취소, 부적, 우두머리 경고처럼 전용 복사본이 필요 없는 역할은 별도 에셋을 만들지 않았다.
+아래 32개만 `Assets/JoseonHunter/Resources/Audio/CC0`에 편입했다. 동일 파일을 여러 게임 큐에서 재사용하므로 UI 취소, 부적처럼 전용 복사본이 필요 없는 역할은 별도 에셋을 만들지 않았다. 일반 몬스터 사망음은 다수 동시 재생으로 소리가 뭉개지는 것을 막기 위해 의도적으로 편입·재생하지 않는다.
 
 | Unity 파일 | 원본 파일 | 용도 |
 |---|---|---|
@@ -83,3 +83,22 @@
 | `Combat/hit_soft_1.ogg` | Kenney Impact `impactSoft_medium_000.ogg` | 일반 피격 |
 | `Combat/hit_critical.ogg` | Kenney Impact `impactPunch_heavy_000.ogg` | 치명타 |
 | `Combat/boss_defeat.ogg` | Kenney Impact `impactMetal_heavy_000.ogg` | 우두머리 격파 |
+| `Combat/player_hurt_1.ogg` | Kenney Impact `impactSoft_medium_001.ogg` | 플레이어 피격 변형 1 |
+| `Combat/player_hurt_2.ogg` | Kenney Impact `impactSoft_medium_002.ogg` | 플레이어 피격 변형 2 |
+| `Combat/player_defeat.ogg` | 80 RPG `creature_hurt_02.ogg` | 플레이어 패배 |
+| `Combat/elite_defeat.ogg` | 80 RPG `creature_die_01.ogg` | 정예 몬스터 격파 |
+| `Combat/boss_slam.ogg` | Kenney Impact `impactMetal_heavy_003.ogg` | 우두머리 내려찍기 |
+| `Combat/boss_charge.wav` | Battle SFX `swish_4.wav` | 우두머리 돌진 |
+| `Combat/boss_volley.ogg` | 80 RPG `spell_fire_07.ogg` | 우두머리 투사체 연사 |
+| `Events/wave_warning.ogg` | Kenney Impact `impactBell_heavy_001.ogg` | 웨이브 경고 |
+| `Events/elite_appear.ogg` | 80 RPG `creature_roar_01.ogg` | 정예 몬스터 출현 |
+| `Events/treasure_appear.ogg` | Kenney Impact `impactWood_medium_004.ogg` | 보물상자 출현 |
+| `Events/treasure_open.ogg` | Kenney RPG `handleCoins.ogg` | 보물상자 개봉 |
+| `UI/pause_open.ogg` | Kenney UI `switch2.ogg` | 일시정지 메뉴 열기 |
+| `UI/appraisal_tick.ogg` | Kenney UI `switch7.ogg` | 추가옵션 수치 상승 |
+| `UI/appraisal_reveal.ogg` | 80 RPG `item_gem_03.ogg` | 추가옵션 등급 공개 |
+
+## 검토했지만 편입하지 않은 후보
+
+- Unity Asset Store `FREE Casual Game SFX Pack`(페이지 ID 54116)은 CC0 표기를 확인했지만, 에셋 스토어 페이지의 GraphQL 오류로 계정 라이브러리 추가가 완료되지 않아 프로젝트에는 편입하지 않았다.
+- 현재 빌드는 위 Kenney·OpenGameArt CC0 원본만 사용한다.
