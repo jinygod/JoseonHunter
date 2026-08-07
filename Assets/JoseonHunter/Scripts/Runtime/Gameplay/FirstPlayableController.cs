@@ -305,6 +305,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public WeaponLegacySnapshot LegacySnapshotForTests(WeaponId weaponId) =>
             weaponLegacyState.SnapshotFor(weaponId,
                 weaponLevels.TryGetValue(weaponId.Value, out var weaponLevel) ? weaponLevel : 0);
+        public WeaponLegacyPathId EquippedLegacyPathForTests(WeaponId weaponId) =>
+            weaponLegacyState.TryGetEquippedPath(weaponId, out var pathId) ? pathId : default;
         public bool ChooseWeaponLegacyForTests(WeaponId weaponId, WeaponLegacyPathId pathId)
         {
             weaponLegacyState.Remove(weaponId);

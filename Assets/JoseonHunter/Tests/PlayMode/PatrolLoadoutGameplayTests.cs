@@ -36,8 +36,10 @@ namespace JoseonHunter.Tests.PlayMode
             var controller = Object.FindAnyObjectByType<FirstPlayableController>();
 
             Assert.That(controller.RegisteredWeaponIds.Single(), Is.EqualTo(WeaponId.GakgungShot));
-            Assert.That(controller.LegacySnapshotForTests(WeaponId.GakgungShot).PathId,
+            Assert.That(controller.EquippedLegacyPathForTests(WeaponId.GakgungShot),
                 Is.EqualTo(WeaponLegacyPathId.GakgungSunPiercer));
+            Assert.That(controller.LegacySnapshotForTests(WeaponId.GakgungShot).Stage,
+                Is.EqualTo(WeaponLegacyStage.None));
         }
 
         [UnityTest]
