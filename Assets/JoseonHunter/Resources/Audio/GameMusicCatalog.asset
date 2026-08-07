@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 314c066bb6956904aa95d040afaea029, type: 3}
+  m_Name: GameMusicCatalog
+  m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.Audio.GameMusicCatalogAsset
+  entries:
+  - Role: 1
+    Clip: {fileID: 8300000, guid: d6db8505a9eb3c247810aa46a1aea989, type: 3}
+    Volume: 0.34
+  - Role: 2
+    Clip: {fileID: 8300000, guid: 918837005e5d40842bc4f2a932725f38, type: 3}
+    Volume: 0.38
+  - Role: 3
+    Clip: {fileID: 8300000, guid: 0325a357204863247a18f52b83f036a3, type: 3}
+    Volume: 0.4
+  - Role: 4
+    Clip: {fileID: 8300000, guid: e7c6d3f459d873d4fa382725b03a9fea, type: 3}
+    Volume: 0.42
+  - Role: 5
+    Clip: {fileID: 8300000, guid: 842a916240a8d6846aa6b1111f038566, type: 3}
+    Volume: 0.44
+  - Role: 6
+    Clip: {fileID: 8300000, guid: d37e7780b9e98734cb71a357bb1347e0, type: 3}
+    Volume: 0.46
