@@ -100,3 +100,11 @@
 - Final-evolution offers use an explicit presentation tier and path ID. The presenter supplies an opaque ink/crimson backdrop, gold final frame, muted standard cards, unscaled input lock, and a subtle pulse without relying on weapon-name string matching.
 - All 16 legacy paths declare at least two changed behavior dimensions among rhythm, geometry, enemy response, and payoff. Existing executor regressions remained green, so no additional balance tuning was introduced in this milestone.
 - Latest evidence: `Docs/Verification/2026-08-07-weapon-evolution-onboarding.md`. Full EditMode passed 806/806, full PlayMode passed 282/282, and the Android ARM64 IL2CPP development APK built successfully. Physical-device evolution readability, feel, frame pacing, and thermal verification remain outstanding.
+
+## Combat information and audio settings handoff (2026-08-07)
+
+- `RunWeaponKillLedger` now owns run-scoped confirmed damage and last-hit kill totals in addition to mastery points. `WeaponSlotView` carries these totals to the weapon detail sheet.
+- Weapon details display run damage/kill totals and one accumulated affix per line with `일반`, `고급`, or `최대` grade labels. Structured rolls are authoritative; old summary-only views use an explicit unknown-grade fallback.
+- Audio settings are split into music and sound effects, persisted atomically, and migrated from the legacy single `AudioVolume`. The pause panel and lobby gear modal share the same settings and apply them immediately to the two existing audio directors.
+- HUD health and experience fills use anchored width rather than sprite-less `Image.fillAmount`; elapsed time is displayed as `경과 mm:ss`.
+- Latest evidence: `Docs/Verification/2026-08-07-combat-information-audio-settings.md`. Full EditMode passed 898/898 and full PlayMode passed 296/296 under BelowNormal priority and four-core affinity. Physical-device visual and listening checks remain outstanding.

@@ -25,9 +25,11 @@ namespace JoseonHunter.Presentation.Audio
         private GameAudioPlaybackBudget budget;
         private bool combatEnabled = true;
         private int nextSourceIndex;
+        private float masterVolume = 1f;
 
         public static GameAudioDirector Instance => instance;
         public int SourceCount => sources == null ? 0 : sources.Length;
+        public float MasterVolume => masterVolume;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void EnsureExists()
@@ -97,6 +99,22 @@ namespace JoseonHunter.Presentation.Audio
         }
 
         public void SetCombatEnabled(bool enabled) => combatEnabled = enabled;
+
+        public void SetMasterVolume(float value)
+        {
+            var next = Mathf.Clamp01(value);
+            var previous = masterVolume;
+            masterVolume = next;
+            if (sources == null) return;
+            for (var index = 0; index < sources.Length; index++)
+            {
+                var source = sources[index];
+                if (source == null || !source.isPlaying) continue;
+                source.volume = previous > .0001f
+                    ? Mathf.Clamp01(source.volume / previous) * masterVolume
+                    : 0f;
+            }
+        }
 
         public bool CanRequest(GameAudioCueId cue) =>
             cue != GameAudioCueId.None && (combatEnabled || !IsCombatCue(cue));
@@ -177,7 +195,7 @@ namespace JoseonHunter.Presentation.Audio
             var source = sources[sourceIndex];
             if (source.isPlaying) source.Stop();
             source.clip = clip;
-            source.volume = VolumeFor(cue);
+            source.volume = VolumeFor(cue) * masterVolume;
             source.pitch = Random.Range(.96f, 1.0401f);
             source.Play();
             sourcePriorities[sourceIndex] = priority;

@@ -18,10 +18,13 @@ namespace JoseonHunter.Presentation.Audio
         private GameMusicCatalogAsset catalog;
         private Coroutine transition;
         private int activeSourceIndex = -1;
+        private float activeCatalogVolume;
+        private float masterVolume = 1f;
 
         public static GameMusicDirector Instance => instance;
         public GameMusicRole CurrentRole { get; private set; } = GameMusicRole.None;
         public int SourceCount => sources.Length;
+        public float MasterVolume => masterVolume;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void EnsureExists()
@@ -94,7 +97,9 @@ namespace JoseonHunter.Presentation.Audio
             incoming.Play();
 
             activeSourceIndex = incomingIndex;
+            activeCatalogVolume = targetVolume;
             CurrentRole = role;
+            targetVolume *= masterVolume;
 
             if (fadeSeconds <= 0f)
             {
@@ -113,11 +118,26 @@ namespace JoseonHunter.Presentation.Audio
             return true;
         }
 
+        public void SetMasterVolume(float value)
+        {
+            masterVolume = Mathf.Clamp01(value);
+            if (sources[0] == null || sources[1] == null) return;
+            StopTransition();
+            for (var index = 0; index < sources.Length; index++)
+            {
+                if (index == activeSourceIndex && sources[index].isPlaying)
+                    sources[index].volume = activeCatalogVolume * masterVolume;
+                else if (sources[index].isPlaying)
+                    StopAndClear(index);
+            }
+        }
+
         public void FadeOut(float fadeSeconds = DefaultFadeOutSeconds)
         {
             StopTransition();
             CurrentRole = GameMusicRole.None;
             activeSourceIndex = -1;
+            activeCatalogVolume = 0f;
 
             if (fadeSeconds <= 0f)
             {

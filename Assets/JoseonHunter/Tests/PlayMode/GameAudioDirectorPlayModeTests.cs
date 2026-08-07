@@ -106,6 +106,19 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(director.CanRequest(GameAudioCueId.UiClick), Is.True);
         }
 
+        [UnityTest]
+        public IEnumerator SoundEffectMasterVolumeIsClampedAndApplied()
+        {
+            GameAudioDirector.EnsureExists();
+            yield return null;
+            var director = GameAudioDirector.Instance;
+
+            director.SetMasterVolume(.35f);
+            Assert.That(director.MasterVolume, Is.EqualTo(.35f).Within(.001f));
+            director.SetMasterVolume(2f);
+            Assert.That(director.MasterVolume, Is.EqualTo(1f));
+        }
+
         private static int EnabledListenerCount()
         {
             var count = 0;

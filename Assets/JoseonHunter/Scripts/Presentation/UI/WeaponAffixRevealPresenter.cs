@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Runtime.Combat.Weapons;
 using JoseonHunter.Runtime.Gameplay;
 using TMPro;
 using UnityEngine;
@@ -44,6 +45,7 @@ namespace JoseonHunter.Presentation.UI
         private TextMeshProUGUI weaponBehavior;
         private TextMeshProUGUI growthGuide;
         private TextMeshProUGUI accumulatedAffixSummary;
+        private TextMeshProUGUI weaponRunStatistics;
         private Image weaponIcon;
         private Button confirmButton;
         private TextMeshProUGUI confirmLabel;
@@ -152,6 +154,8 @@ namespace JoseonHunter.Presentation.UI
             VisiblePotentialCount = 0;
             appraisalRevealAnnounced = false;
             lastAppraisalCount = int.MinValue;
+            growthGuide.gameObject.SetActive(true);
+            weaponRunStatistics.gameObject.SetActive(false);
 
             BindSprites();
             ResetVisuals();
@@ -209,6 +213,9 @@ namespace JoseonHunter.Presentation.UI
             weaponName.text = weapon.DisplayName;
             weaponLevel.text = $"레벨 {weapon.Level} · 현재 무기";
             weaponBehavior.text = weapon.Behavior;
+            growthGuide.gameObject.SetActive(false);
+            weaponRunStatistics.gameObject.SetActive(true);
+            weaponRunStatistics.text = $"누적 피해 {weapon.RunDamage:N0}   ·   처치 {weapon.RunKills:N0}";
             title.text = "현재 적용 효과";
             detail.text = $"추가옵션 {AffixCount(weapon.GeneralAffixRolls, weapon.GeneralAffixSummary)}개";
             detail.textWrappingMode = TextWrappingModes.NoWrap;
@@ -233,8 +240,8 @@ namespace JoseonHunter.Presentation.UI
                 potentialLabels[index].gameObject.SetActive(true);
                 reelWindows[index + 1].rectTransform.anchoredPosition = PotentialRowPosition(index);
             }
-            BindEffectRows(weapon.GeneralAffixSummary, weapon.LegacyName, weapon.LegacyStageName,
-                weapon.PotentialIds);
+            BindEffectRows(weapon.GeneralAffixSummary, weapon.GeneralAffixRolls,
+                weapon.LegacyName, weapon.LegacyStageName, weapon.PotentialIds);
 
             ApplyFlatAppraisalStyle();
 
@@ -506,7 +513,7 @@ namespace JoseonHunter.Presentation.UI
             {
                 finalSymbols[index + 1].sprite = null;
             }
-            BindEffectRows(activeModel.AccumulatedAffixSummary, activeModel.LegacyName,
+            BindEffectRows(activeModel.AccumulatedAffixSummary, null, activeModel.LegacyName,
                 activeModel.LegacyStageName, activeModel.CurrentPotentials);
 
             burst.sprite = activeResult.NewPotentials.Count > 0
@@ -654,6 +661,11 @@ namespace JoseonHunter.Presentation.UI
                 new Vector2(620f, 20f), 17f, TextAlignmentOptions.Left);
             growthGuide.text = "무기 3레벨에 성장 방식을 선택하고, 4·5레벨에 선택한 효과가 강화됩니다.";
             growthGuide.color = JoseonUiPalette.HanjiMutedInk;
+            weaponRunStatistics = Label("Weapon Run Statistics", shell.transform, new Vector2(80f, 202f),
+                new Vector2(620f, 26f), 20f, TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
+            weaponRunStatistics.fontStyle = FontStyles.Bold;
+            weaponRunStatistics.color = new Color(.36f, .19f, .07f);
+            weaponRunStatistics.gameObject.SetActive(false);
 
             burst = RuntimeUiFactory.Image("Jackpot Burst", shell.transform, Color.white);
             burst.rectTransform.anchorMin = burst.rectTransform.anchorMax = new Vector2(.5f, .5f);
@@ -696,7 +708,8 @@ namespace JoseonHunter.Presentation.UI
             for (var index = 0; index < 3; index++)
             {
                 var position = PotentialRowPosition(index);
-                BuildReel(index + 1, position, new Vector2(820f, 108f), new Vector2(92f, 72f));
+                var rowHeight = index == 0 ? 200f : 108f;
+                BuildReel(index + 1, position, new Vector2(820f, rowHeight), new Vector2(92f, 72f));
                 lockedSlots[index] = RuntimeUiFactory.Image("Locked Potential " + index,
                     finalSymbols[index + 1].transform.parent, Color.white);
                 RuntimeUiFactory.Stretch(lockedSlots[index].rectTransform, 8f, 6f, 8f, 6f);
@@ -704,7 +717,7 @@ namespace JoseonHunter.Presentation.UI
                 var summaryLabelName = index == 0 ? "Affix Summary Row" :
                     index == 1 ? "Growth Summary Row" : "Potential Summary Row";
                 potentialLabels[index] = Label(summaryLabelName, shell.transform,
-                    position + new Vector2(80f, 0f), new Vector2(600f, 84f), 21f,
+                    position + new Vector2(80f, 0f), new Vector2(600f, index == 0 ? 176f : 84f), 21f,
                     TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
                 potentialLabels[index].fontStyle = FontStyles.Bold;
                 potentialLabels[index].textWrappingMode = TextWrappingModes.Normal;
@@ -715,7 +728,7 @@ namespace JoseonHunter.Presentation.UI
                 JoseonUiPalette.AppraisalResult);
             var confirmRect = confirmButton.GetComponent<RectTransform>();
             confirmRect.anchorMin = confirmRect.anchorMax = new Vector2(.5f, .5f);
-            confirmRect.anchoredPosition = new Vector2(0f, -385f);
+            confirmRect.anchoredPosition = new Vector2(0f, -478f);
             confirmRect.sizeDelta = new Vector2(310f, 62f);
             confirmButton.image.preserveAspect = false;
             confirmButton.onClick.AddListener(OnConfirmButton);
@@ -738,25 +751,50 @@ namespace JoseonHunter.Presentation.UI
 
         private void BindEffectRows(
             string affixSummary,
+            IReadOnlyList<WeaponAffixRoll> affixRolls,
             string legacyName,
             string legacyStageName,
             IReadOnlyList<WeaponPotentialId> potentialIds)
         {
+            var affixLines = new List<string>();
+            if (affixRolls != null)
+                for (var index = 0; index < affixRolls.Count; index++)
+                {
+                    var roll = affixRolls[index];
+                    affixLines.Add($"[{AffixTierLabel(roll.Tier)}] " +
+                                   WeaponAffixDisplayFormatter.Describe(
+                                       roll, Mathf.RoundToInt((float)roll.Value)));
+                }
+            if (affixLines.Count == 0 && !string.IsNullOrWhiteSpace(affixSummary))
+            {
+                var summaries = affixSummary.Split(
+                    new[] { " · " }, StringSplitOptions.RemoveEmptyEntries);
+                for (var index = 0; index < summaries.Length; index++)
+                    affixLines.Add("[등급 미상] " + summaries[index]);
+            }
             potentialLabels[0].text = "누적 추가옵션\n" +
-                (string.IsNullOrWhiteSpace(affixSummary) ? "없음" : affixSummary);
+                (affixLines.Count == 0 ? "없음" : string.Join("\n", affixLines));
 
             var hasGrowth = !string.IsNullOrWhiteSpace(legacyName) && legacyName != "미선택";
             var growth = hasGrowth
                 ? legacyName + (string.IsNullOrWhiteSpace(legacyStageName) ? string.Empty : " · " + legacyStageName)
                 : "선택 전";
-            potentialLabels[1].text = "성장 방식\n" + growth;
+            potentialLabels[1].text = "진화 상태\n" + growth;
 
             var names = new List<string>();
             if (potentialIds != null)
                 for (var index = 0; index < potentialIds.Count; index++)
                     names.Add(PotentialName(potentialIds[index]));
-            potentialLabels[2].text = "잠재 능력\n" + (names.Count == 0 ? "없음" : string.Join(" · ", names));
+            potentialLabels[2].text = "해금된 잠재 능력\n" +
+                (names.Count == 0 ? "없음" : string.Join(" · ", names));
         }
+
+        private static string AffixTierLabel(WeaponAffixTier tier) => tier switch
+        {
+            WeaponAffixTier.Perfect => "최대",
+            WeaponAffixTier.High => "고급",
+            _ => "일반"
+        };
 
         private static int AffixCount(IReadOnlyList<WeaponAffixRoll> rolls, string summary)
         {
@@ -795,7 +833,12 @@ namespace JoseonHunter.Presentation.UI
         }
 
         private static Vector2 PotentialRowPosition(int index) =>
-            new Vector2(0f, -32f - Mathf.Clamp(index, 0, 2) * 128f);
+            Mathf.Clamp(index, 0, 2) switch
+            {
+                0 => new Vector2(0f, -76f),
+                1 => new Vector2(0f, -246f),
+                _ => new Vector2(0f, -374f)
+            };
 
         private void BuildReel(int index, Vector2 position, Vector2 windowSize, Vector2 symbolSize)
         {

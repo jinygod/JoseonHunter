@@ -60,5 +60,22 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(snapshot[WeaponId.ThunderCrashBomb], Is.EqualTo(10));
             Assert.That(ledger.PointsFor(WeaponId.ThunderCrashBomb), Is.Zero);
         }
+
+        [Test]
+        public void ConfirmedDamageAndAttributedKillsAreTrackedPerWeapon()
+        {
+            var ledger = new RunWeaponKillLedger();
+            ledger.RecordDamage(WeaponId.GakgungShot, 120);
+            ledger.RecordDamage(WeaponId.GakgungShot, 35);
+            ledger.RecordDamage(WeaponId.FrostFlask, 18);
+            ledger.RecordHit(21, WeaponId.GakgungShot);
+
+            ledger.ConfirmDeath(21, EnemyMasteryClass.Elite);
+
+            Assert.That(ledger.DamageFor(WeaponId.GakgungShot), Is.EqualTo(155));
+            Assert.That(ledger.KillsFor(WeaponId.GakgungShot), Is.EqualTo(1));
+            Assert.That(ledger.DamageFor(WeaponId.FrostFlask), Is.EqualTo(18));
+            Assert.That(ledger.KillsFor(WeaponId.FrostFlask), Is.Zero);
+        }
     }
 }

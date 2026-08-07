@@ -42,6 +42,52 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void LegacySingleAudioVolumeMigratesToBothAudioChannels()
+        {
+            Directory.CreateDirectory(directory);
+            const string payload = "{\"schemaVersion\":4,\"audioVolume\":0.35}";
+            var envelope = "{\"payload\":\"" + payload.Replace("\\", "\\\\").Replace("\"", "\\\"") +
+                           "\",\"checksum\":\"" + SaveChecksum.ForCanonicalPayload(payload) + "\"}";
+            File.WriteAllText(Path.Combine(directory, "progression.json"), envelope);
+
+            var loaded = new JsonSaveRepository(directory).Load().Data;
+
+            Assert.That(loaded.MusicVolume, Is.EqualTo(.35f).Within(.001f));
+            Assert.That(loaded.SoundEffectVolume, Is.EqualTo(.35f).Within(.001f));
+        }
+
+        [Test]
+        public void SplitAudioVolumesRoundTripIndependently()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.MusicVolume = .25f;
+            data.SoundEffectVolume = .8f;
+
+            var repository = new JsonSaveRepository(directory);
+            Assert.That(repository.Save(data).Success, Is.True);
+            var loaded = repository.Load().Data;
+
+            Assert.That(loaded.MusicVolume, Is.EqualTo(.25f).Within(.001f));
+            Assert.That(loaded.SoundEffectVolume, Is.EqualTo(.8f).Within(.001f));
+        }
+
+        [Test]
+        public void AudioSettingsSaveAtomicallyAndClampToValidRange()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            var repository = new RecordingRepository();
+            var autosave = new AutoSaveOrchestrator(repository, data);
+
+            var result = autosave.SaveAudioSettings(-1f, 1.5f);
+
+            Assert.That(result.Success, Is.True);
+            Assert.That(repository.SaveCount, Is.EqualTo(1));
+            Assert.That(data.MusicVolume, Is.Zero);
+            Assert.That(data.SoundEffectVolume, Is.EqualTo(1f));
+            Assert.That(data.HasSplitAudioSettings, Is.True);
+        }
+
+        [Test]
         public void SchemaFourRoundTripPreservesProgressStageSelectionAndClearRecords()
         {
             var data = SaveDataV1.CreateDefaults();

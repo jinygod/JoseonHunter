@@ -2514,6 +2514,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnCombatDamageConfirmed(ConfirmedDamageEvent confirmed)
         {
+            runWeaponKillLedger.RecordDamage(confirmed.WeaponId, confirmed.FinalDamage);
             runWeaponKillLedger.RecordHit(confirmed.TargetRuntimeId, confirmed.WeaponId);
             if (!pendingMasteryDeaths.TryGetValue(confirmed.TargetRuntimeId, out var enemyClass)) return;
             pendingMasteryDeaths.Remove(confirmed.TargetRuntimeId);
@@ -3296,7 +3297,9 @@ namespace JoseonHunter.Runtime.Gameplay
                     legacyName,
                     legacyStageName,
                     nextLegacyMilestone,
-                    profile?.GeneralRolls));
+                    profile?.GeneralRolls,
+                    runWeaponKillLedger.DamageFor(weaponId),
+                    runWeaponKillLedger.KillsFor(weaponId)));
             }
 
             // The final boss owns the featured health bar even if a midboss survived into

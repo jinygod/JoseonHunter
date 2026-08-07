@@ -94,6 +94,12 @@ namespace JoseonHunter.Runtime.Meta
             return autosave.SaveLoadout(index, loadout);
         }
 
+        public TransactionResult SaveAudioSettings(float musicVolume, float soundEffectVolume)
+        {
+            EnsureInitialized();
+            return autosave.SaveAudioSettings(musicVolume, soundEffectVolume);
+        }
+
         public TransactionResult CommitRun(RunSettlement settlement)
         {
             EnsureInitialized();

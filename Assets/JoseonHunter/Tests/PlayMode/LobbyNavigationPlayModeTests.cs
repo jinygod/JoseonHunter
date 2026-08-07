@@ -88,6 +88,29 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator LobbyGearOpensPersistentAudioControls()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.MusicVolume = .4f;
+            data.SoundEffectVolume = .7f;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var settingsButton = GameObject.Find("Settings Button")?.GetComponent<Button>();
+            Assert.That(settingsButton, Is.Not.Null);
+            settingsButton.onClick.Invoke();
+            yield return null;
+
+            var sliders = Object.FindObjectsByType<Slider>(FindObjectsInactive.Include);
+            var music = sliders.Single(slider => slider.name == "Music Volume Slider");
+            var effects = sliders.Single(slider => slider.name == "Sound Effect Volume Slider");
+            Assert.That(music.gameObject.activeInHierarchy, Is.True);
+            Assert.That(music.value, Is.EqualTo(.4f).Within(.001f));
+            Assert.That(effects.value, Is.EqualTo(.7f).Within(.001f));
+        }
+
+        [UnityTest]
         public IEnumerator NavigationSwitchesOneOpaquePanelAtATime()
         {
             SceneManager.LoadScene("Lobby");

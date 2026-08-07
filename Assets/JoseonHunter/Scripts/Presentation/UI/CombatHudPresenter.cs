@@ -113,7 +113,8 @@ namespace JoseonHunter.Presentation.UI
             levelText.text = $"레벨 {state.Level}";
             healthText.text = $"체력 {Mathf.CeilToInt(state.Health)} / {Mathf.CeilToInt(state.MaximumHealth)}";
             experienceText.text = $"경험치 {state.Experience} / {state.ExperienceToNext}    엽전 {state.Coins}";
-            timerText.text = Mathf.CeilToInt(Mathf.Max(0f, state.Duration - state.Elapsed)).ToString("00");
+            var elapsedSeconds = Mathf.Max(0, Mathf.FloorToInt(state.Elapsed));
+            timerText.text = $"경과 {elapsedSeconds / 60:00}:{elapsedSeconds % 60:00}";
             killsText.text = $"처치 {state.Kills}";
             SetFill(healthFill, state.Health, state.MaximumHealth);
             SetFill(experienceFill, state.Experience, state.ExperienceToNext);
@@ -162,17 +163,23 @@ namespace JoseonHunter.Presentation.UI
             rect.pivot = new Vector2(0f, 1f);
             rect.anchoredPosition = position;
             rect.sizeDelta = size;
-            var fill = RuntimeUiFactory.Image(name, background.transform, color);
-            RuntimeUiFactory.Stretch(fill.rectTransform, 2f, 2f, 2f, 2f);
-            fill.type = Image.Type.Filled;
-            fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.fillOrigin = 0;
+            var fillArea = RuntimeUiFactory.Rect(name + " Area", background.transform);
+            RuntimeUiFactory.Stretch(fillArea, 2f, 2f, 2f, 2f);
+            var fill = RuntimeUiFactory.Image(name, fillArea, color);
+            fill.rectTransform.anchorMin = Vector2.zero;
+            fill.rectTransform.anchorMax = Vector2.one;
+            fill.rectTransform.offsetMin = Vector2.zero;
+            fill.rectTransform.offsetMax = Vector2.zero;
             return fill;
         }
 
         private static void SetFill(Image fill, float current, float maximum)
         {
-            fill.fillAmount = maximum <= 0f ? 0f : Mathf.Clamp01(current / maximum);
+            var maximumAnchor = fill.rectTransform.anchorMax;
+            maximumAnchor.x = maximum <= 0f ? 0f : Mathf.Clamp01(current / maximum);
+            fill.rectTransform.anchorMax = maximumAnchor;
+            fill.rectTransform.offsetMin = Vector2.zero;
+            fill.rectTransform.offsetMax = Vector2.zero;
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using JoseonHunter.Runtime.Meta;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +10,7 @@ namespace JoseonHunter.Presentation.UI
     {
         private GameObject root;
         private RectTransform panelRect;
+        private AudioSettingsPresenter audioSettings;
 
         public event Action Confirmed;
         public event Action Cancelled;
@@ -29,7 +31,7 @@ namespace JoseonHunter.Presentation.UI
         {
             if (panelRect != null)
                 panelRect.sizeDelta = new Vector2(
-                    PortraitUiMetrics.ContainedWidth(transform as RectTransform, 760f), 430f);
+                    PortraitUiMetrics.ContainedWidth(transform as RectTransform, 760f), 680f);
         }
 
         private void Build()
@@ -46,29 +48,42 @@ namespace JoseonHunter.Presentation.UI
             panelRect = panel.rectTransform;
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(.5f, .5f);
             panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(760f, 430f);
+            panelRect.sizeDelta = new Vector2(760f, 680f);
             panel.raycastTarget = true;
 
             var title = RuntimeUiFactory.Text("Abandon Title", panel.transform, "일시정지", 43f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
-            SetRect(title.rectTransform, new Vector2(0f, 132f), new Vector2(650f, 70f));
+            SetRect(title.rectTransform, new Vector2(0f, 258f), new Vector2(650f, 70f));
             title.color = JoseonUiPalette.HanjiInk;
 
             var message = RuntimeUiFactory.Text("Abandon Message", panel.transform,
                 "전투를 계속하거나 현재 성과를 저장하고 로비로 돌아갈 수 있습니다.", 27f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
-            SetRect(message.rectTransform, new Vector2(0f, 38f), new Vector2(640f, 110f));
+            SetRect(message.rectTransform, new Vector2(0f, 176f), new Vector2(640f, 80f));
             message.color = JoseonUiPalette.HanjiInk;
 
+            var audioRoot = RuntimeUiFactory.Rect("Pause Audio Settings", panel.transform);
+            SetRect(audioRoot, new Vector2(0f, -8f), new Vector2(640f, 250f));
+            audioSettings = audioRoot.gameObject.AddComponent<AudioSettingsPresenter>();
+            audioSettings.Initialize(MetaGameSession.EnsureExists(), false);
+
             var cancel = RuntimeUiFactory.Button("Continue Combat Button", panel.transform, JoseonUiPalette.Ink);
-            SetRect(cancel.GetComponent<RectTransform>(), new Vector2(-170f, -118f), new Vector2(280f, 76f));
-            cancel.onClick.AddListener(() => Cancelled?.Invoke());
+            SetRect(cancel.GetComponent<RectTransform>(), new Vector2(-170f, -260f), new Vector2(280f, 76f));
+            cancel.onClick.AddListener(() =>
+            {
+                audioSettings.CommitPending();
+                Cancelled?.Invoke();
+            });
             ButtonLabel(cancel, "계속하기");
 
             var confirm = RuntimeUiFactory.Button("Confirm Return Button", panel.transform,
                 JoseonUiPalette.AppraisalResult);
-            SetRect(confirm.GetComponent<RectTransform>(), new Vector2(170f, -118f), new Vector2(280f, 76f));
-            confirm.onClick.AddListener(() => Confirmed?.Invoke());
+            SetRect(confirm.GetComponent<RectTransform>(), new Vector2(170f, -260f), new Vector2(280f, 76f));
+            confirm.onClick.AddListener(() =>
+            {
+                audioSettings.CommitPending();
+                Confirmed?.Invoke();
+            });
             ButtonLabel(confirm, "로비로 돌아가기");
             ApplyPortraitLayout();
             root.SetActive(false);

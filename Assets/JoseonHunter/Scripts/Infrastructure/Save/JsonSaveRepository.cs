@@ -137,6 +137,9 @@ namespace JoseonHunter.Infrastructure.Save
             public bool tutorialCompleted;
             public bool accessibilityEnabled;
             public float audioVolume;
+            public float musicVolume;
+            public float soundEffectVolume;
+            public bool hasSplitAudioSettings;
             public string[] firstSolutionFlags;
             public string[] selectableInvestigationPolicies;
             public string selectedInvestigationPolicy;
@@ -175,6 +178,9 @@ namespace JoseonHunter.Infrastructure.Save
                 tutorialCompleted = data.TutorialCompleted,
                 accessibilityEnabled = data.AccessibilityEnabled,
                 audioVolume = data.AudioVolume,
+                musicVolume = Mathf.Clamp01(data.MusicVolume),
+                soundEffectVolume = Mathf.Clamp01(data.SoundEffectVolume),
+                hasSplitAudioSettings = true,
                 firstSolutionFlags = Sorted(data.FirstSolutionFlags),
                 selectableInvestigationPolicies = Sorted(data.SelectableInvestigationPolicies),
                 selectedInvestigationPolicy = data.SelectedInvestigationPolicy,
@@ -210,7 +216,11 @@ namespace JoseonHunter.Infrastructure.Save
                 NormalizeSelectedStage(data);
                 data.TutorialCompleted = tutorialCompleted;
                 data.AccessibilityEnabled = accessibilityEnabled;
-                data.AudioVolume = audioVolume;
+                var legacyVolume = Mathf.Clamp01(audioVolume);
+                data.AudioVolume = legacyVolume;
+                data.HasSplitAudioSettings = true;
+                data.MusicVolume = hasSplitAudioSettings ? Mathf.Clamp01(musicVolume) : legacyVolume;
+                data.SoundEffectVolume = hasSplitAudioSettings ? Mathf.Clamp01(soundEffectVolume) : legacyVolume;
                 data.FirstSolutionFlags = List(firstSolutionFlags);
                 data.SelectableInvestigationPolicies = List(selectableInvestigationPolicies);
                 data.SelectedInvestigationPolicy = selectedInvestigationPolicy;

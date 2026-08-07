@@ -48,6 +48,7 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTest]
         public IEnumerator PatrolHomePresentsStageAndLargePrimaryAction()
         {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
 

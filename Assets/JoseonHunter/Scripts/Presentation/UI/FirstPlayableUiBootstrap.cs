@@ -3,6 +3,7 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Presentation.Audio;
 using JoseonHunter.Runtime.Audio;
+using JoseonHunter.Runtime.Meta;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -41,6 +42,7 @@ namespace JoseonHunter.Presentation.UI
         private ProgressionRewardEvent pendingReward;
         private bool hasPendingReward;
         private bool resultWasOpen;
+        private bool audioSettingsApplied;
         private readonly GameplayMusicState gameplayMusic = new GameplayMusicState();
 
         public FirstPlayableController BoundController => boundController;
@@ -176,6 +178,11 @@ namespace JoseonHunter.Presentation.UI
 
         private void Update()
         {
+            if (!audioSettingsApplied && MetaGameSession.Current != null)
+            {
+                AudioSettingsPresenter.ApplySavedVolumes(MetaGameSession.Current);
+                audioSettingsApplied = true;
+            }
             var safeArea = Screen.safeArea;
             var screenSize = new Vector2(Screen.width, Screen.height);
             if (safeArea != lastSafeArea || screenSize != lastScreenSize) ApplySafeArea(safeArea, screenSize);

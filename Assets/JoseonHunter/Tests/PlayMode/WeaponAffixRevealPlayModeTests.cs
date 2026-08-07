@@ -62,10 +62,10 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextValue(growthGuide),
                 Is.EqualTo("무기 3레벨에 성장 방식을 선택하고, 4·5레벨에 선택한 효과가 강화됩니다."));
             Assert.That(RectNamed(presenter, "Reel Window 0").anchoredPosition.y, Is.EqualTo(126f));
-            Assert.That(presenter.PotentialRowY(0), Is.EqualTo(-32f));
-            Assert.That(presenter.PotentialRowY(1), Is.EqualTo(-160f));
-            Assert.That(presenter.PotentialRowY(2), Is.EqualTo(-288f));
-            Assert.That(RectNamed(presenter, "Confirm Result").anchoredPosition.y, Is.EqualTo(-385f));
+            Assert.That(presenter.PotentialRowY(0), Is.EqualTo(-76f));
+            Assert.That(presenter.PotentialRowY(1), Is.EqualTo(-246f));
+            Assert.That(presenter.PotentialRowY(2), Is.EqualTo(-374f));
+            Assert.That(RectNamed(presenter, "Confirm Result").anchoredPosition.y, Is.EqualTo(-478f));
             Object.DestroyImmediate(presenter.gameObject);
         }
 
@@ -97,7 +97,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextValue(RectNamed(presenter, "Rarity Seal Label")), Is.EqualTo("최대"));
             var growth = RectNamed(presenter, "Growth Summary Row");
             Assert.That(growth.gameObject.activeSelf, Is.True);
-            Assert.That(TextValue(growth), Does.Contain("성장 방식"));
+            Assert.That(TextValue(growth), Does.Contain("진화 상태"));
             Assert.That(TextValue(growth), Does.Contain("선택 전"));
             Assert.That(TextColor(growth).grayscale, Is.LessThan(.5f));
 
@@ -259,13 +259,39 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-1").enabled, Is.False);
             }
             Assert.That(TextValue(RectNamed(presenter, "Affix Summary Row")),
-                Is.EqualTo("누적 추가옵션\nDamage +24%"));
+                Is.EqualTo("누적 추가옵션\n[등급 미상] Damage +24%"));
             Assert.That(TextValue(RectNamed(presenter, "Growth Summary Row")),
-                Is.EqualTo("성장 방식\n빙무 · 선택"));
+                Is.EqualTo("진화 상태\n빙무 · 선택"));
             Assert.That(TextValue(RectNamed(presenter, "Potential Summary Row")),
-                Is.EqualTo("잠재 능력\n독니"));
+                Is.EqualTo("해금된 잠재 능력\n독니"));
             Assert.That(TextColor(RectNamed(presenter, "Growth Summary Row")).grayscale, Is.LessThan(.5f));
 
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void WeaponDetailListsEachAffixGradeAndRunCombatTotals()
+        {
+            var presenter = new GameObject("Weapon Detail Statistics Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.ShowDetails(new WeaponSlotView(
+                WeaponId.GakgungShot.Value, "각궁", 4, null,
+                "피해량 +19% · 재사용 대기시간 -9%",
+                generalAffixRolls: new[]
+                {
+                    new WeaponAffixRoll(WeaponAffixStat.Damage, WeaponAffixTier.Standard, 19d),
+                    new WeaponAffixRoll(WeaponAffixStat.Cooldown, WeaponAffixTier.High, -9d)
+                },
+                runDamage: 128450,
+                runKills: 237));
+
+            Assert.That(TextValue(RectNamed(presenter, "Weapon Run Statistics")),
+                Is.EqualTo("누적 피해 128,450   ·   처치 237"));
+            var affixRows = TextValue(RectNamed(presenter, "Affix Summary Row"));
+            Assert.That(affixRows, Does.Contain("[일반] 피해량 +19%"));
+            Assert.That(affixRows, Does.Contain("[고급] 재사용 대기시간 -9%"));
+            Assert.That(affixRows.Split('\n'), Has.Length.GreaterThanOrEqualTo(3));
             Object.DestroyImmediate(presenter.gameObject);
         }
 
@@ -281,7 +307,7 @@ namespace JoseonHunter.Tests.PlayMode
                 nextLegacyMilestone: "최종 효과 적용 중"));
 
             Assert.That(TextValue(RectNamed(presenter, "Growth Summary Row")),
-                Is.EqualTo("성장 방식\n관일 · 최종 효과 완성"));
+                Is.EqualTo("진화 상태\n관일 · 최종 효과 완성"));
             Object.DestroyImmediate(presenter.gameObject);
         }
 

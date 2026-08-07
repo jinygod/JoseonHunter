@@ -59,6 +59,17 @@ namespace JoseonHunter.Domain.Save
                 return new Progression.ProgressionResult(true, Progression.ProgressionError.None);
             });
         }
+        public TransactionResult SaveAudioSettings(float musicVolume, float soundEffectVolume)
+        {
+            return Apply(copy =>
+            {
+                copy.MusicVolume = Math.Max(0f, Math.Min(1f, musicVolume));
+                copy.SoundEffectVolume = Math.Max(0f, Math.Min(1f, soundEffectVolume));
+                copy.AudioVolume = copy.SoundEffectVolume;
+                copy.HasSplitAudioSettings = true;
+                return new Progression.ProgressionResult(true, Progression.ProgressionError.None);
+            });
+        }
         public TransactionResult CommitRun(Progression.RunSettlement settlement)
         {
             return Apply(copy =>

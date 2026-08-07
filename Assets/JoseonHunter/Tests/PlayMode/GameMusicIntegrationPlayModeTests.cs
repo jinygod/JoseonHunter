@@ -17,6 +17,9 @@ namespace JoseonHunter.Tests.PlayMode
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            if (MetaGameSession.Current != null)
+                Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
             yield return null;

@@ -1,6 +1,7 @@
 using JoseonHunter.Runtime.Meta;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.Audio;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Audio;
 using TMPro;
 using UnityEngine;
@@ -17,6 +18,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private TMP_Text accountLevelText;
         private TMP_Text accountExperienceText;
         private Image accountExperienceFill;
+        private GameObject settingsOverlay;
+        private AudioSettingsPresenter audioSettings;
         private RectTransform safeArea;
         private Rect lastSafeArea;
 
@@ -41,6 +44,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             {
                 safeArea = transform.Find("Safe Area") as RectTransform;
                 EnsureAccountHeader();
+                EnsureSettingsShell();
                 return;
             }
             var canvas = GetComponent<Canvas>() ?? gameObject.AddComponent<Canvas>();
@@ -76,9 +80,9 @@ namespace JoseonHunter.Presentation.UI.Lobby
             coinText.color = LobbyUiFactory.Gold;
             var coinIcon = LobbyUiFactory.Image("Coin Icon", header.transform, Color.white);
             coinIcon.preserveAspect = true;
-            LobbyUiFactory.Anchor(coinIcon.rectTransform, new Vector2(.72f, .23f), new Vector2(.80f, .77f),
+            LobbyUiFactory.Anchor(coinIcon.rectTransform, new Vector2(.69f, .23f), new Vector2(.76f, .77f),
                 Vector2.zero, Vector2.zero);
-            LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.80f, .1f), new Vector2(.96f, .9f),
+            LobbyUiFactory.Anchor(coinText.rectTransform, new Vector2(.76f, .1f), new Vector2(.89f, .9f),
                 Vector2.zero, Vector2.zero);
             EnsureAccountHeader();
 
@@ -112,6 +116,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 research.gameObject, patrol.gameObject, training.gameObject,
                 researchButton, patrolButton, trainingButton);
 
+            EnsureSettingsShell();
             EnsureEventSystem();
         }
 
@@ -133,7 +138,81 @@ namespace JoseonHunter.Presentation.UI.Lobby
             foreach (var research in GetComponentsInChildren<WeaponResearchPresenter>(true)) research.Initialize(session, RefreshHeader);
             foreach (var patrol in GetComponentsInChildren<PatrolPresenter>(true)) patrol.Initialize(session, RefreshHeader);
             foreach (var training in GetComponentsInChildren<CommonTrainingPresenter>(true)) training.Initialize(session, RefreshHeader);
+            if (audioSettings != null) audioSettings.Initialize(session, true);
+            else AudioSettingsPresenter.ApplySavedVolumes(session);
             RefreshHeader();
+        }
+
+        private void EnsureSettingsShell()
+        {
+            var header = transform.Find("Safe Area/Header");
+            if (header == null || safeArea == null) return;
+            var existingButton = header.Find("Settings Button")?.GetComponent<Button>();
+            var settingsButton = existingButton ?? LobbyUiFactory.Button(
+                "Settings Button", header, string.Empty, 18f, LobbyUiFactory.Brown, LobbyUiFactory.Gold);
+            LobbyUiFactory.Anchor(settingsButton.GetComponent<RectTransform>(),
+                new Vector2(.905f, .13f), new Vector2(.975f, .87f), Vector2.zero, Vector2.zero);
+            if (existingButton == null)
+            {
+                AddGearIcon(settingsButton.transform);
+                settingsButton.onClick.AddListener(OpenSettings);
+            }
+
+            var existingOverlay = safeArea.Find("Audio Settings Overlay");
+            if (existingOverlay != null)
+            {
+                settingsOverlay = existingOverlay.gameObject;
+                audioSettings = settingsOverlay.GetComponentInChildren<AudioSettingsPresenter>(true);
+                settingsOverlay.transform.SetAsLastSibling();
+                return;
+            }
+
+            var overlay = LobbyUiFactory.Image("Audio Settings Overlay", safeArea,
+                new Color(.01f, .012f, .02f, .88f), true);
+            LobbyUiFactory.Stretch(overlay.rectTransform);
+            settingsOverlay = overlay.gameObject;
+            var panel = LobbyUiFactory.Image("Audio Settings Panel", overlay.transform, LobbyUiFactory.HanjiLight, true);
+            LobbyUiFactory.Anchor(panel.rectTransform, new Vector2(.08f, .31f), new Vector2(.92f, .69f),
+                Vector2.zero, Vector2.zero);
+            var content = LobbyUiFactory.Rect("Audio Settings Content", panel.transform);
+            LobbyUiFactory.Stretch(content, 20f, 20f, 20f, 20f);
+            audioSettings = content.gameObject.AddComponent<AudioSettingsPresenter>();
+            audioSettings.CloseRequested += CloseSettings;
+            settingsOverlay.SetActive(false);
+            settingsOverlay.transform.SetAsLastSibling();
+        }
+
+        private void OpenSettings()
+        {
+            if (settingsOverlay == null) return;
+            settingsOverlay.transform.SetAsLastSibling();
+            settingsOverlay.SetActive(true);
+        }
+
+        private void CloseSettings()
+        {
+            if (settingsOverlay != null) settingsOverlay.SetActive(false);
+        }
+
+        private static void AddGearIcon(Transform parent)
+        {
+            for (var index = 0; index < 8; index++)
+            {
+                var tooth = LobbyUiFactory.Image("Gear Tooth " + index, parent, LobbyUiFactory.Gold);
+                var angle = index * 45f;
+                var radians = angle * Mathf.Deg2Rad;
+                var rect = tooth.rectTransform;
+                rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+                rect.anchoredPosition = new Vector2(Mathf.Cos(radians), Mathf.Sin(radians)) * 17f;
+                rect.sizeDelta = index % 2 == 0 ? new Vector2(10f, 16f) : new Vector2(9f, 14f);
+                rect.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
+            var hub = LobbyUiFactory.Image("Gear Hub", parent, LobbyUiFactory.Gold);
+            hub.rectTransform.anchorMin = hub.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            hub.rectTransform.sizeDelta = new Vector2(28f, 28f);
+            var hole = LobbyUiFactory.Image("Gear Hole", hub.transform, LobbyUiFactory.Brown);
+            hole.rectTransform.anchorMin = hole.rectTransform.anchorMax = new Vector2(.5f, .5f);
+            hole.rectTransform.sizeDelta = new Vector2(12f, 12f);
         }
 
         private void RefreshHeader()

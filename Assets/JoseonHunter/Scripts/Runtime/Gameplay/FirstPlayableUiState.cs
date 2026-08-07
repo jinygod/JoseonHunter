@@ -109,7 +109,7 @@ namespace JoseonHunter.Runtime.Gameplay
             string generalAffixSummary = null, IEnumerable<WeaponPotentialId> potentialIds = null,
             IEnumerable<WeaponAffixTier> generalAffixTiers = null, string behavior = null,
             string legacyName = null, string legacyStageName = null, string nextLegacyMilestone = null,
-            IEnumerable<WeaponAffixRoll> generalAffixRolls = null)
+            IEnumerable<WeaponAffixRoll> generalAffixRolls = null, long runDamage = 0L, int runKills = 0)
         {
             Id = id; DisplayName = displayName; Level = level; Icon = icon;
             GeneralAffixSummary = generalAffixSummary ?? string.Empty;
@@ -120,6 +120,8 @@ namespace JoseonHunter.Runtime.Gameplay
             PotentialIds = Array.AsReadOnly((potentialIds ?? Array.Empty<WeaponPotentialId>()).ToArray());
             GeneralAffixTiers = Array.AsReadOnly((generalAffixTiers ?? Array.Empty<WeaponAffixTier>()).ToArray());
             GeneralAffixRolls = Array.AsReadOnly((generalAffixRolls ?? Array.Empty<WeaponAffixRoll>()).ToArray());
+            RunDamage = Math.Max(0L, runDamage);
+            RunKills = Math.Max(0, runKills);
         }
 
         public string Id { get; }
@@ -134,6 +136,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public IReadOnlyList<WeaponPotentialId> PotentialIds { get; }
         public IReadOnlyList<WeaponAffixTier> GeneralAffixTiers { get; }
         public IReadOnlyList<WeaponAffixRoll> GeneralAffixRolls { get; }
+        public long RunDamage { get; }
+        public int RunKills { get; }
     }
 
     public sealed class UpgradeChoiceState

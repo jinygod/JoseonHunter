@@ -110,5 +110,20 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(director.Request(GameMusicRole.None, .1f), Is.False);
             Assert.That(director.CurrentRole, Is.EqualTo(GameMusicRole.Lobby));
         }
+
+        [UnityTest]
+        public IEnumerator MusicMasterVolumeImmediatelyScalesActiveTrack()
+        {
+            var director = GameMusicDirector.Instance;
+            director.Request(GameMusicRole.Lobby, 0f);
+            yield return null;
+            var source = director.GetComponents<AudioSource>().Single(candidate => candidate.isPlaying);
+            var authoredVolume = source.volume;
+
+            director.SetMasterVolume(.4f);
+
+            Assert.That(director.MasterVolume, Is.EqualTo(.4f).Within(.001f));
+            Assert.That(source.volume, Is.EqualTo(authoredVolume * .4f).Within(.001f));
+        }
     }
 }

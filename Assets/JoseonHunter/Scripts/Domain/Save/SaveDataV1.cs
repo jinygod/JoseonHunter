@@ -114,7 +114,11 @@ namespace JoseonHunter.Domain.Save
         public Dictionary<string, int> BestPatrolResults = new Dictionary<string, int>();
         public bool TutorialCompleted;
         public bool AccessibilityEnabled;
+        // Retained as the migration source for saves written before split audio controls.
         public float AudioVolume = 1f;
+        public float MusicVolume = 1f;
+        public float SoundEffectVolume = 1f;
+        public bool HasSplitAudioSettings = true;
         public List<string> FirstSolutionFlags = new List<string>();
         public List<string> SelectableInvestigationPolicies = new List<string>();
         public string SelectedInvestigationPolicy;
@@ -174,6 +178,8 @@ namespace JoseonHunter.Domain.Save
                 SelectedStageId = SelectedStageId, SelectedStageDifficulty = SelectedStageDifficulty,
                 StageClearRecords = StageClearRecords.ConvertAll(record => record.Copy()),
                 TutorialCompleted = TutorialCompleted, AccessibilityEnabled = AccessibilityEnabled, AudioVolume = AudioVolume,
+                MusicVolume = MusicVolume, SoundEffectVolume = SoundEffectVolume,
+                HasSplitAudioSettings = HasSplitAudioSettings,
                 EquipmentLevels = new Dictionary<string, int>(EquipmentLevels), EquipmentQualities = new Dictionary<string, int>(EquipmentQualities),
                 EquipmentFragments = new Dictionary<string, int>(EquipmentFragments), EvolutionNodeRanks = new Dictionary<string, int>(EvolutionNodeRanks), EvolutionSpentCoins = new Dictionary<string, int>(EvolutionSpentCoins),
                 BestPatrolResults = new Dictionary<string, int>(BestPatrolResults), InvestigationClues = new List<string>(InvestigationClues),
@@ -197,7 +203,9 @@ namespace JoseonHunter.Domain.Save
             EvolutionNodeRanks = copy.EvolutionNodeRanks; EvolutionSpentCoins = copy.EvolutionSpentCoins; InvestigationClues = copy.InvestigationClues; ClaimedInvestigationMilestones = copy.ClaimedInvestigationMilestones;
             MonsterCompendiumEntries = copy.MonsterCompendiumEntries; UnlockedHeroes = copy.UnlockedHeroes; UnlockedDifficulties = copy.UnlockedDifficulties;
             UnlockedRecipes = copy.UnlockedRecipes; UnlockedAppearances = copy.UnlockedAppearances; BestPatrolResults = copy.BestPatrolResults;
-            TutorialCompleted = copy.TutorialCompleted; AccessibilityEnabled = copy.AccessibilityEnabled; AudioVolume = copy.AudioVolume; FirstSolutionFlags = copy.FirstSolutionFlags; SelectableInvestigationPolicies = copy.SelectableInvestigationPolicies; SelectedInvestigationPolicy = copy.SelectedInvestigationPolicy;
+            TutorialCompleted = copy.TutorialCompleted; AccessibilityEnabled = copy.AccessibilityEnabled; AudioVolume = copy.AudioVolume;
+            MusicVolume = copy.MusicVolume; SoundEffectVolume = copy.SoundEffectVolume; HasSplitAudioSettings = copy.HasSplitAudioSettings;
+            FirstSolutionFlags = copy.FirstSolutionFlags; SelectableInvestigationPolicies = copy.SelectableInvestigationPolicies; SelectedInvestigationPolicy = copy.SelectedInvestigationPolicy;
             WeaponMasteryPoints = copy.WeaponMasteryPoints; UnlockedWeaponStyles = copy.UnlockedWeaponStyles;
             CommonTrainingRanks = copy.CommonTrainingRanks; CommonTrainingSpentCoins = copy.CommonTrainingSpentCoins;
             PatrolLoadouts = copy.PatrolLoadouts; ActivePatrolLoadoutIndex = copy.ActivePatrolLoadoutIndex;

@@ -1,6 +1,7 @@
 using System.Collections;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI;
+using JoseonHunter.Presentation.Audio;
 using JoseonHunter.Runtime.Gameplay;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
@@ -19,6 +20,8 @@ namespace JoseonHunter.Tests.PlayMode
         {
             Time.timeScale = 1f;
             if (MetaGameSession.Current != null) Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+            if (GameAudioDirector.Instance != null) Object.DestroyImmediate(GameAudioDirector.Instance.gameObject);
+            if (GameMusicDirector.Instance != null) Object.DestroyImmediate(GameMusicDirector.Instance.gameObject);
         }
 
         [Test]
@@ -44,6 +47,25 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(System.Array.Find(root.GetComponentsInChildren<RectTransform>(true),
                 candidate => candidate.name == "Return Button"), Is.Null);
             Assert.That(AllText(root), Does.Not.Match("HP|XP|COIN|KILLS|BOSS|DREADFUL"));
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void CombatHudShowsElapsedClockAndVisualHealthAndExperienceRatios()
+        {
+            var root = new GameObject("HUD Ratio Test");
+            var presenter = root.AddComponent<CombatHudPresenter>();
+            presenter.Render(new FirstPlayableUiState(26, 12, 29, 17, 1057,
+                553f, 900f, 39f, 122f, false, false, 0f, 0f,
+                System.Array.Empty<WeaponSlotView>()));
+
+            Assert.That(TextNamed(root, "Timer"), Is.EqualTo("경과 09:13"));
+            Assert.That(ImageNamed(root, "Health Fill").rectTransform.anchorMax.x,
+                Is.EqualTo(39f / 122f).Within(.001f));
+            Assert.That(ImageNamed(root, "Experience Fill").rectTransform.anchorMax.x,
+                Is.EqualTo(12f / 29f).Within(.001f));
+            Assert.That(ImageNamed(root, "Health Fill Background").color.a, Is.GreaterThan(0f));
+            Assert.That(ImageNamed(root, "Experience Fill Background").color.a, Is.GreaterThan(0f));
             Object.DestroyImmediate(root);
         }
 
@@ -154,6 +176,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(AllText(root), Does.Contain("계속하기"));
             Assert.That(AllText(root), Does.Contain("로비로 돌아가기"));
             Assert.That(ImageNamed(root, "Abandon Panel").color.a, Is.EqualTo(1f));
+            Assert.That(SliderNamed(root, "Music Volume Slider"), Is.Not.Null);
+            Assert.That(SliderNamed(root, "Sound Effect Volume Slider"), Is.Not.Null);
             System.Array.Find(root.GetComponentsInChildren<Button>(true),
                 candidate => candidate.name == "Continue Combat Button").onClick.Invoke();
             System.Array.Find(root.GetComponentsInChildren<Button>(true),
@@ -162,6 +186,9 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(confirmed, Is.EqualTo(1));
             Object.DestroyImmediate(root);
         }
+
+        private static Slider SliderNamed(GameObject root, string name) =>
+            System.Array.Find(root.GetComponentsInChildren<Slider>(true), candidate => candidate.name == name);
 
         [UnityTest]
         public IEnumerator Support_level_up_resumes_combat_then_sequences_the_queue_after_grace()
