@@ -30,9 +30,10 @@ namespace JoseonHunter.Domain.Runs
 
     public sealed class WaveSpawnDirector
     {
+        private readonly StageWaveProfile profile;
         private readonly int seed;
         private Random random;
-        private RunPhase? scheduledPhase;
+        private int scheduledWaveIndex;
         private float nextPackSeconds;
         private int packOrdinal;
         private int nextIntroductionIndex;
@@ -40,8 +41,13 @@ namespace JoseonHunter.Domain.Runs
         private int specialOrdinal;
         private float lastSpecialSpawnSeconds;
 
-        public WaveSpawnDirector(int seed)
+        public WaveSpawnDirector(int seed) : this(WaveSchedule.Profile, seed)
         {
+        }
+
+        public WaveSpawnDirector(StageWaveProfile profile, int seed)
+        {
+            this.profile = profile ?? throw new ArgumentNullException(nameof(profile));
             this.seed = seed;
             Reset();
         }
@@ -49,7 +55,7 @@ namespace JoseonHunter.Domain.Runs
         public void Reset()
         {
             random = new Random(seed);
-            scheduledPhase = null;
+            scheduledWaveIndex = -1;
             nextPackSeconds = float.PositiveInfinity;
             packOrdinal = 0;
             nextIntroductionIndex = 0;
@@ -60,12 +66,12 @@ namespace JoseonHunter.Domain.Runs
 
         public string SelectNormal(RunPhase phase)
         {
-            return SelectWeighted(WaveSchedule.For(phase).WeightedContent);
+            return SelectWeighted(profile.For(phase).WeightedContent);
         }
 
         public string SelectNormal(float elapsedSeconds)
         {
-            return SelectWeighted(WaveSchedule.NormalEntriesAt(elapsedSeconds));
+            return SelectWeighted(profile.NormalEntriesAt(elapsedSeconds));
         }
 
         private string SelectWeighted(System.Collections.Generic.IReadOnlyList<WeightedEnemyEntry> entries)
@@ -91,16 +97,16 @@ namespace JoseonHunter.Domain.Runs
                 throw new ArgumentOutOfRangeException(nameof(elapsedSeconds));
             if (availableSlots <= 0) return false;
 
-            var phase = RunClock.PhaseAt(elapsedSeconds);
-            var definition = WaveSchedule.For(phase);
+            var waveIndex = profile.WindowIndexAt(elapsedSeconds);
+            var definition = profile.WaveAt(elapsedSeconds);
             if (!definition.Pack.HasValue) return false;
             var pack = definition.Pack.Value;
             if (availableSlots < pack.MinimumSize) return false;
 
-            if (scheduledPhase != phase)
+            if (scheduledWaveIndex != waveIndex)
             {
-                scheduledPhase = phase;
-                nextPackSeconds = PhaseStartSeconds(phase) + NextInterval(pack);
+                scheduledWaveIndex = waveIndex;
+                nextPackSeconds = profile.WindowStartSecondsAt(elapsedSeconds) + NextInterval(pack);
                 packOrdinal = 0;
             }
 
@@ -118,8 +124,8 @@ namespace JoseonHunter.Domain.Runs
         {
             plan = default;
             ValidateElapsed(elapsedSeconds);
-            if (nextIntroductionIndex >= WaveSchedule.Introductions.Count) return false;
-            var introduction = WaveSchedule.Introductions[nextIntroductionIndex];
+            if (nextIntroductionIndex >= profile.Introductions.Count) return false;
+            var introduction = profile.Introductions[nextIntroductionIndex];
             if (elapsedSeconds < introduction.AtSeconds || availableSlots < introduction.SpawnCount) return false;
 
             nextIntroductionIndex++;
@@ -140,7 +146,7 @@ namespace JoseonHunter.Domain.Runs
             if (introducedSpecialCount == 0 || specialCap <= 0 || livingSpecialCount >= specialCap ||
                 elapsedSeconds - lastSpecialSpawnSeconds < 8f) return false;
 
-            contentId = WaveSchedule.Introductions[specialOrdinal++ % introducedSpecialCount].ContentId;
+            contentId = profile.Introductions[specialOrdinal++ % introducedSpecialCount].ContentId;
             lastSpecialSpawnSeconds = elapsedSeconds;
             return true;
         }
@@ -148,18 +154,6 @@ namespace JoseonHunter.Domain.Runs
         private float NextInterval(in WavePackDefinition pack) =>
             pack.MinimumIntervalSeconds +
             (float)random.NextDouble() * (pack.MaximumIntervalSeconds - pack.MinimumIntervalSeconds);
-
-        private static float PhaseStartSeconds(RunPhase phase) => phase switch
-        {
-            RunPhase.WaveOne => 0f,
-            RunPhase.WaveTwo => 120f,
-            RunPhase.WaveThree => 300f,
-            RunPhase.Peak => 600f,
-            RunPhase.BossWarning => 840f,
-            RunPhase.Boss => 900f,
-            RunPhase.Expired => 960f,
-            _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null)
-        };
 
         private static void ValidateElapsed(float elapsedSeconds)
         {

@@ -34,8 +34,9 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void SameSeedProducesSameNormalAndPackSequence()
         {
-            var left = new WaveSpawnDirector(1701);
-            var right = new WaveSpawnDirector(1701);
+            var profile = StageCombatCatalog.For(StageId.GwigokField).Waves;
+            var left = new WaveSpawnDirector(profile, 1701);
+            var right = new WaveSpawnDirector(profile, 1701);
 
             var leftNormals = Enumerable.Range(0, 32)
                 .Select(_ => left.SelectNormal(RunPhase.WaveTwo))
@@ -50,6 +51,16 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(leftPack.ContentId, Is.EqualTo(rightPack.ContentId));
             Assert.That(leftPack.Count, Is.EqualTo(rightPack.Count));
             Assert.That(leftPack.Side, Is.EqualTo(rightPack.Side));
+        }
+
+        [Test]
+        public void InjectedStageProfileControlsNormalSelection()
+        {
+            var profile = StageCombatCatalog.For(StageId.DokkaebiPass).Waves;
+            var director = new WaveSpawnDirector(profile, 1701);
+
+            Assert.That(Enumerable.Range(0, 16).Select(_ => director.SelectNormal(20f)),
+                Is.All.EqualTo("club_dokkaebi"));
         }
 
         [Test]

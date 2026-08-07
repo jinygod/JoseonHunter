@@ -144,6 +144,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private StagePacingTimeline stageTimeline;
         private StageSelection activeStageSelection =
             new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
+        private StageCombatDefinition activeStageCombat =
+            StageCombatCatalog.For(StageId.GwigokField);
         private StageDifficultyProfile activeDifficultyProfile =
             StageDifficultyProfile.For(StageDifficulty.Normal);
         private int processedStageMilestones;
@@ -222,7 +224,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public float LastSpawnHealthForTests { get; private set; }
         public float LastSpawnContactDamageForTests { get; private set; }
         public int ActiveEnemyCapForTests => activeDifficultyProfile.ScaleActiveCap(
-            WaveSchedule.For(RunClock.PhaseAt(elapsed)).ActiveCap);
+            activeStageCombat.Waves.WaveAt(elapsed).ActiveCap);
         public float NextSpawnIntervalForTests => activeDifficultyProfile.ScaleSpawnInterval(
             EnemyDensityProfile.SpawnInterval(stageTimeline.Sample(elapsed)));
         public bool RunEndedForTests => runEnded;
@@ -988,6 +990,7 @@ namespace JoseonHunter.Runtime.Gameplay
             activeStageSelection = metaSession != null
                 ? metaSession.ActiveStageSelection
                 : new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
+            activeStageCombat = StageCombatCatalog.For(activeStageSelection.StageId);
             activeDifficultyProfile = StageDifficultyProfile.For(activeStageSelection.Difficulty);
             var startingWeapon = patrolLoadout != null
                 ? patrolLoadout.StartingWeapon
@@ -1021,7 +1024,7 @@ namespace JoseonHunter.Runtime.Gameplay
             stageTimeline = StagePacingTimeline.ForDuration(PrototypeDurationSeconds);
             enemySpriteRoster = new EnemySpriteRoster(enemySprite, enemySpriteAlt, enemySprites,
                 CombatChoiceVisualCatalog.LoadDefault());
-            waveSpawnDirector = new WaveSpawnDirector(RunSpawnSeed);
+            waveSpawnDirector = new WaveSpawnDirector(activeStageCombat.Waves, RunSpawnSeed);
             processedStageMilestones = 0;
             finalBossWarning = false;
             waveAnnouncement = string.Empty;
@@ -1191,7 +1194,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (suppressAutomaticSpawningForTests) return;
 #endif
             var phase = RunClock.PhaseAt(elapsed);
-            var wave = WaveSchedule.For(phase);
+            var wave = activeStageCombat.Waves.WaveAt(elapsed);
             if (phase == RunPhase.BossWarning || phase == RunPhase.Boss || phase == RunPhase.Expired)
                 return;
 
@@ -1684,8 +1687,7 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             using (FirstPlayableProfilerMarkers.Spawn.Auto())
             {
-                var phase = RunClock.PhaseAt(elapsed);
-                var activeCap = WaveSchedule.For(phase).ActiveCap;
+                var activeCap = activeStageCombat.Waves.WaveAt(elapsed).ActiveCap;
                 var activeCount = ActiveCombatEnemyCount();
                 for (var index = 0; index < count && activeCount < activeCap; index++)
                 {
@@ -2093,8 +2095,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var splitResult = default(SpecialEnemyMotionResult);
             if (enemy.ArchetypeProfile != null && enemy.ArchetypeProfile.Archetype == EnemyArchetype.SplittingRat)
             {
-                var phase = RunClock.PhaseAt(elapsed);
-                var activeCap = WaveSchedule.For(phase).ActiveCap;
+                var activeCap = activeStageCombat.Waves.WaveAt(elapsed).ActiveCap;
                 splitResult = SpecialEnemyMotion.Tick(EnemyArchetype.SplittingRat, ref enemy.SpecialMotion, 0f,
                     Vector2.zero, false, false, true, Mathf.Max(0, ActiveCombatEnemyCount() - 1), activeCap);
             }
