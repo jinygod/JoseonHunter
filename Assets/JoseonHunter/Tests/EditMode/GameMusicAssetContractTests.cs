@@ -13,6 +13,8 @@ namespace JoseonHunter.Tests.EditMode
         [TestCase(Root + "/gwigok_early_asianoriental.ogg")]
         [TestCase(Root + "/gwigok_mid_frozen_desert.ogg")]
         [TestCase(Root + "/gwigok_late_hope.ogg")]
+        [TestCase(Root + "/dokkaebi_pass_oriented.ogg")]
+        [TestCase(Root + "/moonlit_tomb_creepy_loop.ogg")]
         [TestCase(Root + "/midboss_determined_pursuit.ogg")]
         [TestCase(Root + "/finalboss_epic_battle.ogg")]
         public void RequiredMusicUsesTheStreamingStereoProfile(string path)
@@ -34,10 +36,10 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void RuntimeMusicFolderContainsOnlyTheSixApprovedClips()
+        public void RuntimeMusicFolderContainsOnlyTheEightApprovedClips()
         {
             var guids = AssetDatabase.FindAssets("t:AudioClip", new[] { Root });
-            Assert.That(guids, Has.Length.EqualTo(6));
+            Assert.That(guids, Has.Length.EqualTo(8));
             foreach (var guid in guids)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);

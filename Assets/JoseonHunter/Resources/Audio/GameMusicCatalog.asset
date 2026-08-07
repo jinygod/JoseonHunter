@@ -25,6 +25,12 @@ MonoBehaviour:
   - Role: 4
     Clip: {fileID: 8300000, guid: e7c6d3f459d873d4fa382725b03a9fea, type: 3}
     Volume: 0.42
+  - Role: 7
+    Clip: {fileID: 8300000, guid: d867b3cb396ea8a4e9c47e56669997b1, type: 3}
+    Volume: 0.4
+  - Role: 8
+    Clip: {fileID: 8300000, guid: 2cdb5dfd11fbb6d44b83e9046703baa9, type: 3}
+    Volume: 0.38
   - Role: 5
     Clip: {fileID: 8300000, guid: 842a916240a8d6846aa6b1111f038566, type: 3}
     Volume: 0.44

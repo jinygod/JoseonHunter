@@ -115,6 +115,8 @@
 | `Audio/Music/CC0/gwigok_late_hope.ogg` | `hope_orchestral_battle_music_bpm165.ogg` · MintoDog | 귀곡 들판 10~15분 | `1615903236286AF59D14B4D71DA3FC2518A3091ECDD8F162A50215B9B3D0F320` |
 | `Audio/Music/CC0/midboss_determined_pursuit.ogg` | `determined_pursuit_loop.wav` · Emma_MA | 중간보스 | `E4F3BE098B50213B56A60AEFE60FFFAE79CD9F7C9008088F93C187EF1BBC856B` |
 | `Audio/Music/CC0/finalboss_epic_battle.ogg` | `Juhani Junkala - Epic Boss Battle [Seamlessly Looping].wav` · SubspaceAudio/Juhani Junkala | 최종보스 | `35F75B4381DFBB053992876F7DFC567D9FD959D61B73954D5B1CD519753E7DF1` |
+| `Audio/Music/CC0/dokkaebi_pass_oriented.ogg` | `Oriented.ogg` · yd | 도깨비 고갯길 | `D088A0E4D768ADEDD4228B4C5C78A2018972721AA03DEEE3A5B6ECB866E2D3A2` |
+| `Audio/Music/CC0/moonlit_tomb_creepy_loop.ogg` | `creepyloop-v2.ogg` · epb9000 | 월식 고분 | `609BD62E824D77DF3D35AF26064BFD824CB6FCE95CB9637C467FB80B717D6050` |
 
 원본 페이지:
 
@@ -124,3 +126,5 @@
 - https://opengameart.org/content/hopeorchestral-battle-music
 - https://opengameart.org/content/determined-pursuit-epic-orchestra-loop
 - https://opengameart.org/content/boss-battle-music
+- https://opengameart.org/content/oriented
+- https://opengameart.org/content/creepy-ambient-loop

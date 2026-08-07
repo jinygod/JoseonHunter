@@ -8,7 +8,7 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class GameMusicCatalogTests
     {
         [Test]
-        public void DefaultCatalogResolvesSixUniqueMusicRoles()
+        public void DefaultCatalogResolvesEightUniqueMusicRoles()
         {
             var catalog = GameMusicCatalogAsset.LoadDefault();
             Assert.That(catalog, Is.Not.Null);
@@ -19,6 +19,8 @@ namespace JoseonHunter.Tests.EditMode
                          GameMusicRole.CombatEarly,
                          GameMusicRole.CombatMid,
                          GameMusicRole.CombatLate,
+                         GameMusicRole.DokkaebiPass,
+                         GameMusicRole.MoonlitTomb,
                          GameMusicRole.MidBoss,
                          GameMusicRole.FinalBoss
                      })

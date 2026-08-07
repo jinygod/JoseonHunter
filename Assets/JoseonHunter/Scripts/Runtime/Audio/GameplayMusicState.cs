@@ -1,3 +1,5 @@
+using JoseonHunter.Domain.Runs;
+
 namespace JoseonHunter.Runtime.Audio
 {
     public sealed class GameplayMusicState
@@ -6,6 +8,7 @@ namespace JoseonHunter.Runtime.Audio
         private int activeMidBosses;
         private bool finalBossActive;
         private bool ended = true;
+        private StageId stageId = StageId.GwigokField;
 
         public GameMusicRole CurrentRole
         {
@@ -14,12 +17,17 @@ namespace JoseonHunter.Runtime.Audio
                 if (ended) return GameMusicRole.None;
                 if (finalBossActive) return GameMusicRole.FinalBoss;
                 if (activeMidBosses > 0) return GameMusicRole.MidBoss;
+                if (stageId.Equals(StageId.DokkaebiPass)) return GameMusicRole.DokkaebiPass;
+                if (stageId.Equals(StageId.MoonlitTomb)) return GameMusicRole.MoonlitTomb;
                 return GameMusicPolicy.RoleFor(phase);
             }
         }
 
-        public void Reset()
+        public void Reset() => Reset(StageId.GwigokField);
+
+        public void Reset(StageId nextStageId)
         {
+            stageId = nextStageId;
             phase = CombatMusicPhase.Early;
             activeMidBosses = 0;
             finalBossActive = false;

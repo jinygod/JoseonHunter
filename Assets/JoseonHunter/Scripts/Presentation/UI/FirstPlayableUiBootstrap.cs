@@ -395,7 +395,9 @@ namespace JoseonHunter.Presentation.UI
 
         private void ResetGameplayMusic()
         {
-            gameplayMusic.Reset();
+            gameplayMusic.Reset(boundController != null
+                ? boundController.ActiveStageId
+                : StageId.GwigokField);
             RequestGameplayMusic(.6f);
         }
 
@@ -439,9 +441,19 @@ namespace JoseonHunter.Presentation.UI
         {
             PlayCue(attack switch
             {
-                BossAttackKind.SuppressionSlam => GameAudioCueId.BossSlam,
-                BossAttackKind.BloodCharge => GameAudioCueId.BossCharge,
-                BossAttackKind.SpiritVolley => GameAudioCueId.BossVolley,
+                BossAttackKind.SuppressionSlam or
+                BossAttackKind.ClubSlam or
+                BossAttackKind.ShieldSlam or
+                BossAttackKind.SpiritHands => GameAudioCueId.BossSlam,
+                BossAttackKind.BloodCharge or
+                BossAttackKind.TripleCharge or
+                BossAttackKind.ShieldPush or
+                BossAttackKind.ConeSweep or
+                BossAttackKind.CrescentSweep => GameAudioCueId.BossCharge,
+                BossAttackKind.SpiritVolley or
+                BossAttackKind.Rockfall or
+                BossAttackKind.RadialVolley or
+                BossAttackKind.SequentialCurseCells => GameAudioCueId.BossVolley,
                 _ => GameAudioCueId.None
             });
         }

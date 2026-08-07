@@ -8,7 +8,9 @@ namespace JoseonHunter.Runtime.Audio
         CombatMid = 3,
         CombatLate = 4,
         MidBoss = 5,
-        FinalBoss = 6
+        FinalBoss = 6,
+        DokkaebiPass = 7,
+        MoonlitTomb = 8
     }
 
     public enum CombatMusicPhase

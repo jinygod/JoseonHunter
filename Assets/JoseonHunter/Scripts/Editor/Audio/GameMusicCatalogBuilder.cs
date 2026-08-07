@@ -29,6 +29,8 @@ namespace JoseonHunter.Editor.Audio
                 Entry(GameMusicRole.CombatEarly, "gwigok_early_asianoriental.ogg", .38f),
                 Entry(GameMusicRole.CombatMid, "gwigok_mid_frozen_desert.ogg", .40f),
                 Entry(GameMusicRole.CombatLate, "gwigok_late_hope.ogg", .42f),
+                Entry(GameMusicRole.DokkaebiPass, "dokkaebi_pass_oriented.ogg", .40f),
+                Entry(GameMusicRole.MoonlitTomb, "moonlit_tomb_creepy_loop.ogg", .38f),
                 Entry(GameMusicRole.MidBoss, "midboss_determined_pursuit.ogg", .44f),
                 Entry(GameMusicRole.FinalBoss, "finalboss_epic_battle.ogg", .46f)
             });
@@ -36,6 +38,12 @@ namespace JoseonHunter.Editor.Audio
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("JoseonHunter game music catalog rebuilt.");
+        }
+
+        public static void RebuildFromCommandLine()
+        {
+            Rebuild();
+            EditorApplication.Exit(0);
         }
 
         private static GameMusicCatalogAsset.Entry Entry(GameMusicRole role, string filename, float volume)

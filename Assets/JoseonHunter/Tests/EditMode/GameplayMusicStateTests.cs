@@ -1,3 +1,4 @@
+using JoseonHunter.Domain.Runs;
 using JoseonHunter.Runtime.Audio;
 using NUnit.Framework;
 
@@ -26,6 +27,20 @@ namespace JoseonHunter.Tests.EditMode
 
             state.SetPhase(CombatMusicPhase.Late);
             Assert.That(state.CurrentRole, Is.EqualTo(GameMusicRole.CombatLate));
+        }
+
+        [TestCase("stage_02_dokkaebi_pass", GameMusicRole.DokkaebiPass)]
+        [TestCase("stage_03_moonlit_tomb", GameMusicRole.MoonlitTomb)]
+        public void LaterStagesKeepTheirOwnThemeAcrossNormalPhases(string stageId, GameMusicRole expected)
+        {
+            var state = new GameplayMusicState();
+            state.Reset(new StageId(stageId));
+
+            Assert.That(state.CurrentRole, Is.EqualTo(expected));
+            state.SetPhase(CombatMusicPhase.Mid);
+            Assert.That(state.CurrentRole, Is.EqualTo(expected));
+            state.SetPhase(CombatMusicPhase.Late);
+            Assert.That(state.CurrentRole, Is.EqualTo(expected));
         }
 
         [Test]

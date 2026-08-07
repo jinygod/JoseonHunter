@@ -204,6 +204,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public event Action<CombatMusicPhase> CombatMusicPhaseChanged;
         public event Action MidBossAppeared;
         public event Action MidBossDefeated;
+        public StageId ActiveStageId => activeStageSelection.StageId;
 
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
