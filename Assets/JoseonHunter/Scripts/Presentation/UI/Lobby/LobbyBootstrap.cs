@@ -1,5 +1,7 @@
 using JoseonHunter.Runtime.Meta;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Presentation.Audio;
+using JoseonHunter.Runtime.Audio;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,6 +22,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         private void Awake()
         {
+            GameMusicDirector.EnsureExists();
+            GameMusicDirector.Instance?.Request(GameMusicRole.Lobby, .8f);
             BuildShell();
             GameAudioButtonFeedback.AttachAll(transform);
             Bind(MetaGameSession.EnsureExists());

@@ -11,6 +11,7 @@ using JoseonHunter.Content.Weapons;
 using JoseonHunter.Content;
 using JoseonHunter.Runtime.Combat;
 using JoseonHunter.Runtime.Combat.Weapons;
+using JoseonHunter.Runtime.Audio;
 using JoseonHunter.Runtime.Meta;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -192,6 +193,9 @@ namespace JoseonHunter.Runtime.Gameplay
         public event Action<BossAttackKind> BossAttackExecuted;
         public event Action TreasureAppeared;
         public event Action TreasureOpened;
+        public event Action<CombatMusicPhase> CombatMusicPhaseChanged;
+        public event Action MidBossAppeared;
+        public event Action MidBossDefeated;
 
 #if UNITY_INCLUDE_TESTS
         public IReadOnlyList<UpgradeOffer> CurrentOffers => upgradeOfferData;
@@ -227,6 +231,7 @@ namespace JoseonHunter.Runtime.Gameplay
         public void AdvanceStageForTests(float previousElapsed, float currentElapsed)
         {
             elapsed = Mathf.Clamp(currentElapsed, 0f, PrototypeDurationSeconds);
+            PublishCombatMusicPhaseChange(previousElapsed, elapsed);
             ProcessStageMilestones(previousElapsed, elapsed);
         }
         public void DefeatMidBossesForTests()
@@ -850,6 +855,7 @@ namespace JoseonHunter.Runtime.Gameplay
             sealCooldown = Mathf.Max(0f, sealCooldown - delta);
             magnetMessageTimer = Mathf.Max(0f, magnetMessageTimer - delta);
             waveAnnouncementTimer = Mathf.Max(0f, waveAnnouncementTimer - delta);
+            PublishCombatMusicPhaseChange(previousElapsed, elapsed);
             ProcessStageMilestones(previousElapsed, elapsed);
 
             ReadMovement();
@@ -1601,9 +1607,17 @@ namespace JoseonHunter.Runtime.Gameplay
         private void SpawnMidBoss(int tier)
         {
             SpawnEnemy(false, Mathf.Clamp(tier, 1, 2));
+            MidBossAppeared?.Invoke();
 #if UNITY_INCLUDE_TESTS
             MidBossSpawnCountForTests++;
 #endif
+        }
+
+        private void PublishCombatMusicPhaseChange(float previousElapsed, float currentElapsed)
+        {
+            var previousPhase = GameMusicPolicy.PhaseAt(previousElapsed);
+            var currentPhase = GameMusicPolicy.PhaseAt(currentElapsed);
+            if (previousPhase != currentPhase) CombatMusicPhaseChanged?.Invoke(currentPhase);
         }
 
         private void ProcessStageMilestones(float previousElapsed, float currentElapsed)
@@ -2139,6 +2153,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     deathPosition + (Vector3)(UnityEngine.Random.insideUnitCircle * 0.2f),
                     PickupKind.Magnet,
                     0);
+                MidBossDefeated?.Invoke();
             }
         }
 

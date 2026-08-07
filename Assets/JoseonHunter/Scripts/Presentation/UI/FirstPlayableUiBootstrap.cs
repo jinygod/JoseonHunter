@@ -41,6 +41,7 @@ namespace JoseonHunter.Presentation.UI
         private ProgressionRewardEvent pendingReward;
         private bool hasPendingReward;
         private bool resultWasOpen;
+        private readonly GameplayMusicState gameplayMusic = new GameplayMusicState();
 
         public FirstPlayableController BoundController => boundController;
         public RectTransform SafeAreaContainer => safeAreaContainer;
@@ -233,9 +234,17 @@ namespace JoseonHunter.Presentation.UI
             boundController.BossAttackExecuted += OnBossAttackExecuted;
             boundController.TreasureAppeared += OnTreasureAppeared;
             boundController.TreasureOpened += OnTreasureOpened;
+            boundController.CombatMusicPhaseChanged += OnCombatMusicPhaseChanged;
+            boundController.MidBossAppeared += OnMidBossAppeared;
+            boundController.MidBossDefeated += OnMidBossDefeated;
+            boundController.BossAppeared += OnFinalBossMusicStarted;
+            boundController.BossDefeated += OnGameplayMusicEnded;
+            boundController.PlayerDefeated += OnGameplayMusicEnded;
             boundController.RunReset += CloseUpgradeChoice;
             boundController.RunReset += CloseRewardReveal;
             boundController.RunReset += CloseAbandonWithoutFlowChange;
+            boundController.RunReset += ResetGameplayMusic;
+            ResetGameplayMusic();
         }
 
         private void UnbindController()
@@ -260,9 +269,16 @@ namespace JoseonHunter.Presentation.UI
             boundController.BossAttackExecuted -= OnBossAttackExecuted;
             boundController.TreasureAppeared -= OnTreasureAppeared;
             boundController.TreasureOpened -= OnTreasureOpened;
+            boundController.CombatMusicPhaseChanged -= OnCombatMusicPhaseChanged;
+            boundController.MidBossAppeared -= OnMidBossAppeared;
+            boundController.MidBossDefeated -= OnMidBossDefeated;
+            boundController.BossAppeared -= OnFinalBossMusicStarted;
+            boundController.BossDefeated -= OnGameplayMusicEnded;
+            boundController.PlayerDefeated -= OnGameplayMusicEnded;
             boundController.RunReset -= CloseUpgradeChoice;
             boundController.RunReset -= CloseRewardReveal;
             boundController.RunReset -= CloseAbandonWithoutFlowChange;
+            boundController.RunReset -= ResetGameplayMusic;
             boundController = null;
         }
 
@@ -376,6 +392,49 @@ namespace JoseonHunter.Presentation.UI
         private static void OnTreasureOpened() => PlayCue(GameAudioCueId.TreasureOpen);
         private static void OnAppraisalTicked() => PlayCue(GameAudioCueId.AppraisalTick);
         private static void OnAppraisalRevealed() => PlayCue(GameAudioCueId.AppraisalReveal);
+
+        private void ResetGameplayMusic()
+        {
+            gameplayMusic.Reset();
+            RequestGameplayMusic(.6f);
+        }
+
+        private void OnCombatMusicPhaseChanged(CombatMusicPhase phase)
+        {
+            gameplayMusic.SetPhase(phase);
+            RequestGameplayMusic(2f);
+        }
+
+        private void OnMidBossAppeared()
+        {
+            gameplayMusic.EnterMidBoss();
+            RequestGameplayMusic(.9f);
+        }
+
+        private void OnMidBossDefeated()
+        {
+            gameplayMusic.ExitMidBoss();
+            RequestGameplayMusic(1.4f);
+        }
+
+        private void OnFinalBossMusicStarted()
+        {
+            gameplayMusic.EnterFinalBoss();
+            RequestGameplayMusic(.8f);
+        }
+
+        private void OnGameplayMusicEnded()
+        {
+            gameplayMusic.EndRun();
+            GameMusicDirector.Instance?.FadeOut(1.2f);
+        }
+
+        private void RequestGameplayMusic(float fadeSeconds)
+        {
+            GameMusicDirector.EnsureExists();
+            GameMusicDirector.Instance?.Request(gameplayMusic.CurrentRole, fadeSeconds);
+        }
+
         private static void OnBossAttackExecuted(BossAttackKind attack)
         {
             PlayCue(attack switch
@@ -490,6 +549,7 @@ namespace JoseonHunter.Presentation.UI
         {
             abandonRun?.CloseImmediately();
             SetModalScrimVisible(false);
+            OnGameplayMusicEnded();
             boundController?.ConfirmAbandonAndReturn();
         }
 
