@@ -19,6 +19,18 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTearDown]
+        public IEnumerator TearDown()
+        {
+            if (GameMusicDirector.Instance != null)
+            {
+                GameMusicDirector.Instance.FadeOut(0f);
+                Object.Destroy(GameMusicDirector.Instance.gameObject);
+            }
+
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator LobbyStartsLobbyMusicAndGameplayStartsEarlyCombatMusic()
         {

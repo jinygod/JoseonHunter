@@ -26,6 +26,11 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTearDown]
         public IEnumerator TearDown()
         {
+            if (GameMusicDirector.Instance != null)
+            {
+                GameMusicDirector.Instance.FadeOut(0f);
+                Object.Destroy(GameMusicDirector.Instance.gameObject);
+            }
             if (listenerObject != null) Object.Destroy(listenerObject);
             yield return null;
         }
