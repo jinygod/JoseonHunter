@@ -153,6 +153,8 @@ namespace JoseonHunter.Editor.Scenes
             typeof(FirstPlayableController).GetField("chestSpawnTimer", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo EnemiesField =
             typeof(FirstPlayableController).GetField("enemies", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo PlayerField =
+            typeof(FirstPlayableController).GetField("player", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo ExecutorsByWeaponField =
             typeof(JoseonHunter.Runtime.Combat.WeaponRuntimeController)
                 .GetField("executorsByWeapon", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -166,6 +168,9 @@ namespace JoseonHunter.Editor.Scenes
         private static string weaponFilter;
         private static bool readabilityCapture;
         private static int readabilityStep;
+        private static bool observedTransientPresentation;
+        private static float closestTransientPresentationDistance;
+        private static string closestTransientPresentationDescription;
 
         public readonly struct CaptureCase
         {
@@ -254,6 +259,14 @@ namespace JoseonHunter.Editor.Scenes
             BeginCapture(WeaponId.HwandoFlyingBlade.Value);
             if (CaptureSessionState.IsPending)
                 CaptureSessionState.BeginPortraitWeapon(WeaponId.HwandoFlyingBlade.Value);
+        }
+
+        /// <summary>Captures only the Wind-Thunder Fan states at the portrait reference resolution.</summary>
+        public static void CaptureWindThunderFanPortraitInBatchMode()
+        {
+            BeginCapture(WeaponId.WindThunderFan.Value);
+            if (CaptureSessionState.IsPending)
+                CaptureSessionState.BeginPortraitWeapon(WeaponId.WindThunderFan.Value);
         }
 
         public static void CaptureWeapon(WeaponId weaponId)
@@ -357,7 +370,10 @@ namespace JoseonHunter.Editor.Scenes
 
             foreach (var position in TargetPositions) controller.SpawnEnemyForTests(position);
             MakeEnemiesStationaryAndDurable();
-            playerTransform = GameObject.Find("Han Yeonhwa")?.transform;
+            playerTransform = (PlayerField.GetValue(controller) as GameObject)?.transform;
+            observedTransientPresentation = false;
+            closestTransientPresentationDistance = float.PositiveInfinity;
+            closestTransientPresentationDescription = "none";
             readabilityStep = 0;
             if (captureCase.Scenario == ReadabilityScenario.GeumjulClosureReady ||
                 captureCase.Scenario == ReadabilityScenario.GeumjulClosureImpact)
@@ -442,7 +458,10 @@ namespace JoseonHunter.Editor.Scenes
                     {
                         throw new TimeoutException(
                             $"Meaningful phase predicate '{predicateKind}' timed out after {timeout:F2}s " +
-                            $"for {currentCase.WeaponId}/{currentCase.Label}; no PNG was written.");
+                            $"for {currentCase.WeaponId}/{currentCase.Label}; no PNG was written. " +
+                            $"player={(playerTransform == null ? "missing" : playerTransform.position.ToString("F2"))}, " +
+                            $"observedTransient={observedTransientPresentation}, " +
+                            $"closest={closestTransientPresentationDistance:F2}, candidate={closestTransientPresentationDescription}.");
                     }
 
                     if (action != CapturePhaseAction.Capture) break;
@@ -529,7 +548,18 @@ namespace JoseonHunter.Editor.Scenes
                                       objectName == "Gakgung Arrow";
             if (objectName != "Weapon Transient Visual" && !isGakgungProjectile || playerTransform == null)
                 return false;
-            return Vector2.Distance(renderer.transform.position, playerTransform.position) <= 2.2f;
+            var distance = Vector2.Distance(renderer.transform.position, playerTransform.position);
+            if (objectName == "Weapon Transient Visual")
+            {
+                observedTransientPresentation = true;
+                if (distance < closestTransientPresentationDistance)
+                {
+                    closestTransientPresentationDistance = distance;
+                    closestTransientPresentationDescription =
+                        $"{renderer.sprite?.name ?? "no-sprite"}@{renderer.transform.position:F2}";
+                }
+            }
+            return distance <= 2.2f;
         }
 
         private static bool IsWeaponPresentationName(string objectName) =>
@@ -733,7 +763,8 @@ namespace JoseonHunter.Editor.Scenes
         private static void ValidateReflectionHooks()
         {
             if (WeaponLevelsField == null || RebuildWeaponsMethod == null || SpawnTimerField == null ||
-                ChestSpawnTimerField == null || EnemiesField == null || ExecutorsByWeaponField == null)
+                ChestSpawnTimerField == null || EnemiesField == null || PlayerField == null ||
+                ExecutorsByWeaponField == null)
             {
                 throw new MissingMemberException(
                     "Eight-weapon capture no longer matches FirstPlayableController's deterministic capture hooks.");
