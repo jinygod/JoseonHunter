@@ -33,16 +33,18 @@ namespace JoseonHunter.Runtime.Gameplay
             var pulse = .5f + .5f * Mathf.Sin(time * 10f);
             outer.startColor = outer.endColor = new Color(.32f, .015f, .025f, .82f);
             inner.startColor = inner.endColor = new Color(.78f, .04f, .07f, Mathf.Lerp(.18f, .42f, pulse));
-            if (kind == BossAttackKind.BloodCharge)
+            if (kind == BossAttackKind.BloodCharge || kind == BossAttackKind.TripleCharge ||
+                kind == BossAttackKind.ShieldPush)
             {
                 ConfigureCorridor(bossPosition, lockedTarget);
                 return;
             }
 
-            var radius = kind == BossAttackKind.SpiritVolley
+            var radius = kind == BossAttackKind.SpiritVolley || kind == BossAttackKind.Rockfall
                 ? Mathf.Max(1.8f, bodyScale * 1.45f)
                 : Mathf.Max(1.9f, bodyScale * 1.2f);
-            ConfigureCircle(kind == BossAttackKind.SpiritVolley ? bossPosition : lockedTarget, radius);
+            ConfigureCircle(kind == BossAttackKind.SpiritVolley || kind == BossAttackKind.Rockfall
+                ? bossPosition : lockedTarget, radius);
         }
 
         public void Hide()
@@ -106,4 +108,3 @@ namespace JoseonHunter.Runtime.Gameplay
         }
     }
 }
-

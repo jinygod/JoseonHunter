@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JoseonHunter.Domain.Combat;
 
 namespace JoseonHunter.Domain.Runs
 {
@@ -9,11 +10,11 @@ namespace JoseonHunter.Domain.Runs
             Array.AsReadOnly(new[]
             {
                 new StageCombatDefinition(StageId.GwigokField, WaveSchedule.Profile,
-                    StageBattlefieldDefinition.Infinite("gwigok_field"), true),
+                    StageBattlefieldDefinition.Infinite("gwigok_field"), StageBossCatalog.For(StageId.GwigokField), true),
                 new StageCombatDefinition(StageId.DokkaebiPass, CreateDokkaebiPassWaves(),
-                    StageBattlefieldDefinition.Bounded(72f, 112f, "dokkaebi_pass"), false),
+                    StageBattlefieldDefinition.Bounded(72f, 112f, "dokkaebi_pass"), StageBossCatalog.For(StageId.DokkaebiPass), false),
                 new StageCombatDefinition(StageId.MoonlitTomb, CreateMoonlitTombWaves(),
-                    StageBattlefieldDefinition.Bounded(84f, 84f, "moonlit_tomb"), false)
+                    StageBattlefieldDefinition.Bounded(84f, 84f, "moonlit_tomb"), StageBossCatalog.For(StageId.MoonlitTomb), false)
             });
 
         public static StageCombatDefinition For(StageId stageId)

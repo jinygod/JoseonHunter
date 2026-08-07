@@ -53,7 +53,9 @@ namespace JoseonHunter.Runtime.Gameplay
         ShieldDokkaebi,
         SpiritShaman,
         ChargingHornGhost,
-        SplittingRat
+        SplittingRat,
+        StoneThrower,
+        RedHornElite
     }
 
     /// <summary>Small immutable ruleset for readable special enemies. No profile grants immunity.</summary>
@@ -84,6 +86,11 @@ namespace JoseonHunter.Runtime.Gameplay
             "spirit_shaman" => new EnemyArchetypeProfile(EnemyArchetype.SpiritShaman, contentId, 1.15f, .78f, .9f),
             "charging_horn_ghost" => new EnemyArchetypeProfile(EnemyArchetype.ChargingHornGhost, contentId, 1.3f, .92f, 1.15f),
             "splitting_rat" => new EnemyArchetypeProfile(EnemyArchetype.SplittingRat, contentId, 1.1f, 1.05f, .85f),
+            "club_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId, 2.0f, .65f, 1.15f, 1.08f),
+            "shield_guard_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.ShieldDokkaebi, contentId, 2.2f, .55f, 1.1f, 1.12f),
+            "iron_horn_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.ChargingHornGhost, contentId, 1.8f, .8f, 1.25f, 1.1f),
+            "stone_thrower_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.StoneThrower, contentId, 1.35f, .62f, .85f, 1.05f),
+            "red_horn_elite" => new EnemyArchetypeProfile(EnemyArchetype.RedHornElite, contentId, 3.2f, .85f, 1.4f, 1.25f),
             _ => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId ?? string.Empty, 1f, 1f, 1f)
         };
 

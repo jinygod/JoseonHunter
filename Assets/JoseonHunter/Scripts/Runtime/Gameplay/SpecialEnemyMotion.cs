@@ -59,8 +59,12 @@ namespace JoseonHunter.Runtime.Gameplay
                 return new SpecialEnemyMotionResult(directionToPlayer.normalized * .7f, auraPulse: pulse);
             }
 
-            if (archetype != EnemyArchetype.ChargingHornGhost)
-                return new SpecialEnemyMotionResult(directionToPlayer.normalized);
+            if (archetype == EnemyArchetype.StoneThrower)
+                return new SpecialEnemyMotionResult(directionToPlayer.normalized * .62f);
+
+            var isCharging = archetype == EnemyArchetype.ChargingHornGhost ||
+                             archetype == EnemyArchetype.RedHornElite;
+            if (!isCharging) return new SpecialEnemyMotionResult(directionToPlayer.normalized);
 
             if ((frozen || knockedBack) && state.Phase != SpecialEnemyMotionPhase.Chase)
             {
@@ -80,11 +84,13 @@ namespace JoseonHunter.Runtime.Gameplay
                 state.Remaining -= step;
                 if (state.Remaining > 0f) return new SpecialEnemyMotionResult(Vector2.zero, isTelegraphing: true);
                 state.Phase = SpecialEnemyMotionPhase.Dash; state.Remaining = DashSeconds;
-                return new SpecialEnemyMotionResult(state.LockedDirection * DashSpeed);
+                return new SpecialEnemyMotionResult(state.LockedDirection *
+                    (archetype == EnemyArchetype.RedHornElite ? DashSpeed * 1.18f : DashSpeed));
             }
 
             state.Remaining -= step;
-            var velocity = state.LockedDirection * DashSpeed;
+            var velocity = state.LockedDirection *
+                           (archetype == EnemyArchetype.RedHornElite ? DashSpeed * 1.18f : DashSpeed);
             if (state.Remaining <= 0f) { state.Phase = SpecialEnemyMotionPhase.Chase; state.Remaining = 0f; }
             return new SpecialEnemyMotionResult(velocity);
         }

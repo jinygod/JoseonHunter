@@ -214,6 +214,17 @@ namespace JoseonHunter.Runtime.Gameplay
         public int PendingUpgradeCountForTests => pendingUpgradeCount;
         public float LastSpawnScaleForTests { get; private set; }
         public bool BossTelegraphVisibleForTests => bossTelegraphPresenter != null && bossTelegraphPresenter.IsVisible;
+        public string FeaturedBossContentIdForTests => FeaturedBossEnemy()?.ContentId ?? string.Empty;
+        public float FeaturedBossScaleMultiplierForTests
+        {
+            get
+            {
+                var boss = FeaturedBossEnemy();
+                if (boss == null) return 0f;
+                var baseline = VisualScale.NormalEnemyScale;
+                return baseline <= 0f ? 0f : boss.Object.transform.localScale.x / baseline;
+            }
+        }
         public int ActiveExperiencePickupCountForTests => pickups.Count(pickup => pickup.Kind == PickupKind.Experience);
         public int TotalExperiencePickupValueForTests => pickups.Where(pickup => pickup.Kind == PickupKind.Experience).Sum(pickup => pickup.Value);
         public void SpawnExperiencePickupForTests(Vector2 position, int value) => SpawnPickup(position, PickupKind.Experience, value);
@@ -555,6 +566,9 @@ namespace JoseonHunter.Runtime.Gameplay
             public BossCombatRole BossRole;
             public BossAttackController BossAttack;
             public BossAttackSnapshot BossAttackSnapshot;
+            public EnemyAttackController EnemyAttack;
+            public EnemyAttackSnapshot EnemyAttackSnapshot;
+            public EnemyAttackPresenter EnemyAttackPresenter;
             public Vector2 ChargeStart;
             public bool BossAttackHitApplied;
             public float ContactRadius;
@@ -778,6 +792,7 @@ namespace JoseonHunter.Runtime.Gameplay
             public GameObject Object;
             public Vector2 Velocity;
             public float Remaining;
+            public float Damage;
         }
 
         private void Awake()
@@ -793,6 +808,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void OnDestroy()
         {
+            for (var enemyIndex = 0; enemyIndex < enemies.Count; enemyIndex++)
+                enemies[enemyIndex].EnemyAttackPresenter?.Dispose();
             geumjulPresenter?.Clear();
             bossTelegraphPresenter?.Dispose();
             bossTelegraphPresenter = null;
@@ -994,6 +1011,8 @@ namespace JoseonHunter.Runtime.Gameplay
 
             runtimeObjects = new GameObject("RuntimeObjects").transform;
             runtimeObjects.SetParent(transform, false);
+            for (var enemyIndex = 0; enemyIndex < enemies.Count; enemyIndex++)
+                enemies[enemyIndex].EnemyAttackPresenter?.Dispose();
             enemies.Clear();
             pickups.Clear();
             pickupPool.Clear();
@@ -1279,6 +1298,15 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ShowNormalRoleAnnouncements()
         {
+            if (activeStageSelection.StageId.Equals(StageId.DokkaebiPass))
+            {
+                ShowRoleAnnouncementAt(120f, 1, "방패 깨비 출현 · 정면 방패를 깨거나 뒤를 노리세요");
+                ShowRoleAnnouncementAt(300f, 2, "쇠뿔 깨비 출현 · 붉은 돌진 예고선에서 벗어나세요");
+                ShowRoleAnnouncementAt(420f, 4, "돌팔매 깨비 출현 · 예고 후 날아오는 바위를 피하세요");
+                ShowRoleAnnouncementAt(600f, 8, "붉은 뿔 정예 출현 · 돌진 뒤의 빈틈을 노리세요");
+                return;
+            }
+
             if (elapsed >= 120f && (normalRoleAnnouncementMask & 1) == 0)
             {
                 normalRoleAnnouncementMask |= 1;
@@ -1290,6 +1318,13 @@ namespace JoseonHunter.Runtime.Gameplay
                 normalRoleAnnouncementMask |= 2;
                 ShowWaveAnnouncement("도깨비 출현 · 느리지만 매우 단단합니다", 1, 2.2f);
             }
+        }
+
+        private void ShowRoleAnnouncementAt(float atSeconds, int bit, string message)
+        {
+            if (elapsed < atSeconds || (normalRoleAnnouncementMask & bit) != 0) return;
+            normalRoleAnnouncementMask |= bit;
+            ShowWaveAnnouncement(message, 1, 2.2f);
         }
 
         private void CountLivingEnemyKinds(out int normal, out int special)
@@ -1401,8 +1436,10 @@ namespace JoseonHunter.Runtime.Gameplay
             var rank = isBoss
                 ? EnemyRankProfile.Boss
                 : (isElite || isMidBoss ? EnemyRankProfile.Elite : EnemyRankProfile.Normal);
-            var resolvedContentId = isBoss
-                ? "fallen_general"
+            var stageBoss = ResolveStageBossDefinition(isBoss, midBossTier);
+            var resolvedContentId = stageBoss != null
+                ? stageBoss.ContentId
+                : isBoss ? "fallen_general"
                 : isMidBoss ? "dokkaebi_captain" :
                 string.IsNullOrEmpty(normalContentId) ?
                     waveSpawnDirector.SelectNormal(elapsed) : normalContentId;
@@ -1417,6 +1454,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     : enemySpriteRoster.Resolve(resolvedContentId));
             var specialFrames = enemySpriteRoster.Frames(resolvedContentId);
             var enemyObject = CreateCombatantObject(
+                stageBoss != null ? stageBoss.DisplayName :
                 isBoss ? "Fallen General" :
                 isMidBoss ? (midBossTier >= 2 ? "Vengeful Field Commander" : "Dokkaebi Captain") :
                 isElite ? "Elite Pursuer" : "Pursuing Enemy",
@@ -1437,7 +1475,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 : midBossTier >= 2
                     ? BossCombatRole.SecondMidBoss
                     : BossCombatRole.FirstMidBoss;
-            var baseHealth = isBoss ? 6000f :
+            var baseHealth = stageBoss != null ? stageBoss.MaximumHealth :
+                isBoss ? 6000f :
                 isMidBoss ? (midBossTier >= 2 ? 1400f : 450f) :
                 EnemyHealthCurve.BaseHealthAt(elapsed);
             var health = (isBoss || isMidBoss
@@ -1445,7 +1484,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 : baseHealth * rank.HealthMultiplier * archetypeProfile.HealthMultiplier) *
                 activeDifficultyProfile.EnemyHealthMultiplier;
             var displayScale = isBoss || isMidBoss
-                ? VisualScale.NormalEnemyScale * BossScaleProfile.MultiplierFor(bossRole)
+                ? VisualScale.NormalEnemyScale *
+                  (stageBoss != null ? stageBoss.VisualScale : BossScaleProfile.MultiplierFor(bossRole))
                 : VisualScale.ScaleFor(rank);
             enemyObject.transform.localScale = Vector3.one * (displayScale * archetypeProfile.DisplayScaleMultiplier);
 #if UNITY_INCLUDE_TESTS
@@ -1484,7 +1524,9 @@ namespace JoseonHunter.Runtime.Gameplay
                 MidBossTier = midBossTier,
                 BossRole = bossRole,
                 BossAttack = isBoss || isMidBoss
-                    ? new BossAttackController(bossRole, 1.2f, activeDifficultyProfile.BossPressureTier)
+                    ? stageBoss != null
+                        ? new BossAttackController(stageBoss, 1.2f, activeDifficultyProfile.BossPressureTier)
+                        : new BossAttackController(bossRole, 1.2f, activeDifficultyProfile.BossPressureTier)
                     : null,
                 ContactRadius = isBoss || isMidBoss
                     ? BossScaleProfile.ContactRadius(VisualScale.NormalContactRadius, bossRole)
@@ -1511,6 +1553,12 @@ namespace JoseonHunter.Runtime.Gameplay
                 if (state.HealthFill == null) state.HealthFill = CreateHealthBar(enemyObject.transform);
                 state.ShieldFill = CreateShieldBar(enemyObject.transform);
             }
+            if (archetypeProfile.Archetype == EnemyArchetype.StoneThrower)
+            {
+                state.EnemyAttack = new EnemyAttackController(
+                    EnemyAttackKind.WarnedSingleProjectile, 1.1f);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+            }
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
@@ -1528,6 +1576,8 @@ namespace JoseonHunter.Runtime.Gameplay
                 EnemyArchetype.SpiritShaman => "원혼 무당 · 주변 적 강화, 먼저 처치",
                 EnemyArchetype.ChargingHornGhost => "돌진 쇠뿔귀 · 붉은 예고선에서 이탈",
                 EnemyArchetype.SplittingRat => "분열 쥐 · 처치 시 둘로 분열, 범위 공격 권장",
+                EnemyArchetype.StoneThrower => "돌팔매 깨비 · 붉은 예고선을 보고 투사체를 피하세요",
+                EnemyArchetype.RedHornElite => "붉은 뿔 정예 · 돌진 뒤 빈틈을 노리세요",
                 _ => string.Empty
             };
             if (guide.Length == 0) return;
@@ -1656,6 +1706,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 var enemy = enemies[index];
                 if (enemy.Object == null || enemy.IsBoss || enemy.IsMidBoss || enemy.IsTreasure) continue;
                 combatTargets.Unregister(enemy.CombatTarget);
+                enemy.EnemyAttackPresenter?.Dispose();
                 Destroy(enemy.Object);
                 enemies.RemoveAt(index);
             }
@@ -1668,6 +1719,25 @@ namespace JoseonHunter.Runtime.Gameplay
 #if UNITY_INCLUDE_TESTS
             MidBossSpawnCountForTests++;
 #endif
+        }
+
+        private StageBossDefinition ResolveStageBossDefinition(bool isFinalBoss, int midBossTier)
+        {
+            if (!isFinalBoss && midBossTier <= 0) return null;
+            var role = isFinalBoss
+                ? BossCombatRole.FinalBoss
+                : midBossTier >= 2 ? BossCombatRole.SecondMidBoss : BossCombatRole.FirstMidBoss;
+            for (var index = 0; index < activeStageCombat.Bosses.Count; index++)
+                if (activeStageCombat.Bosses[index].Role == role) return activeStageCombat.Bosses[index];
+            return null;
+        }
+
+        private string StageBossDisplayName(BossCombatRole role, string fallback)
+        {
+            for (var index = 0; index < activeStageCombat.Bosses.Count; index++)
+                if (activeStageCombat.Bosses[index].Role == role)
+                    return activeStageCombat.Bosses[index].DisplayName;
+            return fallback;
         }
 
         private void PublishCombatMusicPhaseChange(float previousElapsed, float currentElapsed)
@@ -1687,7 +1757,8 @@ namespace JoseonHunter.Runtime.Gameplay
             ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FirstMidBoss, () =>
             {
                 SpawnMidBoss(1);
-                ShowWaveAnnouncement("중간보스 · 도깨비 대장", 2, 1.4f);
+                ShowWaveAnnouncement("중간보스 · " +
+                    StageBossDisplayName(BossCombatRole.FirstMidBoss, "도깨비 대장"), 2, 1.4f);
             });
             ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.SecondSurge, () =>
             {
@@ -1697,7 +1768,8 @@ namespace JoseonHunter.Runtime.Gameplay
             ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.SecondMidBoss, () =>
             {
                 SpawnMidBoss(2);
-                ShowWaveAnnouncement("중간보스 · 원혼 장수", 2, 1.4f);
+                ShowWaveAnnouncement("중간보스 · " +
+                    StageBossDisplayName(BossCombatRole.SecondMidBoss, "원혼 장수"), 2, 1.4f);
             });
             ProcessMilestone(previousElapsed, currentElapsed, StageMilestone.FinalSurge, () =>
             {
@@ -1714,7 +1786,8 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 SpawnBoss();
                 BossAppeared?.Invoke();
-                ShowWaveAnnouncement("최종보스 · 타락한 장군", 3, 1.8f);
+                ShowWaveAnnouncement("최종보스 · " +
+                    StageBossDisplayName(BossCombatRole.FinalBoss, "타락한 장군"), 3, 1.8f);
             });
         }
 
@@ -1819,9 +1892,35 @@ namespace JoseonHunter.Runtime.Gameplay
                     if (specialMotion.AuraPulse) ApplyShamanAura(enemy);
                     UpdateSpecialEnemyFrame(enemy, archetype, specialMotion, delta,
                         Vector2.Distance(enemyPosition, playerPosition));
-                    var velocity = archetype == EnemyArchetype.ChargingHornGhost
+                    var velocity = archetype == EnemyArchetype.ChargingHornGhost ||
+                                   archetype == EnemyArchetype.RedHornElite
                         ? specialMotion.Velocity * enemy.MovementMultiplier
                         : direction * (enemy.Speed * enemy.MovementMultiplier * enemy.AuraMultiplier);
+                    if (enemy.EnemyAttack != null)
+                    {
+                        var attack = enemy.EnemyAttack.Tick(
+                            delta,
+                            new Float2(enemyPosition.x, enemyPosition.y),
+                            new Float2(playerPosition.x, playerPosition.y),
+                            IsInsideGameplayViewport(new Float2(enemyPosition.x, enemyPosition.y)));
+                        enemy.EnemyAttackSnapshot = attack;
+                        var locked = new Vector2(attack.LockedTarget.X, attack.LockedTarget.Y);
+                        if (attack.Phase == EnemyAttackPhase.Telegraph)
+                        {
+                            enemy.EnemyAttackPresenter?.ShowLine(enemyPosition, locked, Time.time);
+                            velocity = Vector2.zero;
+                        }
+                        else
+                        {
+                            enemy.EnemyAttackPresenter?.Hide();
+                        }
+
+                        if (attack.ExecuteStarted)
+                        {
+                            SpawnEnemyProjectile(enemyPosition, locked, 7f);
+                            velocity = Vector2.zero;
+                        }
+                    }
                     if (ReferenceEquals(enemy, featuredBoss) && enemy.BossAttack != null)
                         velocity = ResolveBossVelocity(enemy, enemyPosition, playerPosition, chase, delta);
                     if (velocity.sqrMagnitude > .0001f) enemy.Facing = velocity.normalized;
@@ -1882,21 +1981,34 @@ namespace JoseonHunter.Runtime.Gameplay
                 BossAttackExecuted?.Invoke(snapshot.Kind);
                 enemy.BossAttackHitApplied = false;
                 enemy.ChargeStart = enemyPosition;
-                if (snapshot.Kind == BossAttackKind.SuppressionSlam)
+                if (snapshot.Kind == BossAttackKind.SuppressionSlam ||
+                    snapshot.Kind == BossAttackKind.ClubSlam ||
+                    snapshot.Kind == BossAttackKind.ShieldSlam)
                 {
                     var radius = enemy.IsBoss ? 2.5f : 2.1f;
                     if ((playerPosition - lockedTarget).sqrMagnitude <= radius * radius)
                         ApplyBossDamageToPlayer(enemy.IsBoss ? 18f : 16f);
                     enemy.BossAttackHitApplied = true;
                 }
-                else if (snapshot.Kind == BossAttackKind.SpiritVolley)
+                else if (snapshot.Kind == BossAttackKind.SpiritVolley ||
+                         snapshot.Kind == BossAttackKind.Rockfall)
                 {
-                    SpawnBossVolley(enemyPosition, enemy.Health < enemy.MaximumHealth * .5f ? 10 : 8);
+                    SpawnBossVolley(enemyPosition, snapshot.Kind == BossAttackKind.Rockfall ? 6 :
+                        enemy.Health < enemy.MaximumHealth * .5f ? 10 : 8);
+                    enemy.BossAttackHitApplied = true;
+                }
+                else if (snapshot.Kind == BossAttackKind.ConeSweep ||
+                         snapshot.Kind == BossAttackKind.ShieldPush)
+                {
+                    var radius = snapshot.Kind == BossAttackKind.ShieldPush ? 3.2f : 3.8f;
+                    if ((playerPosition - enemyPosition).sqrMagnitude <= radius * radius)
+                        ApplyBossDamageToPlayer(enemy.IsBoss ? 18f : 15f);
                     enemy.BossAttackHitApplied = true;
                 }
             }
 
-            if (snapshot.Phase == BossAttackPhase.Execute && snapshot.Kind == BossAttackKind.BloodCharge)
+            if (snapshot.Phase == BossAttackPhase.Execute &&
+                (snapshot.Kind == BossAttackKind.BloodCharge || snapshot.Kind == BossAttackKind.TripleCharge))
             {
                 var charge = lockedTarget - enemy.ChargeStart;
                 var velocity = charge.sqrMagnitude <= .0001f ? Vector2.zero : charge.normalized * 14f;
@@ -1926,7 +2038,22 @@ namespace JoseonHunter.Runtime.Gameplay
                 projectile.Object.SetActive(true);
                 projectile.Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 6.2f;
                 projectile.Remaining = 4f;
+                projectile.Damage = 11f;
             }
+        }
+
+        private void SpawnEnemyProjectile(Vector2 center, Vector2 target, float damage)
+        {
+            var projectile = AcquireBossProjectile();
+            var direction = target - center;
+            projectile.Object.name = "Dokkaebi Stone Projectile";
+            projectile.Object.transform.position = center;
+            projectile.Object.transform.localScale = Vector3.one * .42f;
+            projectile.Object.GetComponent<SpriteRenderer>().color = new Color(.34f, .22f, .12f, 1f);
+            projectile.Object.SetActive(true);
+            projectile.Velocity = (direction.sqrMagnitude > .0001f ? direction.normalized : Vector2.down) * 5.2f;
+            projectile.Remaining = 4.5f;
+            projectile.Damage = Mathf.Max(0f, damage);
         }
 
         private BossProjectileState AcquireBossProjectile()
@@ -1960,7 +2087,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 projectile.Object.transform.position += (Vector3)(projectile.Velocity * delta);
                 if (((Vector2)projectile.Object.transform.position - playerPosition).sqrMagnitude <= .22f * .22f)
                 {
-                    ApplyBossDamageToPlayer(11f);
+                    ApplyBossDamageToPlayer(projectile.Damage > 0f ? projectile.Damage : 11f);
                     projectile.Object.SetActive(false);
                 }
                 else if (projectile.Remaining <= 0f)
@@ -2016,6 +2143,7 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 EnemyArchetype.SpiritShaman => true,
                 EnemyArchetype.ChargingHornGhost => motion.IsTelegraphing,
+                EnemyArchetype.RedHornElite => motion.IsTelegraphing,
                 EnemyArchetype.SplittingRat => playerDistance <= 4f,
                 _ => false
             };
@@ -2152,6 +2280,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     Vector2.zero, false, false, true, Mathf.Max(0, ActiveCombatEnemyCount() - 1), activeCap);
             }
             combatTargets.Unregister(enemy.CombatTarget);
+            enemy.EnemyAttackPresenter?.Dispose();
             enemies.Remove(enemy);
             if (wasBoss || wasMidBoss)
             {

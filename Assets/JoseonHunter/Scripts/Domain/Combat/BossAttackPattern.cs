@@ -15,7 +15,13 @@ namespace JoseonHunter.Domain.Combat
         None,
         SuppressionSlam,
         BloodCharge,
-        SpiritVolley
+        SpiritVolley,
+        ConeSweep,
+        ShieldSlam,
+        ShieldPush,
+        ClubSlam,
+        TripleCharge,
+        Rockfall
     }
 
     public enum BossAttackPhase
@@ -74,6 +80,7 @@ namespace JoseonHunter.Domain.Combat
     {
         private readonly BossCombatRole role;
         private readonly int pressureTier;
+        private readonly StageBossDefinition stageDefinition;
         private BossAttackPhase phase = BossAttackPhase.Chase;
         private BossAttackKind kind;
         private Float2 lockedTarget;
@@ -91,6 +98,16 @@ namespace JoseonHunter.Domain.Combat
             this.role = role;
             this.pressureTier = pressureTier;
             phaseSecondsRemaining = initialCooldownSeconds;
+        }
+
+        public BossAttackController(
+            StageBossDefinition definition,
+            float initialCooldownSeconds = .8f,
+            int pressureTier = 0)
+            : this(definition?.Role ?? throw new ArgumentNullException(nameof(definition)),
+                initialCooldownSeconds, pressureTier)
+        {
+            stageDefinition = definition;
         }
 
         public BossAttackSnapshot Tick(
@@ -111,7 +128,7 @@ namespace JoseonHunter.Domain.Combat
                 switch (phase)
                 {
                     case BossAttackPhase.Chase:
-                        BeginTelegraph(playerPosition);
+                        BeginTelegraph(playerPosition, healthFraction);
                         break;
                     case BossAttackPhase.Telegraph:
                         phase = BossAttackPhase.Execute;
@@ -150,17 +167,24 @@ namespace JoseonHunter.Domain.Combat
             return baseDuration * (pressureTier == 1 ? .88f : pressureTier >= 2 ? .75f : 1f);
         }
 
-        private void BeginTelegraph(Float2 playerPosition)
+        private void BeginTelegraph(Float2 playerPosition, float healthFraction)
         {
-            kind = SelectNextAttack();
+            kind = SelectNextAttack(healthFraction);
             lockedTarget = playerPosition;
-            warningDurationSeconds = WarningDurationSeconds(kind);
+            if (stageDefinition == null) warningDurationSeconds = WarningDurationSeconds(kind);
             phaseSecondsRemaining = warningDurationSeconds;
             phase = BossAttackPhase.Telegraph;
         }
 
-        private BossAttackKind SelectNextAttack()
+        private BossAttackKind SelectNextAttack(float healthFraction)
         {
+            if (stageDefinition != null)
+            {
+                var pattern = stageDefinition.PatternFor(healthFraction, pressureTier);
+                var step = pattern[attackOrdinal++ % pattern.Count];
+                warningDurationSeconds = step.WarningSeconds;
+                return step.Kind;
+            }
             if (role == BossCombatRole.FirstMidBoss)
             {
                 if (pressureTier < 2) return BossAttackKind.SuppressionSlam;
@@ -188,10 +212,16 @@ namespace JoseonHunter.Domain.Combat
             BossAttackKind.SuppressionSlam => 1.1f,
             BossAttackKind.BloodCharge => .95f,
             BossAttackKind.SpiritVolley => .8f,
+            BossAttackKind.ConeSweep => .85f,
+            BossAttackKind.ShieldSlam => 1f,
+            BossAttackKind.ShieldPush => .85f,
+            BossAttackKind.ClubSlam => 1.1f,
+            BossAttackKind.TripleCharge => .9f,
+            BossAttackKind.Rockfall => .95f,
             _ => throw new ArgumentOutOfRangeException(nameof(attack), attack, null)
         };
 
         private static float ExecuteDurationSeconds(BossAttackKind attack) =>
-            attack == BossAttackKind.BloodCharge ? .45f : .08f;
+            attack == BossAttackKind.BloodCharge || attack == BossAttackKind.TripleCharge ? .45f : .08f;
     }
 }
