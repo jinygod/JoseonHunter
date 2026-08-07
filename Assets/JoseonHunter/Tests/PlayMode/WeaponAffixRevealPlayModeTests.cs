@@ -259,13 +259,35 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(ImageNamed(presenter, "Spin Symbol " + index + "-1").enabled, Is.False);
             }
             Assert.That(TextValue(RectNamed(presenter, "Affix Summary Row")),
-                Is.EqualTo("누적 추가옵션\n[등급 미상] Damage +24%"));
+                Is.EqualTo("누적 추가옵션\n[추가옵션] Damage +24%"));
             Assert.That(TextValue(RectNamed(presenter, "Growth Summary Row")),
                 Is.EqualTo("진화 상태\n빙무 · 선택"));
             Assert.That(TextValue(RectNamed(presenter, "Potential Summary Row")),
                 Is.EqualTo("해금된 잠재 능력\n독니"));
             Assert.That(TextColor(RectNamed(presenter, "Growth Summary Row")).grayscale, Is.LessThan(.5f));
 
+            Object.DestroyImmediate(presenter.gameObject);
+        }
+
+        [Test]
+        public void WeaponDetailUsesStoredTiersWhenStructuredRollsAreUnavailable()
+        {
+            var presenter = new GameObject("Weapon Detail Tier Fallback Test")
+                .AddComponent<WeaponAffixRevealPresenter>();
+            presenter.SetCatalogForTests(TestCatalog());
+            presenter.ShowDetails(new WeaponSlotView(
+                WeaponId.WindThunderFan.Value, "풍뢰선", 2, null,
+                "재사용 대기시간 -12% · 공격 범위 +15%",
+                generalAffixTiers: new[]
+                {
+                    WeaponAffixTier.Perfect,
+                    WeaponAffixTier.High
+                }));
+
+            var affixRows = TextValue(RectNamed(presenter, "Affix Summary Row"));
+            Assert.That(affixRows, Does.Contain("[최대] 재사용 대기시간 -12%"));
+            Assert.That(affixRows, Does.Contain("[고급] 공격 범위 +15%"));
+            Assert.That(affixRows, Does.Not.Contain("등급 미상"));
             Object.DestroyImmediate(presenter.gameObject);
         }
 

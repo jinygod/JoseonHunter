@@ -241,6 +241,7 @@ namespace JoseonHunter.Presentation.UI
                 reelWindows[index + 1].rectTransform.anchoredPosition = PotentialRowPosition(index);
             }
             BindEffectRows(weapon.GeneralAffixSummary, weapon.GeneralAffixRolls,
+                weapon.GeneralAffixTiers,
                 weapon.LegacyName, weapon.LegacyStageName, weapon.PotentialIds);
 
             ApplyFlatAppraisalStyle();
@@ -513,7 +514,7 @@ namespace JoseonHunter.Presentation.UI
             {
                 finalSymbols[index + 1].sprite = null;
             }
-            BindEffectRows(activeModel.AccumulatedAffixSummary, null, activeModel.LegacyName,
+            BindEffectRows(activeModel.AccumulatedAffixSummary, null, null, activeModel.LegacyName,
                 activeModel.LegacyStageName, activeModel.CurrentPotentials);
 
             burst.sprite = activeResult.NewPotentials.Count > 0
@@ -752,6 +753,7 @@ namespace JoseonHunter.Presentation.UI
         private void BindEffectRows(
             string affixSummary,
             IReadOnlyList<WeaponAffixRoll> affixRolls,
+            IReadOnlyList<WeaponAffixTier> affixTiers,
             string legacyName,
             string legacyStageName,
             IReadOnlyList<WeaponPotentialId> potentialIds)
@@ -770,7 +772,12 @@ namespace JoseonHunter.Presentation.UI
                 var summaries = affixSummary.Split(
                     new[] { " · " }, StringSplitOptions.RemoveEmptyEntries);
                 for (var index = 0; index < summaries.Length; index++)
-                    affixLines.Add("[등급 미상] " + summaries[index]);
+                {
+                    var tier = affixTiers != null && index < affixTiers.Count
+                        ? "[" + AffixTierLabel(affixTiers[index]) + "] "
+                        : "[추가옵션] ";
+                    affixLines.Add(tier + summaries[index]);
+                }
             }
             potentialLabels[0].text = "누적 추가옵션\n" +
                 (affixLines.Count == 0 ? "없음" : string.Join("\n", affixLines));
