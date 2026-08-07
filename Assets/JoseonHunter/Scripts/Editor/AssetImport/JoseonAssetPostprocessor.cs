@@ -6,6 +6,7 @@ namespace JoseonHunter.Editor.AssetImport
 {
     public sealed class JoseonAssetPostprocessor : AssetPostprocessor
     {
+        private const uint ImportProfileVersion = 2;
         private const string PixelRoot = "Assets/JoseonHunter/Art/";
         private const string MusicRoot = "Assets/JoseonHunter/Audio/Music/";
         private const string SfxRoot = "Assets/JoseonHunter/Audio/SFX/";
@@ -54,6 +55,8 @@ namespace JoseonHunter.Editor.AssetImport
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/";
         private const string HanYeonhwaRuntimePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
+
+        public override uint GetVersion() => ImportProfileVersion;
 
         private void OnPreprocessTexture()
         {
@@ -277,9 +280,15 @@ namespace JoseonHunter.Editor.AssetImport
             settings.compressionFormat = AudioCompressionFormat.Vorbis;
             settings.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
             settings.preloadAudioData = !isMusic;
+            if (isMusic)
+            {
+                settings.quality = .55f;
+                audio.forceToMono = false;
+                audio.loadInBackground = true;
+            }
             if (isRuntimeCc0) settings.quality = .70f;
             audio.defaultSampleSettings = settings;
-            audio.forceToMono = isRuntimeCc0;
+            if (!isMusic) audio.forceToMono = isRuntimeCc0;
         }
 
         private static bool IsBilinearArt(string path)

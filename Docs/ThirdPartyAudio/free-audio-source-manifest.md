@@ -102,3 +102,25 @@
 
 - Unity Asset Store `FREE Casual Game SFX Pack`(페이지 ID 54116)은 CC0 표기를 확인했지만, 에셋 스토어 페이지의 GraphQL 오류로 계정 라이브러리 추가가 완료되지 않아 프로젝트에는 편입하지 않았다.
 - 현재 빌드는 위 Kenney·OpenGameArt CC0 원본만 사용한다.
+
+## 배경음악 편입 목록
+
+2026-08-07에 OpenGameArt 원본 페이지에서 CC0 표기를 직접 확인하고 아래 6곡을 편입했다. WAV 원본 세 곡은 메타데이터를 제거하고 스테레오·원본 샘플레이트를 유지한 채 OGG Vorbis 품질 5로 변환했다. OGG 원본 세 곡은 재압축하지 않았다.
+
+| Unity 파일 | 원본·제작자 | 용도 | 원본 SHA-256 |
+|---|---|---|---|
+| `Audio/Music/CC0/lobby_yoiyami.ogg` | `yoiyami_core_theme.wav` · Yoiyami | 로비 | `613D462F5229568AD98DCBE870036CCDF858F5AE33C63386CACE86548809CB60` |
+| `Audio/Music/CC0/gwigok_early_asianoriental.ogg` | `asianoriental1.ogg` · Tozan | 귀곡 들판 0~5분 | `172D95262348D020D7D1428046B100AEFBAD0A6CBAA93EF87EFAFEB8ADD107D0` |
+| `Audio/Music/CC0/gwigok_mid_frozen_desert.ogg` | `Frozen Desert.ogg` · Dizzy Crow | 귀곡 들판 5~10분 | `62DDC8D2A52A94FA42DDAAB48A01157F9B6B2A84A726C3090BE222C9D944B949` |
+| `Audio/Music/CC0/gwigok_late_hope.ogg` | `hope_orchestral_battle_music_bpm165.ogg` · MintoDog | 귀곡 들판 10~15분 | `1615903236286AF59D14B4D71DA3FC2518A3091ECDD8F162A50215B9B3D0F320` |
+| `Audio/Music/CC0/midboss_determined_pursuit.ogg` | `determined_pursuit_loop.wav` · Emma_MA | 중간보스 | `E4F3BE098B50213B56A60AEFE60FFFAE79CD9F7C9008088F93C187EF1BBC856B` |
+| `Audio/Music/CC0/finalboss_epic_battle.ogg` | `Juhani Junkala - Epic Boss Battle [Seamlessly Looping].wav` · SubspaceAudio/Juhani Junkala | 최종보스 | `35F75B4381DFBB053992876F7DFC567D9FD959D61B73954D5B1CD519753E7DF1` |
+
+원본 페이지:
+
+- https://opengameart.org/content/yoiyami-core-theme-%E2%80%93-deep-blue-ambient-piano
+- https://opengameart.org/content/asianoriental1
+- https://opengameart.org/content/frozen-desert-112
+- https://opengameart.org/content/hopeorchestral-battle-music
+- https://opengameart.org/content/determined-pursuit-epic-orchestra-loop
+- https://opengameart.org/content/boss-battle-music
