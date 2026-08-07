@@ -1,6 +1,9 @@
 using System.Collections;
 using System.Linq;
+using JoseonHunter.Domain.Runs;
+using JoseonHunter.Domain.Save;
 using JoseonHunter.Runtime.Gameplay;
+using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,6 +13,20 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class BattlefieldTilePresenterPlayModeTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            if (MetaGameSession.Current != null)
+                Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            if (MetaGameSession.Current != null)
+                Object.DestroyImmediate(MetaGameSession.Current.gameObject);
+        }
+
         [UnityTest]
         public IEnumerator GameplayResolvesFolkFieldPresentationLibraryAndTracksNineChunks()
         {
@@ -85,6 +102,33 @@ namespace JoseonHunter.Tests.PlayMode
             fixture.Dispose();
         }
 
+        [UnityTest]
+        public IEnumerator DokkaebiPassBuildsFiniteFieldAndKeepsSpawnInsideItsOuterBoundary()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 400, 35)));
+            data.SelectedStageId = StageId.DokkaebiPass.Value;
+            data.SelectedStageDifficulty = "normal";
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+
+            var presenter = Object.FindAnyObjectByType<BoundedBattlefieldPresenter>();
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            Assert.That(presenter, Is.Not.Null);
+            Assert.That(presenter.Bounds.width, Is.EqualTo(72f));
+            Assert.That(presenter.Bounds.height, Is.EqualTo(112f));
+            Assert.That(presenter.ActiveTileCount, Is.EqualTo(12));
+
+            controller.ConfigureViewportSpawnForTests(0, .5f, 1f, false);
+            controller.SpawnEnemyForViewportClearanceTests(false, 0);
+            Assert.That(presenter.Bounds.Contains(controller.LastSpawnPositionForTests), Is.True);
+            Assert.That(ViewportBounds(Camera.main).Contains(controller.LastSpawnPositionForTests), Is.False);
+        }
+
         private static Fixture CreateFixture()
         {
             var root = new GameObject("Battlefield");
@@ -119,6 +163,25 @@ namespace JoseonHunter.Tests.PlayMode
                 Object.Destroy(Root);
                 Object.Destroy(Sprite);
                 Object.Destroy(Texture);
+            }
+        }
+
+        private static Rect ViewportBounds(Camera camera)
+        {
+            var bottomLeft = camera.ViewportToWorldPoint(Vector3.zero);
+            var topRight = camera.ViewportToWorldPoint(Vector3.one);
+            return Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
+        }
+
+        private sealed class MemoryRepository : ISaveRepository
+        {
+            private SaveDataV1 stored;
+            public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
+            public LoadResult Load() => new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
+            public SaveResult Save(SaveDataV1 data)
+            {
+                stored = data.Copy();
+                return new SaveResult(true, SaveError.None);
             }
         }
     }

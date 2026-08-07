@@ -8,9 +8,12 @@ namespace JoseonHunter.Domain.Runs
         private static readonly IReadOnlyList<StageCombatDefinition> Definitions =
             Array.AsReadOnly(new[]
             {
-                new StageCombatDefinition(StageId.GwigokField, WaveSchedule.Profile, true),
-                new StageCombatDefinition(StageId.DokkaebiPass, CreateDokkaebiPassWaves(), false),
-                new StageCombatDefinition(StageId.MoonlitTomb, CreateMoonlitTombWaves(), false)
+                new StageCombatDefinition(StageId.GwigokField, WaveSchedule.Profile,
+                    StageBattlefieldDefinition.Infinite("gwigok_field"), true),
+                new StageCombatDefinition(StageId.DokkaebiPass, CreateDokkaebiPassWaves(),
+                    StageBattlefieldDefinition.Bounded(72f, 112f, "dokkaebi_pass"), false),
+                new StageCombatDefinition(StageId.MoonlitTomb, CreateMoonlitTombWaves(),
+                    StageBattlefieldDefinition.Bounded(84f, 84f, "moonlit_tomb"), false)
             });
 
         public static StageCombatDefinition For(StageId stageId)

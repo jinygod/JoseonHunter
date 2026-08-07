@@ -77,6 +77,9 @@ namespace JoseonHunter.Runtime.Gameplay
         private GameFlowCoordinator flow;
         private Transform flatField;
         private BattlefieldTilePresenter battlefieldPresenter;
+        private BoundedBattlefieldPresenter boundedBattlefieldPresenter;
+        private StageId presentedStageId;
+        private bool fieldBuilt;
         private Transform runtimeObjects;
         private GameObject player;
         private SpriteRenderer playerRenderer;
@@ -784,7 +787,6 @@ namespace JoseonHunter.Runtime.Gameplay
             Application.targetFrameRate = 60;
             SetupCamera();
             CreateSharedSprite();
-            CreateField();
             ResetRun();
             GameplayReadySignal.MarkReady();
         }
@@ -936,27 +938,43 @@ namespace JoseonHunter.Runtime.Gameplay
 
             flatField = new GameObject("FlatField").transform;
             flatField.SetParent(transform, false);
-            battlefieldPresenter = flatField.gameObject.AddComponent<BattlefieldTilePresenter>();
             var presentation = Resources.Load<BattlefieldPresentationLibrary>(
                 BattlefieldPresentationResourcesPath);
-            if (presentation != null && presentation.GroundTile != null)
+            battlefieldPresenter = null;
+            boundedBattlefieldPresenter = null;
+            if (activeStageCombat.Battlefield.IsBounded)
             {
-                battlefieldPresenter.BuildInfinite(
-                    presentation.ChunkPrefab,
-                    presentation.GroundTile,
-                    presentation.AlternateGroundTile,
-                    presentation.Decorations,
+                boundedBattlefieldPresenter = flatField.gameObject.AddComponent<BoundedBattlefieldPresenter>();
+                boundedBattlefieldPresenter.Configure(
+                    activeStageCombat.Battlefield,
+                    presentation,
                     solidSprite,
-                    0x4A4F5345);
+                    0x4A4F5345 ^ activeStageSelection.StageId.GetHashCode());
             }
             else
             {
-                battlefieldPresenter.Build(
-                    battlefieldTilePrimary,
-                    battlefieldTileAlternate,
-                    battlefieldDecals,
-                    solidSprite);
+                battlefieldPresenter = flatField.gameObject.AddComponent<BattlefieldTilePresenter>();
+                if (presentation != null && presentation.GroundTile != null)
+                {
+                    battlefieldPresenter.BuildInfinite(
+                        presentation.ChunkPrefab,
+                        presentation.GroundTile,
+                        presentation.AlternateGroundTile,
+                        presentation.Decorations,
+                        solidSprite,
+                        0x4A4F5345);
+                }
+                else
+                {
+                    battlefieldPresenter.Build(
+                        battlefieldTilePrimary,
+                        battlefieldTileAlternate,
+                        battlefieldDecals,
+                        solidSprite);
+                }
             }
+            presentedStageId = activeStageSelection.StageId;
+            fieldBuilt = true;
         }
 
         private void ResetRun()
@@ -992,6 +1010,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 : new StageSelection(StageId.GwigokField, StageDifficulty.Normal);
             activeStageCombat = StageCombatCatalog.For(activeStageSelection.StageId);
             activeDifficultyProfile = StageDifficultyProfile.For(activeStageSelection.Difficulty);
+            if (!fieldBuilt || !presentedStageId.Equals(activeStageSelection.StageId)) CreateField();
             var startingWeapon = patrolLoadout != null
                 ? patrolLoadout.StartingWeapon
                 : WeaponId.HwandoFlyingBlade;
@@ -1154,6 +1173,7 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             var velocity = movement * moveSpeed;
             var position = (Vector2)player.transform.position + velocity * delta;
+            position = ClampToActiveBattlefield(position);
             player.transform.position = position;
             playerVisualRig?.Tick(velocity, delta, MotionWeight.Light);
 
@@ -1164,7 +1184,8 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             var target = player.transform.position;
             var lookAhead = Vector2.ClampMagnitude(movement, 1f) * 0.35f;
-            var desired = new Vector3(target.x + lookAhead.x, target.y + lookAhead.y, -10f);
+            var desiredCenter = ClampToActiveBattlefield((Vector2)target + lookAhead);
+            var desired = new Vector3(desiredCenter.x, desiredCenter.y, -10f);
             gameplayCamera.transform.position = Vector3.SmoothDamp(
                 gameplayCamera.transform.position,
                 desired,
@@ -1186,6 +1207,16 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             if (battlefieldPresenter != null && player != null)
                 battlefieldPresenter.Track(player.transform.position);
+        }
+
+        private Vector2 ClampToActiveBattlefield(Vector2 position)
+        {
+            if (!activeStageCombat.Battlefield.IsBounded) return position;
+            var vertical = gameplayCamera != null ? gameplayCamera.orthographicSize : 0f;
+            var horizontal = gameplayCamera != null ? vertical * gameplayCamera.aspect : 0f;
+            var clamped = activeStageCombat.Battlefield.ClampPlayer(
+                new Float2(position.x, position.y), new Float2(horizontal, vertical));
+            return new Vector2(clamped.X, clamped.Y);
         }
 
         private void UpdateSpawning(float delta)
@@ -1331,7 +1362,28 @@ namespace JoseonHunter.Runtime.Gameplay
             margin = spawnMarginForTests ?? margin;
 #endif
             var spawnBounds = CurrentVisibleBounds();
-            var position = ViewportSpawnGeometry.PointOnExpandedPerimeter(spawnBounds, side, t, margin);
+            Vector2 position;
+            if (activeStageCombat.Battlefield.IsBounded && boundedBattlefieldPresenter != null)
+            {
+                if (!BoundedSpawnGeometry.TrySelect(
+                        player != null ? (Vector2)player.transform.position : Vector2.zero,
+                        boundedBattlefieldPresenter.Bounds,
+                        gameplayCamera,
+                        side,
+                        t,
+                        margin,
+                        out position))
+                {
+                    position = ViewportSpawnGeometry.PointOnExpandedPerimeter(spawnBounds, side, t, margin);
+                    var bounds = boundedBattlefieldPresenter.Bounds;
+                    position.x = Mathf.Clamp(position.x, bounds.xMin + .01f, bounds.xMax - .01f);
+                    position.y = Mathf.Clamp(position.y, bounds.yMin + .01f, bounds.yMax - .01f);
+                }
+            }
+            else
+            {
+                position = ViewportSpawnGeometry.PointOnExpandedPerimeter(spawnBounds, side, t, margin);
+            }
 #if UNITY_INCLUDE_TESTS
             LastSpawnPositionForTests = position;
 #endif
