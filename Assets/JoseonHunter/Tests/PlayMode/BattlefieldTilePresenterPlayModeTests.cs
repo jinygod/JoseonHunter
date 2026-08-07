@@ -127,6 +127,10 @@ namespace JoseonHunter.Tests.PlayMode
             controller.SpawnEnemyForViewportClearanceTests(false, 0);
             Assert.That(presenter.Bounds.Contains(controller.LastSpawnPositionForTests), Is.True);
             Assert.That(ViewportBounds(Camera.main).Contains(controller.LastSpawnPositionForTests), Is.False);
+            Assert.That(presenter.GetComponentsInChildren<SpriteRenderer>()
+                    .Where(renderer => renderer.gameObject.name.Contains("Boundary"))
+                    .Select(renderer => renderer.drawMode),
+                Is.All.EqualTo(SpriteDrawMode.Simple));
         }
 
         private static Fixture CreateFixture()

@@ -78,14 +78,14 @@ namespace JoseonHunter.Runtime.Gameplay
             var boundary = new GameObject(objectName);
             boundary.transform.SetParent(transform, false);
             boundary.transform.localPosition = position;
+            boundary.transform.localScale = new Vector3(size.x, size.y, 1f);
             var renderer = boundary.AddComponent<SpriteRenderer>();
             renderer.sprite = sprite;
-            renderer.drawMode = SpriteDrawMode.Tiled;
-            renderer.size = size;
+            renderer.drawMode = SpriteDrawMode.Simple;
             renderer.color = new Color(.08f, .12f, .11f, 1f);
             renderer.sortingOrder = -16;
             var collider = boundary.AddComponent<BoxCollider2D>();
-            collider.size = size;
+            collider.size = Vector2.one;
         }
     }
 }
