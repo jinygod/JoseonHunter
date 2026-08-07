@@ -59,18 +59,33 @@ namespace JoseonHunter.Domain.Progression
             IUpgradeIdSet unlockedIds,
             IUpgradeIdSet acquiredEvolutionIds,
             IUpgradeIdSet discardedWeaponIds)
+            : this(weaponLevels, supportLevels, unlockedIds, acquiredEvolutionIds,
+                discardedWeaponIds, new SnapshotSet(Array.Empty<string>()))
+        {
+        }
+
+        public UpgradeState(
+            IReadOnlyDictionary<string, int> weaponLevels,
+            IReadOnlyDictionary<string, int> supportLevels,
+            IUpgradeIdSet unlockedIds,
+            IUpgradeIdSet acquiredEvolutionIds,
+            IUpgradeIdSet discardedWeaponIds,
+            IUpgradeIdSet finalEvolutionReadyWeaponIds)
         {
             if (weaponLevels == null) throw new ArgumentNullException(nameof(weaponLevels));
             if (supportLevels == null) throw new ArgumentNullException(nameof(supportLevels));
             if (unlockedIds == null) throw new ArgumentNullException(nameof(unlockedIds));
             if (acquiredEvolutionIds == null) throw new ArgumentNullException(nameof(acquiredEvolutionIds));
             if (discardedWeaponIds == null) throw new ArgumentNullException(nameof(discardedWeaponIds));
+            if (finalEvolutionReadyWeaponIds == null)
+                throw new ArgumentNullException(nameof(finalEvolutionReadyWeaponIds));
 
             WeaponLevels = new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(weaponLevels));
             SupportLevels = new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(supportLevels));
             UnlockedIds = new SnapshotSet(unlockedIds);
             AcquiredEvolutionIds = new SnapshotSet(acquiredEvolutionIds);
             DiscardedWeaponIds = new SnapshotSet(discardedWeaponIds);
+            FinalEvolutionReadyWeaponIds = new SnapshotSet(finalEvolutionReadyWeaponIds);
         }
 
         public UpgradeState(
@@ -103,11 +118,25 @@ namespace JoseonHunter.Domain.Progression
         {
         }
 
+        public UpgradeState(
+            IReadOnlyDictionary<string, int> weaponLevels,
+            IReadOnlyDictionary<string, int> supportLevels,
+            ISet<string> unlockedIds,
+            ISet<string> acquiredEvolutionIds,
+            ISet<string> discardedWeaponIds,
+            ISet<string> finalEvolutionReadyWeaponIds)
+            : this(weaponLevels, supportLevels, new SnapshotSet(unlockedIds),
+                new SnapshotSet(acquiredEvolutionIds), new SnapshotSet(discardedWeaponIds),
+                new SnapshotSet(finalEvolutionReadyWeaponIds))
+        {
+        }
+
         public IReadOnlyDictionary<string, int> WeaponLevels { get; }
         public IReadOnlyDictionary<string, int> SupportLevels { get; }
         public IUpgradeIdSet UnlockedIds { get; }
         public IUpgradeIdSet AcquiredEvolutionIds { get; }
         public IUpgradeIdSet DiscardedWeaponIds { get; }
+        public IUpgradeIdSet FinalEvolutionReadyWeaponIds { get; }
 
         private sealed class SnapshotSet : IUpgradeIdSet
         {

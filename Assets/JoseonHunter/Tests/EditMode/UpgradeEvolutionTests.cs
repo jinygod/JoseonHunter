@@ -9,6 +9,34 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class UpgradeEvolutionTests
     {
         [Test]
+        public void LevelFiveReadyEquippedWeaponIsGuaranteedInThreeOffers()
+        {
+            var state = new UpgradeState(
+                new Dictionary<string, int>
+                {
+                    [WeaponId.HwandoFlyingBlade.Value] = 4,
+                    [WeaponId.GakgungShot.Value] = 2
+                },
+                new Dictionary<string, int>(),
+                new HashSet<string>(),
+                new HashSet<string>(),
+                new HashSet<string>(),
+                new HashSet<string> { WeaponId.HwandoFlyingBlade.Value });
+
+            for (var seed = 0; seed < 40; seed++)
+            {
+                var offers = UpgradeSelector.Select(state, seed, 9);
+                Assert.That(offers.Any(offer =>
+                        offer.Id == WeaponId.HwandoFlyingBlade.Value &&
+                        offer.Kind == UpgradeKind.Weapon &&
+                        offer.NextLevel == 5),
+                    Is.True,
+                    $"Seed {seed}");
+                Assert.That(offers, Has.Count.EqualTo(3));
+            }
+        }
+
+        [Test]
         public void Full_loadout_marks_new_weapon_for_replacement_and_never_offers_discarded_weapon()
         {
             var state = new UpgradeState(

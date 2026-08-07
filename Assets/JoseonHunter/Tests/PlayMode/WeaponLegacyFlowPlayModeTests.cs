@@ -64,6 +64,35 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FinalEvolutionCardShowsOnlyEquippedMoonEclipse()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.PatrolLoadouts[data.ActivePatrolLoadoutIndex]
+                .WeaponStyleIds[WeaponId.HwandoFlyingBlade.Value] =
+                WeaponLegacyPathId.HwandoMoonEclipse.Value;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Gameplay");
+            yield return null;
+            yield return null;
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            controller.SetWeaponLevelForTests(WeaponId.HwandoFlyingBlade, 4);
+            UpgradeChoiceState opened = null;
+            controller.UpgradeOpened += state => opened = state;
+
+            controller.SetUpgradeOffersForTests(new UpgradeOffer(
+                WeaponId.HwandoFlyingBlade.Value, UpgradeKind.Weapon, 5));
+
+            Assert.That(opened, Is.Not.Null);
+            var final = opened.Choices.Single();
+            Assert.That(final.PresentationTier,
+                Is.EqualTo(UpgradePresentationTier.FinalEvolution));
+            Assert.That(final.LegacyPathId,
+                Is.EqualTo(WeaponLegacyPathId.HwandoMoonEclipse));
+            Assert.That(final.Name, Is.EqualTo("환도·월식"));
+            Assert.That(opened.Choices.All(choice => !choice.Name.Contains("독니")), Is.True);
+        }
+
+        [UnityTest]
         public IEnumerator Level_three_upgrade_waits_for_one_matching_legacy_choice()
         {
             SceneManager.LoadScene("Gameplay");

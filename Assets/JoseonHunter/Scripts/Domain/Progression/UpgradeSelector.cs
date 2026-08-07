@@ -28,6 +28,12 @@ namespace JoseonHunter.Domain.Progression
 
             var random = new Random(seed);
             var offers = new List<UpgradeOffer>(3);
+            var finalEvolution = eligible.FirstOrDefault(offer =>
+                offer.Kind == UpgradeKind.Weapon &&
+                offer.NextLevel == 5 &&
+                state.FinalEvolutionReadyWeaponIds.Contains(offer.Id));
+            if (!string.IsNullOrEmpty(finalEvolution.Id))
+                offers.Add(finalEvolution);
             var supports = eligible.Where(offer => offer.Kind == UpgradeKind.Support).ToList();
             var ownedWeapons = eligible.Where(offer =>
                 offer.Kind == UpgradeKind.Weapon && offer.NextLevel > 1).ToList();
@@ -41,7 +47,7 @@ namespace JoseonHunter.Domain.Progression
                 offers.Add(supports[index]);
 
             var weaponDue = playerLevel % 4 == 0 || random.NextDouble() < .25d;
-            if (weaponDue)
+            if (weaponDue && offers.Count < 3)
             {
                 var preferredWeapons = playerLevel % 2 == 0 ? newWeapons : ownedWeapons;
                 var fallbackWeapons = playerLevel % 2 == 0 ? ownedWeapons : newWeapons;

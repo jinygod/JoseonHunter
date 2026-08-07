@@ -2566,8 +2566,15 @@ namespace JoseonHunter.Runtime.Gameplay
             pendingWeaponChoice = null;
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
+            var finalEvolutionReadyWeaponIds = new HashSet<string>();
+            foreach (var weapon in weaponLevels)
+            {
+                if (weapon.Value == 4 && weaponLegacyState.TryGetEquippedPath(
+                        new WeaponId(weapon.Key), out _))
+                    finalEvolutionReadyWeaponIds.Add(weapon.Key);
+            }
             var state = new UpgradeState(weaponLevels, supportLevels, unlockedUpgradeIds,
-                acquiredEvolutionIds, discardedWeaponIds);
+                acquiredEvolutionIds, discardedWeaponIds, finalEvolutionReadyWeaponIds);
             var selected = UpgradeSelector.Select(state, level * 397 ^ kills, level);
             foreach (var offer in selected)
             {
@@ -3008,13 +3015,37 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             if (offer.Kind == UpgradeKind.Weapon)
             {
+                var weaponId = new WeaponId(offer.Id);
+                if (offer.NextLevel >= 4 &&
+                    weaponLegacyState.TryGetEquippedPath(weaponId, out var pathId) &&
+                    WeaponLegacyCatalog.TryGet(pathId, out var legacy))
+                {
+                    var final = offer.NextLevel == 5;
+                    var legacyIcon = CombatChoiceVisualCatalog.LoadDefault()?.LegacyIcon(pathId);
+                    return new UpgradeChoiceView(
+                        offer.Id,
+                        offer.Kind,
+                        offer.NextLevel,
+                        final ? "최종 진화" : "진화 발현",
+                        final
+                            ? legacy.CompletionName
+                            : $"{legacy.DisplayName} · {WeaponDisplayName(offer.Id)}",
+                        final ? legacy.CompletionSummary : legacy.Benefit,
+                        final ? "최종 기술 완성" : legacy.Cost,
+                        legacyIcon != null ? legacyIcon : ResolveWeaponSprite(weaponId),
+                        final
+                            ? UpgradePresentationTier.FinalEvolution
+                            : UpgradePresentationTier.Evolution,
+                        pathId);
+                }
+
                 return new UpgradeChoiceView(
                     offer.Id, offer.Kind, offer.NextLevel,
                     offer.NextLevel == 1 ? "신규 무기" : "무기 강화",
                     WeaponDisplayName(offer.Id),
                     WeaponBehavior(offer.Id),
                     offer.NextLevel == 1 ? "신규" : $"레벨 {offer.NextLevel}",
-                    ResolveWeaponSprite(new WeaponId(offer.Id)));
+                    ResolveWeaponSprite(weaponId));
             }
 
             if (offer.Kind == UpgradeKind.Support)

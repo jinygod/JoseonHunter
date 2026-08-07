@@ -6,6 +6,13 @@ using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
 {
+    public enum UpgradePresentationTier
+    {
+        Standard,
+        Evolution,
+        FinalEvolution
+    }
+
     public readonly struct FirstPlayableUiState
     {
         public FirstPlayableUiState(int level, int experience, int experienceToNext, int coins, int kills,
@@ -74,10 +81,14 @@ namespace JoseonHunter.Runtime.Gameplay
     public readonly struct UpgradeChoiceView
     {
         public UpgradeChoiceView(string id, UpgradeKind kind, int nextLevel, string category, string name,
-            string behavior, string delta, Sprite icon)
+            string behavior, string delta, Sprite icon,
+            UpgradePresentationTier presentationTier = UpgradePresentationTier.Standard,
+            WeaponLegacyPathId legacyPathId = default)
         {
             Id = id; Kind = kind; NextLevel = nextLevel; Category = category; Name = name;
             Behavior = behavior; Delta = delta; Icon = icon;
+            PresentationTier = presentationTier;
+            LegacyPathId = legacyPathId;
         }
 
         public string Id { get; }
@@ -88,6 +99,8 @@ namespace JoseonHunter.Runtime.Gameplay
         public string Behavior { get; }
         public string Delta { get; }
         public Sprite Icon { get; }
+        public UpgradePresentationTier PresentationTier { get; }
+        public WeaponLegacyPathId LegacyPathId { get; }
     }
 
     public readonly struct WeaponSlotView
