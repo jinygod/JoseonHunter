@@ -6,6 +6,7 @@ namespace JoseonHunter.Runtime.Gameplay
     /// <summary>One reusable warning line per ranged enemy; built at spawn and never allocated during Tick.</summary>
     public sealed class EnemyAttackPresenter : IDisposable
     {
+        private const int CircleSegments = 28;
         private readonly GameObject root;
         private readonly LineRenderer border;
         private readonly LineRenderer pulse;
@@ -39,6 +40,30 @@ namespace JoseonHunter.Runtime.Gameplay
             pulse.startColor = pulse.endColor = new Color(.82f, .11f, .04f, alpha);
         }
 
+        public void ShowCircle(Vector2 center, float radius, float time)
+        {
+            if (root == null) return;
+            root.SetActive(true);
+            border.loop = true;
+            pulse.loop = true;
+            border.positionCount = pulse.positionCount = CircleSegments;
+            border.startWidth = border.endWidth = .18f;
+            pulse.startWidth = pulse.endWidth = .09f;
+            border.startColor = border.endColor = new Color(.18f, .015f, .24f, .92f);
+            var alpha = Mathf.Lerp(.3f, .75f, .5f + .5f * Mathf.Sin(time * 11f));
+            pulse.startColor = pulse.endColor = new Color(.68f, .08f, .48f, alpha);
+            for (var index = 0; index < CircleSegments; index++)
+            {
+                var angle = Mathf.PI * 2f * index / CircleSegments;
+                var point = new Vector3(
+                    center.x + Mathf.Cos(angle) * radius,
+                    center.y + Mathf.Sin(angle) * radius,
+                    0f);
+                border.SetPosition(index, point);
+                pulse.SetPosition(index, point);
+            }
+        }
+
         public void Hide()
         {
             if (root != null) root.SetActive(false);
@@ -57,6 +82,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var line = child.AddComponent<LineRenderer>();
             line.useWorldSpace = true;
             line.positionCount = 2;
+            line.loop = false;
             line.startWidth = line.endWidth = width;
             line.numCapVertices = 0;
             line.numCornerVertices = 0;

@@ -21,7 +21,11 @@ namespace JoseonHunter.Domain.Combat
         ShieldPush,
         ClubSlam,
         TripleCharge,
-        Rockfall
+        Rockfall,
+        CrescentSweep,
+        RadialVolley,
+        SequentialCurseCells,
+        SpiritHands
     }
 
     public enum BossAttackPhase
@@ -218,6 +222,10 @@ namespace JoseonHunter.Domain.Combat
             BossAttackKind.ClubSlam => 1.1f,
             BossAttackKind.TripleCharge => .9f,
             BossAttackKind.Rockfall => .95f,
+            BossAttackKind.CrescentSweep => 1f,
+            BossAttackKind.RadialVolley => .9f,
+            BossAttackKind.SequentialCurseCells => 1.05f,
+            BossAttackKind.SpiritHands => .95f,
             _ => throw new ArgumentOutOfRangeException(nameof(attack), attack, null)
         };
 

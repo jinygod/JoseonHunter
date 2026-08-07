@@ -40,11 +40,14 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
-            var radius = kind == BossAttackKind.SpiritVolley || kind == BossAttackKind.Rockfall
-                ? Mathf.Max(1.8f, bodyScale * 1.45f)
-                : Mathf.Max(1.9f, bodyScale * 1.2f);
-            ConfigureCircle(kind == BossAttackKind.SpiritVolley || kind == BossAttackKind.Rockfall
-                ? bossPosition : lockedTarget, radius);
+            var centeredOnBoss = kind == BossAttackKind.SpiritVolley || kind == BossAttackKind.Rockfall ||
+                                 kind == BossAttackKind.RadialVolley || kind == BossAttackKind.CrescentSweep;
+            var radius = kind == BossAttackKind.RadialVolley
+                ? Mathf.Max(3.8f, bodyScale * 1.75f)
+                : centeredOnBoss
+                    ? Mathf.Max(1.8f, bodyScale * 1.45f)
+                    : Mathf.Max(1.9f, bodyScale * 1.2f);
+            ConfigureCircle(centeredOnBoss ? bossPosition : lockedTarget, radius);
         }
 
         public void Hide()

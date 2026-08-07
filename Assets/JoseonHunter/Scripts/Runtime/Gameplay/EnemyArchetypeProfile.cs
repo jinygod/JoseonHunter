@@ -55,7 +55,11 @@ namespace JoseonHunter.Runtime.Gameplay
         ChargingHornGhost,
         SplittingRat,
         StoneThrower,
-        RedHornElite
+        RedHornElite,
+        TombArcherGhost,
+        RedLanternWraith,
+        CurseShaman,
+        GraveAmbusherElite
     }
 
     /// <summary>Small immutable ruleset for readable special enemies. No profile grants immunity.</summary>
@@ -91,6 +95,11 @@ namespace JoseonHunter.Runtime.Gameplay
             "iron_horn_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.ChargingHornGhost, contentId, 1.8f, .8f, 1.25f, 1.1f),
             "stone_thrower_dokkaebi" => new EnemyArchetypeProfile(EnemyArchetype.StoneThrower, contentId, 1.35f, .62f, .85f, 1.05f),
             "red_horn_elite" => new EnemyArchetypeProfile(EnemyArchetype.RedHornElite, contentId, 3.2f, .85f, 1.4f, 1.25f),
+            "tomb_attendant" => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId, 1.35f, .86f, 1.05f),
+            "tomb_archer_ghost" => new EnemyArchetypeProfile(EnemyArchetype.TombArcherGhost, contentId, 1.5f, .68f, .75f, 1.06f),
+            "red_lantern_wraith" => new EnemyArchetypeProfile(EnemyArchetype.RedLanternWraith, contentId, 1.7f, 1.15f, .95f, 1.08f),
+            "curse_shaman" => new EnemyArchetypeProfile(EnemyArchetype.CurseShaman, contentId, 2f, .62f, .8f, 1.12f),
+            "grave_ambusher_elite" => new EnemyArchetypeProfile(EnemyArchetype.GraveAmbusherElite, contentId, 3.8f, .75f, 1.45f, 1.3f),
             _ => new EnemyArchetypeProfile(EnemyArchetype.Normal, contentId ?? string.Empty, 1f, 1f, 1f)
         };
 

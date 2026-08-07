@@ -12,7 +12,10 @@ namespace JoseonHunter.Domain.Combat
         CircleSlam,
         ConeSweep,
         Rockfall,
-        SpinSweep
+        SpinSweep,
+        WarnedLineProjectile,
+        PredictedCurseField,
+        WarnedBurrowEmergence
     }
 
     public enum EnemyAttackPhase
@@ -136,6 +139,9 @@ namespace JoseonHunter.Domain.Combat
         private static float WarningSecondsFor(EnemyAttackKind attack) => attack switch
         {
             EnemyAttackKind.WarnedSingleProjectile => .75f,
+            EnemyAttackKind.WarnedLineProjectile => .85f,
+            EnemyAttackKind.PredictedCurseField => 1f,
+            EnemyAttackKind.WarnedBurrowEmergence => 1.05f,
             EnemyAttackKind.WarnedLineCharge => .8f,
             EnemyAttackKind.CircleSlam => 1f,
             EnemyAttackKind.ConeSweep => .85f,
@@ -151,6 +157,25 @@ namespace JoseonHunter.Domain.Combat
             attack == EnemyAttackKind.WarnedLineCharge ? 1.15f : .8f;
 
         private static float CooldownSecondsFor(EnemyAttackKind attack) =>
-            attack == EnemyAttackKind.WarnedSingleProjectile ? 2.2f : 1.35f;
+            attack switch
+            {
+                EnemyAttackKind.WarnedSingleProjectile => 2.2f,
+                EnemyAttackKind.WarnedLineProjectile => 2.45f,
+                EnemyAttackKind.PredictedCurseField => 3.2f,
+                EnemyAttackKind.WarnedBurrowEmergence => 3.6f,
+                _ => 1.35f
+            };
+    }
+
+    public static class RangedAttackRules
+    {
+        public static bool CanAcquireTarget(bool insideCameraMargin, float distance, float maximumDistance)
+        {
+            if (float.IsNaN(distance) || float.IsInfinity(distance) || distance < 0f)
+                throw new ArgumentOutOfRangeException(nameof(distance));
+            if (float.IsNaN(maximumDistance) || float.IsInfinity(maximumDistance) || maximumDistance <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(maximumDistance));
+            return insideCameraMargin && distance <= maximumDistance;
+        }
     }
 }

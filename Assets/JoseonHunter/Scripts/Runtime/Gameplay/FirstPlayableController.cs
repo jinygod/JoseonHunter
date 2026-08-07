@@ -87,6 +87,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private Transform playerHealthFill;
         private GeumjulTrailPresenter geumjulPresenter;
         private BossTelegraphPresenter bossTelegraphPresenter;
+        private EnemyProjectilePool stageProjectilePool;
+        private StageHazardPool stageHazardPool;
         private CombatTargetRegistry combatTargets;
         private CombatDamageService combatDamageService;
         private WeaponRuntimeController weaponRuntime;
@@ -238,6 +240,10 @@ namespace JoseonHunter.Runtime.Gameplay
         public StageDifficulty ActiveStageDifficultyForTests => activeStageSelection.Difficulty;
         public float LastSpawnHealthForTests { get; private set; }
         public float LastSpawnContactDamageForTests { get; private set; }
+        public int ActiveStageProjectileCountForTests => stageProjectilePool?.ActiveCount ?? 0;
+        public int ActiveStageHazardCountForTests => stageHazardPool?.ActiveCount ?? 0;
+        public int StageProjectileCapacityForTests => stageProjectilePool?.Capacity ?? 0;
+        public int StageHazardCapacityForTests => stageHazardPool?.Capacity ?? 0;
         public int ActiveEnemyCapForTests => activeDifficultyProfile.ScaleActiveCap(
             activeStageCombat.Waves.WaveAt(elapsed).ActiveCap);
         public float NextSpawnIntervalForTests => activeDifficultyProfile.ScaleSpawnInterval(
@@ -891,6 +897,7 @@ namespace JoseonHunter.Runtime.Gameplay
             }
             UpdateEnemies(delta);
             UpdateBossProjectiles(delta);
+            UpdateStageAttacks(delta);
             using (FirstPlayableProfilerMarkers.Weapon.Auto()) UpdateAttack(delta);
             UpdateExperienceAbsorbFlash(delta);
             using (FirstPlayableProfilerMarkers.Pickup.Auto()) UpdatePickups(delta);
@@ -1033,6 +1040,8 @@ namespace JoseonHunter.Runtime.Gameplay
             pickups.Clear();
             pickupPool.Clear();
             bossProjectiles.Clear();
+            stageProjectilePool = null;
+            stageHazardPool = null;
             trail.Clear();
             upgradeOffers.Clear();
             upgradeOfferData.Clear();
@@ -1159,6 +1168,12 @@ namespace JoseonHunter.Runtime.Gameplay
             geumjulPresenter.transform.SetParent(runtimeObjects, false);
             geumjulPresenter.Configure(visualLibrary, runtimeObjects, 4);
             bossTelegraphPresenter = new BossTelegraphPresenter(runtimeObjects);
+            var stageAttackObject = new GameObject("Stage Attack Pools");
+            stageAttackObject.transform.SetParent(runtimeObjects, false);
+            stageProjectilePool = stageAttackObject.AddComponent<EnemyProjectilePool>();
+            stageProjectilePool.Configure(48, solidSprite);
+            stageHazardPool = stageAttackObject.AddComponent<StageHazardPool>();
+            stageHazardPool.Configure(24, solidSprite);
 
             gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
             cameraFollowVelocity = Vector3.zero;
@@ -1321,6 +1336,15 @@ namespace JoseonHunter.Runtime.Gameplay
                 ShowRoleAnnouncementAt(300f, 2, "쇠뿔 깨비 출현 · 붉은 돌진 예고선에서 벗어나세요");
                 ShowRoleAnnouncementAt(420f, 4, "돌팔매 깨비 출현 · 예고 후 날아오는 바위를 피하세요");
                 ShowRoleAnnouncementAt(600f, 8, "붉은 뿔 정예 출현 · 돌진 뒤의 빈틈을 노리세요");
+                return;
+            }
+
+            if (activeStageSelection.StageId.Equals(StageId.MoonlitTomb))
+            {
+                ShowRoleAnnouncementAt(120f, 1, "왕릉 궁수 혼령 출현 · 화면 안에서 조준선을 보고 피하세요");
+                ShowRoleAnnouncementAt(300f, 2, "홍등 원귀 출현 · 빠른 투사체를 옆으로 흘리세요");
+                ShowRoleAnnouncementAt(420f, 4, "저주 무당 출현 · 보랏빛 장판에서 벗어나세요");
+                ShowRoleAnnouncementAt(600f, 8, "무덤 잠복 정예 출현 · 원형 경고 뒤의 출현을 피하세요");
                 return;
             }
 
@@ -1581,6 +1605,25 @@ namespace JoseonHunter.Runtime.Gameplay
                     EnemyAttackKind.WarnedSingleProjectile, 1.1f);
                 state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
             }
+            else if (archetypeProfile.Archetype == EnemyArchetype.TombArcherGhost ||
+                     archetypeProfile.Archetype == EnemyArchetype.RedLanternWraith)
+            {
+                state.EnemyAttack = new EnemyAttackController(
+                    EnemyAttackKind.WarnedLineProjectile, .65f);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+            }
+            else if (archetypeProfile.Archetype == EnemyArchetype.CurseShaman)
+            {
+                state.EnemyAttack = new EnemyAttackController(
+                    EnemyAttackKind.PredictedCurseField, .8f);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+            }
+            else if (archetypeProfile.Archetype == EnemyArchetype.GraveAmbusherElite)
+            {
+                state.EnemyAttack = new EnemyAttackController(
+                    EnemyAttackKind.WarnedBurrowEmergence, .9f);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+            }
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
             enemies.Add(state);
@@ -1600,6 +1643,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 EnemyArchetype.SplittingRat => "분열 쥐 · 처치 시 둘로 분열, 범위 공격 권장",
                 EnemyArchetype.StoneThrower => "돌팔매 깨비 · 붉은 예고선을 보고 투사체를 피하세요",
                 EnemyArchetype.RedHornElite => "붉은 뿔 정예 · 돌진 뒤 빈틈을 노리세요",
+                EnemyArchetype.TombArcherGhost => "왕릉 궁수 혼령 · 조준선이 고정된 뒤 화살을 쏩니다",
+                EnemyArchetype.RedLanternWraith => "홍등 원귀 · 빠른 탄을 쏘지만 몸은 약합니다",
+                EnemyArchetype.CurseShaman => "저주 무당 · 예고된 위치에 지속 장판을 남깁니다",
+                EnemyArchetype.GraveAmbusherElite => "무덤 잠복 정예 · 원형 경고 뒤 가까이 솟아오릅니다",
                 _ => string.Empty
             };
             if (guide.Length == 0) return;
@@ -1924,12 +1971,21 @@ namespace JoseonHunter.Runtime.Gameplay
                             delta,
                             new Float2(enemyPosition.x, enemyPosition.y),
                             new Float2(playerPosition.x, playerPosition.y),
-                            IsInsideGameplayViewport(new Float2(enemyPosition.x, enemyPosition.y)));
+                            RangedAttackRules.CanAcquireTarget(
+                                IsInsideGameplayViewport(new Float2(enemyPosition.x, enemyPosition.y)),
+                                Vector2.Distance(enemyPosition, playerPosition),
+                                16f));
                         enemy.EnemyAttackSnapshot = attack;
                         var locked = new Vector2(attack.LockedTarget.X, attack.LockedTarget.Y);
                         if (attack.Phase == EnemyAttackPhase.Telegraph)
                         {
-                            enemy.EnemyAttackPresenter?.ShowLine(enemyPosition, locked, Time.time);
+                            if (attack.Kind == EnemyAttackKind.PredictedCurseField ||
+                                attack.Kind == EnemyAttackKind.WarnedBurrowEmergence)
+                                enemy.EnemyAttackPresenter?.ShowCircle(locked,
+                                    attack.Kind == EnemyAttackKind.PredictedCurseField ? 1.7f : 1.25f,
+                                    Time.time);
+                            else
+                                enemy.EnemyAttackPresenter?.ShowLine(enemyPosition, locked, Time.time);
                             velocity = Vector2.zero;
                         }
                         else
@@ -1939,7 +1995,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
                         if (attack.ExecuteStarted)
                         {
-                            SpawnEnemyProjectile(enemyPosition, locked, 7f);
+                            ExecuteEnemyStageAttack(enemy, attack, enemyPosition, locked);
                             velocity = Vector2.zero;
                         }
                     }
@@ -2020,11 +2076,24 @@ namespace JoseonHunter.Runtime.Gameplay
                     enemy.BossAttackHitApplied = true;
                 }
                 else if (snapshot.Kind == BossAttackKind.ConeSweep ||
-                         snapshot.Kind == BossAttackKind.ShieldPush)
+                         snapshot.Kind == BossAttackKind.ShieldPush ||
+                         snapshot.Kind == BossAttackKind.CrescentSweep)
                 {
                     var radius = snapshot.Kind == BossAttackKind.ShieldPush ? 3.2f : 3.8f;
                     if ((playerPosition - enemyPosition).sqrMagnitude <= radius * radius)
                         ApplyBossDamageToPlayer(enemy.IsBoss ? 18f : 15f);
+                    enemy.BossAttackHitApplied = true;
+                }
+                else if (snapshot.Kind == BossAttackKind.RadialVolley)
+                {
+                    SpawnMoonlitVolley(enemyPosition, lockedTarget, 14, 44f);
+                    enemy.BossAttackHitApplied = true;
+                }
+                else if (snapshot.Kind == BossAttackKind.SequentialCurseCells ||
+                         snapshot.Kind == BossAttackKind.SpiritHands)
+                {
+                    SpawnMoonlitHazards(lockedTarget,
+                        snapshot.Kind == BossAttackKind.SpiritHands ? 3 : 5);
                     enemy.BossAttackHitApplied = true;
                 }
             }
@@ -2078,6 +2147,68 @@ namespace JoseonHunter.Runtime.Gameplay
             projectile.Damage = Mathf.Max(0f, damage);
         }
 
+        private void ExecuteEnemyStageAttack(
+            EnemyState enemy,
+            EnemyAttackSnapshot attack,
+            Vector2 enemyPosition,
+            Vector2 lockedTarget)
+        {
+            if (attack.Kind == EnemyAttackKind.WarnedSingleProjectile)
+            {
+                SpawnEnemyProjectile(enemyPosition, lockedTarget, 7f);
+                return;
+            }
+            if (attack.Kind == EnemyAttackKind.WarnedLineProjectile)
+            {
+                var direction = lockedTarget - enemyPosition;
+                stageProjectilePool?.Launch(
+                    enemyPosition,
+                    (direction.sqrMagnitude > .0001f ? direction.normalized : Vector2.down) * 7.2f,
+                    4f,
+                    enemy.ArchetypeProfile.Archetype == EnemyArchetype.RedLanternWraith ? 9f : 7f,
+                    new Color(.55f, .09f, .42f, .95f));
+                return;
+            }
+            if (attack.Kind == EnemyAttackKind.PredictedCurseField)
+            {
+                stageHazardPool?.Activate(lockedTarget, 1.7f, 4f, .7f, 4f,
+                    new Color(.31f, .04f, .42f, .38f));
+                return;
+            }
+            if (attack.Kind != EnemyAttackKind.WarnedBurrowEmergence) return;
+            var approach = lockedTarget - enemyPosition;
+            var offset = approach.sqrMagnitude > .0001f ? approach.normalized * 1.2f : Vector2.down;
+            enemy.Object.transform.position = lockedTarget - offset;
+            stageHazardPool?.Activate(lockedTarget, 1.2f, .65f, .65f, 10f,
+                new Color(.52f, .06f, .20f, .42f));
+        }
+
+        private void SpawnMoonlitVolley(Vector2 center, Vector2 safeTarget, int count, float safeGapDegrees)
+        {
+            var safeDirection = safeTarget - center;
+            var safeAngle = Mathf.Atan2(safeDirection.y, safeDirection.x);
+            var halfGap = safeGapDegrees * Mathf.Deg2Rad * .5f;
+            for (var index = 0; index < count; index++)
+            {
+                var angle = Mathf.PI * 2f * index / count;
+                if (Mathf.Abs(Mathf.DeltaAngle(angle * Mathf.Rad2Deg, safeAngle * Mathf.Rad2Deg)) *
+                    Mathf.Deg2Rad < halfGap) continue;
+                stageProjectilePool?.Launch(center,
+                    new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 6.4f,
+                    4f, 11f, new Color(.62f, .08f, .44f, .95f));
+            }
+        }
+
+        private void SpawnMoonlitHazards(Vector2 center, int count)
+        {
+            for (var index = 0; index < count; index++)
+            {
+                var offset = new Vector2((index - (count - 1) * .5f) * 1.55f, 2.25f);
+                stageHazardPool?.Activate(center + offset, 1.05f, 3.4f, .75f, 5f,
+                    new Color(.36f, .04f, .46f, .4f));
+            }
+        }
+
         private BossProjectileState AcquireBossProjectile()
         {
             for (var index = 0; index < bossProjectiles.Count; index++)
@@ -2118,6 +2249,16 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
             }
         }
+
+        private void UpdateStageAttacks(float delta)
+        {
+            if (player == null) return;
+            var playerPosition = (Vector2)player.transform.position;
+            stageProjectilePool?.Tick(delta, playerPosition, .24f, ApplyStageAttackDamage);
+            stageHazardPool?.Tick(delta, playerPosition, ApplyStageAttackDamage);
+        }
+
+        private void ApplyStageAttackDamage(float amount) => ApplyPlayerDamage(amount, .25f);
 
         private void ApplyBossDamageToPlayer(float amount)
         {
