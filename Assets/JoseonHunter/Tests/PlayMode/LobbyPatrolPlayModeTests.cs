@@ -137,7 +137,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator StageOneNormalClearOpensOmenAndStageTwoButBlocksUnfinishedContent()
+        public IEnumerator StageOneNormalClearOpensOmenAndPlayableStageTwo()
         {
             var data = SaveDataV1.CreateDefaults();
             data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
@@ -155,10 +155,10 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             Assert.That(GameObject.Find("Stage Name").GetComponent<TMPro.TMP_Text>().text,
-                Does.Contain("도깨비 고개"));
+                Does.Contain("도깨비 고갯길"));
             Assert.That(GameObject.Find("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
-                Is.EqualTo("아직 준비 중인 지역입니다"));
-            Assert.That(GameObject.Find("Start Patrol").GetComponent<Button>().interactable, Is.False);
+                Is.Empty);
+            Assert.That(GameObject.Find("Start Patrol").GetComponent<Button>().interactable, Is.True);
         }
 
         private static GameObject FindIncludingInactive(string name) =>
