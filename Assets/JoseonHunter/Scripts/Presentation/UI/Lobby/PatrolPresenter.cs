@@ -54,17 +54,14 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 TextAlignmentOptions.Center, true);
             stageNameText = title;
             title.color = LobbyUiFactory.Gold;
-            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.18f, .87f), new Vector2(.82f, .96f),
-                Vector2.zero, Vector2.zero);
+            Anchor(title.rectTransform, new Vector2(.18f, .875f), new Vector2(.82f, .95f));
 
             previousStageButton = LobbyUiFactory.Button("Previous Stage", transform, "◀", 28f,
                 LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
-            LobbyUiFactory.Anchor(previousStageButton.GetComponent<RectTransform>(), new Vector2(.05f, .87f),
-                new Vector2(.17f, .96f), Vector2.zero, Vector2.zero);
+            Anchor(previousStageButton.GetComponent<RectTransform>(), new Vector2(.04f, .875f), new Vector2(.16f, .95f));
             nextStageButton = LobbyUiFactory.Button("Next Stage", transform, "▶", 28f,
                 LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
-            LobbyUiFactory.Anchor(nextStageButton.GetComponent<RectTransform>(), new Vector2(.83f, .87f),
-                new Vector2(.95f, .96f), Vector2.zero, Vector2.zero);
+            Anchor(nextStageButton.GetComponent<RectTransform>(), new Vector2(.84f, .875f), new Vector2(.96f, .95f));
 
             stageStatusText = LobbyUiFactory.Text("Stage Status", transform, string.Empty, 17f,
                 TextAlignmentOptions.Center, true);
@@ -77,13 +74,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             shadowRect.SetParent(transform, false);
             shadowRect.GetComponent<PixelOvalGraphic>().color = new Color(0f, 0f, 0f, .17f);
             shadowRect.GetComponent<PixelOvalGraphic>().raycastTarget = false;
-            LobbyUiFactory.Anchor(shadowRect, new Vector2(.34f, .56f), new Vector2(.66f, .61f),
-                Vector2.zero, Vector2.zero);
+            Anchor(shadowRect, new Vector2(.40f, .57f), new Vector2(.60f, .60f));
 
             heroImage = LobbyUiFactory.Image("Patrol Hero", transform, Color.white);
             heroImage.preserveAspect = true;
-            LobbyUiFactory.Anchor(heroImage.rectTransform, new Vector2(.31f, .58f), new Vector2(.69f, .81f),
-                Vector2.zero, Vector2.zero);
+            Anchor(heroImage.rectTransform, new Vector2(.33f, .58f), new Vector2(.67f, .81f));
 
             normalDifficultyButton = CreateDifficultyButton(
                 "Difficulty Normal", "보통", new Vector2(.07f, .445f), new Vector2(.35f, .56f));
@@ -92,9 +87,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             greatOmenDifficultyButton = CreateDifficultyButton(
                 "Difficulty Great Omen", "대흉", new Vector2(.65f, .445f), new Vector2(.93f, .56f));
 
+            Anchor(normalDifficultyButton.GetComponent<RectTransform>(), new Vector2(.055f, .43f), new Vector2(.35f, .535f));
+            Anchor(omenDifficultyButton.GetComponent<RectTransform>(), new Vector2(.352f, .43f), new Vector2(.648f, .535f));
+            Anchor(greatOmenDifficultyButton.GetComponent<RectTransform>(), new Vector2(.65f, .43f), new Vector2(.945f, .535f));
+
             weaponSelectorButton = LobbyUiFactory.Button("Starting Weapon Selector", transform, string.Empty, 23f);
-            LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .28f),
-                new Vector2(.85f, .42f), Vector2.zero, Vector2.zero);
+            Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.12f, .285f), new Vector2(.88f, .405f));
             var selectorLabel = weaponSelectorButton.GetComponentInChildren<TMP_Text>(true);
             selectorLabel.name = "Starting Weapon Name";
             selectorLabel.alignment = TextAlignmentOptions.MidlineLeft;
@@ -118,8 +116,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
             patrolButton = LobbyUiFactory.Button("Start Patrol", transform, "출전", 31f,
                 LobbyUiFactory.Gold, LobbyUiFactory.Ink);
-            LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .09f),
-                new Vector2(.78f, .27f), Vector2.zero, Vector2.zero);
+            Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.20f, .09f), new Vector2(.80f, .235f));
             feedbackText = LobbyUiFactory.Text("Patrol Feedback", transform, string.Empty, 18f);
             feedbackText.color = LobbyUiFactory.HanjiLight;
             LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.04f, .03f), new Vector2(.96f, .09f),
@@ -138,6 +135,9 @@ namespace JoseonHunter.Presentation.UI.Lobby
             return button;
         }
 
+        private static void Anchor(RectTransform rect, Vector2 min, Vector2 max) =>
+            LobbyUiFactory.Anchor(rect, min, max, Vector2.zero, Vector2.zero);
+
         private void BindExistingView()
         {
             stageNameText = transform.Find("Stage Name")?.GetComponent<TMP_Text>();
@@ -155,19 +155,16 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private void EnsureStageControls()
         {
             if (stageNameText != null)
-                LobbyUiFactory.Anchor(stageNameText.rectTransform, new Vector2(.18f, .87f), new Vector2(.82f, .96f),
-                    Vector2.zero, Vector2.zero);
+                Anchor(stageNameText.rectTransform, new Vector2(.18f, .875f), new Vector2(.82f, .95f));
 
             previousStageButton = transform.Find("Previous Stage")?.GetComponent<Button>() ??
                 LobbyUiFactory.Button("Previous Stage", transform, "◀", 28f,
                     LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
-            LobbyUiFactory.Anchor(previousStageButton.GetComponent<RectTransform>(), new Vector2(.05f, .87f),
-                new Vector2(.17f, .96f), Vector2.zero, Vector2.zero);
+            Anchor(previousStageButton.GetComponent<RectTransform>(), new Vector2(.04f, .875f), new Vector2(.16f, .95f));
             nextStageButton = transform.Find("Next Stage")?.GetComponent<Button>() ??
                 LobbyUiFactory.Button("Next Stage", transform, "▶", 28f,
                     LobbyUiFactory.NightInk, LobbyUiFactory.Gold);
-            LobbyUiFactory.Anchor(nextStageButton.GetComponent<RectTransform>(), new Vector2(.83f, .87f),
-                new Vector2(.95f, .96f), Vector2.zero, Vector2.zero);
+            Anchor(nextStageButton.GetComponent<RectTransform>(), new Vector2(.84f, .875f), new Vector2(.96f, .95f));
 
             stageStatusText = transform.Find("Stage Status")?.GetComponent<TMP_Text>();
             if (stageStatusText == null)
@@ -186,25 +183,19 @@ namespace JoseonHunter.Presentation.UI.Lobby
             greatOmenDifficultyButton = transform.Find("Difficulty Great Omen")?.GetComponent<Button>() ??
                 CreateDifficultyButton("Difficulty Great Omen", "대흉", new Vector2(.65f, .445f), new Vector2(.93f, .56f));
 
-            LobbyUiFactory.Anchor(normalDifficultyButton.GetComponent<RectTransform>(),
-                new Vector2(.07f, .445f), new Vector2(.35f, .56f), Vector2.zero, Vector2.zero);
-            LobbyUiFactory.Anchor(omenDifficultyButton.GetComponent<RectTransform>(),
-                new Vector2(.36f, .445f), new Vector2(.64f, .56f), Vector2.zero, Vector2.zero);
-            LobbyUiFactory.Anchor(greatOmenDifficultyButton.GetComponent<RectTransform>(),
-                new Vector2(.65f, .445f), new Vector2(.93f, .56f), Vector2.zero, Vector2.zero);
+            Anchor(normalDifficultyButton.GetComponent<RectTransform>(), new Vector2(.055f, .43f), new Vector2(.35f, .535f));
+            Anchor(omenDifficultyButton.GetComponent<RectTransform>(), new Vector2(.352f, .43f), new Vector2(.648f, .535f));
+            Anchor(greatOmenDifficultyButton.GetComponent<RectTransform>(), new Vector2(.65f, .43f), new Vector2(.945f, .535f));
 
             var shadow = transform.Find("Patrol Hero Shadow") as RectTransform;
             if (shadow != null)
-                LobbyUiFactory.Anchor(shadow, new Vector2(.34f, .56f), new Vector2(.66f, .61f), Vector2.zero, Vector2.zero);
+                Anchor(shadow, new Vector2(.40f, .57f), new Vector2(.60f, .60f));
             if (heroImage != null)
-                LobbyUiFactory.Anchor(heroImage.rectTransform, new Vector2(.31f, .58f), new Vector2(.69f, .81f),
-                    Vector2.zero, Vector2.zero);
+                Anchor(heroImage.rectTransform, new Vector2(.33f, .58f), new Vector2(.67f, .81f));
             if (weaponSelectorButton != null)
-                LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .28f),
-                    new Vector2(.85f, .42f), Vector2.zero, Vector2.zero);
+                Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.12f, .285f), new Vector2(.88f, .405f));
             if (patrolButton != null)
-                LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .09f),
-                    new Vector2(.78f, .27f), Vector2.zero, Vector2.zero);
+                Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.20f, .09f), new Vector2(.80f, .235f));
 
             EnsurePremiumPresentation();
         }
@@ -220,8 +211,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             {
                 var selectorImage = weaponSelectorButton.targetGraphic as Image ??
                                     weaponSelectorButton.GetComponent<Image>();
-                PremiumPixelUiSkin.ApplyFrame(selectorImage, PremiumFrame.CardIdle);
-                selectorImage.color = new Color(.72f, .64f, .52f, 1f);
+                PremiumPixelUiSkin.ApplyFrame(selectorImage, PremiumFrame.WeaponSelector);
                 weaponSelectorButton.targetGraphic = selectorImage;
             }
         }
@@ -230,8 +220,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
         {
             var plaque = transform.Find("Stage Plaque")?.GetComponent<Image>() ??
                          LobbyUiFactory.Image("Stage Plaque", transform, Color.white);
-            LobbyUiFactory.Anchor(plaque.rectTransform, new Vector2(.16f, .865f), new Vector2(.84f, .965f),
-                Vector2.zero, Vector2.zero);
+            Anchor(plaque.rectTransform, new Vector2(.18f, .875f), new Vector2(.82f, .95f));
             plaque.raycastTarget = false;
             PremiumPixelUiSkin.ApplyFrame(plaque, PremiumFrame.StagePlaque);
             if (stageNameText != null) stageNameText.color = new Color(.26f, .08f, .035f, 1f);
@@ -265,8 +254,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (heroImage == null) return;
             var frame = transform.Find("Patrol Hero Frame")?.GetComponent<Image>() ??
                         LobbyUiFactory.Image("Patrol Hero Frame", transform, Color.white);
-            LobbyUiFactory.Anchor(frame.rectTransform, new Vector2(.29f, .555f), new Vector2(.71f, .825f),
-                Vector2.zero, Vector2.zero);
+            Anchor(frame.rectTransform, new Vector2(.30f, .55f), new Vector2(.70f, .84f));
             frame.raycastTarget = false;
             PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.HeroOval);
             frame.transform.SetSiblingIndex(heroImage.transform.GetSiblingIndex());

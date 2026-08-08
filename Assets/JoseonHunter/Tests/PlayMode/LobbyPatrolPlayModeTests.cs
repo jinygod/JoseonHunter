@@ -92,7 +92,7 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
 
             Assert.That(GameObject.Find("Stage Plaque").GetComponent<Image>().sprite.name,
-                Is.EqualTo("stage_plaque_frame"));
+                Is.EqualTo("stage_title_plate"));
             Assert.That(GameObject.Find("Patrol Hero Frame").GetComponent<Image>().sprite.name,
                 Is.EqualTo("hero_oval_frame"));
             Assert.That(GameObject.Find("Previous Stage").transform.Find("Premium Icon")
@@ -100,9 +100,40 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(GameObject.Find("Next Stage").transform.Find("Premium Icon")
                 .GetComponent<Image>().sprite.name, Is.EqualTo("icon_next"));
             Assert.That(((Image)GameObject.Find("Difficulty Normal").GetComponent<Button>().targetGraphic)
-                .sprite.name, Is.EqualTo("card_selected_frame"));
+                .sprite.name, Is.EqualTo("difficulty_selected"));
             Assert.That(GameObject.Find("Starting Weapon Selector").GetComponent<Image>().sprite.name,
-                Is.EqualTo("card_idle_frame"));
+                Is.EqualTo("weapon_selector_frame"));
+        }
+
+        [UnityTest]
+        public IEnumerator PatrolUsesApprovedMockupAnchorsAndSemanticSprites()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            AssertAnchor("Stage Plaque", new Vector2(.18f, .875f), new Vector2(.82f, .95f));
+            AssertAnchor("Previous Stage", new Vector2(.04f, .875f), new Vector2(.16f, .95f));
+            AssertAnchor("Next Stage", new Vector2(.84f, .875f), new Vector2(.96f, .95f));
+            AssertAnchor("Patrol Hero Frame", new Vector2(.30f, .55f), new Vector2(.70f, .84f));
+            AssertAnchor("Difficulty Normal", new Vector2(.055f, .43f), new Vector2(.35f, .535f));
+            AssertAnchor("Difficulty Omen", new Vector2(.352f, .43f), new Vector2(.648f, .535f));
+            AssertAnchor("Difficulty Great Omen", new Vector2(.65f, .43f), new Vector2(.945f, .535f));
+            AssertAnchor("Starting Weapon Selector", new Vector2(.12f, .285f), new Vector2(.88f, .405f));
+            AssertAnchor("Start Patrol", new Vector2(.20f, .09f), new Vector2(.80f, .235f));
+
+            Assert.That(GameObject.Find("Stage Plaque").GetComponent<Image>().sprite.name,
+                Is.EqualTo("stage_title_plate"));
+            Assert.That(((Image)GameObject.Find("Difficulty Normal").GetComponent<Button>().targetGraphic)
+                .sprite.name, Is.EqualTo("difficulty_selected"));
+            Assert.That(((Image)GameObject.Find("Difficulty Omen").GetComponent<Button>().targetGraphic)
+                .sprite.name, Is.EqualTo("difficulty_locked"));
+            Assert.That(((Image)FindIncludingInactive("Difficulty Great Omen").GetComponent<Button>().targetGraphic)
+                .sprite.name, Is.EqualTo("difficulty_locked"));
+            Assert.That(GameObject.Find("Starting Weapon Selector").GetComponent<Image>().sprite.name,
+                Is.EqualTo("weapon_selector_frame"));
+            Assert.That(((Image)GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("primary_red_button"));
         }
 
         [UnityTest]
@@ -149,16 +180,16 @@ namespace JoseonHunter.Tests.PlayMode
                 Does.Contain("흉조"));
             Assert.That(FindIncludingInactive("Stage Status").activeSelf, Is.False);
             Assert.That(((Image)FindIncludingInactive("Difficulty Normal").GetComponent<Button>().targetGraphic)
-                .sprite.name, Is.EqualTo("card_selected_frame"));
+                .sprite.name, Is.EqualTo("difficulty_selected"));
             Assert.That(((Image)FindIncludingInactive("Difficulty Omen").GetComponent<Button>().targetGraphic)
-                .sprite.name, Is.EqualTo("card_idle_frame"));
+                .sprite.name, Is.EqualTo("difficulty_locked"));
             var greatOmen = FindIncludingInactive("Difficulty Great Omen");
             Assert.That(greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("대흉"));
             Assert.That(greatOmen.transform.Find("Lock Slash").gameObject.activeSelf, Is.True);
             Assert.That(greatOmen.transform.Find("Lock Icon").GetComponent<Image>().sprite.name,
                 Is.EqualTo("icon_lock"));
             var startImage = GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic as Image;
-            Assert.That(startImage.sprite.name, Is.EqualTo("button_primary_frame"));
+            Assert.That(startImage.sprite.name, Is.EqualTo("primary_red_button"));
             Assert.That(startImage.type, Is.EqualTo(Image.Type.Sliced));
 
             GameObject.Find("Difficulty Omen").GetComponent<Button>().onClick.Invoke();
@@ -183,17 +214,17 @@ namespace JoseonHunter.Tests.PlayMode
             var normal = FindIncludingInactive("Difficulty Normal").transform;
             var omen = FindIncludingInactive("Difficulty Omen").transform;
             Assert.That(((Image)normal.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("card_selected_frame"));
+                Is.EqualTo("difficulty_selected"));
             Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("card_idle_frame"));
+                Is.EqualTo("difficulty_idle"));
 
             omen.GetComponent<Button>().onClick.Invoke();
             yield return null;
 
             Assert.That(((Image)normal.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("card_idle_frame"));
+                Is.EqualTo("difficulty_idle"));
             Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("card_selected_frame"));
+                Is.EqualTo("difficulty_selected"));
         }
 
         [UnityTest]
@@ -224,6 +255,13 @@ namespace JoseonHunter.Tests.PlayMode
         private static GameObject FindIncludingInactive(string name) =>
             Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
                 .Single(transform => transform.name == name).gameObject;
+
+        private static void AssertAnchor(string name, Vector2 minimum, Vector2 maximum)
+        {
+            var rect = FindIncludingInactive(name).GetComponent<RectTransform>();
+            Assert.That(rect.anchorMin, Is.EqualTo(minimum), name + " anchor minimum");
+            Assert.That(rect.anchorMax, Is.EqualTo(maximum), name + " anchor maximum");
+        }
 
         private sealed class MemoryRepository : ISaveRepository
         {
