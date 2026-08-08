@@ -15,6 +15,15 @@ namespace JoseonHunter.Editor.Scenes
         [MenuItem("JoseonHunter/Setup/Generate First Playable")]
         public static void Generate()
         {
+            var gameplayVisualPrefabs = AssetDatabase.LoadAssetAtPath<GameplayVisualPrefabLibrary>(
+                GameplayVisualPrefabBuilder.LibraryAssetPath);
+            if (gameplayVisualPrefabs == null)
+            {
+                throw new InvalidOperationException(
+                    $"Gameplay visual library is missing at {GameplayVisualPrefabBuilder.LibraryAssetPath}. " +
+                    "Run JoseonHunter > Gameplay Editing > Create or Validate Visual Prefabs first.");
+            }
+
             var scene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Single);
             foreach (var root in scene.GetRootGameObjects())
             {
@@ -77,6 +86,7 @@ namespace JoseonHunter.Editor.Scenes
             serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue =
                 AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(
                     "Assets/JoseonHunter/Resources/Presentation/JangseungGeumjulVisualLibrary.asset");
+            serialized.FindProperty("gameplayVisualPrefabs").objectReferenceValue = gameplayVisualPrefabs;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, GameplayScenePath);

@@ -40,6 +40,9 @@ namespace JoseonHunter.Runtime.Gameplay
         [SerializeField] private CombatMotionLibrary motionLibrary;
         [SerializeField] private JangseungGeumjulVisualLibrary jangseungGeumjulVisuals;
 
+        [Header("Editable gameplay visual prefabs")]
+        [SerializeField] private GameplayVisualPrefabLibrary gameplayVisualPrefabs;
+
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<EnemyState> separationEnemies = new List<EnemyState>();
         private readonly List<EnemySeparationAgent> separationAgents = new List<EnemySeparationAgent>();
@@ -61,6 +64,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private readonly WeaponLegacyState weaponLegacyState = new WeaponLegacyState();
         private readonly RunWeaponKillLedger runWeaponKillLedger = new RunWeaponKillLedger();
         private readonly Dictionary<int, EnemyMasteryClass> pendingMasteryDeaths = new Dictionary<int, EnemyMasteryClass>();
+        private readonly HashSet<string> missingVisualPrefabWarnings = new HashSet<string>();
         private PendingWeaponChoice pendingWeaponChoice;
         private int affixRollOrdinal;
         private WeaponId startingWeaponId = WeaponId.HwandoFlyingBlade;
@@ -171,6 +175,7 @@ namespace JoseonHunter.Runtime.Gameplay
         private const int RunSpawnSeed = 0x4A4F5345;
         private const string JangseungGeumjulResourcesPath = "Presentation/JangseungGeumjulVisualLibrary";
         private const string BattlefieldPresentationResourcesPath = "Presentation/BattlefieldPresentationLibrary";
+        private const string GameplayVisualPrefabResourcesPath = "Gameplay/GameplayVisualPrefabLibrary";
         private const float StartingPickupRadius = .58f;
         private const float QueuedUpgradeGraceSeconds = 1f;
 
@@ -788,12 +793,15 @@ namespace JoseonHunter.Runtime.Gameplay
         private sealed class PickupState
         {
             public GameObject Object;
+            public PickupVisualView View;
+            public SpriteRenderer Renderer;
             public PickupKind Kind;
             public int Value;
             public bool ForceCollect;
             public bool Attracting;
             public float AttractionAge;
             public TrailRenderer Trail;
+            public float AuthoredBaseScale;
             public float BaseScale;
         }
 
@@ -1158,9 +1166,10 @@ namespace JoseonHunter.Runtime.Gameplay
                 CombatantVisualRole.Player);
             player.transform.localScale = Vector3.one * VisualScale.PlayerScale;
             playerRenderer = playerVisualRig.Renderer;
-            playerHealthFill = CreateHealthBar(player.transform);
-            playerHealthFill.parent.localPosition = new Vector3(0f, -0.30f, 0f);
-            playerHealthFill.parent.localScale = Vector3.one * 0.58f;
+            playerHealthFill = CreateHealthBar(
+                player.transform,
+                new Vector3(0f, -0.30f, 0f),
+                .58f);
             if (playerSprite == null)
             {
                 playerRenderer.color = new Color(0.18f, 0.38f, 0.72f);
@@ -1597,15 +1606,24 @@ namespace JoseonHunter.Runtime.Gameplay
 #endif
             if (rank.IsElite || isMidBoss)
             {
-                state.HealthFill = CreateHealthBar(enemyObject.transform);
-                state.HealthFill.parent.localPosition = new Vector3(0f, isMidBoss ? -1.2f : -0.78f, 0f);
-                state.HealthFill.parent.localScale = Vector3.one * (isMidBoss ? .82f : .52f);
+                state.HealthFill = CreateHealthBar(
+                    enemyObject.transform,
+                    new Vector3(0f, isMidBoss ? -1.2f : -0.78f, 0f),
+                    isMidBoss ? .82f : .52f,
+                    isMidBoss);
             }
             if (archetypeProfile.Archetype == EnemyArchetype.ShieldDokkaebi)
             {
                 state.ShieldCharges = ShieldDokkaebiGuard.MaximumCharges;
-                if (state.HealthFill == null) state.HealthFill = CreateHealthBar(enemyObject.transform);
-                state.ShieldFill = CreateShieldBar(enemyObject.transform);
+                if (state.HealthFill == null)
+                    state.HealthFill = CreateHealthBar(
+                        enemyObject.transform,
+                        new Vector3(0f, -0.78f, 0f),
+                        .52f);
+                state.ShieldFill = CreateShieldBar(
+                    enemyObject.transform,
+                    new Vector3(0f, -1.48f, 0f),
+                    1f);
             }
             if (archetypeProfile.Archetype == EnemyArchetype.StoneThrower)
             {
@@ -2609,14 +2627,23 @@ namespace JoseonHunter.Runtime.Gameplay
 
             if (pickup == null)
             {
-                var createdObject = CreateSpriteObject(
+                var createdObject = CreatePickupObject(
+                    kind,
                     objectName,
                     sprite != null ? sprite : solidSprite,
                     position,
-                    6,
-                    runtimeObjects);
-                pickup = new PickupState { Object = createdObject, Kind = kind };
-                if (kind == PickupKind.Experience)
+                    out var pickupView);
+                var createdRenderer = pickupView != null
+                    ? pickupView.VisualRenderer
+                    : createdObject.GetComponent<SpriteRenderer>();
+                pickup = new PickupState
+                {
+                    Object = createdObject,
+                    View = pickupView,
+                    Renderer = createdRenderer,
+                    Kind = kind
+                };
+                if (kind == PickupKind.Experience && pickupView == null)
                 {
                     var trailRenderer = createdObject.AddComponent<TrailRenderer>();
                     trailRenderer.time = .14f;
@@ -2629,6 +2656,15 @@ namespace JoseonHunter.Runtime.Gameplay
                     trailRenderer.sharedMaterial = pickupTrailMaterial;
                     trailRenderer.emitting = false;
                     pickup.Trail = trailRenderer;
+                }
+                else if (kind == PickupKind.Experience)
+                {
+                    pickup.Trail = pickupView.TrailRenderer;
+                    if (pickup.Trail != null)
+                    {
+                        pickup.Trail.sharedMaterial = pickupTrailMaterial;
+                        pickup.Trail.emitting = false;
+                    }
                 }
                 pickupPool.Add(pickup);
             }
@@ -2648,10 +2684,15 @@ namespace JoseonHunter.Runtime.Gameplay
                 pickup.Trail.emitting = false;
             }
 
-            var renderer = pickupObject.GetComponent<SpriteRenderer>();
+            var renderer = pickup.Renderer != null
+                ? pickup.Renderer
+                : pickupObject.GetComponent<SpriteRenderer>();
             renderer.sprite = sprite != null ? sprite : solidSprite;
             renderer.color = Color.white;
-            pickup.BaseScale = kind == PickupKind.Experience ? .72f : kind == PickupKind.Yeopjeon ? .48f : .50f;
+            pickup.AuthoredBaseScale = pickup.View != null
+                ? pickup.View.BaseScale
+                : kind == PickupKind.Experience ? .72f : kind == PickupKind.Yeopjeon ? .48f : .50f;
+            pickup.BaseScale = pickup.AuthoredBaseScale;
             if (kind == PickupKind.Magnet)
             {
                 renderer.color = new Color(0.25f, 0.92f, 1f);
@@ -2671,9 +2712,12 @@ namespace JoseonHunter.Runtime.Gameplay
         private static void UpdateExperiencePickupVisual(PickupState pickup)
         {
             var tier = ExperiencePickupBudget.TierFor(pickup.Value);
-            pickup.BaseScale = tier == ExperiencePickupTier.Large ? 1.05f :
-                tier == ExperiencePickupTier.Medium ? .88f : .72f;
-            var renderer = pickup.Object.GetComponent<SpriteRenderer>();
+            var authoredBaseScale = Mathf.Max(.01f, pickup.AuthoredBaseScale);
+            pickup.BaseScale = tier == ExperiencePickupTier.Large ? authoredBaseScale * (1.05f / .72f) :
+                tier == ExperiencePickupTier.Medium ? authoredBaseScale * (.88f / .72f) : authoredBaseScale;
+            var renderer = pickup.Renderer != null
+                ? pickup.Renderer
+                : pickup.Object.GetComponent<SpriteRenderer>();
             renderer.color = tier == ExperiencePickupTier.Large
                 ? new Color(.92f, .18f, .72f)
                 : tier == ExperiencePickupTier.Medium
@@ -2769,7 +2813,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 }
                 else if (pickup.Kind == PickupKind.Yeopjeon)
                 {
-                    var pulse = .48f + Mathf.Sin(Time.time * 4.1f + index * .61f) * .035f;
+                    var pulse = pickup.BaseScale + Mathf.Sin(Time.time * 4.1f + index * .61f) * .035f;
                     pickup.Object.transform.localScale = Vector3.one * pulse;
                 }
                 if (pickup.ForceCollect || distance <= pickupRadius)
@@ -3737,6 +3781,43 @@ namespace JoseonHunter.Runtime.Gameplay
             return result;
         }
 
+        private GameObject CreatePickupObject(
+            PickupKind kind,
+            string objectName,
+            Sprite sprite,
+            Vector2 position,
+            out PickupVisualView pickupView)
+        {
+            pickupView = null;
+            var library = ResolveGameplayVisualPrefabs();
+            var prefab = kind == PickupKind.Experience
+                ? library?.ExperiencePickup
+                : kind == PickupKind.Yeopjeon
+                    ? library?.YeopjeonPickup
+                    : library?.MagnetPickup;
+            var prefabView = prefab == null ? null : prefab.GetComponent<PickupVisualView>();
+            var valid = prefabView != null && prefabView.HasRequiredBindings &&
+                        (kind != PickupKind.Experience || prefabView.TrailRenderer != null);
+            if (valid)
+            {
+                var result = Instantiate(prefab, runtimeObjects, false);
+                result.name = objectName;
+                result.transform.position = position;
+                result.transform.rotation = Quaternion.identity;
+                pickupView = result.GetComponent<PickupVisualView>();
+                pickupView.VisualRenderer.sprite = sprite;
+                pickupView.VisualRenderer.sortingOrder = 6;
+                return result;
+            }
+
+            WarnMissingVisualPrefabOnce(
+                $"pickup:{kind}",
+                prefab == null
+                    ? $"Gameplay visual prefab is missing for pickup '{kind}'. Using the legacy visual fallback."
+                    : $"Gameplay visual prefab '{prefab.name}' has invalid PickupVisualView bindings. Using the legacy visual fallback.");
+            return CreateSpriteObject(objectName, sprite, position, 6, runtimeObjects);
+        }
+
         private GameObject CreateCombatantObject(
             string objectName,
             Sprite sprite,
@@ -3748,6 +3829,35 @@ namespace JoseonHunter.Runtime.Gameplay
             out CombatantVisualRig visualRig,
             CombatantVisualRole role = CombatantVisualRole.Enemy)
         {
+            var library = ResolveGameplayVisualPrefabs();
+            var prefab = role == CombatantVisualRole.Player
+                ? library?.PlayerVisual
+                : library?.EnemyVisual;
+            var prefabView = prefab == null ? null : prefab.GetComponent<CombatantVisualView>();
+            if (prefabView != null && prefabView.HasRequiredBindings(role))
+            {
+                var prefabInstance = Instantiate(prefab, parent, false);
+                prefabInstance.name = objectName;
+                prefabInstance.transform.position = position;
+                prefabInstance.transform.rotation = Quaternion.identity;
+                visualRig = CombatantVisualRig.Bind(
+                    prefabInstance,
+                    prefabInstance.GetComponent<CombatantVisualView>(),
+                    sprite,
+                    sortingOrder,
+                    motionLibrary == null ? null : motionLibrary.Find(sprite),
+                    weight,
+                    phaseOffset,
+                    role);
+                return prefabInstance;
+            }
+
+            WarnMissingVisualPrefabOnce(
+                role == CombatantVisualRole.Player ? "combatant:player" : "combatant:enemy",
+                prefab == null
+                    ? $"Gameplay visual prefab is missing for combatant role '{role}'. Using the legacy visual fallback."
+                    : $"Gameplay visual prefab '{prefab.name}' has invalid CombatantVisualView bindings for role '{role}'. Using the legacy visual fallback.");
+
             var result = new GameObject(objectName);
             result.transform.SetParent(parent, false);
             result.transform.position = position;
@@ -3762,52 +3872,112 @@ namespace JoseonHunter.Runtime.Gameplay
             return result;
         }
 
-        private Transform CreateHealthBar(Transform owner)
+        private Transform CreateHealthBar(
+            Transform owner,
+            Vector3 fallbackLocalPosition,
+            float fallbackLocalScale,
+            bool overrideAuthoredAnchor = false)
         {
-            var root = new GameObject("Health Bar").transform;
-            root.SetParent(owner, false);
-            root.localPosition = new Vector3(0f, -1.25f, 0f);
-            root.localRotation = Quaternion.identity;
+            var combatantView = owner == null ? null : owner.GetComponent<CombatantVisualView>();
+            var anchor = combatantView != null && combatantView.HealthBarAnchor != null
+                ? combatantView.HealthBarAnchor
+                : owner;
+            if (anchor != owner && overrideAuthoredAnchor)
+            {
+                anchor.localPosition = fallbackLocalPosition;
+                anchor.localScale = Vector3.one * fallbackLocalScale;
+            }
 
-            var background = new GameObject("Background");
-            background.transform.SetParent(root, false);
-            background.transform.localScale = new Vector3(2.2f, 0.24f, 1f);
-            var backgroundRenderer = background.AddComponent<SpriteRenderer>();
-            backgroundRenderer.sprite = solidSprite;
-            backgroundRenderer.color = new Color(0.16f, 0.12f, 0.12f, 0.92f);
-            backgroundRenderer.sortingOrder = 20;
-
-            var fill = new GameObject("Fill").transform;
-            fill.SetParent(root, false);
-            fill.localScale = new Vector3(2f, 0.14f, 1f);
-            var fillRenderer = fill.gameObject.AddComponent<SpriteRenderer>();
-            fillRenderer.sprite = solidSprite;
-            fillRenderer.color = new Color(0.24f, 0.86f, 0.34f);
-            fillRenderer.sortingOrder = 21;
-            return fill;
+            return CreateWorldBar(
+                "Health Bar",
+                ResolveGameplayVisualPrefabs()?.WorldHealthBar,
+                anchor,
+                anchor == owner ? fallbackLocalPosition : Vector3.zero,
+                anchor == owner ? fallbackLocalScale : 1f,
+                anchor != owner,
+                new Vector3(2.2f, .24f, 1f),
+                new Vector3(2f, .14f, 1f),
+                new Color(.16f, .12f, .12f, .92f),
+                new Color(.24f, .86f, .34f));
         }
 
-        private Transform CreateShieldBar(Transform owner)
+        private Transform CreateShieldBar(
+            Transform owner,
+            Vector3 fallbackLocalPosition,
+            float fallbackLocalScale)
         {
-            var root = new GameObject("Shield Guard Bar").transform;
-            root.SetParent(owner, false);
-            root.localPosition = new Vector3(0f, -1.48f, 0f);
+            var combatantView = owner == null ? null : owner.GetComponent<CombatantVisualView>();
+            var anchor = combatantView != null && combatantView.ShieldBarAnchor != null
+                ? combatantView.ShieldBarAnchor
+                : owner;
+            return CreateWorldBar(
+                "Shield Guard Bar",
+                ResolveGameplayVisualPrefabs()?.WorldShieldBar,
+                anchor,
+                anchor == owner ? fallbackLocalPosition : Vector3.zero,
+                anchor == owner ? fallbackLocalScale : 1f,
+                anchor != owner,
+                new Vector3(2.2f, .20f, 1f),
+                new Vector3(2f, .10f, 1f),
+                new Color(.12f, .09f, .06f, .94f),
+                new Color(.72f, .45f, .14f, 1f));
+        }
+
+        private Transform CreateWorldBar(
+            string runtimeName,
+            GameObject prefab,
+            Transform parent,
+            Vector3 localPosition,
+            float localScale,
+            bool preservePrefabRootTransform,
+            Vector3 fallbackBackgroundScale,
+            Vector3 fallbackFillScale,
+            Color fallbackBackgroundColor,
+            Color fallbackFillColor)
+        {
+            var prefabView = prefab == null ? null : prefab.GetComponent<WorldBarView>();
+            if (prefabView != null && prefabView.HasRequiredBindings)
+            {
+                var instance = Instantiate(prefab, parent, false);
+                instance.name = runtimeName;
+                if (!preservePrefabRootTransform)
+                {
+                    instance.transform.localPosition = localPosition;
+                    instance.transform.localRotation = Quaternion.identity;
+                    instance.transform.localScale = Vector3.one * localScale;
+                }
+                var view = instance.GetComponent<WorldBarView>();
+                view.Prepare(solidSprite);
+                view.SetNormalizedValue(1f);
+                return view.Fill;
+            }
+
+            WarnMissingVisualPrefabOnce(
+                $"bar:{runtimeName}",
+                prefab == null
+                    ? $"Gameplay visual prefab is missing for '{runtimeName}'. Using the legacy visual fallback."
+                    : $"Gameplay visual prefab '{prefab.name}' has invalid WorldBarView bindings. Using the legacy visual fallback.");
+
+            var root = new GameObject(runtimeName).transform;
+            root.SetParent(parent, false);
+            root.localPosition = localPosition;
             root.localRotation = Quaternion.identity;
+            root.localScale = Vector3.one * localScale;
 
             var background = new GameObject("Background");
             background.transform.SetParent(root, false);
-            background.transform.localScale = new Vector3(2.2f, .20f, 1f);
+            background.transform.localScale = fallbackBackgroundScale;
             var backgroundRenderer = background.AddComponent<SpriteRenderer>();
             backgroundRenderer.sprite = solidSprite;
-            backgroundRenderer.color = new Color(.12f, .09f, .06f, .94f);
+            backgroundRenderer.color = fallbackBackgroundColor;
             backgroundRenderer.sortingOrder = 20;
 
             var fill = new GameObject("Fill").transform;
             fill.SetParent(root, false);
-            fill.localScale = new Vector3(2f, .10f, 1f);
+            fill.localScale = fallbackFillScale;
             var fillRenderer = fill.gameObject.AddComponent<SpriteRenderer>();
             fillRenderer.sprite = solidSprite;
-            fillRenderer.color = new Color(.72f, .45f, .14f, 1f);
+            fillRenderer.color = fallbackFillColor;
             fillRenderer.sortingOrder = 21;
             return fill;
         }
@@ -3819,9 +3989,34 @@ namespace JoseonHunter.Runtime.Gameplay
                 return;
             }
 
+            var authoredView = fill.GetComponentInParent<WorldBarView>();
+            if (authoredView != null)
+            {
+                authoredView.SetNormalizedValue(normalizedValue);
+                return;
+            }
+
             var ratio = Mathf.Clamp01(normalizedValue);
             fill.localScale = new Vector3(width * ratio, height, 1f);
             fill.localPosition = new Vector3(-width * .5f + width * ratio * .5f, 0f, -.01f);
+        }
+
+        private GameplayVisualPrefabLibrary ResolveGameplayVisualPrefabs()
+        {
+            if (gameplayVisualPrefabs == null)
+                gameplayVisualPrefabs = Resources.Load<GameplayVisualPrefabLibrary>(GameplayVisualPrefabResourcesPath);
+            if (gameplayVisualPrefabs == null)
+                WarnMissingVisualPrefabOnce(
+                    "library",
+                    $"Missing Resources/{GameplayVisualPrefabResourcesPath}.asset. Gameplay visuals are using legacy code-created fallbacks.");
+            return gameplayVisualPrefabs;
+        }
+
+        private void WarnMissingVisualPrefabOnce(string key, string message)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (missingVisualPrefabWarnings.Add(key)) Debug.LogWarning(message, this);
+#endif
         }
 
     }

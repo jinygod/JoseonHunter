@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b58687d3414d9af4dab54c37079db343, type: 3}
+  m_Name: GameplayVisualPrefabLibrary
+  m_EditorClassIdentifier: JoseonHunter.Runtime::JoseonHunter.Runtime.Gameplay.GameplayVisualPrefabLibrary
+  playerVisual: {fileID: 5092779975179975399, guid: ce8aa9d0741f8e947971e0813c0fe65a, type: 3}
+  enemyVisual: {fileID: 5372874690761222964, guid: 9a1896501ac34f04c9315b5248c9f68a, type: 3}
+  worldHealthBar: {fileID: 3696838050925516324, guid: a2ccda62f3aec3b479f997712478eec1, type: 3}
+  worldShieldBar: {fileID: 7749117362457773173, guid: fb8bfad585e27f84190f5b1d994b156b, type: 3}
+  experiencePickup: {fileID: 8103291702198345505, guid: 150bb25bc0db8d1499ec8ae3baa66f2e, type: 3}
+  yeopjeonPickup: {fileID: 7661993579117631856, guid: 370f2c0b97c1d9445a5f50291ca27cca, type: 3}
+  magnetPickup: {fileID: 2864831474830288966, guid: 4ef87bfd6a791ed4d84104b6f13ffaea, type: 3}

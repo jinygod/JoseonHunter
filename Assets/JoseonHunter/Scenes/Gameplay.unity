@@ -300,6 +300,7 @@ MonoBehaviour:
   weaponCatalog: {fileID: 11400000, guid: 14000000000000000000000000000009, type: 2}
   motionLibrary: {fileID: 11400000, guid: aee251db328bfae44b7fc5980b679900, type: 2}
   jangseungGeumjulVisuals: {fileID: 0}
+  gameplayVisualPrefabs: {fileID: 11400000, guid: aa9d35978d88e464a961a7b878d26f49, type: 2}
 --- !u!4 &895535185
 Transform:
   m_ObjectHideFlags: 0
