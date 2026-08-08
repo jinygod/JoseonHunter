@@ -66,7 +66,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(confirm.image.sprite.name, Is.EqualTo("button_primary_frame"));
             Assert.That(confirm.image.type, Is.EqualTo(Image.Type.Sliced));
             Assert.That(TextValue(confirmLabel), Is.EqualTo("확인"));
-            Assert.That(TextColor(confirmLabel), Is.EqualTo(JoseonUiPalette.DarkPanelText));
+            Assert.That(TextColor(confirmLabel), Is.EqualTo(JoseonUiPalette.Hanji));
             presenter.Confirm();
             yield return null;
             Object.Destroy(presenter.gameObject);

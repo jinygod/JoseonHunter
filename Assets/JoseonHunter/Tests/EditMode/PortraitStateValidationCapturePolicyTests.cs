@@ -15,7 +15,8 @@ namespace JoseonHunter.Tests.EditMode
             }));
             Assert.That(PortraitStateValidationCapture.CaptureNames, Is.EqualTo(new[]
             {
-                "01-gameplay.png", "02-level-up.png", "03-appraisal.png", "04-resumed-combat.png"
+                "01-gameplay.png", "02-level-up.png", "03-appraisal.png", "04-pause.png",
+                "05-resumed-combat.png"
             }));
         }
 
@@ -26,6 +27,15 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(PortraitStateValidationCapturePolicy.ShouldCaptureThisTick(0), Is.True);
             Assert.That(PortraitStateValidationCapturePolicy.CanResumeInCurrentProcess(4815, 4815), Is.True);
             Assert.That(PortraitStateValidationCapturePolicy.CanResumeInCurrentProcess(4815, 9261), Is.False);
+        }
+
+        [Test]
+        public void Every_capture_phase_keeps_its_own_output_name()
+        {
+            var names = PortraitStateValidationCapture.CaptureNames;
+            var mapped = Enumerable.Range(0, names.Count)
+                .Select(index => PortraitStateValidationCapturePolicy.CaptureNameForPhase(names, index));
+            Assert.That(mapped, Is.EqualTo(names));
         }
     }
 }

@@ -24,6 +24,9 @@ namespace JoseonHunter.Tests.PlayMode
         {
             var root = new GameObject("Button Skin Test Root", typeof(RectTransform));
             var button = RuntimeUiFactory.Button("Action", root.transform, Color.black);
+            var label = RuntimeUiFactory.Text("Label", button.transform, "확인", 24f,
+                TMPro.TextAlignmentOptions.Center);
+            RuntimeUiFactory.Stretch(label.rectTransform, 8f, 4f, 8f, 4f);
 
             JoseonButtonSkin.Apply(button, JoseonButtonStyle.Primary, JoseonButtonIcon.Continue);
             JoseonButtonSkin.Apply(button, JoseonButtonStyle.Primary, JoseonButtonIcon.Continue);
@@ -37,6 +40,7 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo(1));
             Assert.That(button.transform.Find("Action Icon").GetComponent<Image>().sprite.name,
                 Is.EqualTo("icon_continue"));
+            Assert.That(label.color, Is.EqualTo(JoseonUiPalette.Hanji));
 
             Object.Destroy(root);
             yield return null;

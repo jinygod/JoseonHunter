@@ -92,6 +92,7 @@ namespace JoseonHunter.Presentation.UI
                 var rect = label.rectTransform;
                 rect.offsetMin = new Vector2(hasIcon ? 48f : 12f, rect.offsetMin.y);
                 rect.offsetMax = new Vector2(-12f, rect.offsetMax.y);
+                label.color = JoseonUiPalette.Hanji;
             }
         }
 

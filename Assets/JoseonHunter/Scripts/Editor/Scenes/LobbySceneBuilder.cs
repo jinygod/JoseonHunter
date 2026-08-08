@@ -243,6 +243,26 @@ namespace JoseonHunter.Editor.Scenes
             var transforms = instance.GetComponentsInChildren<Transform>(true);
             SetPreviewText(transforms, "Starting Weapon Name", "환도 비검");
             SetPreviewText(transforms, "Coin Text", "155");
+            transforms.Single(item => item.name == "Stage Status").gameObject.SetActive(false);
+
+            var normal = transforms.Single(item => item.name == "Difficulty Normal").GetComponent<Button>();
+            var omen = transforms.Single(item => item.name == "Difficulty Omen").GetComponent<Button>();
+            var greatOmen = transforms.Single(item => item.name == "Difficulty Great Omen").GetComponent<Button>();
+            greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text = "대흉";
+            LobbySelectionChrome.Apply(normal, true);
+            LobbySelectionChrome.Apply(omen, false);
+            LobbySelectionChrome.Apply(greatOmen, false, true);
+
+            var start = transforms.Single(item => item.name == "Start Patrol").GetComponent<Button>();
+            JoseonHunter.Presentation.UI.JoseonButtonSkin.Apply(start,
+                JoseonHunter.Presentation.UI.JoseonButtonStyle.Primary);
+
+            LobbySelectionChrome.Apply(transforms.Single(item => item.name == "Patrol Navigation")
+                .GetComponent<Button>(), true);
+            LobbySelectionChrome.Apply(transforms.Single(item => item.name == "Weapon Research Navigation")
+                .GetComponent<Button>(), false);
+            LobbySelectionChrome.Apply(transforms.Single(item => item.name == "Common Training Navigation")
+                .GetComponent<Button>(), false);
         }
 
         private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)

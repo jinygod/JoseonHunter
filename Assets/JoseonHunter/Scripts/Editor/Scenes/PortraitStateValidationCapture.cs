@@ -19,6 +19,13 @@ namespace JoseonHunter.Editor.Scenes
 
         public static bool CanResumeInCurrentProcess(int captureProcessId, int currentProcessId) =>
             captureProcessId == currentProcessId;
+
+        public static string CaptureNameForPhase(IReadOnlyList<string> names, int phase)
+        {
+            if (names == null) throw new ArgumentNullException(nameof(names));
+            if (phase < 0 || phase >= names.Count) throw new ArgumentOutOfRangeException(nameof(phase));
+            return names[phase];
+        }
     }
 
     internal static class PortraitStateCaptureSession
@@ -76,10 +83,16 @@ namespace JoseonHunter.Editor.Scenes
     public static class PortraitStateValidationCapture
     {
         private const string GameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
-        private static readonly string[] Names = { "01-gameplay.png", "02-level-up.png", "03-appraisal.png", "04-resumed-combat.png" };
+        private static readonly string[] Names =
+        {
+            "01-gameplay.png", "02-level-up.png", "03-appraisal.png", "04-pause.png",
+            "05-resumed-combat.png"
+        };
         private static readonly MethodInfo OpenDetails = typeof(FirstPlayableUiBootstrap).GetMethod("OpenWeaponDetails", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly MethodInfo CloseUpgrade = typeof(FirstPlayableUiBootstrap).GetMethod("CloseUpgradeChoice", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly MethodInfo DismissDetails = typeof(WeaponAffixRevealPresenter).GetMethod("DismissDetails", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly MethodInfo OpenAbandon = typeof(FirstPlayableUiBootstrap).GetMethod("OpenAbandonConfirmation", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly MethodInfo CancelAbandon = typeof(FirstPlayableUiBootstrap).GetMethod("CancelAbandon", BindingFlags.Instance | BindingFlags.NonPublic);
         private static int resolutionIndex;
         private static int phase;
         private static int updatesSinceTransition;
@@ -206,21 +219,8 @@ namespace JoseonHunter.Editor.Scenes
                     updatesSinceTransition = 1;
                     return;
                 }
-                switch (phase)
-                {
-                    case 0:
-                        CaptureAndAdvance(resolution, Names[0]);
-                        break;
-                    case 1:
-                        CaptureAndAdvance(resolution, Names[1]);
-                        break;
-                    case 2:
-                        CaptureAndAdvance(resolution, Names[2]);
-                        break;
-                    default:
-                        CaptureAndAdvance(resolution, Names[3]);
-                        break;
-                }
+                CaptureAndAdvance(resolution,
+                    PortraitStateValidationCapturePolicy.CaptureNameForPhase(Names, phase));
             }
             catch (Exception exception)
             {
@@ -248,11 +248,21 @@ namespace JoseonHunter.Editor.Scenes
                     OpenDetails.Invoke(bootstrap, new object[] { weapons[0] });
                     RequirePresenter<WeaponAffixRevealPresenter>(controller, GameFlowState.Paused, presenter => presenter.IsDetailOpen, "Appraisal presenter/state was not opened.");
                     break;
-                default:
+                case 3:
                     var detail = Object.FindAnyObjectByType<WeaponAffixRevealPresenter>();
                     Require(DismissDetails != null && detail != null, "Appraisal close seam is unavailable.");
                     DismissDetails.Invoke(detail, null);
                     Require(controller.Flow.State == GameFlowState.Playing, "Appraisal did not resume Playing.");
+                    Require(OpenAbandon != null, "Pause open seam is unavailable.");
+                    OpenAbandon.Invoke(bootstrap, null);
+                    RequirePresenter<AbandonRunPresenter>(controller, GameFlowState.Paused,
+                        presenter => presenter.IsOpen, "Pause presenter/state was not opened.");
+                    break;
+                default:
+                    Require(CancelAbandon != null, "Pause close seam is unavailable.");
+                    CancelAbandon.Invoke(bootstrap, null);
+                    Require(controller.Flow.State == GameFlowState.Playing,
+                        "Pause did not resume Playing.");
                     break;
             }
         }
@@ -339,7 +349,9 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void ValidateReflectionHooks()
         {
-            Require(OpenDetails != null && CloseUpgrade != null && DismissDetails != null, "Portrait capture reflection hooks no longer match the UI bootstrap presenters.");
+            Require(OpenDetails != null && CloseUpgrade != null && DismissDetails != null &&
+                    OpenAbandon != null && CancelAbandon != null,
+                "Portrait capture reflection hooks no longer match the UI bootstrap presenters.");
         }
 
         private static string ProjectRoot() => Directory.GetParent(Application.dataPath)?.FullName
