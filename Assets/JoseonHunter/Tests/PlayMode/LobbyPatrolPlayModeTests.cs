@@ -76,8 +76,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(hero.sprite, Is.Not.Null);
             Assert.That(hero.preserveAspect, Is.True);
             Assert.That(hero.transform.parent.name, Is.EqualTo("Patrol Panel"));
-            Assert.That(GameObject.Find("Patrol Panel").GetComponent<Image>().sprite, Is.Null,
-                "The patrol content panel must not stretch an outer architectural frame.");
+            var contentPanel = GameObject.Find("Patrol Panel").GetComponent<Image>();
+            Assert.That(contentPanel.sprite, Is.Not.Null,
+                "The patrol content panel must retain the approved thin content border.");
+            Assert.That(contentPanel.sprite.name,
+                Is.EqualTo("thin_outer_frame"),
+                "The patrol content panel must retain the approved thin content border.");
             Assert.That(shadow, Is.Not.Null);
             Assert.That(shadow.color.a, Is.InRange(.08f, .28f));
             Assert.That(shadow.transform.GetSiblingIndex(), Is.LessThan(hero.transform.GetSiblingIndex()));
@@ -173,10 +177,14 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTest]
         public IEnumerator NewAccountShowsStageOneWithKoreanDifficultyLocks()
         {
+            var originalWidth = Screen.width;
+            var originalHeight = Screen.height;
             Screen.SetResolution(1080, 2340, false);
-            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
-            SceneManager.LoadScene("Lobby");
-            yield return null;
+            try
+            {
+                MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+                SceneManager.LoadScene("Lobby");
+                yield return null;
 
             Assert.That(GameObject.Find("Stage Name").GetComponent<TMPro.TMP_Text>().text,
                 Does.Contain("귀곡 들판"));
@@ -208,8 +216,13 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(GameObject.Find("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
                 Is.EqualTo("이 장 보통 승리 시 해금"));
-            Assert.That(MetaGameSession.Current.ActiveStageSelection,
-                Is.EqualTo(new StageSelection(StageId.GwigokField, StageDifficulty.Normal)));
+                Assert.That(MetaGameSession.Current.ActiveStageSelection,
+                    Is.EqualTo(new StageSelection(StageId.GwigokField, StageDifficulty.Normal)));
+            }
+            finally
+            {
+                Screen.SetResolution(originalWidth, originalHeight, false);
+            }
         }
 
         [UnityTest]

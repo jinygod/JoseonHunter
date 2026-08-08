@@ -43,8 +43,8 @@ namespace JoseonHunter.Tests.PlayMode
             var returnButton = FindButton(root, "Confirm Return Button");
             Assert.That(continueButton.GetComponent<RectTransform>().anchoredPosition.y,
                 Is.GreaterThan(returnButton.GetComponent<RectTransform>().anchoredPosition.y));
-            Assert.That(((Image)continueButton.targetGraphic).sprite, Is.Not.Null);
-            Assert.That(((Image)returnButton.targetGraphic).sprite, Is.Not.Null);
+            Assert.That(((Image)continueButton.targetGraphic).sprite.name, Is.EqualTo("primary_red_button"));
+            Assert.That(((Image)returnButton.targetGraphic).sprite.name, Is.EqualTo("secondary_dark_button"));
 
             var musicLabel = FindText(root, "Music Volume Slider Label");
             var effectsLabel = FindText(root, "Sound Effect Volume Slider Label");

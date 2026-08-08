@@ -81,11 +81,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Anchor(heroImage.rectTransform, new Vector2(.33f, .58f), new Vector2(.67f, .81f));
 
             normalDifficultyButton = CreateDifficultyButton(
-                "Difficulty Normal", "보통", new Vector2(.07f, .445f), new Vector2(.35f, .56f));
+                "Difficulty Normal", "보통");
             omenDifficultyButton = CreateDifficultyButton(
-                "Difficulty Omen", "흉조", new Vector2(.36f, .445f), new Vector2(.64f, .56f));
+                "Difficulty Omen", "흉조");
             greatOmenDifficultyButton = CreateDifficultyButton(
-                "Difficulty Great Omen", "대흉", new Vector2(.65f, .445f), new Vector2(.93f, .56f));
+                "Difficulty Great Omen", "대흉");
 
             Anchor(normalDifficultyButton.GetComponent<RectTransform>(), new Vector2(.055f, .43f), new Vector2(.35f, .535f));
             Anchor(omenDifficultyButton.GetComponent<RectTransform>(), new Vector2(.352f, .43f), new Vector2(.648f, .535f));
@@ -126,12 +126,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
             BuildWeaponSelectionOverlay();
         }
 
-        private Button CreateDifficultyButton(string name, string label, Vector2 minimum, Vector2 maximum)
+        private Button CreateDifficultyButton(string name, string label)
         {
             var button = LobbyUiFactory.Button(name, transform, label, 21f,
                 LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
-            LobbyUiFactory.Anchor(button.GetComponent<RectTransform>(), minimum, maximum,
-                Vector2.zero, Vector2.zero);
             return button;
         }
 
@@ -177,11 +175,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 Vector2.zero, Vector2.zero);
 
             normalDifficultyButton = transform.Find("Difficulty Normal")?.GetComponent<Button>() ??
-                CreateDifficultyButton("Difficulty Normal", "보통", new Vector2(.07f, .445f), new Vector2(.35f, .56f));
+                CreateDifficultyButton("Difficulty Normal", "보통");
             omenDifficultyButton = transform.Find("Difficulty Omen")?.GetComponent<Button>() ??
-                CreateDifficultyButton("Difficulty Omen", "흉조", new Vector2(.36f, .445f), new Vector2(.64f, .56f));
+                CreateDifficultyButton("Difficulty Omen", "흉조");
             greatOmenDifficultyButton = transform.Find("Difficulty Great Omen")?.GetComponent<Button>() ??
-                CreateDifficultyButton("Difficulty Great Omen", "대흉", new Vector2(.65f, .445f), new Vector2(.93f, .56f));
+                CreateDifficultyButton("Difficulty Great Omen", "대흉");
 
             Anchor(normalDifficultyButton.GetComponent<RectTransform>(), new Vector2(.055f, .43f), new Vector2(.35f, .535f));
             Anchor(omenDifficultyButton.GetComponent<RectTransform>(), new Vector2(.352f, .43f), new Vector2(.648f, .535f));

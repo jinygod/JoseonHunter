@@ -68,6 +68,7 @@ namespace JoseonHunter.Presentation.UI
                 : "secondary_dark_button", sliced: true);
             button.targetGraphic = image;
             button.transition = Selectable.Transition.ColorTint;
+            button.colors = ActionColors();
         }
 
         public static void ApplyIcon(Image image, PremiumIcon icon)
@@ -167,6 +168,20 @@ namespace JoseonHunter.Presentation.UI
                 pressedColor = Color.Lerp(normal, Color.black, .25f),
                 selectedColor = Color.Lerp(normal, Color.white, .12f),
                 disabledColor = new Color(normal.r, normal.g, normal.b, .45f),
+                colorMultiplier = 1f,
+                fadeDuration = .08f
+            };
+        }
+
+        private static ColorBlock ActionColors()
+        {
+            return new ColorBlock
+            {
+                normalColor = Color.white,
+                highlightedColor = new Color(1f, .9f, .86f, 1f),
+                pressedColor = new Color(.72f, .72f, .72f, 1f),
+                selectedColor = new Color(1f, .94f, .9f, 1f),
+                disabledColor = new Color(1f, 1f, 1f, .45f),
                 colorMultiplier = 1f,
                 fadeDuration = .08f
             };

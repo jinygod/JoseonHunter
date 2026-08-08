@@ -129,6 +129,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
         {
             var panel = LobbyUiFactory.Image(name, parent, LobbyUiFactory.NightInk);
             LobbyUiFactory.Stretch(panel.rectTransform);
+            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
             return panel.rectTransform;
         }
 
@@ -149,7 +150,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                      })
             {
                 var panel = transform.Find("Safe Area/Stage Content/" + panelName)?.GetComponent<Image>();
-                if (panel != null) panel.sprite = null;
+                PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
             }
 
             var navigation = transform.Find("Safe Area/Bottom Navigation")?.GetComponent<Image>();

@@ -36,6 +36,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(background.sprite, Is.Not.Null);
             Assert.That(background.sprite.name, Is.EqualTo("primary_red_button"));
             Assert.That(background.type, Is.EqualTo(Image.Type.Sliced));
+            Assert.That(button.colors.highlightedColor, Is.EqualTo(new Color(1f, .9f, .86f, 1f)));
+            Assert.That(button.colors.pressedColor, Is.EqualTo(new Color(.72f, .72f, .72f, 1f)));
             Assert.That(button.transform.Cast<Transform>().Count(child => child.name == "Action Icon"),
                 Is.EqualTo(1));
             Assert.That(button.transform.Find("Action Icon").GetComponent<Image>().sprite.name,
