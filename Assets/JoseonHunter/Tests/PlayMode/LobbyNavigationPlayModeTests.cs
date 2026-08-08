@@ -150,6 +150,31 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator LobbyAudioSettingsCloseButtonHidesSerializedOverlay()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var settingsButton = GameObject.Find("Settings Button")?.GetComponent<Button>();
+            Assert.That(settingsButton, Is.Not.Null);
+            settingsButton.onClick.Invoke();
+            yield return null;
+
+            var overlay = GameObject.Find("Audio Settings Overlay");
+            var closeButton = GameObject.Find("Close Audio Settings")?.GetComponent<Button>();
+            Assert.That(overlay, Is.Not.Null);
+            Assert.That(closeButton, Is.Not.Null);
+            Assert.That(overlay.activeInHierarchy, Is.True);
+
+            closeButton.onClick.Invoke();
+            yield return null;
+
+            Assert.That(overlay.activeSelf, Is.False,
+                "The serialized lobby audio overlay must subscribe its close request to LobbyBootstrap.");
+        }
+
+        [UnityTest]
         public IEnumerator LobbyAudioSliderHandlesStayCompactAndInsideTheirTracks()
         {
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));

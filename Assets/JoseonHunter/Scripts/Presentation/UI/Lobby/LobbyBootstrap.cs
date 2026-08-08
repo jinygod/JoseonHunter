@@ -164,6 +164,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             {
                 settingsOverlay = existingOverlay.gameObject;
                 audioSettings = settingsOverlay.GetComponentInChildren<AudioSettingsPresenter>(true);
+                if (audioSettings != null)
+                {
+                    audioSettings.CloseRequested -= CloseSettings;
+                    audioSettings.CloseRequested += CloseSettings;
+                }
                 settingsOverlay.transform.SetAsLastSibling();
                 return;
             }
