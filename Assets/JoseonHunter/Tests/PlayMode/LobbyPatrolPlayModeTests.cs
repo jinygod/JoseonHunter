@@ -173,6 +173,7 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTest]
         public IEnumerator NewAccountShowsStageOneWithKoreanDifficultyLocks()
         {
+            Screen.SetResolution(1080, 2340, false);
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
@@ -191,6 +192,11 @@ namespace JoseonHunter.Tests.PlayMode
             var greatOmen = FindIncludingInactive("Difficulty Great Omen");
             Assert.That(greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("대흉"));
             Assert.That(greatOmen.transform.Find("Lock Slash").gameObject.activeSelf, Is.True);
+            var lockSlash = greatOmen.transform.Find("Lock Slash").GetComponent<RectTransform>();
+            Assert.That(lockSlash.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)),
+                "production lock slash must be centered rather than stretched across transparent card margins");
+            Assert.That(lockSlash.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
+            AssertVisualRectInside(lockSlash, greatOmen.GetComponent<RectTransform>());
             Assert.That(greatOmen.transform.Find("Lock Icon").GetComponent<Image>().sprite.name,
                 Is.EqualTo("icon_lock"));
             var startImage = GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic as Image;
@@ -277,6 +283,21 @@ namespace JoseonHunter.Tests.PlayMode
             var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
             Assert.That(image.color, Is.EqualTo(Color.white), name + " image tint");
             Assert.That(label.color, Is.EqualTo(new Color(.96f, .89f, .71f, 1f)), name + " label color");
+        }
+
+        private static void AssertVisualRectInside(RectTransform child, RectTransform parent)
+        {
+            var childCorners = new Vector3[4];
+            var parentCorners = new Vector3[4];
+            child.GetWorldCorners(childCorners);
+            parent.GetWorldCorners(parentCorners);
+            foreach (var corner in childCorners)
+            {
+                Assert.That(corner.x, Is.InRange(parentCorners[0].x, parentCorners[2].x),
+                    "lock slash must not extend beyond production card width");
+                Assert.That(corner.y, Is.InRange(parentCorners[0].y, parentCorners[2].y),
+                    "lock slash must not extend beyond production card height");
+            }
         }
 
         private sealed class MemoryRepository : ISaveRepository

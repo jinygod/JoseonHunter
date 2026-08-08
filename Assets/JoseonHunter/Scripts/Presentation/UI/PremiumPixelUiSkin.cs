@@ -134,25 +134,9 @@ namespace JoseonHunter.Presentation.UI
             slash.sprite = null;
             slash.color = new Color(.92f, .63f, .18f, .95f);
             slash.raycastTarget = false;
-            var slashRect = slash.rectTransform;
-            slashRect.anchorMin = new Vector2(.12f, .5f);
-            slashRect.anchorMax = new Vector2(.88f, .5f);
-            slashRect.anchoredPosition = Vector2.zero;
-            const float slashAngle = -16f;
-            var buttonRect = button.transform as RectTransform;
-            var cardSize = buttonRect.rect.size;
-            var slashThickness = Mathf.Min(5f, cardSize.y * .08f);
-            var radians = Mathf.Abs(slashAngle) * Mathf.Deg2Rad;
-            var safeWidth = cardSize.x * .72f;
-            var safeHeight = cardSize.y * .72f;
-            var maxLengthByWidth = (safeWidth - slashThickness * Mathf.Sin(radians))
-                / Mathf.Cos(radians);
-            var maxLengthByHeight = (safeHeight - slashThickness * Mathf.Cos(radians))
-                / Mathf.Sin(radians);
-            var slashLength = Mathf.Max(0f, Mathf.Min(safeWidth, maxLengthByWidth, maxLengthByHeight));
-            var anchoredWidth = cardSize.x * (slashRect.anchorMax.x - slashRect.anchorMin.x);
-            slashRect.sizeDelta = new Vector2(slashLength - anchoredWidth, slashThickness);
-            slashRect.localEulerAngles = new Vector3(0f, 0f, slashAngle);
+            var slashLayout = slash.GetComponent<LockSlashConstraint>();
+            if (slashLayout == null) slashLayout = slash.gameObject.AddComponent<LockSlashConstraint>();
+            slashLayout.Configure();
             slash.gameObject.SetActive(locked);
 
             var lockIcon = EnsureImage(button.transform, "Lock Icon");
@@ -236,6 +220,43 @@ namespace JoseonHunter.Presentation.UI
                 PremiumIcon.Lock => "icon_lock",
                 _ => null
             };
+        }
+    }
+
+    internal sealed class LockSlashConstraint : MonoBehaviour
+    {
+        private const float SlashAngle = -16f;
+        private bool applying;
+
+        public void Configure() => Apply();
+
+        private void OnRectTransformDimensionsChange() => Apply();
+
+        private void Apply()
+        {
+            if (applying || transform.parent is not RectTransform card) return;
+            applying = true;
+            try
+            {
+                var rect = (RectTransform)transform;
+                var cardSize = card.rect.size;
+                var slashThickness = Mathf.Min(5f, cardSize.y * .08f);
+                var radians = Mathf.Abs(SlashAngle) * Mathf.Deg2Rad;
+                var safeWidth = cardSize.x * .50f;
+                var safeHeight = cardSize.y * .72f;
+                var maxLengthByWidth = (safeWidth - slashThickness * Mathf.Sin(radians)) / Mathf.Cos(radians);
+                var maxLengthByHeight = (safeHeight - slashThickness * Mathf.Cos(radians)) / Mathf.Sin(radians);
+                var slashLength = Mathf.Max(0f, Mathf.Min(safeWidth, maxLengthByWidth, maxLengthByHeight));
+                rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+                rect.pivot = new Vector2(.5f, .5f);
+                rect.anchoredPosition = Vector2.zero;
+                rect.sizeDelta = new Vector2(slashLength, slashThickness);
+                rect.localEulerAngles = new Vector3(0f, 0f, SlashAngle);
+            }
+            finally
+            {
+                applying = false;
+            }
         }
     }
 }

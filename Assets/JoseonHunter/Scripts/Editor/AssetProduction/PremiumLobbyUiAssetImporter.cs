@@ -33,6 +33,9 @@ namespace JoseonHunter.Editor.AssetProduction
                 importer.mipmapEnabled = false;
                 importer.filterMode = FilterMode.Point;
                 importer.textureCompression = TextureImporterCompression.Uncompressed;
+                SetUncompressedPlatform(importer, "Standalone");
+                SetUncompressedPlatform(importer, "Android");
+                SetUncompressedPlatform(importer, "WebGL");
                 importer.spritePixelsPerUnit = 100f;
                 var name = Path.GetFileNameWithoutExtension(path);
                 importer.spriteBorder = Array.IndexOf(Sliced, name) >= 0
@@ -46,6 +49,15 @@ namespace JoseonHunter.Editor.AssetProduction
 
             AssetDatabase.SaveAssets();
             Debug.Log("Imported premium Joseon lobby UI sprites.");
+        }
+
+        private static void SetUncompressedPlatform(TextureImporter importer, string platform)
+        {
+            var settings = importer.GetPlatformTextureSettings(platform);
+            settings.overridden = true;
+            settings.textureCompression = TextureImporterCompression.Uncompressed;
+            settings.crunchedCompression = false;
+            importer.SetPlatformTextureSettings(settings);
         }
     }
 }

@@ -29,7 +29,18 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point));
             Assert.That(importer.mipmapEnabled, Is.False);
             Assert.That(importer.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
+            AssertPlatformIsUncompressed(importer, "Standalone", path);
+            AssertPlatformIsUncompressed(importer, "Android", path);
+            AssertPlatformIsUncompressed(importer, "WebGL", path);
             Assert.That(importer.spriteBorder.sqrMagnitude, sliced ? Is.GreaterThan(0f) : Is.EqualTo(0f));
+        }
+
+        private static void AssertPlatformIsUncompressed(TextureImporter importer, string platform, string path)
+        {
+            var settings = importer.GetPlatformTextureSettings(platform);
+            Assert.That(settings.overridden, Is.True, path + " " + platform);
+            Assert.That(settings.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed),
+                path + " " + platform);
         }
     }
 }

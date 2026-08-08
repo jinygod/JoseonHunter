@@ -45,8 +45,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(((Image)button.targetGraphic).sprite.name, Is.EqualTo("difficulty_locked"));
             var slashRect = button.transform.Find("Lock Slash").GetComponent<RectTransform>();
             var lockRect = button.transform.Find("Lock Icon").GetComponent<RectTransform>();
-            Assert.That(slashRect.anchorMin.x, Is.EqualTo(.12f));
-            Assert.That(slashRect.anchorMax.x, Is.EqualTo(.88f));
+            Assert.That(slashRect.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)));
+            Assert.That(slashRect.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
             Assert.That(lockRect.sizeDelta.x, Is.EqualTo(30f).Within(.001f));
             Assert.That(lockRect.sizeDelta.y, Is.EqualTo(30f).Within(.001f));
             AssertRectInsideButton(slashRect, button.GetComponent<RectTransform>());

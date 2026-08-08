@@ -53,3 +53,9 @@ The audit was repeated after final regeneration and returned zero production/tes
 ## Overall status
 
 Passed: production rebuild, focused contracts, full EditMode, full PlayMode, native-resolution capture acceptance, and zero-reference cleanup audit.
+
+## Fix Round 1
+
+- Premium importer now explicitly sets Standalone, Android, and WebGL overrides to uncompressed; focused asset contract passed 13/13.
+- The lock slash is dynamically centered and constrained to the card; the 1080x2340 patrol original was re-inspected and its complete orange slash remains inside the locked-card border.
+- Final reruns: EditMode 918/918 and PlayMode 321/321. Capture originals were regenerated at 00:04--00:05 local time.
