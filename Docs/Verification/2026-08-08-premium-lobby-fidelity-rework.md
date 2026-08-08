@@ -59,3 +59,9 @@ Passed: production rebuild, focused contracts, full EditMode, full PlayMode, nat
 - Premium importer now explicitly sets Standalone, Android, and WebGL overrides to uncompressed; focused asset contract passed 13/13.
 - The lock slash is dynamically centered and constrained to the card; the 1080x2340 patrol original was re-inspected and its complete orange slash remains inside the locked-card border.
 - Final reruns: EditMode 918/918 and PlayMode 321/321. Capture originals were regenerated at 00:04--00:05 local time.
+
+## Final fix-wave evidence (blocked asset replacement)
+
+The final review identified padded difficulty/action sprites and a missing active content-panel thin frame. The content-frame and minor code/test fixes were completed with focused RED/GREEN evidence: asset-bound RED 14/18 (four padded controls failed), content-frame RED 8/9 (one panel-frame failure), then the focused code fixtures passed 12/12. The required full suites and captures were not rerun because the mandatory bitmap replacement remained blocked.
+
+PixelLab-only regeneration was attempted in two inspected six-asset batches. Batch 1 was rejected for transparent margins and non-compliant ornamental/textured treatment. Batch 2 alpha-filled its canvases but was also rejected at original resolution: generated menu text/buildings, multi-control sheets, or transparent-margin artwork. No rejected output was imported into production; the existing source-alpha contract therefore remains intentionally red for `difficulty_selected`, `difficulty_idle`, `primary_red_button`, and `secondary_dark_button`. See `.superpowers/sdd/2026-08-08-premium-lobby-fidelity-rework-implementation-plan/final-fix-report.md` for job IDs and exact evidence.
