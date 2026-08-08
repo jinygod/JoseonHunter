@@ -105,6 +105,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
         public void Initialize(MetaGameSession value, Action onChanged)
         {
             EnsureExpandedView();
+            JoseonButtonSkin.Apply(purchaseButton, JoseonButtonStyle.Primary);
+            JoseonButtonSkin.Apply(resetButton, JoseonButtonStyle.Secondary);
             session = value;
             refreshHeader = onChanged;
             for (var index = 0; index < trainingButtons.Length; index++)

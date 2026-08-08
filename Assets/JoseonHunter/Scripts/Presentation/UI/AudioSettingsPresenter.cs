@@ -85,6 +85,7 @@ namespace JoseonHunter.Presentation.UI
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             closeLabel.color = JoseonUiPalette.Hanji;
             RuntimeUiFactory.Stretch(closeLabel.rectTransform, 8f, 4f, 8f, 4f);
+            JoseonButtonSkin.Apply(close, JoseonButtonStyle.Secondary);
         }
 
         private Slider BuildSlider(string name, string labelText, float y, out TextMeshProUGUI valueLabel)

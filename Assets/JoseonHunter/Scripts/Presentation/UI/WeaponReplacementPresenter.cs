@@ -62,6 +62,7 @@ namespace JoseonHunter.Presentation.UI
                 "교체하지 않기", 23f, TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             RuntimeUiFactory.Stretch(cancelLabel.rectTransform, 10f, 8f, 10f, 8f);
             cancelButton.onClick.AddListener(Cancel);
+            JoseonButtonSkin.Apply(cancelButton, JoseonButtonStyle.Secondary);
             ApplyPortraitLayout();
             root.SetActive(false);
         }

@@ -738,6 +738,7 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 12f, 5f, 12f, 5f);
             confirmLabel.fontStyle = FontStyles.Bold;
             confirmLabel.color = JoseonUiPalette.DarkPanelText;
+            JoseonButtonSkin.Apply(confirmButton, JoseonButtonStyle.Primary);
 
             title.transform.SetAsLastSibling();
             detail.transform.SetAsLastSibling();

@@ -75,6 +75,7 @@ namespace JoseonHunter.Presentation.UI
                 Cancelled?.Invoke();
             });
             ButtonLabel(cancel, "계속하기");
+            JoseonButtonSkin.Apply(cancel, JoseonButtonStyle.Primary, JoseonButtonIcon.Continue);
 
             var confirm = RuntimeUiFactory.Button("Confirm Return Button", panel.transform,
                 JoseonUiPalette.AppraisalResult);
@@ -85,6 +86,7 @@ namespace JoseonHunter.Presentation.UI
                 Confirmed?.Invoke();
             });
             ButtonLabel(confirm, "로비로 돌아가기");
+            JoseonButtonSkin.Apply(confirm, JoseonButtonStyle.Secondary, JoseonButtonIcon.Lobby);
             ApplyPortraitLayout();
             root.SetActive(false);
         }

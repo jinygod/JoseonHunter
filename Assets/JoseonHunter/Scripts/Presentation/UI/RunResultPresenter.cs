@@ -110,6 +110,7 @@ namespace JoseonHunter.Presentation.UI
             RuntimeUiFactory.Stretch(lobbyReturnLabel.rectTransform, 12f, 8f, 12f, 8f);
             lobbyReturnLabel.fontStyle = FontStyles.Bold;
             lobbyReturnLabel.color = JoseonUiPalette.DarkPanelText;
+            JoseonButtonSkin.Apply(lobbyReturnButton, JoseonButtonStyle.Secondary, JoseonButtonIcon.Lobby);
 
             ApplyPortraitLayout();
             resultRoot.SetActive(false);

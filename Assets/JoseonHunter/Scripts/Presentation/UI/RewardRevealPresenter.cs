@@ -133,6 +133,7 @@ namespace JoseonHunter.Presentation.UI
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
             confirmLabel.color = JoseonUiPalette.DarkPanelText;
             RuntimeUiFactory.Stretch(confirmLabel.rectTransform, 6f, 4f, 6f, 4f);
+            JoseonButtonSkin.Apply(confirmButton, JoseonButtonStyle.Primary);
             root.SetActive(false);
         }
 
