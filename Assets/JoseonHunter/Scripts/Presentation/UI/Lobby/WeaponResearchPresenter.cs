@@ -4,6 +4,7 @@ using System.Linq;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Meta;
 using TMPro;
 using UnityEngine;
@@ -31,20 +32,25 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void Build()
         {
-            if (transform.Find("Research Title") != null) return;
+            if (transform.Find("Research Progress Backplate") != null) return;
+            ArchiveLegacyLayoutIfPresent("Research Title", "Legacy Research Layout");
             titleText = LobbyUiFactory.Text("Research Title", transform, "무기 연구", 34f,
                 TextAlignmentOptions.Left, true);
             titleText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(titleText.rectTransform, new Vector2(.22f, .90f), new Vector2(.96f, .985f),
+            LobbyUiFactory.Anchor(titleText.rectTransform, new Vector2(.22f, .86f), new Vector2(.96f, .96f),
                 Vector2.zero, Vector2.zero);
 
             selectedWeaponIcon = LobbyUiFactory.Image("Selected Weapon Icon", transform, Color.white);
             selectedWeaponIcon.preserveAspect = true;
-            LobbyUiFactory.Anchor(selectedWeaponIcon.rectTransform, new Vector2(.055f, .82f), new Vector2(.195f, .965f),
+            LobbyUiFactory.Anchor(selectedWeaponIcon.rectTransform, new Vector2(.055f, .86f), new Vector2(.195f, .96f),
                 Vector2.zero, Vector2.zero);
 
+            var progressBackplate = LobbyUiFactory.Image("Research Progress Backplate", transform, Color.white);
+            PremiumPixelUiSkin.ApplyFrame(progressBackplate, PremiumFrame.ContentBackplate);
+            LobbyUiFactory.Anchor(progressBackplate.rectTransform, new Vector2(.05f, .77f), new Vector2(.95f, .855f),
+                Vector2.zero, Vector2.zero);
             var weaponGrid = LobbyUiFactory.Rect("Weapon Grid", transform);
-            LobbyUiFactory.Anchor(weaponGrid, new Vector2(.04f, .58f), new Vector2(.96f, .75f),
+            LobbyUiFactory.Anchor(weaponGrid, new Vector2(.04f, .57f), new Vector2(.96f, .755f),
                 Vector2.zero, Vector2.zero);
             var grid = weaponGrid.gameObject.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -54,17 +60,20 @@ namespace JoseonHunter.Presentation.UI.Lobby
             grid.childAlignment = TextAnchor.MiddleCenter;
             weaponButtons = new Button[WeaponRoster.All.Count];
             for (var index = 0; index < weaponButtons.Length; index++)
+            {
                 weaponButtons[index] = LobbyUiFactory.Button("Weapon " + index, weaponGrid,
                     LobbyViewModels.WeaponName(WeaponRoster.All[index]), 19f,
                     LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+                PremiumPixelUiSkin.ApplyFrame(weaponButtons[index].GetComponent<Image>(), PremiumFrame.SmallItem);
+            }
 
-            masteryText = LobbyUiFactory.Text("Mastery Summary", transform, string.Empty, 21f);
+            masteryText = LobbyUiFactory.Text("Mastery Summary", progressBackplate.transform, string.Empty, 21f);
             masteryText.color = LobbyUiFactory.HanjiLight;
-            LobbyUiFactory.Anchor(masteryText.rectTransform, new Vector2(.22f, .825f), new Vector2(.94f, .895f),
+            LobbyUiFactory.Anchor(masteryText.rectTransform, new Vector2(.06f, .50f), new Vector2(.94f, .94f),
                 Vector2.zero, Vector2.zero);
 
-            var progress = LobbyUiFactory.Image("Mastery Progress", transform, new Color(.04f, .055f, .05f, 1f));
-            LobbyUiFactory.Anchor(progress.rectTransform, new Vector2(.22f, .775f), new Vector2(.94f, .815f),
+            var progress = LobbyUiFactory.Image("Mastery Progress", progressBackplate.transform, new Color(.04f, .055f, .05f, 1f));
+            LobbyUiFactory.Anchor(progress.rectTransform, new Vector2(.06f, .15f), new Vector2(.94f, .42f),
                 Vector2.zero, Vector2.zero);
             var fill = LobbyUiFactory.Image("Mastery Progress Fill", progress.transform,
                 new Color(.18f, .76f, .39f, 1f));
@@ -72,29 +81,38 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(masteryProgressFill, Vector2.zero, new Vector2(0f, 1f),
                 Vector2.zero, Vector2.zero);
 
-            var styles = LobbyUiFactory.Rect("Style Cards", transform);
-            LobbyUiFactory.Anchor(styles, new Vector2(.05f, .10f), new Vector2(.95f, .555f),
-                Vector2.zero, Vector2.zero);
-            var layout = styles.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 12f;
-            layout.padding = new RectOffset(0, 0, 0, 0);
-            layout.childControlHeight = true;
-            layout.childControlWidth = true;
-            layout.childForceExpandHeight = true;
-            layout.childForceExpandWidth = true;
             styleButtons = new Button[3];
             for (var index = 0; index < styleButtons.Length; index++)
-                styleButtons[index] = LobbyUiFactory.Button("Style " + index, styles, string.Empty, 20f,
+            {
+                styleButtons[index] = LobbyUiFactory.Button("Style Card " + index, transform, string.Empty, 20f,
                     LobbyUiFactory.Crimson, LobbyUiFactory.HanjiLight);
+                PremiumPixelUiSkin.ApplyFrame(styleButtons[index].GetComponent<Image>(), PremiumFrame.ContentBackplate);
+                var maxY = .555f - index * .145f;
+                LobbyUiFactory.Anchor(styleButtons[index].GetComponent<RectTransform>(), new Vector2(.05f, maxY - .135f),
+                    new Vector2(.95f, maxY), Vector2.zero, Vector2.zero);
+            }
 
             feedbackText = LobbyUiFactory.Text("Research Feedback", transform, string.Empty, 19f);
             feedbackText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .015f), new Vector2(.95f, .085f),
+            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .03f), new Vector2(.95f, .11f),
                 Vector2.zero, Vector2.zero);
+        }
+
+        private void ArchiveLegacyLayoutIfPresent(string marker, string archiveName)
+        {
+            if (transform.Find(marker) == null) return;
+            var archive = LobbyUiFactory.Rect(archiveName, transform);
+            var legacyChildren = new List<Transform>();
+            foreach (Transform child in transform)
+                if (child != archive) legacyChildren.Add(child);
+            foreach (var child in legacyChildren)
+                child.SetParent(archive, false);
+            archive.gameObject.SetActive(false);
         }
 
         public void Initialize(MetaGameSession value, Action onChanged)
         {
+            Build();
             session = value;
             refreshHeader = onChanged;
             for (var index = 0; index < weaponButtons.Length; index++)

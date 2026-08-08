@@ -48,9 +48,8 @@ namespace JoseonHunter.Tests.PlayMode
             var purchase = presenter.transform.Find("Purchase Training").GetComponent<Button>();
             Assert.That(purchase.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(64f));
             Assert.That(purchase.GetComponentInChildren<TMPro.TMP_Text>().fontSize, Is.GreaterThanOrEqualTo(18f));
-            var detail = presenter.transform.Find("Training Detail").GetComponent<Image>();
-            Assert.That(detail.color.maxColorComponent, Is.LessThan(.5f));
-            Assert.That(detail.color.a, Is.GreaterThan(.95f));
+            var detail = presenter.transform.Find("Training Summary Backplate").GetComponent<Image>();
+            Assert.That(detail.sprite.name, Is.EqualTo("content_backplate"));
 
             presenter.PurchaseForTests();
             Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(400));
@@ -126,12 +125,57 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.FeedbackTextForTests, Is.EqualTo("총 수련 최대치에 도달했습니다."));
         }
 
+        [UnityTest]
+        public IEnumerator TrainingUsesSixSmallStatCardsAndSeparateSummaryActions()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include).gameObject.SetActive(true);
+            Canvas.ForceUpdateCanvases();
+
+            var cards = GameObject.Find("Training Grid").GetComponentsInChildren<Button>(true);
+            Assert.That(cards, Has.Length.EqualTo(6));
+            Assert.That(cards, Has.All.Matches<Button>(button =>
+                button.GetComponent<Image>().sprite.name == "small_item_frame"));
+            Assert.That(GameObject.Find("Training Summary Backplate").GetComponent<Image>().sprite.name,
+                Is.EqualTo("content_backplate"));
+            var purchase = GameObject.Find("Purchase Training").GetComponent<Button>();
+            var reset = GameObject.Find("Reset Training").GetComponent<Button>();
+            Assert.That(purchase.GetComponent<Image>().sprite.name, Is.EqualTo("primary_red_button"));
+            Assert.That(reset.GetComponent<Image>().sprite.name, Is.EqualTo("secondary_dark_button"));
+            AssertInside(GameObject.Find("Training Content Panel").GetComponent<RectTransform>(),
+                purchase.GetComponent<RectTransform>(), reset.GetComponent<RectTransform>());
+            Assert.That(WorldRect(purchase.GetComponent<RectTransform>()).Overlaps(
+                WorldRect(reset.GetComponent<RectTransform>())), Is.False);
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;
             public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
             public LoadResult Load() => new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
             public SaveResult Save(SaveDataV1 data) { stored = data.Copy(); return new SaveResult(true, SaveError.None); }
+        }
+
+        private static Rect WorldRect(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
+        private static void AssertInside(RectTransform container, params RectTransform[] children)
+        {
+            var bounds = WorldRect(container);
+            foreach (var child in children)
+            {
+                var rect = WorldRect(child);
+                Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(bounds.xMin));
+                Assert.That(rect.xMax, Is.LessThanOrEqualTo(bounds.xMax));
+                Assert.That(rect.yMin, Is.GreaterThanOrEqualTo(bounds.yMin));
+                Assert.That(rect.yMax, Is.LessThanOrEqualTo(bounds.yMax));
+            }
         }
     }
 }

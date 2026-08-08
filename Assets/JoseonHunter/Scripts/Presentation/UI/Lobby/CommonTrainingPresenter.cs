@@ -1,5 +1,6 @@
 using System;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Meta;
 using TMPro;
 using UnityEngine;
@@ -33,29 +34,34 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void Build()
         {
-            if (transform.Find("Training Title") != null)
+            if (transform.Find("Training Summary Backplate") != null)
             {
                 EnsureExpandedView();
                 return;
             }
+            ArchiveLegacyLayoutIfPresent();
             var title = LobbyUiFactory.Text("Training Title", transform, "수련", 34f,
                 TextAlignmentOptions.Center, true);
             title.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .90f), new Vector2(.96f, .985f),
+            LobbyUiFactory.Anchor(title.rectTransform, new Vector2(.04f, .91f), new Vector2(.96f, .96f),
                 Vector2.zero, Vector2.zero);
             var description = LobbyUiFactory.Text("Training Description", transform,
                 "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 15%입니다.", 19f);
             description.color = LobbyUiFactory.HanjiLight;
-            LobbyUiFactory.Anchor(description.rectTransform, new Vector2(.06f, .82f), new Vector2(.94f, .90f),
+            LobbyUiFactory.Anchor(description.rectTransform, new Vector2(.06f, .875f), new Vector2(.94f, .91f),
                 Vector2.zero, Vector2.zero);
             capacityText = LobbyUiFactory.Text("Training Capacity", transform, string.Empty, 18f,
                 TextAlignmentOptions.Center, true);
             capacityText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(capacityText.rectTransform, new Vector2(.06f, .78f), new Vector2(.94f, .83f),
+            LobbyUiFactory.Anchor(capacityText.rectTransform, new Vector2(.06f, .84f), new Vector2(.94f, .875f),
+                Vector2.zero, Vector2.zero);
+
+            var contentPanel = LobbyUiFactory.Rect("Training Content Panel", transform);
+            LobbyUiFactory.Anchor(contentPanel, new Vector2(.04f, .10f), new Vector2(.96f, .96f),
                 Vector2.zero, Vector2.zero);
 
             var gridRoot = LobbyUiFactory.Rect("Training Grid", transform);
-            LobbyUiFactory.Anchor(gridRoot, new Vector2(.06f, .55f), new Vector2(.94f, .81f),
+            LobbyUiFactory.Anchor(gridRoot, new Vector2(.06f, .58f), new Vector2(.94f, .82f),
                 Vector2.zero, Vector2.zero);
             var grid = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -70,10 +76,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 trainingButtons[index] = LobbyUiFactory.Button("Training " + id, gridRoot,
                     LobbyViewModels.TrainingName(id), 21f,
                     LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+                PremiumPixelUiSkin.ApplyFrame(trainingButtons[index].GetComponent<Image>(), PremiumFrame.SmallItem);
             }
 
-            var detail = LobbyUiFactory.Image("Training Detail", transform, LobbyUiFactory.NightInk);
-            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.07f, .29f), new Vector2(.93f, .53f),
+            var detail = LobbyUiFactory.Image("Training Summary Backplate", transform, Color.white);
+            PremiumPixelUiSkin.ApplyFrame(detail, PremiumFrame.ContentBackplate);
+            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.07f, .31f), new Vector2(.93f, .56f),
                 Vector2.zero, Vector2.zero);
             currentText = DetailText("Current", detail.transform, .68f, .94f);
             nextText = DetailText("Next", detail.transform, .39f, .66f);
@@ -81,16 +89,28 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
             purchaseButton = LobbyUiFactory.Button("Purchase Training", transform, "수련하기", 25f,
                 LobbyUiFactory.Crimson, LobbyUiFactory.HanjiLight);
-            LobbyUiFactory.Anchor(purchaseButton.GetComponent<RectTransform>(), new Vector2(.12f, .09f),
+            LobbyUiFactory.Anchor(purchaseButton.GetComponent<RectTransform>(), new Vector2(.08f, .12f),
                 new Vector2(.61f, .27f), Vector2.zero, Vector2.zero);
             resetButton = LobbyUiFactory.Button("Reset Training", transform, "전체 초기화", 21f,
                 LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
-            LobbyUiFactory.Anchor(resetButton.GetComponent<RectTransform>(), new Vector2(.63f, .09f),
-                new Vector2(.88f, .27f), Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(resetButton.GetComponent<RectTransform>(), new Vector2(.65f, .12f),
+                new Vector2(.92f, .27f), Vector2.zero, Vector2.zero);
             feedbackText = LobbyUiFactory.Text("Training Feedback", transform, string.Empty, 18f);
             feedbackText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .01f), new Vector2(.95f, .08f),
+            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .03f), new Vector2(.95f, .105f),
                 Vector2.zero, Vector2.zero);
+        }
+
+        private void ArchiveLegacyLayoutIfPresent()
+        {
+            if (transform.Find("Training Title") == null) return;
+            var archive = LobbyUiFactory.Rect("Legacy Training Layout", transform);
+            var legacyChildren = new System.Collections.Generic.List<Transform>();
+            foreach (Transform child in transform)
+                if (child != archive) legacyChildren.Add(child);
+            foreach (var child in legacyChildren)
+                child.SetParent(archive, false);
+            archive.gameObject.SetActive(false);
         }
 
         private static TMP_Text DetailText(string name, Transform parent, float minY, float maxY)
@@ -104,6 +124,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void Initialize(MetaGameSession value, Action onChanged)
         {
+            Build();
             EnsureExpandedView();
             JoseonButtonSkin.Apply(purchaseButton, JoseonButtonStyle.Primary);
             JoseonButtonSkin.Apply(resetButton, JoseonButtonStyle.Secondary);
@@ -200,7 +221,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             capacityText = LobbyUiFactory.Text("Training Capacity", transform, string.Empty, 18f,
                 TextAlignmentOptions.Center, true);
             capacityText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(capacityText.rectTransform, new Vector2(.06f, .78f), new Vector2(.94f, .83f),
+            LobbyUiFactory.Anchor(capacityText.rectTransform, new Vector2(.06f, .84f), new Vector2(.94f, .875f),
                 Vector2.zero, Vector2.zero);
         }
 
