@@ -7,6 +7,12 @@ using UnityEngine.UI;
 
 namespace JoseonHunter.Presentation.UI
 {
+    public enum AudioSettingsTheme
+    {
+        Hanji,
+        Night
+    }
+
     [DisallowMultipleComponent]
     public sealed class AudioSettingsPresenter : MonoBehaviour
     {
@@ -24,10 +30,11 @@ namespace JoseonHunter.Presentation.UI
 
         public event Action CloseRequested;
 
-        public void Initialize(MetaGameSession value, bool showCloseButton)
+        public void Initialize(MetaGameSession value, bool showCloseButton,
+            AudioSettingsTheme theme = AudioSettingsTheme.Hanji)
         {
             session = value ?? throw new ArgumentNullException(nameof(value));
-            Build(showCloseButton);
+            Build(showCloseButton, theme);
             suppressChanges = true;
             musicSlider.SetValueWithoutNotify(Mathf.Clamp01(session.Data.MusicVolume));
             soundEffectSlider.SetValueWithoutNotify(Mathf.Clamp01(session.Data.SoundEffectVolume));
@@ -57,19 +64,19 @@ namespace JoseonHunter.Presentation.UI
 
         private void OnDisable() => CommitPending();
 
-        private void Build(bool showCloseButton)
+        private void Build(bool showCloseButton, AudioSettingsTheme theme)
         {
             if (built) return;
             built = true;
 
             var title = RuntimeUiFactory.Text("Audio Settings Title", transform, "소리 설정", 29f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
-            title.color = JoseonUiPalette.HanjiInk;
+            title.color = TextColor(theme);
             SetRect(title.rectTransform, new Vector2(0f, 70f), new Vector2(560f, 42f));
 
-            musicSlider = BuildSlider("Music Volume Slider", "배경 음악", 18f, out musicValue);
+            musicSlider = BuildSlider("Music Volume Slider", "배경 음악", 18f, theme, out musicValue);
             soundEffectSlider = BuildSlider("Sound Effect Volume Slider", "효과음", -55f,
-                out soundEffectValue);
+                theme, out soundEffectValue);
             musicSlider.onValueChanged.AddListener(_ => OnValueChanged());
             soundEffectSlider.onValueChanged.AddListener(_ => OnValueChanged());
 
@@ -88,16 +95,17 @@ namespace JoseonHunter.Presentation.UI
             JoseonButtonSkin.Apply(close, JoseonButtonStyle.Secondary);
         }
 
-        private Slider BuildSlider(string name, string labelText, float y, out TextMeshProUGUI valueLabel)
+        private Slider BuildSlider(string name, string labelText, float y, AudioSettingsTheme theme,
+            out TextMeshProUGUI valueLabel)
         {
             var label = RuntimeUiFactory.Text(name + " Label", transform, labelText, 22f,
                 TextAlignmentOptions.Left, RuntimeFontRole.BodyEmphasis);
-            label.color = JoseonUiPalette.HanjiInk;
+            label.color = TextColor(theme);
             SetRect(label.rectTransform, new Vector2(-178f, y + 20f), new Vector2(210f, 34f));
 
             valueLabel = RuntimeUiFactory.Text(name + " Value", transform, "100%", 21f,
                 TextAlignmentOptions.Right, RuntimeFontRole.BodyEmphasis);
-            valueLabel.color = JoseonUiPalette.HanjiInk;
+            valueLabel.color = TextColor(theme);
             SetRect(valueLabel.rectTransform, new Vector2(218f, y + 20f), new Vector2(100f, 34f));
 
             var track = RuntimeUiFactory.Image(name, transform, new Color(.12f, .09f, .07f, 1f));
@@ -122,6 +130,9 @@ namespace JoseonHunter.Presentation.UI
             slider.targetGraphic = handle;
             return slider;
         }
+
+        private static Color TextColor(AudioSettingsTheme theme) =>
+            theme == AudioSettingsTheme.Night ? JoseonUiPalette.Hanji : JoseonUiPalette.HanjiInk;
 
         private void OnValueChanged()
         {
