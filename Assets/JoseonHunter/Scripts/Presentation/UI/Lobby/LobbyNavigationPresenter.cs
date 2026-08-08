@@ -46,6 +46,9 @@ namespace JoseonHunter.Presentation.UI.Lobby
             researchPanel.SetActive(selected == researchPanel);
             patrolPanel.SetActive(selected == patrolPanel);
             trainingPanel.SetActive(selected == trainingPanel);
+            ApplyContentFrame(researchPanel, selected == researchPanel);
+            ApplyContentFrame(patrolPanel, selected == patrolPanel);
+            ApplyContentFrame(trainingPanel, selected == trainingPanel);
             ApplySelection(researchButton, selected == researchPanel, PremiumIcon.Research);
             ApplySelection(patrolButton, selected == patrolPanel, PremiumIcon.Patrol);
             ApplySelection(trainingButton, selected == trainingPanel, PremiumIcon.Training);
@@ -54,6 +57,14 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private static void ApplySelection(Button button, bool selected, PremiumIcon icon)
         {
             LobbySelectionChrome.ApplyNavigation(button, icon, selected);
+        }
+
+        private static void ApplyContentFrame(GameObject panel, bool selected)
+        {
+            var image = panel.GetComponent<Image>();
+            if (image == null) return;
+            if (selected) PremiumPixelUiSkin.ApplyFrame(image, PremiumFrame.ThinOuter);
+            else image.sprite = null;
         }
     }
 }

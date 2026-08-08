@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using TMPro;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -52,9 +53,23 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(research.Find("Premium Icon").GetComponent<Image>().sprite.name,
                 Is.EqualTo("icon_research"));
             Assert.That(((Image)patrol.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("nav_selected_frame"));
+                Is.EqualTo("tab_selected"));
             Assert.That(((Image)research.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("nav_idle_frame"));
+                Is.EqualTo("tab_idle"));
+        }
+
+        [UnityTest]
+        public IEnumerator LobbyUsesApprovedCommonShellAnchorsAndPremiumFrames()
+        {
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            AssertAnchors("Header", new Vector2(.025f, .91f), new Vector2(.975f, .985f));
+            AssertAnchors("Stage Content", new Vector2(.04f, .105f), new Vector2(.96f, .895f));
+            AssertAnchors("Bottom Navigation", new Vector2(.04f, .02f), new Vector2(.96f, .095f));
+            Assert.That(ImageNamed("Header").sprite.name, Is.EqualTo("header_bar"));
+            Assert.That(ImageNamed("Patrol Panel").sprite.name, Is.EqualTo("thin_outer_frame"));
+            Assert.That(VisibleNavigationLabels(), Is.Empty);
         }
 
         [UnityTest]
@@ -228,9 +243,9 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.False);
             Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
             Assert.That(((Image)buttons[0].targetGraphic).sprite.name,
-                Is.EqualTo("nav_selected_frame"));
+                Is.EqualTo("tab_selected"));
             Assert.That(((Image)buttons[1].targetGraphic).sprite.name,
-                Is.EqualTo("nav_idle_frame"));
+                Is.EqualTo("tab_idle"));
             Assert.That(buttons[0].transform.Find("Premium Icon").GetComponent<Image>().sprite.name,
                 Is.EqualTo("icon_research"));
             Assert.That(buttons[1].transform.Find("Premium Icon").GetComponent<Image>().sprite.name,
@@ -240,6 +255,26 @@ namespace JoseonHunter.Tests.PlayMode
         private static GameObject FindIncludingInactive(string name) =>
             Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
                 .Single(transform => transform.name == name).gameObject;
+
+        private static RectTransform RectNamed(string name) =>
+            GameObject.Find(name).GetComponent<RectTransform>();
+
+        private static Image ImageNamed(string name) =>
+            GameObject.Find(name).GetComponent<Image>();
+
+        private static string[] VisibleNavigationLabels() =>
+            GameObject.Find("Bottom Navigation").GetComponentsInChildren<TMP_Text>(false)
+                .Where(label => label.gameObject.activeInHierarchy && !string.IsNullOrWhiteSpace(label.text))
+                .Select(label => label.text).ToArray();
+
+        private static void AssertAnchors(string name, Vector2 minimum, Vector2 maximum)
+        {
+            var rect = RectNamed(name);
+            Assert.That(rect.anchorMin.x, Is.EqualTo(minimum.x).Within(.005f), name + " min x");
+            Assert.That(rect.anchorMin.y, Is.EqualTo(minimum.y).Within(.005f), name + " min y");
+            Assert.That(rect.anchorMax.x, Is.EqualTo(maximum.x).Within(.005f), name + " max x");
+            Assert.That(rect.anchorMax.y, Is.EqualTo(maximum.y).Within(.005f), name + " max y");
+        }
 
         private sealed class MemoryRepository : ISaveRepository
         {

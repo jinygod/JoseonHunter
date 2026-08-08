@@ -69,8 +69,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Stretch(safeArea);
 
             var header = LobbyUiFactory.Image("Header", safeArea, LobbyUiFactory.NightInk);
-            PremiumPixelUiSkin.ApplyFrame(header, PremiumFrame.Panel);
-            LobbyUiFactory.Anchor(header.rectTransform, new Vector2(.02f, .905f), new Vector2(.98f, .985f),
+            PremiumPixelUiSkin.ApplyFrame(header, PremiumFrame.HeaderBar);
+            LobbyUiFactory.Anchor(header.rectTransform, new Vector2(.025f, .91f), new Vector2(.975f, .985f),
                 Vector2.zero, Vector2.zero);
             LobbyUiFactory.AddGoldRule(header.transform, new Vector2(0f, 0f), new Vector2(1f, .025f));
             var title = LobbyUiFactory.Text("Lobby Title", header.transform, "조선 요괴 사냥꾼", 31f,
@@ -91,7 +91,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             EnsureCurrencyHeader();
 
             var stageContent = LobbyUiFactory.Rect("Stage Content", safeArea);
-            LobbyUiFactory.Anchor(stageContent, new Vector2(.02f, .12f), new Vector2(.98f, .895f),
+            LobbyUiFactory.Anchor(stageContent, new Vector2(.04f, .105f), new Vector2(.96f, .895f),
                 Vector2.zero, Vector2.zero);
             var research = Panel("Weapon Research Panel", stageContent);
             var patrol = Panel("Patrol Panel", stageContent);
@@ -101,11 +101,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             training.gameObject.AddComponent<CommonTrainingPresenter>().Build();
 
             var navigation = LobbyUiFactory.Image("Bottom Navigation", safeArea, LobbyUiFactory.NightInk);
-            PremiumPixelUiSkin.ApplyFrame(navigation, PremiumFrame.Panel);
-            LobbyUiFactory.Anchor(navigation.rectTransform, new Vector2(.02f, .015f), new Vector2(.98f, .105f),
+            navigation.color = Color.clear;
+            LobbyUiFactory.Anchor(navigation.rectTransform, new Vector2(.04f, .02f), new Vector2(.96f, .095f),
                 Vector2.zero, Vector2.zero);
             var layout = navigation.gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
+            layout.spacing = 6f;
             layout.padding = new RectOffset(8, 8, 8, 8);
             layout.childControlHeight = true;
             layout.childControlWidth = true;
@@ -128,7 +128,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private static RectTransform Panel(string name, Transform parent)
         {
             var panel = LobbyUiFactory.Image(name, parent, LobbyUiFactory.NightInk);
-            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
+            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
             LobbyUiFactory.Stretch(panel.rectTransform);
             return panel.rectTransform;
         }
@@ -136,18 +136,34 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private void ApplyPremiumShell()
         {
             var header = transform.Find("Safe Area/Header")?.GetComponent<Image>();
-            PremiumPixelUiSkin.ApplyFrame(header, PremiumFrame.Panel);
+            PremiumPixelUiSkin.ApplyFrame(header, PremiumFrame.HeaderBar);
+            if (header != null)
+                LobbyUiFactory.Anchor(header.rectTransform, new Vector2(.025f, .91f), new Vector2(.975f, .985f),
+                    Vector2.zero, Vector2.zero);
+            var stageContent = transform.Find("Safe Area/Stage Content") as RectTransform;
+            if (stageContent != null)
+                LobbyUiFactory.Anchor(stageContent, new Vector2(.04f, .105f), new Vector2(.96f, .895f),
+                    Vector2.zero, Vector2.zero);
             foreach (var panelName in new[]
                      {
                          "Weapon Research Panel", "Patrol Panel", "Common Training Panel"
                      })
             {
                 var panel = transform.Find("Safe Area/Stage Content/" + panelName)?.GetComponent<Image>();
-                PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
+                if (panelName == "Patrol Panel") PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
+                else if (panel != null) panel.sprite = null;
             }
 
             var navigation = transform.Find("Safe Area/Bottom Navigation")?.GetComponent<Image>();
-            PremiumPixelUiSkin.ApplyFrame(navigation, PremiumFrame.Panel);
+            if (navigation != null)
+            {
+                navigation.sprite = null;
+                navigation.color = Color.clear;
+                LobbyUiFactory.Anchor(navigation.rectTransform, new Vector2(.04f, .02f), new Vector2(.96f, .095f),
+                    Vector2.zero, Vector2.zero);
+                var layout = navigation.GetComponent<HorizontalLayoutGroup>();
+                if (layout != null) layout.spacing = 6f;
+            }
         }
 
         private void Bind(MetaGameSession session)
@@ -176,10 +192,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 "Settings Button", header, string.Empty, 18f, LobbyUiFactory.Brown, LobbyUiFactory.Gold);
             LobbyUiFactory.Anchor(settingsButton.GetComponent<RectTransform>(),
                 new Vector2(.90f, .14f), new Vector2(.975f, .86f), Vector2.zero, Vector2.zero);
-            var settingsBackground = settingsButton.targetGraphic as Image ?? settingsButton.GetComponent<Image>();
-            PremiumPixelUiSkin.ApplyFrame(settingsBackground, PremiumFrame.CardIdle);
-            settingsBackground.color = new Color(.54f, .48f, .40f, 1f);
-            settingsButton.targetGraphic = settingsBackground;
+            PremiumPixelUiSkin.ApplyAction(settingsButton, PremiumActionStyle.Secondary);
             EnsureSettingsIcon(settingsButton.transform);
             settingsButton.onClick.RemoveListener(OpenSettings);
             settingsButton.onClick.AddListener(OpenSettings);
