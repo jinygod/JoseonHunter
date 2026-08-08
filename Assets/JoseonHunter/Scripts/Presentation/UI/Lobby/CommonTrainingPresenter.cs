@@ -34,7 +34,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void Build()
         {
-            if (transform.Find("Training Summary Backplate") != null)
+            if (transform.Find("Training Content Panel") != null)
             {
                 EnsureExpandedView();
                 return;

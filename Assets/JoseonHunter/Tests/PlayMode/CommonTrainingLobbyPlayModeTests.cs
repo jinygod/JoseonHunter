@@ -168,6 +168,39 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.LessThan(.01f));
         }
 
+        [UnityTest]
+        public IEnumerator RepeatedInitializePreservesOneActiveTrainingContentHierarchyAndListeners()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 500;
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+            var presenter = Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
+            var panel = presenter.transform.Find("Training Content Panel");
+            var grid = panel.Find("Training Grid");
+            var summary = panel.Find("Training Summary Backplate");
+            var purchase = panel.Find("Purchase Training").GetComponent<Button>();
+            var reset = panel.Find("Reset Training").GetComponent<Button>();
+
+            presenter.Initialize(MetaGameSession.Current, null);
+            presenter.Initialize(MetaGameSession.Current, null);
+
+            Assert.That(presenter.transform.Find("Training Content Panel"), Is.SameAs(panel));
+            Assert.That(panel.Find("Training Grid"), Is.SameAs(grid));
+            Assert.That(panel.Find("Training Summary Backplate"), Is.SameAs(summary));
+            Assert.That(panel.Find("Purchase Training").GetComponent<Button>(), Is.SameAs(purchase));
+            Assert.That(panel.Find("Reset Training").GetComponent<Button>(), Is.SameAs(reset));
+            Assert.That(DirectChildCount(presenter.transform, "Training Content Panel"), Is.EqualTo(1));
+            Assert.That(DirectChildCount(panel, "Training Grid"), Is.EqualTo(1));
+            Assert.That(DirectChildCount(panel, "Training Summary Backplate"), Is.EqualTo(1));
+            Assert.That(DirectChildCount(panel, "Purchase Training"), Is.EqualTo(1));
+            Assert.That(DirectChildCount(panel, "Reset Training"), Is.EqualTo(1));
+
+            purchase.onClick.Invoke();
+            Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(400));
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;
@@ -181,6 +214,14 @@ namespace JoseonHunter.Tests.PlayMode
             var corners = new Vector3[4];
             rect.GetWorldCorners(corners);
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
+        private static int DirectChildCount(Transform parent, string name)
+        {
+            var count = 0;
+            foreach (Transform child in parent)
+                if (child.name == name) count++;
+            return count;
         }
 
         private static void AssertInside(RectTransform container, params RectTransform[] children)
