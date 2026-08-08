@@ -20,8 +20,6 @@ namespace JoseonHunter.Presentation.UI
     public static class JoseonButtonSkin
     {
         private const string IconName = "Action Icon";
-        private static Sprite primaryFrame;
-        private static Sprite secondaryFrame;
         private static Sprite continueIcon;
         private static Sprite lobbyIcon;
 
@@ -32,14 +30,10 @@ namespace JoseonHunter.Presentation.UI
             var image = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (image == null) return;
 
-            image.sprite = FrameFor(style);
-            image.type = Image.Type.Sliced;
-            image.preserveAspect = false;
-            image.color = Color.white;
+            PremiumPixelUiSkin.ApplyAction(button, style == JoseonButtonStyle.Primary
+                ? PremiumActionStyle.Primary
+                : PremiumActionStyle.Secondary);
             image.raycastTarget = true;
-            button.targetGraphic = image;
-            button.transition = Selectable.Transition.ColorTint;
-            button.colors = ColorsFor(style);
 
             var iconImage = EnsureIcon(button.transform);
             var sprite = IconFor(icon);
@@ -47,13 +41,6 @@ namespace JoseonHunter.Presentation.UI
             iconImage.enabled = sprite != null;
             iconImage.gameObject.SetActive(sprite != null);
             InsetLabels(button.transform, sprite != null);
-        }
-
-        private static Sprite FrameFor(JoseonButtonStyle style)
-        {
-            if (style == JoseonButtonStyle.Primary)
-                return primaryFrame ??= Resources.Load<Sprite>("UI/Buttons/button_primary_frame");
-            return secondaryFrame ??= Resources.Load<Sprite>("UI/Buttons/button_secondary_frame");
         }
 
         private static Sprite IconFor(JoseonButtonIcon icon)
@@ -96,22 +83,5 @@ namespace JoseonHunter.Presentation.UI
             }
         }
 
-        private static ColorBlock ColorsFor(JoseonButtonStyle style)
-        {
-            var normal = Color.white;
-            var highlighted = style == JoseonButtonStyle.Primary
-                ? new Color(1f, .94f, .78f, 1f)
-                : new Color(.94f, .90f, .82f, 1f);
-            return new ColorBlock
-            {
-                normalColor = normal,
-                highlightedColor = highlighted,
-                pressedColor = new Color(.72f, .68f, .62f, 1f),
-                selectedColor = highlighted,
-                disabledColor = new Color(.48f, .46f, .43f, .58f),
-                colorMultiplier = 1f,
-                fadeDuration = .08f
-            };
-        }
     }
 }

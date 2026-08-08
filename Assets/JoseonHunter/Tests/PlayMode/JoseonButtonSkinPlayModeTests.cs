@@ -34,7 +34,7 @@ namespace JoseonHunter.Tests.PlayMode
             var background = button.targetGraphic as Image;
             Assert.That(background, Is.Not.Null);
             Assert.That(background.sprite, Is.Not.Null);
-            Assert.That(background.sprite.name, Is.EqualTo("button_primary_frame"));
+            Assert.That(background.sprite.name, Is.EqualTo("primary_red_button"));
             Assert.That(background.type, Is.EqualTo(Image.Type.Sliced));
             Assert.That(button.transform.Cast<Transform>().Count(child => child.name == "Action Icon"),
                 Is.EqualTo(1));
@@ -54,8 +54,8 @@ namespace JoseonHunter.Tests.PlayMode
             var pause = pauseRoot.AddComponent<AbandonRunPresenter>();
             pause.Open();
 
-            AssertAction(pauseRoot, "Continue Combat Button", "button_primary_frame", "icon_continue");
-            AssertAction(pauseRoot, "Confirm Return Button", "button_secondary_frame", "icon_lobby");
+            AssertAction(pauseRoot, "Continue Combat Button", "primary_red_button", "icon_continue");
+            AssertAction(pauseRoot, "Confirm Return Button", "secondary_dark_button", "icon_lobby");
 
             var resultRoot = new GameObject("Result Skin Test Root", typeof(RectTransform));
             var result = resultRoot.AddComponent<RunResultPresenter>();
@@ -63,7 +63,7 @@ namespace JoseonHunter.Tests.PlayMode
                 30f, 900f, 100f, 100f, false, false, 0f, 0f,
                 System.Array.Empty<WeaponSlotView>(), runEnded: true, victory: false));
 
-            AssertAction(resultRoot, "Lobby Return Button", "button_secondary_frame", "icon_lobby");
+            AssertAction(resultRoot, "Lobby Return Button", "secondary_dark_button", "icon_lobby");
 
             Object.Destroy(pauseRoot);
             Object.Destroy(resultRoot);

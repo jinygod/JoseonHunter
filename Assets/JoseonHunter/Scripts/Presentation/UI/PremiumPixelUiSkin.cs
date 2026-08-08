@@ -6,13 +6,32 @@ namespace JoseonHunter.Presentation.UI
 {
     public enum PremiumFrame
     {
-        Panel,
-        StagePlaque,
-        CardIdle,
-        CardSelected,
-        NavigationIdle,
-        NavigationSelected,
-        HeroOval
+        ThinOuter,
+        HeaderBar,
+        StageTitlePlate,
+        ContentBackplate,
+        DifficultyIdle,
+        DifficultySelected,
+        DifficultyLocked,
+        WeaponSelector,
+        TabIdle,
+        TabSelected,
+        SmallItem,
+        HeroOval,
+
+        // Existing presenters retain these names while sharing the thin semantic frames.
+        Panel = ThinOuter,
+        StagePlaque = StageTitlePlate,
+        CardIdle = DifficultyIdle,
+        CardSelected = DifficultySelected,
+        NavigationIdle = TabIdle,
+        NavigationSelected = TabSelected
+    }
+
+    public enum PremiumActionStyle
+    {
+        Primary,
+        Secondary
     }
 
     public enum PremiumIcon
@@ -38,17 +57,19 @@ namespace JoseonHunter.Presentation.UI
             if (image == null) return;
             var resourceName = FrameName(frame);
             if (string.IsNullOrEmpty(resourceName)) return;
-            var sprite = Resources.Load<Sprite>(ResourceRoot + resourceName);
-            if (sprite == null)
-            {
-                Debug.LogError($"Missing premium UI frame: {resourceName}");
-                return;
-            }
+            LoadAndApply(image, resourceName, sliced: frame != PremiumFrame.HeroOval);
+        }
 
-            image.sprite = sprite;
-            image.type = frame == PremiumFrame.HeroOval ? Image.Type.Simple : Image.Type.Sliced;
-            image.preserveAspect = frame == PremiumFrame.HeroOval;
-            image.color = Color.white;
+        public static void ApplyAction(Button button, PremiumActionStyle style)
+        {
+            if (button == null) return;
+            var image = button.targetGraphic as Image ?? button.GetComponent<Image>();
+            if (image == null) return;
+            LoadAndApply(image, style == PremiumActionStyle.Primary
+                ? "primary_red_button"
+                : "secondary_dark_button", sliced: true);
+            button.targetGraphic = image;
+            button.transition = Selectable.Transition.ColorTint;
         }
 
         public static void ApplyIcon(Image image, PremiumIcon icon)
@@ -78,9 +99,8 @@ namespace JoseonHunter.Presentation.UI
             if (button == null) return;
             var background = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (background == null) return;
-            ApplyFrame(background, selected ? PremiumFrame.NavigationSelected : PremiumFrame.NavigationIdle);
-            var tint = selected ? Color.white : IdleTint;
-            background.color = tint;
+            ApplyFrame(background, selected ? PremiumFrame.TabSelected : PremiumFrame.TabIdle);
+            var tint = Color.white;
             button.targetGraphic = background;
             button.transition = Selectable.Transition.ColorTint;
             button.colors = ColorsFor(tint);
@@ -103,9 +123,11 @@ namespace JoseonHunter.Presentation.UI
             if (button == null) return;
             var background = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (background == null) return;
-            ApplyFrame(background, selected ? PremiumFrame.CardSelected : PremiumFrame.CardIdle);
-            var tint = selected ? Color.white : locked ? LockedTint : IdleTint;
-            background.color = tint;
+            var frame = locked
+                ? PremiumFrame.DifficultyLocked
+                : selected ? PremiumFrame.DifficultySelected : PremiumFrame.DifficultyIdle;
+            ApplyFrame(background, frame);
+            var tint = Color.white;
             button.targetGraphic = background;
             button.transition = Selectable.Transition.ColorTint;
             button.colors = ColorsFor(tint);
@@ -115,8 +137,8 @@ namespace JoseonHunter.Presentation.UI
             slash.color = new Color(.92f, .63f, .18f, .95f);
             slash.raycastTarget = false;
             var slashRect = slash.rectTransform;
-            slashRect.anchorMin = new Vector2(.08f, .5f);
-            slashRect.anchorMax = new Vector2(.92f, .5f);
+            slashRect.anchorMin = new Vector2(.12f, .5f);
+            slashRect.anchorMax = new Vector2(.88f, .5f);
             slashRect.anchoredPosition = Vector2.zero;
             slashRect.sizeDelta = new Vector2(0f, 5f);
             slashRect.localEulerAngles = new Vector3(0f, 0f, -16f);
@@ -127,7 +149,8 @@ namespace JoseonHunter.Presentation.UI
             lockRect.anchorMin = lockRect.anchorMax = new Vector2(.5f, .5f);
             lockRect.pivot = new Vector2(.5f, .5f);
             lockRect.anchoredPosition = Vector2.zero;
-            lockRect.sizeDelta = new Vector2(34f, 34f);
+            var lockSize = background.rectTransform.rect.height * .3f;
+            lockRect.sizeDelta = new Vector2(lockSize, lockSize);
             ApplyIcon(lockIcon, PremiumIcon.Lock);
             lockIcon.gameObject.SetActive(locked);
             slash.transform.SetAsLastSibling();
@@ -158,15 +181,35 @@ namespace JoseonHunter.Presentation.UI
         {
             return frame switch
             {
-                PremiumFrame.Panel => "panel_frame",
-                PremiumFrame.StagePlaque => "stage_plaque_frame",
-                PremiumFrame.CardIdle => "card_idle_frame",
-                PremiumFrame.CardSelected => "card_selected_frame",
-                PremiumFrame.NavigationIdle => "nav_idle_frame",
-                PremiumFrame.NavigationSelected => "nav_selected_frame",
+                PremiumFrame.ThinOuter => "thin_outer_frame",
+                PremiumFrame.HeaderBar => "header_bar",
+                PremiumFrame.StageTitlePlate => "stage_title_plate",
+                PremiumFrame.ContentBackplate => "content_backplate",
+                PremiumFrame.DifficultyIdle => "difficulty_idle",
+                PremiumFrame.DifficultySelected => "difficulty_selected",
+                PremiumFrame.DifficultyLocked => "difficulty_locked",
+                PremiumFrame.WeaponSelector => "weapon_selector_frame",
+                PremiumFrame.TabIdle => "tab_idle",
+                PremiumFrame.TabSelected => "tab_selected",
+                PremiumFrame.SmallItem => "small_item_frame",
                 PremiumFrame.HeroOval => "hero_oval_frame",
                 _ => null
             };
+        }
+
+        private static void LoadAndApply(Image image, string resourceName, bool sliced)
+        {
+            var sprite = Resources.Load<Sprite>(ResourceRoot + resourceName);
+            if (sprite == null)
+            {
+                Debug.LogError($"Missing premium UI frame: {resourceName}");
+                return;
+            }
+
+            image.sprite = sprite;
+            image.type = sliced ? Image.Type.Sliced : Image.Type.Simple;
+            image.preserveAspect = !sliced;
+            image.color = Color.white;
         }
 
         private static string IconName(PremiumIcon icon)
