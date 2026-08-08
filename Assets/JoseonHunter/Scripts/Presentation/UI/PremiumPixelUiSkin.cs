@@ -49,8 +49,6 @@ namespace JoseonHunter.Presentation.UI
     {
         private const string ResourceRoot = "UI/PremiumJoseon/";
         private const string PremiumIconName = "Premium Icon";
-        private static readonly Color IdleTint = new(.54f, .48f, .40f, 1f);
-        private static readonly Color LockedTint = new(.30f, .29f, .28f, 1f);
 
         public static void ApplyFrame(Image image, PremiumFrame frame)
         {
@@ -140,8 +138,21 @@ namespace JoseonHunter.Presentation.UI
             slashRect.anchorMin = new Vector2(.12f, .5f);
             slashRect.anchorMax = new Vector2(.88f, .5f);
             slashRect.anchoredPosition = Vector2.zero;
-            slashRect.sizeDelta = new Vector2(0f, 5f);
-            slashRect.localEulerAngles = new Vector3(0f, 0f, -16f);
+            const float slashAngle = -16f;
+            var buttonRect = button.transform as RectTransform;
+            var cardSize = buttonRect.rect.size;
+            var slashThickness = Mathf.Min(5f, cardSize.y * .08f);
+            var radians = Mathf.Abs(slashAngle) * Mathf.Deg2Rad;
+            var safeWidth = cardSize.x * .72f;
+            var safeHeight = cardSize.y * .72f;
+            var maxLengthByWidth = (safeWidth - slashThickness * Mathf.Sin(radians))
+                / Mathf.Cos(radians);
+            var maxLengthByHeight = (safeHeight - slashThickness * Mathf.Cos(radians))
+                / Mathf.Sin(radians);
+            var slashLength = Mathf.Max(0f, Mathf.Min(safeWidth, maxLengthByWidth, maxLengthByHeight));
+            var anchoredWidth = cardSize.x * (slashRect.anchorMax.x - slashRect.anchorMin.x);
+            slashRect.sizeDelta = new Vector2(slashLength - anchoredWidth, slashThickness);
+            slashRect.localEulerAngles = new Vector3(0f, 0f, slashAngle);
             slash.gameObject.SetActive(locked);
 
             var lockIcon = EnsureImage(button.transform, "Lock Icon");

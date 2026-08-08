@@ -55,6 +55,26 @@ namespace JoseonHunter.Tests.PlayMode
             Object.DestroyImmediate(root);
         }
 
+        [TestCase(320f, 72f)]
+        [TestCase(480f, 64f)]
+        public void ApplyDifficultyKeepsRotatedLockSlashInsideShortWideCards(float width, float height)
+        {
+            var root = new GameObject("Wide Difficulty Test", typeof(RectTransform));
+            var button = RuntimeUiFactory.Button("Difficulty", root.transform, Color.black);
+            var buttonRect = button.GetComponent<RectTransform>();
+            buttonRect.sizeDelta = new Vector2(width, height);
+
+            PremiumPixelUiSkin.ApplyDifficulty(button, selected: false, locked: true);
+            PremiumPixelUiSkin.ApplyDifficulty(button, selected: false, locked: true);
+
+            var slashRect = button.transform.Find("Lock Slash").GetComponent<RectTransform>();
+            Assert.That(button.transform.Cast<Transform>().Count(t => t.name == "Lock Slash"), Is.EqualTo(1));
+            Assert.That(slashRect.localEulerAngles.z, Is.EqualTo(344f).Within(.001f));
+            AssertRectInsideButton(slashRect, buttonRect);
+
+            Object.DestroyImmediate(root);
+        }
+
         [Test]
         public void ApplyNavigationMapsIdleAndSelectedToSemanticTabSprites()
         {
