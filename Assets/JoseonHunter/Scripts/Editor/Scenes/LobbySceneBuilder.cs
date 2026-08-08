@@ -190,7 +190,8 @@ namespace JoseonHunter.Editor.Scenes
             foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
             {
                 var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();
-                PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
+                panel.sprite = null;
+                panel.color = new Color(.035f, .043f, .065f, 1f);
             }
 
             LobbySelectionChrome.Apply(
@@ -219,6 +220,10 @@ namespace JoseonHunter.Editor.Scenes
                     ? startingWeapon.UiIcon
                     : startingWeapon.PresentationSprites.FirstOrDefault();
                 startingWeaponIcon.enabled = startingWeaponIcon.sprite != null;
+                var researchWeaponIcon = transforms.Single(item => item.name == "Selected Weapon Icon")
+                    .GetComponent<Image>();
+                researchWeaponIcon.sprite = startingWeaponIcon.sprite;
+                researchWeaponIcon.enabled = researchWeaponIcon.sprite != null;
             }
             canvasObject.GetComponentInChildren<PatrolPresenter>(true).ConfigureCatalog(catalog);
             canvasObject.GetComponentInChildren<WeaponResearchPresenter>(true).ConfigureCatalog(catalog);
@@ -235,7 +240,9 @@ namespace JoseonHunter.Editor.Scenes
             "Starting Weapon Selector" or
             "Weapon Research Navigation" or
             "Patrol Navigation" or
-            "Common Training Navigation";
+            "Common Training Navigation" ||
+            buttonName.StartsWith("Style ", StringComparison.Ordinal) ||
+            buttonName.StartsWith("Training ", StringComparison.Ordinal);
 
         private static void PopulatePatrolPreview(GameObject instance)
         {

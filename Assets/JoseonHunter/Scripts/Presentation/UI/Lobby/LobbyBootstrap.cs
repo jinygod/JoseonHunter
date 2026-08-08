@@ -128,7 +128,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private static RectTransform Panel(string name, Transform parent)
         {
             var panel = LobbyUiFactory.Image(name, parent, LobbyUiFactory.NightInk);
-            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
             LobbyUiFactory.Stretch(panel.rectTransform);
             return panel.rectTransform;
         }
@@ -150,8 +149,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                      })
             {
                 var panel = transform.Find("Safe Area/Stage Content/" + panelName)?.GetComponent<Image>();
-                if (panelName == "Patrol Panel") PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
-                else if (panel != null) panel.sprite = null;
+                if (panel != null) panel.sprite = null;
             }
 
             var navigation = transform.Find("Safe Area/Bottom Navigation")?.GetComponent<Image>();

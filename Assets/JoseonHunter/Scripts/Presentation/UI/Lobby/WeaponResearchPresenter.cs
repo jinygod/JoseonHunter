@@ -87,6 +87,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 styleButtons[index] = LobbyUiFactory.Button("Style Card " + index, transform, string.Empty, 20f,
                     LobbyUiFactory.Crimson, LobbyUiFactory.HanjiLight);
                 PremiumPixelUiSkin.ApplyFrame(styleButtons[index].GetComponent<Image>(), PremiumFrame.ContentBackplate);
+                var styleLabel = styleButtons[index].GetComponentInChildren<TMP_Text>();
+                styleLabel.fontSize = 18f;
+                styleLabel.lineSpacing = -12f;
+                LobbyUiFactory.Stretch(styleLabel.rectTransform, 12f, 6f, 12f, 6f);
                 var maxY = .555f - index * .145f;
                 LobbyUiFactory.Anchor(styleButtons[index].GetComponent<RectTransform>(), new Vector2(.05f, maxY - .135f),
                     new Vector2(.95f, maxY), Vector2.zero, Vector2.zero);

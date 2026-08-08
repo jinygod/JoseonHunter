@@ -76,6 +76,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(hero.sprite, Is.Not.Null);
             Assert.That(hero.preserveAspect, Is.True);
             Assert.That(hero.transform.parent.name, Is.EqualTo("Patrol Panel"));
+            Assert.That(GameObject.Find("Patrol Panel").GetComponent<Image>().sprite, Is.Null,
+                "The patrol content panel must not stretch an outer architectural frame.");
             Assert.That(shadow, Is.Not.Null);
             Assert.That(shadow.color.a, Is.InRange(.08f, .28f));
             Assert.That(shadow.transform.GetSiblingIndex(), Is.LessThan(hero.transform.GetSiblingIndex()));

@@ -63,7 +63,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(TextColor(detail), Is.EqualTo(JoseonUiPalette.HanjiMutedInk));
             Assert.That(TextValue(detail), Is.EqualTo("경험치 획득 범위 +0.7"));
             Assert.That(confirm.image.sprite, Is.Not.Null);
-            Assert.That(confirm.image.sprite.name, Is.EqualTo("button_primary_frame"));
+            Assert.That(confirm.image.sprite.name, Is.EqualTo("primary_red_button"));
             Assert.That(confirm.image.type, Is.EqualTo(Image.Type.Sliced));
             Assert.That(TextValue(confirmLabel), Is.EqualTo("확인"));
             Assert.That(TextColor(confirmLabel), Is.EqualTo(JoseonUiPalette.Hanji));

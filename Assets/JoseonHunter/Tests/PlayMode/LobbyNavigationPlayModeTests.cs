@@ -68,7 +68,8 @@ namespace JoseonHunter.Tests.PlayMode
             AssertAnchors("Stage Content", new Vector2(.04f, .105f), new Vector2(.96f, .895f));
             AssertAnchors("Bottom Navigation", new Vector2(.04f, .02f), new Vector2(.96f, .095f));
             Assert.That(ImageNamed("Header").sprite.name, Is.EqualTo("header_bar"));
-            Assert.That(ImageNamed("Patrol Panel").sprite.name, Is.EqualTo("thin_outer_frame"));
+            Assert.That(ImageNamed("Patrol Panel").sprite, Is.Null,
+                "The approved shell leaves the patrol content panel free of an oversized outer rail.");
             Assert.That(VisibleNavigationLabels(), Is.Empty);
         }
 

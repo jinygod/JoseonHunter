@@ -107,7 +107,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(ImageNamed("Style Card 2").sprite.name, Is.EqualTo("content_backplate"));
             AssertNoOverlap("Weapon Grid", "Style Card 0", "Style Card 1", "Style Card 2");
             foreach (var index in Enumerable.Range(0, 3))
+            {
                 Assert.That(TextUnder("Style Card " + index).text.Split('\n').Length, Is.LessThanOrEqualTo(3));
+                Assert.That(TextUnder("Style Card " + index).fontSize, Is.EqualTo(18f));
+                Assert.That(TextUnder("Style Card " + index).rectTransform.anchorMin, Is.EqualTo(Vector2.zero));
+                Assert.That(TextUnder("Style Card " + index).rectTransform.anchorMax, Is.EqualTo(Vector2.one));
+            }
         }
 
         [UnityTest]
