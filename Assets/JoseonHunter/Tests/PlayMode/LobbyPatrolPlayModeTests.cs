@@ -134,6 +134,9 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo("weapon_selector_frame"));
             Assert.That(((Image)GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic).sprite.name,
                 Is.EqualTo("primary_red_button"));
+            AssertDifficultyPresentation("Difficulty Normal");
+            AssertDifficultyPresentation("Difficulty Omen");
+            AssertDifficultyPresentation("Difficulty Great Omen");
         }
 
         [UnityTest]
@@ -225,6 +228,8 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo("difficulty_idle"));
             Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
                 Is.EqualTo("difficulty_selected"));
+            AssertDifficultyPresentation("Difficulty Normal");
+            AssertDifficultyPresentation("Difficulty Omen");
         }
 
         [UnityTest]
@@ -261,6 +266,15 @@ namespace JoseonHunter.Tests.PlayMode
             var rect = FindIncludingInactive(name).GetComponent<RectTransform>();
             Assert.That(rect.anchorMin, Is.EqualTo(minimum), name + " anchor minimum");
             Assert.That(rect.anchorMax, Is.EqualTo(maximum), name + " anchor maximum");
+        }
+
+        private static void AssertDifficultyPresentation(string name)
+        {
+            var button = FindIncludingInactive(name).GetComponent<Button>();
+            var image = button.targetGraphic as Image;
+            var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
+            Assert.That(image.color, Is.EqualTo(Color.white), name + " image tint");
+            Assert.That(label.color, Is.EqualTo(new Color(.96f, .89f, .71f, 1f)), name + " label color");
         }
 
         private sealed class MemoryRepository : ISaveRepository

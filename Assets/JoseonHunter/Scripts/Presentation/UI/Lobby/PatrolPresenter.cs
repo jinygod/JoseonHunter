@@ -518,18 +518,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
             button.interactable = true;
             var background = button.targetGraphic as Image;
             if (background != null)
-                background.color = selected
-                    ? LobbyUiFactory.Crimson
-                    : unlocked
-                        ? LobbyUiFactory.NightInk
-                        : new Color(.10f, .10f, .11f, 1f);
+                background.color = Color.white;
             var label = button.GetComponentInChildren<TMP_Text>(true);
             if (label != null)
             {
                 label.text = StageDifficultyNames.DisplayName(difficulty);
-                label.color = selected ? LobbyUiFactory.Gold : unlocked
-                    ? LobbyUiFactory.HanjiLight
-                    : new Color(.48f, .46f, .42f, 1f);
+                label.color = LobbyUiFactory.HanjiLight;
             }
             LobbySelectionChrome.Apply(button, selected, !unlocked);
         }
