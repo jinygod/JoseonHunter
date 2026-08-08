@@ -125,6 +125,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.04f, .03f), new Vector2(.96f, .09f),
                 Vector2.zero, Vector2.zero);
 
+            EnsurePremiumPresentation();
             BuildWeaponSelectionOverlay();
         }
 
@@ -197,6 +198,70 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (patrolButton != null)
                 LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .09f),
                     new Vector2(.78f, .27f), Vector2.zero, Vector2.zero);
+
+            EnsurePremiumPresentation();
+        }
+
+        private void EnsurePremiumPresentation()
+        {
+            EnsureStagePlaque();
+            EnsureStageArrow(previousStageButton, PremiumIcon.Previous);
+            EnsureStageArrow(nextStageButton, PremiumIcon.Next);
+            EnsureHeroFrame();
+
+            if (weaponSelectorButton != null)
+            {
+                var selectorImage = weaponSelectorButton.targetGraphic as Image ??
+                                    weaponSelectorButton.GetComponent<Image>();
+                PremiumPixelUiSkin.ApplyFrame(selectorImage, PremiumFrame.CardIdle);
+                selectorImage.color = new Color(.54f, .48f, .40f, 1f);
+                weaponSelectorButton.targetGraphic = selectorImage;
+            }
+        }
+
+        private void EnsureStagePlaque()
+        {
+            var plaque = transform.Find("Stage Plaque")?.GetComponent<Image>() ??
+                         LobbyUiFactory.Image("Stage Plaque", transform, Color.white);
+            LobbyUiFactory.Anchor(plaque.rectTransform, new Vector2(.16f, .865f), new Vector2(.84f, .965f),
+                Vector2.zero, Vector2.zero);
+            plaque.raycastTarget = false;
+            PremiumPixelUiSkin.ApplyFrame(plaque, PremiumFrame.StagePlaque);
+            plaque.transform.SetAsFirstSibling();
+        }
+
+        private void EnsureStageArrow(Button button, PremiumIcon icon)
+        {
+            if (button == null) return;
+            var background = button.targetGraphic as Image ?? button.GetComponent<Image>();
+            PremiumPixelUiSkin.ApplyFrame(background, PremiumFrame.CardIdle);
+            background.color = new Color(.54f, .48f, .40f, 1f);
+            button.targetGraphic = background;
+
+            foreach (var label in button.GetComponentsInChildren<TMP_Text>(true))
+                label.gameObject.SetActive(false);
+
+            var iconImage = button.transform.Find("Premium Icon")?.GetComponent<Image>() ??
+                            LobbyUiFactory.Image("Premium Icon", button.transform, Color.white);
+            var rect = iconImage.rectTransform;
+            rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
+            rect.pivot = new Vector2(.5f, .5f);
+            rect.anchoredPosition = Vector2.zero;
+            rect.sizeDelta = new Vector2(46f, 46f);
+            PremiumPixelUiSkin.ApplyIcon(iconImage, icon);
+            iconImage.transform.SetAsLastSibling();
+        }
+
+        private void EnsureHeroFrame()
+        {
+            if (heroImage == null) return;
+            var frame = transform.Find("Patrol Hero Frame")?.GetComponent<Image>() ??
+                        LobbyUiFactory.Image("Patrol Hero Frame", transform, Color.white);
+            LobbyUiFactory.Anchor(frame.rectTransform, new Vector2(.29f, .555f), new Vector2(.71f, .825f),
+                Vector2.zero, Vector2.zero);
+            frame.raycastTarget = false;
+            PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.HeroOval);
+            frame.transform.SetSiblingIndex(heroImage.transform.GetSiblingIndex());
         }
 
         private void BuildWeaponSelectionOverlay()

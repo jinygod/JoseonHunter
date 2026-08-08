@@ -86,6 +86,26 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator PatrolUsesStageArrowsPremiumCardsAndHeroFrame()
+        {
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            Assert.That(GameObject.Find("Stage Plaque").GetComponent<Image>().sprite.name,
+                Is.EqualTo("stage_plaque_frame"));
+            Assert.That(GameObject.Find("Patrol Hero Frame").GetComponent<Image>().sprite.name,
+                Is.EqualTo("hero_oval_frame"));
+            Assert.That(GameObject.Find("Previous Stage").transform.Find("Premium Icon")
+                .GetComponent<Image>().sprite.name, Is.EqualTo("icon_previous"));
+            Assert.That(GameObject.Find("Next Stage").transform.Find("Premium Icon")
+                .GetComponent<Image>().sprite.name, Is.EqualTo("icon_next"));
+            Assert.That(((Image)GameObject.Find("Difficulty Normal").GetComponent<Button>().targetGraphic)
+                .sprite.name, Is.EqualTo("card_selected_frame"));
+            Assert.That(GameObject.Find("Starting Weapon Selector").GetComponent<Image>().sprite.name,
+                Is.EqualTo("card_idle_frame"));
+        }
+
+        [UnityTest]
         public IEnumerator WeaponSelectorOpensGridAndImmediatelySavesChosenWeapon()
         {
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
@@ -128,10 +148,10 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(GameObject.Find("Difficulty Omen").GetComponentInChildren<TMPro.TMP_Text>().text,
                 Does.Contain("흉조"));
             Assert.That(FindIncludingInactive("Stage Status").activeSelf, Is.False);
-            Assert.That(FindIncludingInactive("Difficulty Normal").transform
-                .Find("Selection Outer Border").gameObject.activeSelf, Is.True);
-            Assert.That(FindIncludingInactive("Difficulty Omen").transform
-                .Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+            Assert.That(((Image)FindIncludingInactive("Difficulty Normal").GetComponent<Button>().targetGraphic)
+                .sprite.name, Is.EqualTo("card_selected_frame"));
+            Assert.That(((Image)FindIncludingInactive("Difficulty Omen").GetComponent<Button>().targetGraphic)
+                .sprite.name, Is.EqualTo("card_idle_frame"));
             var greatOmen = FindIncludingInactive("Difficulty Great Omen");
             Assert.That(greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("대흉"));
             Assert.That(greatOmen.transform.Find("Lock Slash").gameObject.activeSelf, Is.True);
@@ -162,15 +182,18 @@ namespace JoseonHunter.Tests.PlayMode
 
             var normal = FindIncludingInactive("Difficulty Normal").transform;
             var omen = FindIncludingInactive("Difficulty Omen").transform;
-            Assert.That(normal.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
-            Assert.That(omen.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+            Assert.That(((Image)normal.GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("card_selected_frame"));
+            Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("card_idle_frame"));
 
             omen.GetComponent<Button>().onClick.Invoke();
             yield return null;
 
-            Assert.That(normal.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
-            Assert.That(omen.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
-            Assert.That(omen.Find("Selection Inner Border").gameObject.activeSelf, Is.True);
+            Assert.That(((Image)normal.GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("card_idle_frame"));
+            Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("card_selected_frame"));
         }
 
         [UnityTest]
