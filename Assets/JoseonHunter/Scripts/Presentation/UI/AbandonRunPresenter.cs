@@ -50,7 +50,13 @@ namespace JoseonHunter.Presentation.UI
             panelRect.anchoredPosition = Vector2.zero;
             panelRect.sizeDelta = new Vector2(936f, 840f);
             panel.raycastTarget = true;
-            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
+            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.ThinOuter);
+
+            var backplate = RuntimeUiFactory.Image("Pause Backplate", panel.transform,
+                new Color(.055f, .045f, .035f, 1f));
+            SetRect(backplate.rectTransform, Vector2.zero, new Vector2(888f, 792f));
+            backplate.raycastTarget = false;
+            PremiumPixelUiSkin.ApplyFrame(backplate, PremiumFrame.ContentBackplate);
 
             var title = RuntimeUiFactory.Text("Abandon Title", panel.transform, "일시정지", 43f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
