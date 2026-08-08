@@ -52,9 +52,12 @@ namespace JoseonHunter.Tests.EditMode
                     Assert.That(transforms.Any(item => item.name == removed), Is.False, removed);
 
                 var navigation = transforms.Single(item => item.name == "Bottom Navigation");
-                var navigationLabels = navigation.GetComponentsInChildren<Button>(true)
-                    .Select(button => button.GetComponentInChildren<TMP_Text>(true).text).ToArray();
-                Assert.That(navigationLabels, Is.EquivalentTo(new[] { "무기 연구", "출전", "수련" }));
+                var navigationButtons = navigation.GetComponentsInChildren<Button>(true);
+                Assert.That(navigationButtons.Select(button => button.GetComponentInChildren<TMP_Text>(true).text),
+                    Is.All.Empty);
+                Assert.That(navigationButtons.Select(button => button.transform.Find("Premium Icon")
+                        .GetComponent<Image>().sprite.name),
+                    Is.EquivalentTo(new[] { "icon_research", "icon_patrol", "icon_training" }));
 
                 var hero = transforms.Single(item => item.name == "Patrol Hero").GetComponent<Image>();
                 Assert.That(hero.sprite, Is.Not.Null);

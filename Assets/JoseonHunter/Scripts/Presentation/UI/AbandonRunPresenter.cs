@@ -31,7 +31,7 @@ namespace JoseonHunter.Presentation.UI
         {
             if (panelRect != null)
                 panelRect.sizeDelta = new Vector2(
-                    PortraitUiMetrics.ContainedWidth(transform as RectTransform, 760f), 680f);
+                    PortraitUiMetrics.ContainedWidth(transform as RectTransform, 936f), 840f);
         }
 
         private void Build()
@@ -48,34 +48,34 @@ namespace JoseonHunter.Presentation.UI
             panelRect = panel.rectTransform;
             panelRect.anchorMin = panelRect.anchorMax = new Vector2(.5f, .5f);
             panelRect.anchoredPosition = Vector2.zero;
-            panelRect.sizeDelta = new Vector2(760f, 680f);
+            panelRect.sizeDelta = new Vector2(936f, 840f);
             panel.raycastTarget = true;
             PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
 
             var title = RuntimeUiFactory.Text("Abandon Title", panel.transform, "일시정지", 43f,
                 TextAlignmentOptions.Center, RuntimeFontRole.Title);
-            SetRect(title.rectTransform, new Vector2(0f, 258f), new Vector2(650f, 70f));
+            SetRect(title.rectTransform, new Vector2(0f, 282f), new Vector2(760f, 70f));
             title.color = JoseonUiPalette.Hanji;
 
             var message = RuntimeUiFactory.Text("Abandon Message", panel.transform,
                 "전투를 계속하거나 현재 성과를 저장하고 로비로 돌아갈 수 있습니다.", 27f,
                 TextAlignmentOptions.Center, RuntimeFontRole.BodyEmphasis);
-            SetRect(message.rectTransform, new Vector2(0f, 176f), new Vector2(640f, 80f));
+            SetRect(message.rectTransform, new Vector2(0f, 202f), new Vector2(760f, 88f));
             message.color = JoseonUiPalette.Hanji;
 
             var divider = RuntimeUiFactory.Image("Pause Divider", panel.transform, Color.white);
             divider.sprite = Resources.Load<Sprite>("UI/PremiumJoseon/divider_gold");
             divider.preserveAspect = true;
             divider.raycastTarget = false;
-            SetRect(divider.rectTransform, new Vector2(0f, 118f), new Vector2(430f, 28f));
+            SetRect(divider.rectTransform, new Vector2(0f, 138f), new Vector2(560f, 30f));
 
             var audioRoot = RuntimeUiFactory.Rect("Pause Audio Settings", panel.transform);
-            SetRect(audioRoot, new Vector2(0f, -8f), new Vector2(640f, 250f));
+            SetRect(audioRoot, new Vector2(0f, -2f), new Vector2(700f, 250f));
             audioSettings = audioRoot.gameObject.AddComponent<AudioSettingsPresenter>();
             audioSettings.Initialize(MetaGameSession.EnsureExists(), false, AudioSettingsTheme.Night);
 
             var cancel = RuntimeUiFactory.Button("Continue Combat Button", panel.transform, JoseonUiPalette.Ink);
-            SetRect(cancel.GetComponent<RectTransform>(), new Vector2(0f, -205f), new Vector2(430f, 72f));
+            SetRect(cancel.GetComponent<RectTransform>(), new Vector2(0f, -190f), new Vector2(520f, 76f));
             cancel.onClick.AddListener(() =>
             {
                 audioSettings.CommitPending();
@@ -86,7 +86,7 @@ namespace JoseonHunter.Presentation.UI
 
             var confirm = RuntimeUiFactory.Button("Confirm Return Button", panel.transform,
                 JoseonUiPalette.AppraisalResult);
-            SetRect(confirm.GetComponent<RectTransform>(), new Vector2(0f, -292f), new Vector2(430f, 66f));
+            SetRect(confirm.GetComponent<RectTransform>(), new Vector2(0f, -278f), new Vector2(520f, 70f));
             confirm.onClick.AddListener(() =>
             {
                 audioSettings.CommitPending();

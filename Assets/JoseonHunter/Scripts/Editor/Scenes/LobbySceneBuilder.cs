@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -17,15 +18,8 @@ namespace JoseonHunter.Editor.Scenes
         private const string ScenePath = "Assets/JoseonHunter/Scenes/Lobby.unity";
         private const string PrefabPath = "Assets/JoseonHunter/Prefabs/UI/LobbyShell.prefab";
         private const string BackgroundPath = "Assets/JoseonHunter/Art/UI/Lobby/lobby_courtyard.png";
-        private const string PremiumFramePath = "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_frame.png";
-        private const string PremiumButtonPath =
-            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_primary_button.png";
-        private const string SecondaryButtonPath =
-            "Assets/JoseonHunter/Art/UI/Lobby/premium_lobby_secondary_button.png";
         private const string CoinSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png";
-        private const string SettingsSpritePath =
-            "Assets/JoseonHunter/Art/UI/Lobby/settings_gear.png";
         private const string HeroSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
         private const string WeaponCatalogPath = "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset";
@@ -186,40 +180,33 @@ namespace JoseonHunter.Editor.Scenes
             coinIcon.preserveAspect = true;
 
             var settingsIcon = transforms.Single(item => item.name == "Settings Icon").GetComponent<Image>();
-            settingsIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(SettingsSpritePath);
-            if (settingsIcon.sprite == null)
-                throw new InvalidOperationException($"Missing settings sprite: {SettingsSpritePath}");
-            settingsIcon.preserveAspect = true;
+            PremiumPixelUiSkin.ApplyIcon(settingsIcon, PremiumIcon.Settings);
 
             var patrolHero = transforms.Single(item => item.name == "Patrol Hero").GetComponent<Image>();
             patrolHero.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroSpritePath);
             if (patrolHero.sprite == null) throw new InvalidOperationException($"Missing hero sprite: {HeroSpritePath}");
             patrolHero.preserveAspect = true;
 
-            var frame = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumFramePath);
-            if (frame == null) throw new InvalidOperationException($"Missing Lobby frame: {PremiumFramePath}");
             foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
             {
                 var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();
-                panel.sprite = frame;
-                panel.type = Image.Type.Sliced;
-                panel.color = Color.white;
+                PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
             }
 
-            var primarySprite = AssetDatabase.LoadAssetAtPath<Sprite>(PremiumButtonPath);
-            if (primarySprite == null)
-                throw new InvalidOperationException($"Missing Lobby primary button: {PremiumButtonPath}");
-            var secondarySprite = AssetDatabase.LoadAssetAtPath<Sprite>(SecondaryButtonPath);
-            if (secondarySprite == null)
-                throw new InvalidOperationException($"Missing Lobby secondary button: {SecondaryButtonPath}");
+            LobbySelectionChrome.Apply(
+                transforms.Single(item => item.name == "Difficulty Normal").GetComponent<Button>(), true);
+            LobbySelectionChrome.Apply(
+                transforms.Single(item => item.name == "Difficulty Omen").GetComponent<Button>(), false);
+            LobbySelectionChrome.Apply(
+                transforms.Single(item => item.name == "Difficulty Great Omen").GetComponent<Button>(), false, true);
+
             foreach (var button in canvasObject.GetComponentsInChildren<Button>(true))
             {
-                var image = button.GetComponent<Image>();
-                image.sprite = button.name is "Start Patrol" or "Purchase Training"
-                    ? primarySprite
-                    : secondarySprite;
-                image.type = Image.Type.Sliced;
-                image.color = Color.white;
+                if (UsesSemanticPremiumSkin(button.name)) continue;
+                JoseonButtonSkin.Apply(button,
+                    button.name is "Start Patrol" or "Purchase Training"
+                        ? JoseonButtonStyle.Primary
+                        : JoseonButtonStyle.Secondary);
             }
 
             var catalog = AssetDatabase.LoadAssetAtPath<JoseonHunter.Content.Weapons.WeaponCatalogAsset>(
@@ -238,6 +225,18 @@ namespace JoseonHunter.Editor.Scenes
 
         }
 
+        private static bool UsesSemanticPremiumSkin(string buttonName) => buttonName is
+            "Settings Button" or
+            "Previous Stage" or
+            "Next Stage" or
+            "Difficulty Normal" or
+            "Difficulty Omen" or
+            "Difficulty Great Omen" or
+            "Starting Weapon Selector" or
+            "Weapon Research Navigation" or
+            "Patrol Navigation" or
+            "Common Training Navigation";
+
         private static void PopulatePatrolPreview(GameObject instance)
         {
             var transforms = instance.GetComponentsInChildren<Transform>(true);
@@ -254,15 +253,14 @@ namespace JoseonHunter.Editor.Scenes
             LobbySelectionChrome.Apply(greatOmen, false, true);
 
             var start = transforms.Single(item => item.name == "Start Patrol").GetComponent<Button>();
-            JoseonHunter.Presentation.UI.JoseonButtonSkin.Apply(start,
-                JoseonHunter.Presentation.UI.JoseonButtonStyle.Primary);
+            JoseonButtonSkin.Apply(start, JoseonButtonStyle.Primary);
 
-            LobbySelectionChrome.Apply(transforms.Single(item => item.name == "Patrol Navigation")
-                .GetComponent<Button>(), true);
-            LobbySelectionChrome.Apply(transforms.Single(item => item.name == "Weapon Research Navigation")
-                .GetComponent<Button>(), false);
-            LobbySelectionChrome.Apply(transforms.Single(item => item.name == "Common Training Navigation")
-                .GetComponent<Button>(), false);
+            LobbySelectionChrome.ApplyNavigation(transforms.Single(item => item.name == "Patrol Navigation")
+                .GetComponent<Button>(), PremiumIcon.Patrol, true);
+            LobbySelectionChrome.ApplyNavigation(transforms.Single(item => item.name == "Weapon Research Navigation")
+                .GetComponent<Button>(), PremiumIcon.Research, false);
+            LobbySelectionChrome.ApplyNavigation(transforms.Single(item => item.name == "Common Training Navigation")
+                .GetComponent<Button>(), PremiumIcon.Training, false);
         }
 
         private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)

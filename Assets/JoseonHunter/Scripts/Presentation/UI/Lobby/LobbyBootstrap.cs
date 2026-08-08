@@ -176,6 +176,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 "Settings Button", header, string.Empty, 18f, LobbyUiFactory.Brown, LobbyUiFactory.Gold);
             LobbyUiFactory.Anchor(settingsButton.GetComponent<RectTransform>(),
                 new Vector2(.90f, .14f), new Vector2(.975f, .86f), Vector2.zero, Vector2.zero);
+            var settingsBackground = settingsButton.targetGraphic as Image ?? settingsButton.GetComponent<Image>();
+            PremiumPixelUiSkin.ApplyFrame(settingsBackground, PremiumFrame.CardIdle);
+            settingsBackground.color = new Color(.54f, .48f, .40f, 1f);
+            settingsButton.targetGraphic = settingsBackground;
             EnsureSettingsIcon(settingsButton.transform);
             settingsButton.onClick.RemoveListener(OpenSettings);
             settingsButton.onClick.AddListener(OpenSettings);

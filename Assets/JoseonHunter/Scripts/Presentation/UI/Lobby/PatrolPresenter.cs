@@ -86,15 +86,15 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 Vector2.zero, Vector2.zero);
 
             normalDifficultyButton = CreateDifficultyButton(
-                "Difficulty Normal", "보통", new Vector2(.07f, .48f), new Vector2(.35f, .56f));
+                "Difficulty Normal", "보통", new Vector2(.07f, .445f), new Vector2(.35f, .56f));
             omenDifficultyButton = CreateDifficultyButton(
-                "Difficulty Omen", "흉조", new Vector2(.36f, .48f), new Vector2(.64f, .56f));
+                "Difficulty Omen", "흉조", new Vector2(.36f, .445f), new Vector2(.64f, .56f));
             greatOmenDifficultyButton = CreateDifficultyButton(
-                "Difficulty Great Omen", "대흉", new Vector2(.65f, .48f), new Vector2(.93f, .56f));
+                "Difficulty Great Omen", "대흉", new Vector2(.65f, .445f), new Vector2(.93f, .56f));
 
             weaponSelectorButton = LobbyUiFactory.Button("Starting Weapon Selector", transform, string.Empty, 23f);
-            LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .31f),
-                new Vector2(.85f, .43f), Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .28f),
+                new Vector2(.85f, .42f), Vector2.zero, Vector2.zero);
             var selectorLabel = weaponSelectorButton.GetComponentInChildren<TMP_Text>(true);
             selectorLabel.name = "Starting Weapon Name";
             selectorLabel.alignment = TextAlignmentOptions.MidlineLeft;
@@ -180,11 +180,18 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 Vector2.zero, Vector2.zero);
 
             normalDifficultyButton = transform.Find("Difficulty Normal")?.GetComponent<Button>() ??
-                CreateDifficultyButton("Difficulty Normal", "보통", new Vector2(.07f, .48f), new Vector2(.35f, .56f));
+                CreateDifficultyButton("Difficulty Normal", "보통", new Vector2(.07f, .445f), new Vector2(.35f, .56f));
             omenDifficultyButton = transform.Find("Difficulty Omen")?.GetComponent<Button>() ??
-                CreateDifficultyButton("Difficulty Omen", "흉조", new Vector2(.36f, .48f), new Vector2(.64f, .56f));
+                CreateDifficultyButton("Difficulty Omen", "흉조", new Vector2(.36f, .445f), new Vector2(.64f, .56f));
             greatOmenDifficultyButton = transform.Find("Difficulty Great Omen")?.GetComponent<Button>() ??
-                CreateDifficultyButton("Difficulty Great Omen", "대흉", new Vector2(.65f, .48f), new Vector2(.93f, .56f));
+                CreateDifficultyButton("Difficulty Great Omen", "대흉", new Vector2(.65f, .445f), new Vector2(.93f, .56f));
+
+            LobbyUiFactory.Anchor(normalDifficultyButton.GetComponent<RectTransform>(),
+                new Vector2(.07f, .445f), new Vector2(.35f, .56f), Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(omenDifficultyButton.GetComponent<RectTransform>(),
+                new Vector2(.36f, .445f), new Vector2(.64f, .56f), Vector2.zero, Vector2.zero);
+            LobbyUiFactory.Anchor(greatOmenDifficultyButton.GetComponent<RectTransform>(),
+                new Vector2(.65f, .445f), new Vector2(.93f, .56f), Vector2.zero, Vector2.zero);
 
             var shadow = transform.Find("Patrol Hero Shadow") as RectTransform;
             if (shadow != null)
@@ -193,8 +200,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 LobbyUiFactory.Anchor(heroImage.rectTransform, new Vector2(.31f, .58f), new Vector2(.69f, .81f),
                     Vector2.zero, Vector2.zero);
             if (weaponSelectorButton != null)
-                LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .31f),
-                    new Vector2(.85f, .43f), Vector2.zero, Vector2.zero);
+                LobbyUiFactory.Anchor(weaponSelectorButton.GetComponent<RectTransform>(), new Vector2(.15f, .28f),
+                    new Vector2(.85f, .42f), Vector2.zero, Vector2.zero);
             if (patrolButton != null)
                 LobbyUiFactory.Anchor(patrolButton.GetComponent<RectTransform>(), new Vector2(.22f, .09f),
                     new Vector2(.78f, .27f), Vector2.zero, Vector2.zero);
@@ -214,7 +221,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 var selectorImage = weaponSelectorButton.targetGraphic as Image ??
                                     weaponSelectorButton.GetComponent<Image>();
                 PremiumPixelUiSkin.ApplyFrame(selectorImage, PremiumFrame.CardIdle);
-                selectorImage.color = new Color(.54f, .48f, .40f, 1f);
+                selectorImage.color = new Color(.72f, .64f, .52f, 1f);
                 weaponSelectorButton.targetGraphic = selectorImage;
             }
         }
@@ -227,6 +234,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 Vector2.zero, Vector2.zero);
             plaque.raycastTarget = false;
             PremiumPixelUiSkin.ApplyFrame(plaque, PremiumFrame.StagePlaque);
+            if (stageNameText != null) stageNameText.color = new Color(.26f, .08f, .035f, 1f);
             plaque.transform.SetAsFirstSibling();
         }
 
@@ -235,7 +243,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (button == null) return;
             var background = button.targetGraphic as Image ?? button.GetComponent<Image>();
             PremiumPixelUiSkin.ApplyFrame(background, PremiumFrame.CardIdle);
-            background.color = new Color(.54f, .48f, .40f, 1f);
+            background.color = new Color(.72f, .64f, .52f, 1f);
             button.targetGraphic = background;
 
             foreach (var label in button.GetComponentsInChildren<TMP_Text>(true))
