@@ -6,42 +6,30 @@ namespace JoseonHunter.Tests.EditMode
 {
     public sealed class PremiumLobbyUiAssetContractTests
     {
-        private static readonly string[] Required =
+        [TestCase("thin_outer_frame", true)]
+        [TestCase("header_bar", true)]
+        [TestCase("stage_title_plate", true)]
+        [TestCase("content_backplate", true)]
+        [TestCase("difficulty_idle", true)]
+        [TestCase("difficulty_selected", true)]
+        [TestCase("difficulty_locked", true)]
+        [TestCase("weapon_selector_frame", true)]
+        [TestCase("primary_red_button", true)]
+        [TestCase("secondary_dark_button", true)]
+        [TestCase("tab_idle", true)]
+        [TestCase("tab_selected", true)]
+        [TestCase("small_item_frame", true)]
+        public void FidelitySpriteUsesDeterministicPixelImport(string name, bool sliced)
         {
-            "panel_frame", "stage_plaque_frame", "card_idle_frame", "card_selected_frame",
-            "nav_idle_frame", "nav_selected_frame", "hero_oval_frame", "divider_gold",
-            "icon_research", "icon_patrol", "icon_training", "icon_previous", "icon_next",
-            "icon_settings", "icon_lock"
-        };
-
-        [Test]
-        public void PremiumSpritesExistAndUsePointFiltering()
-        {
-            foreach (var name in Required)
-            {
-                var path = $"Assets/JoseonHunter/Resources/UI/PremiumJoseon/{name}.png";
-                Assert.That(AssetDatabase.LoadAssetAtPath<Sprite>(path), Is.Not.Null, name);
-                var importer = AssetImporter.GetAtPath(path) as TextureImporter;
-                Assert.That(importer, Is.Not.Null, name);
-                Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point), name);
-                Assert.That(importer.mipmapEnabled, Is.False, name);
-                Assert.That(importer.textureCompression,
-                    Is.EqualTo(TextureImporterCompression.Uncompressed), name);
-            }
-        }
-
-        [TestCase("panel_frame")]
-        [TestCase("stage_plaque_frame")]
-        [TestCase("card_idle_frame")]
-        [TestCase("card_selected_frame")]
-        [TestCase("nav_idle_frame")]
-        [TestCase("nav_selected_frame")]
-        public void StretchableFramesHaveSpriteBorders(string name)
-        {
-            var path = $"Assets/JoseonHunter/Resources/UI/PremiumJoseon/{name}.png";
-            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            Assert.That(importer, Is.Not.Null, name);
-            Assert.That(importer.spriteBorder.sqrMagnitude, Is.GreaterThan(0f), name);
+            const string root = "Assets/JoseonHunter/Resources/UI/PremiumJoseon/";
+            var path = root + name + ".png";
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            Assert.That(sprite, Is.Not.Null, path);
+            Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point));
+            Assert.That(importer.mipmapEnabled, Is.False);
+            Assert.That(importer.textureCompression, Is.EqualTo(TextureImporterCompression.Uncompressed));
+            Assert.That(importer.spriteBorder.sqrMagnitude, sliced ? Is.GreaterThan(0f) : Is.EqualTo(0f));
         }
     }
 }

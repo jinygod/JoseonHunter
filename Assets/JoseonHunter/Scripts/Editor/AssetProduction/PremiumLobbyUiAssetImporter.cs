@@ -11,8 +11,10 @@ namespace JoseonHunter.Editor.AssetProduction
 
         private static readonly string[] Sliced =
         {
-            "panel_frame", "stage_plaque_frame", "card_idle_frame", "card_selected_frame",
-            "nav_idle_frame", "nav_selected_frame"
+            "thin_outer_frame", "header_bar", "stage_title_plate", "content_backplate",
+            "difficulty_idle", "difficulty_selected", "difficulty_locked", "weapon_selector_frame",
+            "primary_red_button", "secondary_dark_button", "tab_idle", "tab_selected",
+            "small_item_frame"
         };
 
         [MenuItem("JoseonHunter/Assets/Import Premium Lobby UI")]
@@ -34,7 +36,10 @@ namespace JoseonHunter.Editor.AssetProduction
                 importer.spritePixelsPerUnit = 100f;
                 var name = Path.GetFileNameWithoutExtension(path);
                 importer.spriteBorder = Array.IndexOf(Sliced, name) >= 0
-                    ? new Vector4(24f, 24f, 24f, 24f)
+                    ? new Vector4(name == "thin_outer_frame" ? 16f : 12f,
+                        name == "thin_outer_frame" ? 16f : 12f,
+                        name == "thin_outer_frame" ? 16f : 12f,
+                        name == "thin_outer_frame" ? 16f : 12f)
                     : Vector4.zero;
                 importer.SaveAndReimport();
             }
