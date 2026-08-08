@@ -45,10 +45,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.NextTextForTests, Is.EqualTo("강화 후 최대 체력 +2%"));
             Assert.That(presenter.CostTextForTests, Is.EqualTo("필요 엽전 100 · 강화 후 400"));
             Canvas.ForceUpdateCanvases();
-            var purchase = presenter.transform.Find("Purchase Training").GetComponent<Button>();
+            var purchase = presenter.transform.Find("Training Content Panel/Purchase Training").GetComponent<Button>();
             Assert.That(purchase.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(64f));
             Assert.That(purchase.GetComponentInChildren<TMPro.TMP_Text>().fontSize, Is.GreaterThanOrEqualTo(18f));
-            var detail = presenter.transform.Find("Training Summary Backplate").GetComponent<Image>();
+            var detail = presenter.transform.Find("Training Content Panel/Training Summary Backplate")
+                .GetComponent<Image>();
             Assert.That(detail.sprite.name, Is.EqualTo("content_backplate"));
 
             presenter.PurchaseForTests();
@@ -144,10 +145,27 @@ namespace JoseonHunter.Tests.PlayMode
             var reset = GameObject.Find("Reset Training").GetComponent<Button>();
             Assert.That(purchase.GetComponent<Image>().sprite.name, Is.EqualTo("primary_red_button"));
             Assert.That(reset.GetComponent<Image>().sprite.name, Is.EqualTo("secondary_dark_button"));
-            AssertInside(GameObject.Find("Training Content Panel").GetComponent<RectTransform>(),
+            var contentPanel = GameObject.Find("Training Content Panel").GetComponent<RectTransform>();
+            Assert.That(GameObject.Find("Training Grid").transform.IsChildOf(contentPanel), Is.True);
+            Assert.That(GameObject.Find("Training Summary Backplate").transform.parent, Is.SameAs(contentPanel));
+            Assert.That(purchase.transform.parent, Is.SameAs(contentPanel));
+            Assert.That(reset.transform.parent, Is.SameAs(contentPanel));
+            Assert.That(GameObject.Find("Training Feedback").transform.parent, Is.SameAs(contentPanel));
+            AssertInside(contentPanel,
                 purchase.GetComponent<RectTransform>(), reset.GetComponent<RectTransform>());
             Assert.That(WorldRect(purchase.GetComponent<RectTransform>()).Overlaps(
                 WorldRect(reset.GetComponent<RectTransform>())), Is.False);
+
+            var purchaseBefore = purchase.transform.position;
+            var resetBefore = reset.transform.position;
+            var panelBefore = contentPanel.position;
+            contentPanel.anchoredPosition += new Vector2(37f, -19f);
+            Canvas.ForceUpdateCanvases();
+            var panelDelta = (Vector2)contentPanel.position - (Vector2)panelBefore;
+            Assert.That(Vector2.Distance(purchase.transform.position, (Vector2)purchaseBefore + panelDelta),
+                Is.LessThan(.01f));
+            Assert.That(Vector2.Distance(reset.transform.position, (Vector2)resetBefore + panelDelta),
+                Is.LessThan(.01f));
         }
 
         private sealed class MemoryRepository : ISaveRepository

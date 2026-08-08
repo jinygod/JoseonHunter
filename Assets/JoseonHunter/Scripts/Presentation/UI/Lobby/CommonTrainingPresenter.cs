@@ -60,8 +60,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Anchor(contentPanel, new Vector2(.04f, .10f), new Vector2(.96f, .96f),
                 Vector2.zero, Vector2.zero);
 
-            var gridRoot = LobbyUiFactory.Rect("Training Grid", transform);
-            LobbyUiFactory.Anchor(gridRoot, new Vector2(.06f, .58f), new Vector2(.94f, .82f),
+            var gridRoot = LobbyUiFactory.Rect("Training Grid", contentPanel);
+            LobbyUiFactory.Anchor(gridRoot, new Vector2(.02173913f, .55813956f), new Vector2(.97826087f, .8372093f),
                 Vector2.zero, Vector2.zero);
             var grid = gridRoot.gameObject.AddComponent<GridLayoutGroup>();
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
@@ -79,25 +79,25 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 PremiumPixelUiSkin.ApplyFrame(trainingButtons[index].GetComponent<Image>(), PremiumFrame.SmallItem);
             }
 
-            var detail = LobbyUiFactory.Image("Training Summary Backplate", transform, Color.white);
+            var detail = LobbyUiFactory.Image("Training Summary Backplate", contentPanel, Color.white);
             PremiumPixelUiSkin.ApplyFrame(detail, PremiumFrame.ContentBackplate);
-            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.07f, .31f), new Vector2(.93f, .56f),
+            LobbyUiFactory.Anchor(detail.rectTransform, new Vector2(.0326087f, .24418605f), new Vector2(.9673913f, .53488374f),
                 Vector2.zero, Vector2.zero);
             currentText = DetailText("Current", detail.transform, .68f, .94f);
             nextText = DetailText("Next", detail.transform, .39f, .66f);
             costText = DetailText("Cost", detail.transform, .10f, .37f);
 
-            purchaseButton = LobbyUiFactory.Button("Purchase Training", transform, "수련하기", 25f,
+            purchaseButton = LobbyUiFactory.Button("Purchase Training", contentPanel, "수련하기", 25f,
                 LobbyUiFactory.Crimson, LobbyUiFactory.HanjiLight);
-            LobbyUiFactory.Anchor(purchaseButton.GetComponent<RectTransform>(), new Vector2(.08f, .12f),
-                new Vector2(.61f, .27f), Vector2.zero, Vector2.zero);
-            resetButton = LobbyUiFactory.Button("Reset Training", transform, "전체 초기화", 21f,
+            LobbyUiFactory.Anchor(purchaseButton.GetComponent<RectTransform>(), new Vector2(.04347826f, .02325581f),
+                new Vector2(.6195652f, .19767442f), Vector2.zero, Vector2.zero);
+            resetButton = LobbyUiFactory.Button("Reset Training", contentPanel, "전체 초기화", 21f,
                 LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
-            LobbyUiFactory.Anchor(resetButton.GetComponent<RectTransform>(), new Vector2(.65f, .12f),
-                new Vector2(.92f, .27f), Vector2.zero, Vector2.zero);
-            feedbackText = LobbyUiFactory.Text("Training Feedback", transform, string.Empty, 18f);
+            LobbyUiFactory.Anchor(resetButton.GetComponent<RectTransform>(), new Vector2(.6630435f, .02325581f),
+                new Vector2(.95652174f, .19767442f), Vector2.zero, Vector2.zero);
+            feedbackText = LobbyUiFactory.Text("Training Feedback", contentPanel, string.Empty, 18f);
             feedbackText.color = LobbyUiFactory.AntiqueGold;
-            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.05f, .03f), new Vector2(.95f, .105f),
+            LobbyUiFactory.Anchor(feedbackText.rectTransform, new Vector2(.01086957f, -.08139535f), new Vector2(.98913043f, .00581395f),
                 Vector2.zero, Vector2.zero);
         }
 
