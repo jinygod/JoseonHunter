@@ -66,6 +66,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var label = button.GetComponentInChildren<TMP_Text>(true);
             if (label != null)
                 label.color = selected ? LobbyUiFactory.Gold : LobbyUiFactory.HanjiLight;
+            LobbySelectionChrome.Apply(button, selected);
         }
     }
 }

@@ -127,6 +127,19 @@ namespace JoseonHunter.Tests.PlayMode
                 Does.Contain("보통"));
             Assert.That(GameObject.Find("Difficulty Omen").GetComponentInChildren<TMPro.TMP_Text>().text,
                 Does.Contain("흉조"));
+            Assert.That(FindIncludingInactive("Stage Status").activeSelf, Is.False);
+            Assert.That(FindIncludingInactive("Difficulty Normal").transform
+                .Find("Selection Outer Border").gameObject.activeSelf, Is.True);
+            Assert.That(FindIncludingInactive("Difficulty Omen").transform
+                .Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+            var greatOmen = FindIncludingInactive("Difficulty Great Omen");
+            Assert.That(greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("대흉"));
+            Assert.That(greatOmen.transform.Find("Lock Slash").gameObject.activeSelf, Is.True);
+            Assert.That(greatOmen.transform.Find("Lock Icon").GetComponent<Image>().sprite.name,
+                Is.EqualTo("icon_lock"));
+            var startImage = GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic as Image;
+            Assert.That(startImage.sprite.name, Is.EqualTo("button_primary_frame"));
+            Assert.That(startImage.type, Is.EqualTo(Image.Type.Sliced));
 
             GameObject.Find("Difficulty Omen").GetComponent<Button>().onClick.Invoke();
             yield return null;
@@ -135,6 +148,29 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo("이 장 보통 승리 시 해금"));
             Assert.That(MetaGameSession.Current.ActiveStageSelection,
                 Is.EqualTo(new StageSelection(StageId.GwigokField, StageDifficulty.Normal)));
+        }
+
+        [UnityTest]
+        public IEnumerator UnlockedDifficultyMovesBrightSelectionBorderToChosenButton()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 500, 35)));
+            MetaGameSession.EnsureExists(new MemoryRepository(data));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var normal = FindIncludingInactive("Difficulty Normal").transform;
+            var omen = FindIncludingInactive("Difficulty Omen").transform;
+            Assert.That(normal.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
+            Assert.That(omen.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+
+            omen.GetComponent<Button>().onClick.Invoke();
+            yield return null;
+
+            Assert.That(normal.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+            Assert.That(omen.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
+            Assert.That(omen.Find("Selection Inner Border").gameObject.activeSelf, Is.True);
         }
 
         [UnityTest]

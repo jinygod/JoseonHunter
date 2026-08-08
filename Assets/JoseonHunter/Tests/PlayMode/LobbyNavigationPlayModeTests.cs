@@ -42,6 +42,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.True);
             Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.False);
             Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
+            var patrol = GameObject.Find("Patrol Navigation").transform;
+            var research = GameObject.Find("Weapon Research Navigation").transform;
+            Assert.That(patrol.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
+            Assert.That(patrol.Find("Selection Inner Border").gameObject.activeSelf, Is.True);
+            Assert.That(research.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
         }
 
         [UnityTest]
@@ -217,6 +222,8 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo(new Color(.34f, .10f, .075f, 1f)));
             Assert.That(buttons[1].colors.normalColor,
                 Is.EqualTo(new Color(.035f, .043f, .065f, 1f)));
+            Assert.That(buttons[0].transform.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
+            Assert.That(buttons[1].transform.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
         }
 
         private static GameObject FindIncludingInactive(string name) =>

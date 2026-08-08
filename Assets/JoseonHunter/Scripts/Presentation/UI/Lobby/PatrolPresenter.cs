@@ -250,6 +250,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
         public void Initialize(MetaGameSession value, Action onChanged)
         {
             Build();
+            JoseonButtonSkin.Apply(patrolButton, JoseonButtonStyle.Primary);
+            JoseonButtonSkin.Apply(closeWeaponSelectionButton, JoseonButtonStyle.Secondary);
             session = value;
             refreshHeader = onChanged;
             GameAudioButtonFeedback.Attach(patrolButton, GameAudioCueId.UiConfirm);
@@ -425,7 +427,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var records = StageClearRecordData.DomainRecords(session.Data.StageClearRecords);
             var unlocked = StageUnlockRules.IsUnlocked(selection, records);
             stageNameText.text = $"{viewedStageIndex + 1}장 · {definition.DisplayName}";
-            stageStatusText.text = $"15분 생존 · {StageDifficultyNames.DisplayName(viewedDifficulty)}";
+            stageStatusText.text = string.Empty;
+            stageStatusText.gameObject.SetActive(false);
             previousStageButton.interactable = viewedStageIndex > 0;
             nextStageButton.interactable = viewedStageIndex < StageCatalog.All.Count - 1;
             RefreshDifficultyButton(normalDifficultyButton, StageDifficulty.Normal, records);
@@ -455,20 +458,19 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var background = button.targetGraphic as Image;
             if (background != null)
                 background.color = selected
-                    ? LobbyUiFactory.Gold
+                    ? LobbyUiFactory.Crimson
                     : unlocked
                         ? LobbyUiFactory.NightInk
                         : new Color(.10f, .10f, .11f, 1f);
             var label = button.GetComponentInChildren<TMP_Text>(true);
             if (label != null)
             {
-                label.text = unlocked
-                    ? StageDifficultyNames.DisplayName(difficulty)
-                    : StageDifficultyNames.DisplayName(difficulty) + " · 잠김";
-                label.color = selected ? LobbyUiFactory.Ink : unlocked
+                label.text = StageDifficultyNames.DisplayName(difficulty);
+                label.color = selected ? LobbyUiFactory.Gold : unlocked
                     ? LobbyUiFactory.HanjiLight
                     : new Color(.48f, .46f, .42f, 1f);
             }
+            LobbySelectionChrome.Apply(button, selected, !unlocked);
         }
 
         private void OnDisable()
