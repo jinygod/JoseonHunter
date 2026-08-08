@@ -35,18 +35,26 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(lobby, Is.Not.Null);
 
             var navigation = GameObject.Find("Bottom Navigation");
-            var labels = navigation.GetComponentsInChildren<Button>(true)
-                .Select(button => button.GetComponentInChildren<TMPro.TMP_Text>().text).ToArray();
-
-            Assert.That(labels, Is.EqualTo(new[] { "무기 연구", "출전", "수련" }));
+            var buttons = navigation.GetComponentsInChildren<Button>(true);
+            Assert.That(buttons, Has.Length.EqualTo(3));
+            Assert.That(buttons.Select(button => button.GetComponentInChildren<TMPro.TMP_Text>(true))
+                .All(label => label == null || !label.gameObject.activeSelf || string.IsNullOrEmpty(label.text)),
+                Is.True);
+            Assert.That(buttons.Select(button => button.transform.Find("Premium Icon")?.GetComponent<Image>())
+                .All(icon => icon != null && icon.sprite != null), Is.True);
             Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.True);
             Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.False);
             Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
             var patrol = GameObject.Find("Patrol Navigation").transform;
             var research = GameObject.Find("Weapon Research Navigation").transform;
-            Assert.That(patrol.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
-            Assert.That(patrol.Find("Selection Inner Border").gameObject.activeSelf, Is.True);
-            Assert.That(research.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+            Assert.That(patrol.Find("Premium Icon").GetComponent<Image>().sprite.name,
+                Is.EqualTo("icon_patrol"));
+            Assert.That(research.Find("Premium Icon").GetComponent<Image>().sprite.name,
+                Is.EqualTo("icon_research"));
+            Assert.That(((Image)patrol.GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("nav_selected_frame"));
+            Assert.That(((Image)research.GetComponent<Button>().targetGraphic).sprite.name,
+                Is.EqualTo("nav_idle_frame"));
         }
 
         [UnityTest]
@@ -127,6 +135,7 @@ namespace JoseonHunter.Tests.PlayMode
             var icon = settings.Find("Settings Icon")?.GetComponent<Image>();
             Assert.That(icon, Is.Not.Null);
             Assert.That(icon.sprite, Is.Not.Null);
+            Assert.That(icon.sprite.name, Is.EqualTo("icon_settings"));
             Assert.That(settings.Find("Gear Tooth 0"), Is.Null);
             Assert.That(settings.Find("Gear Hub"), Is.Null);
         }
@@ -218,12 +227,14 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.True);
             Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.False);
             Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
-            Assert.That(buttons[0].colors.normalColor,
-                Is.EqualTo(new Color(.34f, .10f, .075f, 1f)));
-            Assert.That(buttons[1].colors.normalColor,
-                Is.EqualTo(new Color(.035f, .043f, .065f, 1f)));
-            Assert.That(buttons[0].transform.Find("Selection Outer Border").gameObject.activeSelf, Is.True);
-            Assert.That(buttons[1].transform.Find("Selection Outer Border").gameObject.activeSelf, Is.False);
+            Assert.That(((Image)buttons[0].targetGraphic).sprite.name,
+                Is.EqualTo("nav_selected_frame"));
+            Assert.That(((Image)buttons[1].targetGraphic).sprite.name,
+                Is.EqualTo("nav_idle_frame"));
+            Assert.That(buttons[0].transform.Find("Premium Icon").GetComponent<Image>().sprite.name,
+                Is.EqualTo("icon_research"));
+            Assert.That(buttons[1].transform.Find("Premium Icon").GetComponent<Image>().sprite.name,
+                Is.EqualTo("icon_patrol"));
         }
 
         private static GameObject FindIncludingInactive(string name) =>

@@ -43,6 +43,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (transform.Find("Safe Area") != null)
             {
                 safeArea = transform.Find("Safe Area") as RectTransform;
+                ApplyPremiumShell();
                 EnsureAccountHeader();
                 EnsureCurrencyHeader();
                 EnsureSettingsShell();
@@ -68,6 +69,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbyUiFactory.Stretch(safeArea);
 
             var header = LobbyUiFactory.Image("Header", safeArea, LobbyUiFactory.NightInk);
+            PremiumPixelUiSkin.ApplyFrame(header, PremiumFrame.Panel);
             LobbyUiFactory.Anchor(header.rectTransform, new Vector2(.02f, .905f), new Vector2(.98f, .985f),
                 Vector2.zero, Vector2.zero);
             LobbyUiFactory.AddGoldRule(header.transform, new Vector2(0f, 0f), new Vector2(1f, .025f));
@@ -99,6 +101,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             training.gameObject.AddComponent<CommonTrainingPresenter>().Build();
 
             var navigation = LobbyUiFactory.Image("Bottom Navigation", safeArea, LobbyUiFactory.NightInk);
+            PremiumPixelUiSkin.ApplyFrame(navigation, PremiumFrame.Panel);
             LobbyUiFactory.Anchor(navigation.rectTransform, new Vector2(.02f, .015f), new Vector2(.98f, .105f),
                 Vector2.zero, Vector2.zero);
             var layout = navigation.gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -109,11 +112,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             layout.childForceExpandHeight = true;
             layout.childForceExpandWidth = true;
             var researchButton = LobbyUiFactory.Button("Weapon Research Navigation", navigation.transform,
-                "무기 연구", 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+                string.Empty, 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
             var patrolButton = LobbyUiFactory.Button("Patrol Navigation", navigation.transform,
-                "출전", 24f, LobbyUiFactory.Crimson, LobbyUiFactory.Gold);
+                string.Empty, 24f, LobbyUiFactory.Crimson, LobbyUiFactory.Gold);
             var trainingButton = LobbyUiFactory.Button("Common Training Navigation", navigation.transform,
-                "수련", 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
+                string.Empty, 21f, LobbyUiFactory.NightInk, LobbyUiFactory.HanjiLight);
             navigation.gameObject.AddComponent<LobbyNavigationPresenter>().Initialize(
                 research.gameObject, patrol.gameObject, training.gameObject,
                 researchButton, patrolButton, trainingButton);
@@ -125,8 +128,26 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private static RectTransform Panel(string name, Transform parent)
         {
             var panel = LobbyUiFactory.Image(name, parent, LobbyUiFactory.NightInk);
+            PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
             LobbyUiFactory.Stretch(panel.rectTransform);
             return panel.rectTransform;
+        }
+
+        private void ApplyPremiumShell()
+        {
+            var header = transform.Find("Safe Area/Header")?.GetComponent<Image>();
+            PremiumPixelUiSkin.ApplyFrame(header, PremiumFrame.Panel);
+            foreach (var panelName in new[]
+                     {
+                         "Weapon Research Panel", "Patrol Panel", "Common Training Panel"
+                     })
+            {
+                var panel = transform.Find("Safe Area/Stage Content/" + panelName)?.GetComponent<Image>();
+                PremiumPixelUiSkin.ApplyFrame(panel, PremiumFrame.Panel);
+            }
+
+            var navigation = transform.Find("Safe Area/Bottom Navigation")?.GetComponent<Image>();
+            PremiumPixelUiSkin.ApplyFrame(navigation, PremiumFrame.Panel);
         }
 
         private void Bind(MetaGameSession session)
@@ -214,7 +235,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                        LobbyUiFactory.Image("Settings Icon", parent, Color.white);
             icon.preserveAspect = true;
             icon.raycastTarget = false;
-            icon.color = Color.white;
+            PremiumPixelUiSkin.ApplyIcon(icon, PremiumIcon.Settings);
             LobbyUiFactory.Stretch(icon.rectTransform, 10f, 10f, 10f, 10f);
         }
 

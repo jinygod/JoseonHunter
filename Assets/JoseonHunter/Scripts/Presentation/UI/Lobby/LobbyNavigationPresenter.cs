@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
 
 namespace JoseonHunter.Presentation.UI.Lobby
 {
@@ -47,26 +46,14 @@ namespace JoseonHunter.Presentation.UI.Lobby
             researchPanel.SetActive(selected == researchPanel);
             patrolPanel.SetActive(selected == patrolPanel);
             trainingPanel.SetActive(selected == trainingPanel);
-            ApplySelection(researchButton, selected == researchPanel);
-            ApplySelection(patrolButton, selected == patrolPanel);
-            ApplySelection(trainingButton, selected == trainingPanel);
+            ApplySelection(researchButton, selected == researchPanel, PremiumIcon.Research);
+            ApplySelection(patrolButton, selected == patrolPanel, PremiumIcon.Patrol);
+            ApplySelection(trainingButton, selected == trainingPanel, PremiumIcon.Training);
         }
 
-        private static void ApplySelection(Button button, bool selected)
+        private static void ApplySelection(Button button, bool selected, PremiumIcon icon)
         {
-            var background = selected ? LobbyUiFactory.Crimson : LobbyUiFactory.NightInk;
-            var colors = button.colors;
-            colors.normalColor = background;
-            colors.highlightedColor = Color.Lerp(background, Color.white, .14f);
-            colors.pressedColor = Color.Lerp(background, Color.black, .24f);
-            colors.selectedColor = colors.highlightedColor;
-            colors.disabledColor = new Color(background.r, background.g, background.b, .45f);
-            button.colors = colors;
-            if (button.targetGraphic != null) button.targetGraphic.color = background;
-            var label = button.GetComponentInChildren<TMP_Text>(true);
-            if (label != null)
-                label.color = selected ? LobbyUiFactory.Gold : LobbyUiFactory.HanjiLight;
-            LobbySelectionChrome.Apply(button, selected);
+            LobbySelectionChrome.ApplyNavigation(button, icon, selected);
         }
     }
 }
