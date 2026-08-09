@@ -292,6 +292,121 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GeneratorRejectsDuplicateControllerWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var controllerRoot = CreateInScene(scene, "FirstPlayable");
+                controllerRoot.AddComponent<FirstPlayableController>();
+                controllerRoot.AddComponent<FirstPlayableController>();
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "duplicate FirstPlayableController");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsDuplicateFieldChildWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var controllerRoot = CreateInScene(scene, "FirstPlayable");
+                CreateInScene(scene, "FlatField").transform.SetParent(controllerRoot.transform, false);
+                CreateInScene(scene, "FlatField").transform.SetParent(controllerRoot.transform, false);
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "duplicate child 'FlatField'");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsWrongEventSystemInputModuleWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var eventRoot = CreateInScene(scene, "EventSystem");
+                eventRoot.AddComponent<EventSystem>();
+                eventRoot.AddComponent<StandaloneInputModule>();
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "exactly one InputSystemUIInputModule");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsInvalidExistingPreviewChunkWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var controllerRoot = CreateInScene(scene, "FirstPlayable");
+                var field = CreateInScene(scene, "FlatField").transform;
+                field.SetParent(controllerRoot.transform, false);
+                var preview = CreateInScene(scene, "Authoring Preview").transform;
+                preview.SetParent(field, false);
+                CreateInScene(scene, "Disconnected Chunk").AddComponent<BattlefieldChunkView>()
+                    .transform.SetParent(preview, false);
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "exactly nine BattlefieldChunkView");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsDifferentVisualPrefabLibraryWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            var temporaryLibraryPath =
+                $"Assets/JoseonHunter/Resources/GameplaySceneAuthoringContractTests-{Guid.NewGuid():N}.asset";
+            try
+            {
+                Assert.That(AssetDatabase.CopyAsset(GameplayVisualPrefabBuilder.LibraryAssetPath, temporaryLibraryPath), Is.True);
+                var controller = CreateInScene(scene, "FirstPlayable").AddComponent<FirstPlayableController>();
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("gameplayVisualPrefabs").objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<GameplayVisualPrefabLibrary>(temporaryLibraryPath);
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "different visual prefab library");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+                AssetDatabase.DeleteAsset(temporaryLibraryPath);
+            }
+        }
+
+        [Test]
         public void GeneratorRejectsMismatchedCompositionBeforeMutatingTheScene()
         {
             var scene = CreateTemporaryScene();

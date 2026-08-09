@@ -144,13 +144,19 @@ namespace JoseonHunter.Editor.Scenes
 
         private static Transform RequireOrCreateChild(Transform parent, string name)
         {
-            var matches = parent.Cast<Transform>().Where(child => child.name == name).ToArray();
-            if (matches.Length > 1)
-                throw new InvalidOperationException($"{parent.name} contains duplicate child '{name}'.");
-            if (matches.Length == 1) return matches[0];
+            var existing = FindSingleChildOrNull(parent, name);
+            if (existing != null) return existing;
             var child = new GameObject(name).transform;
             child.SetParent(parent, false);
             return child;
+        }
+
+        private static Transform FindSingleChildOrNull(Transform parent, string name)
+        {
+            var matches = parent.Cast<Transform>().Where(child => child.name == name).ToArray();
+            if (matches.Length > 1)
+                throw new InvalidOperationException($"{parent.name} contains duplicate child '{name}'.");
+            return matches.SingleOrDefault();
         }
 
         private static T RequireOrAdd<T>(GameObject gameObject) where T : Component
@@ -172,9 +178,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void EnsureAuthoringPreview(Transform previewRoot)
         {
-            var presentation = AssetDatabase.LoadAssetAtPath<BattlefieldPresentationLibrary>(BattlefieldPresentationPath);
-            if (presentation == null || presentation.ChunkPrefab == null || presentation.GroundTile == null)
-                throw new InvalidOperationException("Battlefield presentation library is missing its chunk prefab or ground tile.");
+            var presentation = RequireBattlefieldPresentation();
             var chunks = previewRoot.GetComponentsInChildren<BattlefieldChunkView>(true);
             if (chunks.Length != 0 && chunks.Length != BattlefieldChunkLayout.ActiveChunkCount)
                 throw new InvalidOperationException("Authoring Preview must contain exactly nine BattlefieldChunkView instances.");
@@ -350,10 +354,37 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void ValidateExistingScene(Scene scene, GameplayVisualPrefabLibrary library)
         {
+            RequireBattlefieldPresentation();
+            var cameraRoot = FindSingleRootOrNull(scene, "Main Camera");
+            var controllerRoot = FindSingleRootOrNull(scene, "FirstPlayable");
+            var uiRoot = FindSingleRootOrNull(scene, "First Playable UI");
+            var eventSystemRoot = FindSingleRootOrNull(scene, "EventSystem");
+            ValidateAtMostOne<Camera>(cameraRoot);
+            ValidateAtMostOne<FirstPlayableController>(controllerRoot);
+            ValidateAtMostOne<GameFlowCoordinator>(controllerRoot);
+            ValidateAtMostOne<GameplaySceneComposition>(controllerRoot);
+            ValidateAtMostOne<FirstPlayableUiBootstrap>(uiRoot);
+            ValidateAtMostOne<EventSystem>(eventSystemRoot);
             ValidateExistingControllerSceneComposition(scene);
             ValidateExistingUiBootstrap(scene);
             ValidateExistingEventSystem(scene);
-            ValidateExistingPlayerAndHealthBar(scene, library);
+            ValidateExistingEventSystemInputModule(eventSystemRoot);
+            ValidateExistingControllerVisualLibrary(controllerRoot, library);
+
+            if (controllerRoot == null) return;
+            var field = FindSingleChildOrNull(controllerRoot.transform, "FlatField");
+            var runtimeObjects = FindSingleChildOrNull(controllerRoot.transform, "RuntimeObjects");
+            var runtimeSystems = FindSingleChildOrNull(controllerRoot.transform, "RuntimeSystems");
+            var spawnGuides = FindSingleChildOrNull(controllerRoot.transform, "Spawn Guides");
+            ValidateAtMostOne<GameplaySpawnGuide>(spawnGuides?.gameObject);
+            ValidateExistingPlayerAndHealthBar(runtimeObjects, library);
+            if (field == null) return;
+
+            var authoringPreview = FindSingleChildOrNull(field, "Authoring Preview");
+            FindSingleChildOrNull(field, "Runtime Battlefield");
+            ValidateAtMostOne<GameplayBattlefieldHost>(field.gameObject);
+            if (authoringPreview != null)
+                ValidateExistingAuthoringPreview(authoringPreview);
         }
 
         private static void ValidateExistingControllerSceneComposition(Scene scene)
@@ -391,17 +422,33 @@ namespace JoseonHunter.Editor.Scenes
                 throw new InvalidOperationException("Gameplay scene contains an unexpected EventSystem.");
         }
 
-        private static void ValidateExistingPlayerAndHealthBar(Scene scene, GameplayVisualPrefabLibrary library)
+        private static void ValidateExistingEventSystemInputModule(GameObject root)
         {
-            var controllerRoot = FindSingleRootOrNull(scene, "FirstPlayable");
-            if (controllerRoot == null) return;
-            var runtimeMatches = controllerRoot.transform.Cast<Transform>()
-                .Where(child => child.name == "RuntimeObjects").ToArray();
-            if (runtimeMatches.Length > 1)
-                throw new InvalidOperationException("FirstPlayable contains duplicate child 'RuntimeObjects'.");
-            if (runtimeMatches.Length == 0) return;
+            var inputModuleType = Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+            if (inputModuleType == null) throw new InvalidOperationException("InputSystemUIInputModule is unavailable.");
+            if (root == null) return;
+            var modules = root.GetComponents<BaseInputModule>();
+            if (modules.Length != 0 && (modules.Length != 1 || modules[0].GetType() != inputModuleType))
+                throw new InvalidOperationException("EventSystem requires exactly one InputSystemUIInputModule and no other input module.");
+        }
 
-            var playerMatches = runtimeMatches[0].Cast<Transform>()
+        private static void ValidateExistingControllerVisualLibrary(
+            GameObject controllerRoot,
+            GameplayVisualPrefabLibrary library)
+        {
+            var controller = controllerRoot != null ? controllerRoot.GetComponent<FirstPlayableController>() : null;
+            if (controller == null) return;
+            var visualPrefabs = new SerializedObject(controller).FindProperty("gameplayVisualPrefabs");
+            if (visualPrefabs.objectReferenceValue != null && visualPrefabs.objectReferenceValue != library)
+                throw new InvalidOperationException("Gameplay controller references a different visual prefab library.");
+        }
+
+        private static void ValidateExistingPlayerAndHealthBar(
+            Transform runtimeObjects,
+            GameplayVisualPrefabLibrary library)
+        {
+            if (runtimeObjects == null) return;
+            var playerMatches = runtimeObjects.Cast<Transform>()
                 .Where(child => child.name == "Han Yeonhwa").ToArray();
             if (playerMatches.Length > 1)
                 throw new InvalidOperationException("RuntimeObjects contains duplicate Han Yeonhwa objects.");
@@ -413,6 +460,32 @@ namespace JoseonHunter.Editor.Scenes
             if (playerView == null || playerView.HealthBarAnchor == null)
                 throw new InvalidOperationException("Authored PlayerVisual is missing CombatantVisualView.HealthBarAnchor.");
             ValidateExistingHealthBar(playerView.HealthBarAnchor, library.WorldHealthBar);
+        }
+
+        private static void ValidateExistingAuthoringPreview(Transform previewRoot)
+        {
+            var presentation = RequireBattlefieldPresentation();
+            var chunks = previewRoot.GetComponentsInChildren<BattlefieldChunkView>(true);
+            if (chunks.Length != 0 && chunks.Length != BattlefieldChunkLayout.ActiveChunkCount)
+                throw new InvalidOperationException("Authoring Preview must contain exactly nine BattlefieldChunkView instances.");
+            if (chunks.Any(chunk => chunk == null ||
+                                    PrefabUtility.GetCorrespondingObjectFromOriginalSource(chunk.gameObject) !=
+                                    presentation.ChunkPrefab.gameObject))
+                throw new InvalidOperationException("Authoring Preview must use connected production BattlefieldChunkView instances.");
+        }
+
+        private static BattlefieldPresentationLibrary RequireBattlefieldPresentation()
+        {
+            var presentation = AssetDatabase.LoadAssetAtPath<BattlefieldPresentationLibrary>(BattlefieldPresentationPath);
+            if (presentation == null || presentation.ChunkPrefab == null || presentation.GroundTile == null)
+                throw new InvalidOperationException("Battlefield presentation library is missing its chunk prefab or ground tile.");
+            return presentation;
+        }
+
+        private static void ValidateAtMostOne<T>(GameObject gameObject) where T : Component
+        {
+            if (gameObject != null && gameObject.GetComponents<T>().Length > 1)
+                throw new InvalidOperationException($"{gameObject.name} contains duplicate {typeof(T).Name} components.");
         }
 
         private static void AssignSprite(SerializedObject serialized, string propertyName, string path)
