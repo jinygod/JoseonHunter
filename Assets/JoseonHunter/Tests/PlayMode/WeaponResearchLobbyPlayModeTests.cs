@@ -167,8 +167,9 @@ namespace JoseonHunter.Tests.PlayMode
                 CreateText("Selected Name", root.transform), CreateProgress("Mastery", root.transform), rows,
                 CreateText("Feedback", root.transform));
             presenter.ConfigureView(page);
-            presenter.ConfigureCatalog(UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(
-                "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset"));
+            var catalog = UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(
+                "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset");
+            presenter.ConfigureCatalog(catalog);
 
             var selectorIds = selectors.Select(selector => selector.GetEntityId()).ToArray();
             var rowIds = rows.Select(row => row.GetEntityId()).ToArray();
@@ -183,7 +184,12 @@ namespace JoseonHunter.Tests.PlayMode
             CollectionAssert.AreEqual(ExpectedWeaponOrder.Select(weapon => weapon.Value),
                 page.WeaponSelectors.Select(selector => selector.name.Replace("Selector ", string.Empty)));
             CollectionAssert.AreEqual(ExpectedWeaponNames, page.WeaponSelectors.Select(selector => selector.WeaponName.text));
-            Assert.That(page.WeaponSelectors.All(selector => selector.Icon.sprite != null), Is.True);
+            for (var index = 0; index < ExpectedWeaponOrder.Length; index++)
+            {
+                Assert.That(catalog.TryGet(ExpectedWeaponOrder[index], out var definition), Is.True);
+                var expectedIcon = definition.UiIcon ?? definition.PresentationSprites.FirstOrDefault();
+                Assert.That(page.WeaponSelectors[index].Icon.sprite, Is.SameAs(expectedIcon));
+            }
             CollectionAssert.AreEqual(selectorIds, page.WeaponSelectors.Select(selector => selector.GetEntityId()));
             CollectionAssert.AreEqual(rowIds, page.Rows.Select(row => row.GetEntityId()));
             Assert.That(page.SelectedWeaponName.text, Is.Not.Empty);
