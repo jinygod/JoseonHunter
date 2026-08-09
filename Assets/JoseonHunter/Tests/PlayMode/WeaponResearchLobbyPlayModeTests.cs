@@ -50,22 +50,20 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
             var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
             presenter.SelectWeaponForTests(1);
+            var page = presenter.GetComponent<ResearchPageView>();
 
             Assert.That(presenter.WeaponCountForTests, Is.EqualTo(8));
             Assert.That(presenter.StyleCountForTests, Is.EqualTo(3));
             Assert.That(presenter.SelectedStyleStateForTests(1), Is.EqualTo("해금 가능"));
             Canvas.ForceUpdateCanvases();
-            var styleButtons = presenter.GetComponentsInChildren<Button>(true)
-                .Where(button => button.name.StartsWith("Style Card ")).ToArray();
+            Assert.That(page, Is.Not.Null);
+            Assert.That(page.WeaponSelectors, Has.Length.EqualTo(8));
+            var styleButtons = page.Rows.Select(row => row.ActionButton).ToArray();
             Assert.That(styleButtons, Has.Length.EqualTo(3));
             Assert.That(styleButtons.Min(button => button.GetComponent<RectTransform>().rect.height),
                 Is.GreaterThanOrEqualTo(64f));
             Assert.That(styleButtons.Min(button => button.GetComponentInChildren<TMPro.TMP_Text>().fontSize),
                 Is.GreaterThanOrEqualTo(18f));
-            var title = presenter.transform.Find("Research Title").GetComponent<TMPro.TMP_Text>();
-            Assert.That(title.color.r, Is.GreaterThan(title.color.b));
-            Assert.That(title.color.g, Is.GreaterThan(.35f));
-
             presenter.ActivateStyleForTests(1);
             presenter.ActivateStyleForTests(1);
 
@@ -87,18 +85,19 @@ namespace JoseonHunter.Tests.PlayMode
             var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
             presenter.SelectWeaponForTests(1);
 
-            var icon = presenter.transform.Find("Selected Weapon Icon").GetComponent<Image>();
-            Assert.That(icon.sprite, Is.Not.Null);
-            var fill = presenter.transform.Find("Research Progress Backplate/Mastery Progress/Mastery Progress Fill")
-                .GetComponent<RectTransform>();
-            Assert.That(fill.anchorMax.x, Is.EqualTo(564f / 2000f).Within(.002f));
-            var mastery = presenter.transform.Find("Research Progress Backplate/Mastery Summary")
-                .GetComponent<TMPro.TMP_Text>();
+            var page = presenter.GetComponent<ResearchPageView>();
+            Assert.That(page, Is.Not.Null);
+            Assert.That(page.HasRequiredBindings, Is.True);
+            Assert.That(page.SelectedWeaponIcon.sprite, Is.Not.Null);
+            var fill = page.MasteryProgress.GetComponentsInChildren<Image>(true)
+                .Single(image => image.fillAmount < 1f);
+            Assert.That(fill.fillAmount, Is.EqualTo(564f / 2000f).Within(.002f));
+            var mastery = page.MasteryProgress.GetComponentInChildren<TMPro.TMP_Text>(true);
             Assert.That(mastery.text, Does.Contain("564 / 2,000"));
 
             presenter.ActivateStyleForTests(2);
 
-            var feedback = presenter.transform.Find("Research Feedback").GetComponent<TMPro.TMP_Text>();
+            var feedback = page.FeedbackText;
             Assert.That(feedback.text, Is.EqualTo("2단계 연구 완료 시 해금"));
         }
 
@@ -108,21 +107,39 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
-            Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include).gameObject.SetActive(true);
+            var presenter = Object.FindAnyObjectByType<WeaponResearchPresenter>(FindObjectsInactive.Include);
+            presenter.gameObject.SetActive(true);
             Canvas.ForceUpdateCanvases();
+            var page = presenter.GetComponent<ResearchPageView>();
 
-            Assert.That(ImageNamed("Research Progress Backplate").sprite.name, Is.EqualTo("content_backplate"));
-            Assert.That(ButtonsUnder("Weapon Grid"), Has.Length.EqualTo(8));
-            Assert.That(ImageNamed("Style Card 0").sprite.name, Is.EqualTo("content_backplate"));
-            Assert.That(ImageNamed("Style Card 1").sprite.name, Is.EqualTo("content_backplate"));
-            Assert.That(ImageNamed("Style Card 2").sprite.name, Is.EqualTo("content_backplate"));
-            AssertNoOverlap("Weapon Grid", "Style Card 0", "Style Card 1", "Style Card 2");
-            foreach (var index in Enumerable.Range(0, 3))
+            Assert.That(page, Is.Not.Null);
+            Assert.That(page.WeaponSelectors, Has.Length.EqualTo(8));
+            Assert.That(page.Rows, Has.Length.EqualTo(3));
+            var hierarchyBeforeSelection = page.GetComponentsInChildren<Transform>(true);
+            presenter.SelectWeaponForTests(1);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(page.WeaponSelectors.All(selector => selector.Background.sprite.name == "weapon_selector_frame"), Is.True,
+                string.Join(", ", page.WeaponSelectors.Select(selector => selector.Background.sprite.name)));
+            Assert.That(page.WeaponSelectors[1].Button.colors.normalColor,
+                Is.Not.EqualTo(page.WeaponSelectors[0].Button.colors.normalColor));
+            CollectionAssert.AreEqual(hierarchyBeforeSelection, page.GetComponentsInChildren<Transform>(true));
+            Assert.That(page.Rows.All(row => row.GetComponent<Image>().sprite.name == "content_backplate"), Is.True);
+            var selectorCards = page.WeaponSelectors.Select(selector => selector.GetComponent<RectTransform>()).ToArray();
+            var pageBounds = page.GetComponent<RectTransform>();
+            Assert.That(selectorCards.All(card => card.rect.width <= pageBounds.rect.width), Is.True);
+            Assert.That(page.Rows.All(row => row.GetComponent<RectTransform>().rect.height >= 64f), Is.True);
+            AssertNoOverlap(selectorCards.Concat(page.Rows.Select(row => row.GetComponent<RectTransform>())).ToArray());
+            foreach (var row in page.Rows)
             {
-                Assert.That(TextUnder("Style Card " + index).text.Split('\n').Length, Is.LessThanOrEqualTo(3));
-                Assert.That(TextUnder("Style Card " + index).fontSize, Is.EqualTo(18f));
-                Assert.That(TextUnder("Style Card " + index).rectTransform.anchorMin, Is.EqualTo(Vector2.zero));
-                Assert.That(TextUnder("Style Card " + index).rectTransform.anchorMax, Is.EqualTo(Vector2.one));
+                Assert.That(row.EffectText.text.Split('\n').Length, Is.LessThanOrEqualTo(3));
+                Assert.That(row.EffectText.fontSize, Is.EqualTo(18f));
+                Assert.That(row.EffectText.rectTransform.anchorMin, Is.EqualTo(new Vector2(.28f, .51f)));
+                Assert.That(row.EffectText.rectTransform.anchorMax, Is.EqualTo(new Vector2(.28f, .51f)));
+                Assert.That(row.EffectText.rectTransform.sizeDelta, Is.EqualTo(new Vector2(500f, 32f)));
+                var rowBounds = WorldRect(row.GetComponent<RectTransform>());
+                var effectBounds = WorldRect(row.EffectText.rectTransform);
+                Assert.That(rowBounds.Contains(effectBounds.min) && rowBounds.Contains(effectBounds.max), Is.True,
+                    $"{row.name} effect bounds {effectBounds} overflow row bounds {rowBounds}");
             }
         }
 
@@ -368,14 +385,6 @@ namespace JoseonHunter.Tests.PlayMode
             return page;
         }
 
-        private static Image ImageNamed(string name) => GameObject.Find(name).GetComponent<Image>();
-
-        private static Button[] ButtonsUnder(string name) =>
-            GameObject.Find(name).GetComponentsInChildren<Button>(true);
-
-        private static TMPro.TMP_Text TextUnder(string name) =>
-            GameObject.Find(name).GetComponentInChildren<TMPro.TMP_Text>(true);
-
         private static LobbyWeaponSelectorCardView CreateSelector(Transform parent, WeaponId weaponId, int index)
         {
             var root = new GameObject("Selector " + weaponId.Value, typeof(RectTransform));
@@ -439,9 +448,9 @@ namespace JoseonHunter.Tests.PlayMode
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
-        private static void AssertNoOverlap(params string[] names)
+        private static void AssertNoOverlap(params RectTransform[] rectTransforms)
         {
-            var rects = names.Select(name => (name, rect: WorldRect(GameObject.Find(name).GetComponent<RectTransform>())))
+            var rects = rectTransforms.Select(rectTransform => (rectTransform.name, rect: WorldRect(rectTransform)))
                 .ToArray();
             for (var left = 0; left < rects.Length; left++)
             for (var right = left + 1; right < rects.Length; right++)

@@ -44,7 +44,7 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
             iconImage.enabled = icon != null;
             rankText.text = $"{rank} / {maximum}";
             progress.Render(maximum <= 0 ? 0f : (float)rank / maximum, string.Empty);
-            LobbySelectionChrome.Apply(button, selected);
+            LobbySelectionChrome.ApplyRow(button, selected);
         }
     }
 }

@@ -45,6 +45,7 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
             trainingView != null && trainingView.HasRequiredBindings && trainingPresenter != null &&
             researchView != null && researchView.HasRequiredBindings && researchPresenter != null &&
             settingsOverlay != null && settingsButton != null && audioSettings != null &&
+            settingsOverlay.TryGetComponent<LobbyAudioSettingsView>(out var settingsView) && settingsView.HasRequiredBindings &&
             HasUniqueReferences();
 
         private bool HasUniqueReferences()

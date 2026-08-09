@@ -36,23 +36,21 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Lobby");
             yield return null;
             var presenter = Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
+            var page = presenter.GetComponent<TrainingPageView>();
 
-            Assert.That(presenter.transform.Find("Training Title").GetComponent<TMPro.TMP_Text>().text,
-                Is.EqualTo("수련"));
-            Assert.That(presenter.transform.Find("Training Description").GetComponent<TMPro.TMP_Text>().text,
-                Is.EqualTo("수련 효과는 모든 출전에 적용되며, 항목별 최대치는 15%입니다."));
+            Assert.That(page, Is.Not.Null);
+            var pageText = page.GetComponentsInChildren<TMPro.TMP_Text>(true);
+            Assert.That(pageText, Has.Some.Matches<TMPro.TMP_Text>(text => text.text == "수련"));
+            Assert.That(pageText, Has.Some.Matches<TMPro.TMP_Text>(text =>
+                text.text == "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 15%입니다."));
 
             presenter.SelectForTests(CommonTrainingId.Vitality);
             Assert.That(presenter.CurrentTextForTests, Is.EqualTo("현재 최대 체력 +0%"));
             Assert.That(presenter.NextTextForTests, Is.EqualTo("강화 후 최대 체력 +2%"));
             Assert.That(presenter.CostTextForTests, Is.EqualTo("필요 엽전 100 · 강화 후 400"));
             Canvas.ForceUpdateCanvases();
-            var purchase = presenter.transform.Find("Training Content Panel/Purchase Training").GetComponent<Button>();
-            Assert.That(purchase.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(64f));
+            var purchase = page.PurchaseButton;
             Assert.That(purchase.GetComponentInChildren<TMPro.TMP_Text>().fontSize, Is.GreaterThanOrEqualTo(18f));
-            var detail = presenter.transform.Find("Training Content Panel/Training Summary Backplate")
-                .GetComponent<Image>();
-            Assert.That(detail.sprite.name, Is.EqualTo("content_backplate"));
 
             presenter.PurchaseForTests();
             Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(400));
@@ -131,43 +129,57 @@ namespace JoseonHunter.Tests.PlayMode
         [UnityTest]
         public IEnumerator TrainingUsesSixSmallStatCardsAndSeparateSummaryActions()
         {
-            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
-            SceneManager.LoadScene("Lobby");
-            yield return null;
-            Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include).gameObject.SetActive(true);
-            Canvas.ForceUpdateCanvases();
+            var originalWidth = Screen.width;
+            var originalHeight = Screen.height;
+            Screen.SetResolution(720, 1280, false);
+            try
+            {
+                MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+                SceneManager.LoadScene("Lobby");
+                yield return null;
+                var presenter = Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
+                presenter.gameObject.SetActive(true);
+                Canvas.ForceUpdateCanvases();
+                var page = presenter.GetComponent<TrainingPageView>();
 
-            var cards = GameObject.Find("Training Grid").GetComponentsInChildren<Button>(true);
-            Assert.That(cards, Has.Length.EqualTo(6));
-            Assert.That(cards, Has.All.Matches<Button>(button =>
-                button.GetComponent<LobbyTrainingRowView>() != null));
-            Assert.That(GameObject.Find("Training Summary Backplate").GetComponent<Image>().sprite.name,
-                Is.EqualTo("content_backplate"));
-            var purchase = GameObject.Find("Purchase Training").GetComponent<Button>();
-            var reset = GameObject.Find("Reset Training").GetComponent<Button>();
-            Assert.That(purchase.GetComponent<Image>().sprite.name, Is.EqualTo("primary_red_button"));
-            Assert.That(reset.GetComponent<Image>().sprite.name, Is.EqualTo("secondary_dark_button"));
-            var contentPanel = GameObject.Find("Training Content Panel").GetComponent<RectTransform>();
-            Assert.That(GameObject.Find("Training Grid").transform.IsChildOf(contentPanel), Is.True);
-            Assert.That(GameObject.Find("Training Summary Backplate").transform.parent, Is.SameAs(contentPanel));
-            Assert.That(purchase.transform.parent, Is.SameAs(contentPanel));
-            Assert.That(reset.transform.parent, Is.SameAs(contentPanel));
-            Assert.That(GameObject.Find("Training Feedback").transform.parent, Is.SameAs(contentPanel));
-            AssertInside(contentPanel,
-                purchase.GetComponent<RectTransform>(), reset.GetComponent<RectTransform>());
-            Assert.That(WorldRect(purchase.GetComponent<RectTransform>()).Overlaps(
-                WorldRect(reset.GetComponent<RectTransform>())), Is.False);
+                Assert.That(page, Is.Not.Null);
+                Assert.That(page.HasRequiredBindings, Is.True);
+                Assert.That(page.Rows, Has.Length.EqualTo(6));
+                presenter.SelectForTests(CommonTrainingId.Power);
+                for (var index = 0; index < page.Rows.Length; index++)
+                {
+                    var row = page.Rows[index];
+                    Assert.That(row, Is.Not.Null);
+                    Assert.That(row.TrainingId, Is.EqualTo((CommonTrainingId)index));
+                    Assert.That(row.Progress.HasRequiredBindings, Is.True);
+                    var rowImage = row.Button.GetComponent<Image>();
+                    Assert.That(rowImage.sprite, Is.Not.Null, row.name);
+                    Assert.That(rowImage.sprite.name, Is.EqualTo("small_item_frame"));
+                    Assert.That(row.GetComponent<RectTransform>().rect.height,
+                        Is.GreaterThanOrEqualTo(64f), row.name);
+                }
+                Assert.That(page.Rows[(int)CommonTrainingId.Power].Button.colors.normalColor,
+                    Is.Not.EqualTo(page.Rows[(int)CommonTrainingId.Vitality].Button.colors.normalColor),
+                    "The selected training row needs a tint highlight without changing its semantic frame.");
 
-            var purchaseBefore = purchase.transform.position;
-            var resetBefore = reset.transform.position;
-            var panelBefore = contentPanel.position;
-            contentPanel.anchoredPosition += new Vector2(37f, -19f);
-            Canvas.ForceUpdateCanvases();
-            var panelDelta = (Vector2)contentPanel.position - (Vector2)panelBefore;
-            Assert.That(Vector2.Distance(purchase.transform.position, (Vector2)purchaseBefore + panelDelta),
-                Is.LessThan(.01f));
-            Assert.That(Vector2.Distance(reset.transform.position, (Vector2)resetBefore + panelDelta),
-                Is.LessThan(.01f));
+                var purchase = page.PurchaseButton;
+                var reset = page.ResetButton;
+                Assert.That(purchase.GetComponent<Image>().sprite.name, Is.EqualTo("primary_red_button"));
+                Assert.That(reset.GetComponent<Image>().sprite.name, Is.EqualTo("secondary_dark_button"));
+                Assert.That(purchase.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(64f));
+                Assert.That(reset.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(64f));
+
+                var touchTargets = new RectTransform[page.Rows.Length + 2];
+                for (var index = 0; index < page.Rows.Length; index++)
+                    touchTargets[index] = page.Rows[index].GetComponent<RectTransform>();
+                touchTargets[^2] = purchase.GetComponent<RectTransform>();
+                touchTargets[^1] = reset.GetComponent<RectTransform>();
+                AssertNoOverlap(touchTargets);
+            }
+            finally
+            {
+                Screen.SetResolution(originalWidth, originalHeight, false);
+            }
         }
 
         [UnityTest]
@@ -254,7 +266,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator RepeatedInitializePreservesOneActiveTrainingContentHierarchyAndListeners()
+        public IEnumerator RepeatedAuthoredInitializePreservesBoundRowsAndListeners()
         {
             var data = SaveDataV1.CreateDefaults();
             data.Coins = 500;
@@ -262,25 +274,20 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Lobby");
             yield return null;
             var presenter = Object.FindAnyObjectByType<CommonTrainingPresenter>(FindObjectsInactive.Include);
-            var panel = presenter.transform.Find("Training Content Panel");
-            var grid = panel.Find("Training Grid");
-            var summary = panel.Find("Training Summary Backplate");
-            var purchase = panel.Find("Purchase Training").GetComponent<Button>();
-            var reset = panel.Find("Reset Training").GetComponent<Button>();
+            var page = presenter.GetComponent<TrainingPageView>();
+            Assert.That(page, Is.Not.Null);
+            Assert.That(page.HasRequiredBindings, Is.True);
+            var rows = page.Rows;
+            var purchase = page.PurchaseButton;
+            var reset = page.ResetButton;
 
-            presenter.Initialize(MetaGameSession.Current, null);
-            presenter.Initialize(MetaGameSession.Current, null);
+            presenter.ConfigureView(page);
+            presenter.InitializeAuthored(MetaGameSession.Current, null);
+            presenter.InitializeAuthored(MetaGameSession.Current, null);
 
-            Assert.That(presenter.transform.Find("Training Content Panel"), Is.SameAs(panel));
-            Assert.That(panel.Find("Training Grid"), Is.SameAs(grid));
-            Assert.That(panel.Find("Training Summary Backplate"), Is.SameAs(summary));
-            Assert.That(panel.Find("Purchase Training").GetComponent<Button>(), Is.SameAs(purchase));
-            Assert.That(panel.Find("Reset Training").GetComponent<Button>(), Is.SameAs(reset));
-            Assert.That(DirectChildCount(presenter.transform, "Training Content Panel"), Is.EqualTo(1));
-            Assert.That(DirectChildCount(panel, "Training Grid"), Is.EqualTo(1));
-            Assert.That(DirectChildCount(panel, "Training Summary Backplate"), Is.EqualTo(1));
-            Assert.That(DirectChildCount(panel, "Purchase Training"), Is.EqualTo(1));
-            Assert.That(DirectChildCount(panel, "Reset Training"), Is.EqualTo(1));
+            Assert.That(page.Rows, Is.SameAs(rows));
+            Assert.That(page.PurchaseButton, Is.SameAs(purchase));
+            Assert.That(page.ResetButton, Is.SameAs(reset));
 
             purchase.onClick.Invoke();
             Assert.That(MetaGameSession.Current.Data.Coins, Is.EqualTo(400));
@@ -299,14 +306,6 @@ namespace JoseonHunter.Tests.PlayMode
             var corners = new Vector3[4];
             rect.GetWorldCorners(corners);
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
-        }
-
-        private static int DirectChildCount(Transform parent, string name)
-        {
-            var count = 0;
-            foreach (Transform child in parent)
-                if (child.name == name) count++;
-            return count;
         }
 
         private static LobbyTrainingRowView CreateAuthoredRow(Transform parent, CommonTrainingId id)
@@ -347,17 +346,13 @@ namespace JoseonHunter.Tests.PlayMode
             return text;
         }
 
-
-        private static void AssertInside(RectTransform container, params RectTransform[] children)
+        private static void AssertNoOverlap(params RectTransform[] rects)
         {
-            var bounds = WorldRect(container);
-            foreach (var child in children)
+            for (var index = 0; index < rects.Length; index++)
             {
-                var rect = WorldRect(child);
-                Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(bounds.xMin));
-                Assert.That(rect.xMax, Is.LessThanOrEqualTo(bounds.xMax));
-                Assert.That(rect.yMin, Is.GreaterThanOrEqualTo(bounds.yMin));
-                Assert.That(rect.yMax, Is.LessThanOrEqualTo(bounds.yMax));
+                for (var other = index + 1; other < rects.Length; other++)
+                    Assert.That(WorldRect(rects[index]).Overlaps(WorldRect(rects[other])), Is.False,
+                        $"{rects[index].name} overlaps {rects[other].name}.");
             }
         }
     }

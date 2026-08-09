@@ -20,6 +20,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (view == null) view = GetComponent<LobbyHomeView>();
         }
 
+        private void OnEnable()
+        {
+            if (session != null) Refresh();
+        }
+
         public void Initialize(MetaGameSession metaGameSession, WeaponCatalogAsset catalog)
         {
             session = metaGameSession;

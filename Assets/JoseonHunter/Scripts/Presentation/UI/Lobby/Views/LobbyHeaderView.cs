@@ -22,11 +22,30 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
 
         public void Render(AccountLevelState account, int coins)
         {
-            accountLevelText.text = account.IsMaximumLevel ? "최고 레벨" : $"레벨 {account.Level}";
-            progressFill.fillAmount = account.IsMaximumLevel || account.NextLevelRequirement <= 0
+            accountLevelText.text = account.IsMaximumLevel ? "최고 레벨" : account.Level.ToString();
+            var progress = account.IsMaximumLevel || account.NextLevelRequirement <= 0
                 ? 1f
                 : Mathf.Clamp01((float)account.CurrentLevelExperience / account.NextLevelRequirement);
-            coinsText.text = Mathf.Max(0, coins).ToString("N0");
+            progressFill.fillAmount = progress;
+            foreach (var image in GetComponentsInChildren<Image>(true))
+            {
+                if (image != progressFill && image.name == "Account Experience Fill")
+                {
+                    image.fillAmount = progress;
+                    break;
+                }
+            }
+            var renderedCoins = Mathf.Max(0, coins).ToString("N0");
+            coinsText.text = renderedCoins;
+
+            foreach (var text in GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (text != coinsText && text.name == "Coin Text")
+                {
+                    text.text = renderedCoins;
+                    break;
+                }
+            }
         }
     }
 }

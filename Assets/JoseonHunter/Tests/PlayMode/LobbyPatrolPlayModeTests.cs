@@ -41,6 +41,7 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
             var presenter = Object.FindAnyObjectByType<PatrolPresenter>();
 
             presenter.SelectStartingWeaponForTests(WeaponId.GakgungShot);
@@ -59,12 +60,13 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            var stage = GameObject.Find("Stage Name");
+            var stage = FindPatrolControl("Stage Name");
             Assert.That(stage, Is.Not.Null);
             Assert.That(stage.GetComponent<TMPro.TMP_Text>().text, Does.Contain("귀곡 들판"));
 
-            var start = GameObject.Find("Start Patrol");
+            var start = FindPatrolControl("Start Patrol");
             Assert.That(start, Is.Not.Null);
             Assert.That(start.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("출전 시작"));
             Assert.That(start.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(76f));
@@ -249,21 +251,16 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            var hero = GameObject.Find("Patrol Hero")?.GetComponent<Image>();
-            var shadow = GameObject.Find("Patrol Hero Shadow")?.GetComponent<PixelOvalGraphic>();
-            var selector = GameObject.Find("Starting Weapon Selector")?.GetComponent<Button>();
+            var hero = FindPatrolControl("Patrol Hero")?.GetComponent<Image>();
+            var shadow = FindPatrolControl("Patrol Hero Shadow")?.GetComponent<PixelOvalGraphic>();
+            var selector = CurrentPatrolView().WeaponSelector.Button;
 
             Assert.That(hero, Is.Not.Null);
             Assert.That(hero.sprite, Is.Not.Null);
             Assert.That(hero.preserveAspect, Is.True);
-            Assert.That(hero.transform.parent.name, Is.EqualTo("Patrol Panel"));
-            var contentPanel = GameObject.Find("Patrol Panel").GetComponent<Image>();
-            Assert.That(contentPanel.sprite, Is.Not.Null,
-                "The patrol content panel must retain the approved thin content border.");
-            Assert.That(contentPanel.sprite.name,
-                Is.EqualTo("thin_outer_frame"),
-                "The patrol content panel must retain the approved thin content border.");
+            Assert.That(hero.transform.parent.name, Is.EqualTo("Patrol Page"));
             Assert.That(shadow, Is.Not.Null);
             Assert.That(shadow.color.a, Is.InRange(.08f, .28f));
             Assert.That(shadow.transform.GetSiblingIndex(), Is.LessThan(hero.transform.GetSiblingIndex()));
@@ -279,18 +276,20 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            Assert.That(GameObject.Find("Stage Plaque").GetComponent<Image>().sprite.name,
+            Assert.That(FindPatrolControl("Stage Plaque").GetComponent<Image>().sprite.name,
                 Is.EqualTo("stage_title_plate"));
-            Assert.That(GameObject.Find("Patrol Hero Frame").GetComponent<Image>().sprite.name,
+            Assert.That(FindPatrolControl("Patrol Hero Frame").GetComponent<Image>().sprite.name,
                 Is.EqualTo("hero_oval_frame"));
-            Assert.That(GameObject.Find("Previous Stage").transform.Find("Premium Icon")
+            Assert.That(FindPatrolControl("Previous Stage").transform.Find("Premium Icon")
                 .GetComponent<Image>().sprite.name, Is.EqualTo("icon_previous"));
-            Assert.That(GameObject.Find("Next Stage").transform.Find("Premium Icon")
+            Assert.That(FindPatrolControl("Next Stage").transform.Find("Premium Icon")
                 .GetComponent<Image>().sprite.name, Is.EqualTo("icon_next"));
-            Assert.That(((Image)GameObject.Find("Difficulty Normal").GetComponent<Button>().targetGraphic)
+            var page = CurrentPatrolView();
+            Assert.That(((Image)page.NormalDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_selected"));
-            Assert.That(GameObject.Find("Starting Weapon Selector").GetComponent<Image>().sprite.name,
+            Assert.That(page.WeaponSelector.Background.sprite.name,
                 Is.EqualTo("weapon_selector_frame"));
         }
 
@@ -300,28 +299,40 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            AssertAnchor("Stage Plaque", new Vector2(.18f, .875f), new Vector2(.82f, .95f));
-            AssertAnchor("Previous Stage", new Vector2(.04f, .875f), new Vector2(.16f, .95f));
-            AssertAnchor("Next Stage", new Vector2(.84f, .875f), new Vector2(.96f, .95f));
+            AssertAnchor("Stage Plaque", new Vector2(.04f, .735f), new Vector2(.96f, .815f));
+            AssertAnchor("Previous Stage", new Vector2(.06f, .742f), new Vector2(.18f, .810f));
+            AssertAnchor("Next Stage", new Vector2(.82f, .742f), new Vector2(.94f, .810f));
             AssertAnchor("Patrol Hero Frame", new Vector2(.30f, .55f), new Vector2(.70f, .84f));
-            AssertAnchor("Difficulty Normal", new Vector2(.055f, .43f), new Vector2(.35f, .535f));
-            AssertAnchor("Difficulty Omen", new Vector2(.352f, .43f), new Vector2(.648f, .535f));
-            AssertAnchor("Difficulty Great Omen", new Vector2(.65f, .43f), new Vector2(.945f, .535f));
-            AssertAnchor("Starting Weapon Selector", new Vector2(.12f, .285f), new Vector2(.88f, .405f));
-            AssertAnchor("Start Patrol", new Vector2(.20f, .09f), new Vector2(.80f, .235f));
+            AssertAnchor("Difficulty Normal", new Vector2(.06f, .405f), new Vector2(.353f, .495f));
+            AssertAnchor("Difficulty Omen", new Vector2(.353f, .405f), new Vector2(.647f, .495f));
+            AssertAnchor("Difficulty Great Omen", new Vector2(.647f, .405f), new Vector2(.94f, .495f));
+            AssertAnchor("Starting Weapon Selector", new Vector2(.06f, .275f), new Vector2(.94f, .365f));
+            AssertAnchor("Start Patrol", new Vector2(.18f, .105f), new Vector2(.82f, .205f));
 
-            Assert.That(GameObject.Find("Stage Plaque").GetComponent<Image>().sprite.name,
+            var page = CurrentPatrolView();
+            var authoredModuleNames = new[]
+            {
+                page.NormalDifficulty.name, page.OmenDifficulty.name,
+                page.GreatOmenDifficulty.name, page.WeaponSelector.name
+            };
+            Assert.That(authoredModuleNames, Is.EqualTo(new[]
+                { "Difficulty Normal", "Difficulty Omen", "Difficulty Great Omen", "Starting Weapon Selector" }));
+            Assert.That(page.GetComponentsInChildren<LobbyDifficultyCardView>(true), Has.Length.EqualTo(3));
+            Assert.That(page.GetComponentsInChildren<LobbyWeaponSelectorCardView>(true), Has.Length.EqualTo(1));
+
+            Assert.That(FindPatrolControl("Stage Plaque").GetComponent<Image>().sprite.name,
                 Is.EqualTo("stage_title_plate"));
-            Assert.That(((Image)GameObject.Find("Difficulty Normal").GetComponent<Button>().targetGraphic)
+            Assert.That(((Image)page.NormalDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_selected"));
-            Assert.That(((Image)GameObject.Find("Difficulty Omen").GetComponent<Button>().targetGraphic)
+            Assert.That(((Image)page.OmenDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_locked"));
-            Assert.That(((Image)FindIncludingInactive("Difficulty Great Omen").GetComponent<Button>().targetGraphic)
+            Assert.That(((Image)page.GreatOmenDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_locked"));
-            Assert.That(GameObject.Find("Starting Weapon Selector").GetComponent<Image>().sprite.name,
+            Assert.That(page.WeaponSelector.Background.sprite.name,
                 Is.EqualTo("weapon_selector_frame"));
-            Assert.That(((Image)GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic).sprite.name,
+            Assert.That(((Image)FindPatrolControl("Start Patrol").GetComponent<Button>().targetGraphic).sprite.name,
                 Is.EqualTo("primary_red_button"));
             AssertDifficultyPresentation("Difficulty Normal");
             AssertDifficultyPresentation("Difficulty Omen");
@@ -334,9 +345,11 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            var selector = GameObject.Find("Starting Weapon Selector").GetComponent<Button>();
-            var overlay = FindIncludingInactive("Weapon Selection Overlay");
+            var page = CurrentPatrolView();
+            var selector = page.WeaponSelector.Button;
+            var overlay = page.WeaponSelectionOverlay;
             Assert.That(overlay.activeSelf, Is.False);
 
             selector.onClick.Invoke();
@@ -353,7 +366,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(MetaGameSession.Current.Data.PatrolLoadouts[active].StartingWeaponId,
                 Is.EqualTo(WeaponId.GakgungShot.Value));
             Assert.That(overlay.activeSelf, Is.False);
-            Assert.That(GameObject.Find("Starting Weapon Name").GetComponent<TMPro.TMP_Text>().text,
+            Assert.That(CurrentPatrolView().WeaponSelector.WeaponName.text,
                 Is.EqualTo("각궁"));
         }
 
@@ -368,36 +381,39 @@ namespace JoseonHunter.Tests.PlayMode
                 MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
                 SceneManager.LoadScene("Lobby");
                 yield return null;
+                ActivatePatrolPage();
 
-            Assert.That(GameObject.Find("Stage Name").GetComponent<TMPro.TMP_Text>().text,
+            Assert.That(FindPatrolControl("Stage Name").GetComponent<TMPro.TMP_Text>().text,
                 Does.Contain("귀곡 들판"));
-            Assert.That(GameObject.Find("Difficulty Normal").GetComponentInChildren<TMPro.TMP_Text>().text,
+            Assert.That(FindPatrolControl("Difficulty Normal").GetComponentInChildren<TMPro.TMP_Text>().text,
                 Does.Contain("보통"));
-            Assert.That(GameObject.Find("Difficulty Omen").GetComponentInChildren<TMPro.TMP_Text>().text,
+            Assert.That(FindPatrolControl("Difficulty Omen").GetComponentInChildren<TMPro.TMP_Text>().text,
                 Does.Contain("흉조"));
             Assert.That(FindIncludingInactive("Stage Status").activeSelf, Is.False);
-            Assert.That(((Image)FindIncludingInactive("Difficulty Normal").GetComponent<Button>().targetGraphic)
+            var page = CurrentPatrolView();
+            Assert.That(((Image)page.NormalDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_selected"));
-            Assert.That(((Image)FindIncludingInactive("Difficulty Omen").GetComponent<Button>().targetGraphic)
+            Assert.That(((Image)page.OmenDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_locked"));
-            var greatOmen = FindIncludingInactive("Difficulty Great Omen");
+            var greatOmen = page.GreatOmenDifficulty.gameObject;
             Assert.That(greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("대흉"));
-            Assert.That(greatOmen.transform.Find("Lock Slash").gameObject.activeSelf, Is.True);
-            var lockSlash = greatOmen.transform.Find("Lock Slash").GetComponent<RectTransform>();
+            var greatOmenCard = page.GreatOmenDifficulty;
+            Assert.That(greatOmenCard.LockSlash.gameObject.activeSelf, Is.True);
+            var lockSlash = greatOmenCard.LockSlash.rectTransform;
             Assert.That(lockSlash.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)),
                 "production lock slash must be centered rather than stretched across transparent card margins");
             Assert.That(lockSlash.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
-            AssertVisualRectInside(lockSlash, greatOmen.GetComponent<RectTransform>());
-            Assert.That(greatOmen.transform.Find("Lock Icon").GetComponent<Image>().sprite.name,
+            AssertVisualRectInside(lockSlash, greatOmenCard.GetComponent<RectTransform>());
+            Assert.That(greatOmenCard.LockIcon.sprite.name,
                 Is.EqualTo("icon_lock"));
-            var startImage = GameObject.Find("Start Patrol").GetComponent<Button>().targetGraphic as Image;
+            var startImage = FindPatrolControl("Start Patrol").GetComponent<Button>().targetGraphic as Image;
             Assert.That(startImage.sprite.name, Is.EqualTo("primary_red_button"));
             Assert.That(startImage.type, Is.EqualTo(UnityEngine.UI.Image.Type.Sliced));
 
-            GameObject.Find("Difficulty Omen").GetComponent<Button>().onClick.Invoke();
+            page.OmenDifficulty.Button.onClick.Invoke();
             yield return null;
 
-            Assert.That(GameObject.Find("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
+            Assert.That(FindPatrolControl("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
                 Is.EqualTo("이 장 보통 승리 시 해금"));
                 Assert.That(MetaGameSession.Current.ActiveStageSelection,
                     Is.EqualTo(new StageSelection(StageId.GwigokField, StageDifficulty.Normal)));
@@ -417,20 +433,22 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(data));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            var normal = FindIncludingInactive("Difficulty Normal").transform;
-            var omen = FindIncludingInactive("Difficulty Omen").transform;
-            Assert.That(((Image)normal.GetComponent<Button>().targetGraphic).sprite.name,
+            var page = CurrentPatrolView();
+            var normal = page.NormalDifficulty.Button;
+            var omen = page.OmenDifficulty.Button;
+            Assert.That(((Image)normal.targetGraphic).sprite.name,
                 Is.EqualTo("difficulty_selected"));
-            Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
+            Assert.That(((Image)omen.targetGraphic).sprite.name,
                 Is.EqualTo("difficulty_idle"));
 
-            omen.GetComponent<Button>().onClick.Invoke();
+            omen.onClick.Invoke();
             yield return null;
 
-            Assert.That(((Image)normal.GetComponent<Button>().targetGraphic).sprite.name,
+            Assert.That(((Image)normal.targetGraphic).sprite.name,
                 Is.EqualTo("difficulty_idle"));
-            Assert.That(((Image)omen.GetComponent<Button>().targetGraphic).sprite.name,
+            Assert.That(((Image)omen.targetGraphic).sprite.name,
                 Is.EqualTo("difficulty_selected"));
             AssertDifficultyPresentation("Difficulty Normal");
             AssertDifficultyPresentation("Difficulty Omen");
@@ -445,25 +463,45 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists(new MemoryRepository(data));
             SceneManager.LoadScene("Lobby");
             yield return null;
+            ActivatePatrolPage();
 
-            GameObject.Find("Difficulty Omen").GetComponent<Button>().onClick.Invoke();
+            var page = CurrentPatrolView();
+            page.OmenDifficulty.Button.onClick.Invoke();
             yield return null;
             Assert.That(MetaGameSession.Current.ActiveStageSelection.Difficulty,
                 Is.EqualTo(StageDifficulty.Omen));
 
-            GameObject.Find("Next Stage").GetComponent<Button>().onClick.Invoke();
+            page.NextStageButton.onClick.Invoke();
             yield return null;
 
-            Assert.That(GameObject.Find("Stage Name").GetComponent<TMPro.TMP_Text>().text,
+            Assert.That(FindPatrolControl("Stage Name").GetComponent<TMPro.TMP_Text>().text,
                 Does.Contain("도깨비 고갯길"));
-            Assert.That(GameObject.Find("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
+            Assert.That(FindPatrolControl("Patrol Feedback").GetComponent<TMPro.TMP_Text>().text,
                 Is.Empty);
-            Assert.That(GameObject.Find("Start Patrol").GetComponent<Button>().interactable, Is.True);
+            Assert.That(FindPatrolControl("Start Patrol").GetComponent<Button>().interactable, Is.True);
         }
 
-        private static GameObject FindIncludingInactive(string name) =>
-            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
-                .Single(transform => transform.name == name).gameObject;
+        private static GameObject FindIncludingInactive(string name) => FindPatrolControl(name);
+
+        private static GameObject FindPatrolControl(string name)
+        {
+            var page = CurrentPatrolView();
+            var control = page.transform.Find(name);
+            Assert.That(control, Is.Not.Null, $"Patrol page must directly author '{name}'.");
+            return control.gameObject;
+        }
+
+        private static void ActivatePatrolPage()
+        {
+            var navigation = Object.FindObjectsByType<LobbyNavigationPresenter>(FindObjectsInactive.Include)
+                .Single(item => item.gameObject.scene == SceneManager.GetActiveScene());
+            Assert.That(navigation, Is.Not.Null, "Lobby must expose authored page navigation.");
+            navigation.Show(LobbyPageId.Patrol);
+        }
+
+        private static PatrolPageView CurrentPatrolView() =>
+            Object.FindObjectsByType<PatrolPageView>(FindObjectsInactive.Include)
+                .Single(item => item.gameObject.scene == SceneManager.GetActiveScene());
 
         private static void AssertAnchor(string name, Vector2 minimum, Vector2 maximum)
         {
@@ -474,9 +512,16 @@ namespace JoseonHunter.Tests.PlayMode
 
         private static void AssertDifficultyPresentation(string name)
         {
-            var button = FindIncludingInactive(name).GetComponent<Button>();
+            var card = name switch
+            {
+                "Difficulty Normal" => CurrentPatrolView().NormalDifficulty,
+                "Difficulty Omen" => CurrentPatrolView().OmenDifficulty,
+                "Difficulty Great Omen" => CurrentPatrolView().GreatOmenDifficulty,
+                _ => throw new ArgumentOutOfRangeException(nameof(name), name, null)
+            };
+            var button = card.Button;
             var image = button.targetGraphic as Image;
-            var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
+            var label = card.Label;
             Assert.That(image.color, Is.EqualTo(Color.white), name + " image tint");
             Assert.That(label.color, Is.EqualTo(new Color(.96f, .89f, .71f, 1f)), name + " label color");
         }

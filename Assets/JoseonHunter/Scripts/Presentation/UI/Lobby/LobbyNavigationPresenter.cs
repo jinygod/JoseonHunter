@@ -55,25 +55,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Bind();
         }
 
-        // Transitional overload for the pre-Task-7 LobbyBootstrap shell.
-        public void Initialize(GameObject research, GameObject patrol, GameObject training,
-            Button researchButton, Button patrolButton, Button trainingButton)
-        {
-            Unbind();
-            homePage = patrol;
-            trainingPage = training;
-            patrolPage = patrol;
-            researchPage = research;
-            trainingMenuButton = trainingButton;
-            patrolMenuButton = patrolButton;
-            researchMenuButton = researchButton;
-            trainingBackButton = null;
-            patrolBackButton = null;
-            researchBackButton = null;
-            Bind();
-            Show(LobbyPageId.Patrol);
-        }
-
         public void Show(LobbyPageId page)
         {
             ValidatePageReferences();

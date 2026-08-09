@@ -1,4 +1,5 @@
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Content.Weapons;
 using JoseonHunter.Presentation.Audio;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby.Views;
@@ -14,13 +15,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
     public sealed class LobbyBootstrap : MonoBehaviour
     {
         [SerializeField] private LobbyRootView rootView;
+        [SerializeField] private WeaponCatalogAsset weaponCatalog;
         [SerializeField] private TMP_Text accountExperienceText;
         private Rect lastSafeArea;
 
         private void Awake()
         {
-            GameMusicDirector.EnsureExists();
-            GameMusicDirector.Instance?.Request(GameMusicRole.Lobby, .8f);
             if (rootView == null || !rootView.HasRequiredBindings)
             {
                 Debug.LogError("Lobby authored view is incomplete. Runtime UI construction was skipped.");
@@ -28,6 +28,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 return;
             }
 
+            GameMusicDirector.EnsureExists();
+            GameMusicDirector.Instance?.Request(GameMusicRole.Lobby, .8f);
             BindAuthoredView(MetaGameSession.EnsureExists());
             ApplySafeArea();
         }
@@ -43,11 +45,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
             rootView.PatrolPresenter.ConfigureView(rootView.PatrolView);
             rootView.TrainingPresenter.ConfigureView(rootView.TrainingView);
             rootView.ResearchPresenter.ConfigureView(rootView.ResearchView);
-            rootView.HomePresenter.Initialize(session, null);
+            rootView.HomePresenter.Initialize(session, weaponCatalog);
             rootView.PatrolPresenter.InitializeAuthored(session, RefreshHeader);
             rootView.TrainingPresenter.InitializeAuthored(session, RefreshHeader);
             rootView.ResearchPresenter.InitializeAuthored(session, RefreshHeader);
-            rootView.AudioSettings.Initialize(session, true);
+            rootView.AudioSettings.InitializeAuthored(rootView.SettingsOverlay.GetComponent<LobbyAudioSettingsView>(), session);
             rootView.SettingsButton.onClick.RemoveListener(OpenSettings);
             rootView.SettingsButton.onClick.AddListener(OpenSettings);
             rootView.AudioSettings.CloseRequested -= CloseSettings;
@@ -72,6 +74,17 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (session == null) return;
             var account = AccountProgression.StateFor(session.Data.AccountExperience);
             rootView.Header.Render(account, session.Data.Coins);
+            if (accountExperienceText == null)
+            {
+                foreach (var text in rootView.Header.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if (text.name == "Account Experience Text")
+                    {
+                        accountExperienceText = text;
+                        break;
+                    }
+                }
+            }
             if (accountExperienceText != null)
                 accountExperienceText.text = account.IsMaximumLevel
                     ? "최고 단계"

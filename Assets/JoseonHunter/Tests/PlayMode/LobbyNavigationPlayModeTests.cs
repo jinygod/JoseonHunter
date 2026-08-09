@@ -124,6 +124,27 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(showError.Message, Does.Contain("homePage"));
         }
 
+        [Test]
+        public void AuthoredLobbyPresentersExposeNoRuntimeBuiltCompatibilityApis()
+        {
+            Assert.That(typeof(LobbyNavigationPresenter).GetMethod("Initialize", new[]
+                {
+                    typeof(GameObject), typeof(GameObject), typeof(GameObject), typeof(Button), typeof(Button),
+                    typeof(Button)
+                }), Is.Null);
+
+            foreach (var presenterType in new[]
+                     {
+                         typeof(PatrolPresenter), typeof(CommonTrainingPresenter), typeof(WeaponResearchPresenter)
+                     })
+            {
+                Assert.That(presenterType.GetMethod("Initialize", new[] { typeof(MetaGameSession), typeof(System.Action) }),
+                    Is.Null, presenterType.Name);
+                Assert.That(presenterType.GetMethod("InitializeLegacyRuntimeBuiltView"), Is.Null, presenterType.Name);
+                Assert.That(presenterType.GetMethod("Build"), Is.Null, presenterType.Name);
+            }
+        }
+
         [UnityTest]
         public IEnumerator HeaderShowsCoinSpriteBesideBareNumber()
         {
@@ -242,7 +263,7 @@ namespace JoseonHunter.Tests.PlayMode
             settingsButton.onClick.Invoke();
             yield return null;
 
-            var overlay = GameObject.Find("Audio Settings Overlay");
+            var overlay = GameObject.Find("Settings Overlay");
             var closeButton = GameObject.Find("Close Audio Settings")?.GetComponent<Button>();
             Assert.That(overlay, Is.Not.Null);
             Assert.That(closeButton, Is.Not.Null);
@@ -277,7 +298,7 @@ namespace JoseonHunter.Tests.PlayMode
                     Is.GreaterThanOrEqualTo(12f), slider.name);
                 Assert.That(handle.parent.GetComponent<RectTransform>().offsetMax.x,
                     Is.LessThanOrEqualTo(-12f), slider.name);
-                Assert.That(track.sizeDelta.x, Is.GreaterThan(handle.sizeDelta.x), slider.name);
+                Assert.That(track.rect.width, Is.GreaterThan(handle.rect.width), slider.name);
             }
         }
 
@@ -304,30 +325,6 @@ namespace JoseonHunter.Tests.PlayMode
                 Count++;
                 gameObject.SetActive(false);
             }
-        }
-
-        private static GameObject FindIncludingInactive(string name) =>
-            Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
-                .Single(transform => transform.name == name).gameObject;
-
-        private static RectTransform RectNamed(string name) =>
-            GameObject.Find(name).GetComponent<RectTransform>();
-
-        private static Image ImageNamed(string name) =>
-            GameObject.Find(name).GetComponent<Image>();
-
-        private static string[] VisibleNavigationLabels() =>
-            GameObject.Find("Bottom Navigation").GetComponentsInChildren<TMP_Text>(false)
-                .Where(label => label.gameObject.activeInHierarchy && !string.IsNullOrWhiteSpace(label.text))
-                .Select(label => label.text).ToArray();
-
-        private static void AssertAnchors(string name, Vector2 minimum, Vector2 maximum)
-        {
-            var rect = RectNamed(name);
-            Assert.That(rect.anchorMin.x, Is.EqualTo(minimum.x).Within(.005f), name + " min x");
-            Assert.That(rect.anchorMin.y, Is.EqualTo(minimum.y).Within(.005f), name + " min y");
-            Assert.That(rect.anchorMax.x, Is.EqualTo(maximum.x).Within(.005f), name + " max x");
-            Assert.That(rect.anchorMax.y, Is.EqualTo(maximum.y).Within(.005f), name + " max y");
         }
 
         private sealed class MemoryRepository : ISaveRepository

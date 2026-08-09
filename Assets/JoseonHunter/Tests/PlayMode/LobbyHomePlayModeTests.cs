@@ -1,12 +1,15 @@
 using System.Collections;
 using System.Linq;
 using JoseonHunter.Content.Weapons;
+using JoseonHunter.Domain.Combat;
+using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
+using UnityEditor;
 using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -52,6 +55,51 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(view.StageText.text, Is.EqualTo("귀곡 들판"));
             Assert.That(view.DifficultyText.text, Is.EqualTo("보통"));
             Assert.That(view.StartingWeaponText.text, Is.EqualTo("각궁"));
+        }
+
+        [UnityTest]
+        public IEnumerator ReturningToAuthoredHomeRefreshesTheSavedPatrolSummaryWithoutRecreatingControls()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.GwigokField, StageDifficulty.Normal), 900f, 400, 35)));
+            data.StageClearRecords.Add(StageClearRecordData.From(StageClearRecord.Victory(
+                new StageSelection(StageId.DokkaebiPass, StageDifficulty.Normal), 900f, 400, 35)));
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
+            var home = CreateHome();
+            var presenter = home.GetComponent<LobbyHomePresenter>();
+            var view = home.GetComponent<LobbyHomeView>();
+            var catalog = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(
+                "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset");
+            Assert.That(catalog, Is.Not.Null);
+
+            presenter.Initialize(session, catalog);
+            yield return null;
+
+            var authoredButtons = home.GetComponentsInChildren<Button>(true);
+            var authoredIcon = view.StartingWeaponIcon;
+            var clicks = 0;
+            authoredButtons[0].onClick.AddListener(() => clicks++);
+
+            home.SetActive(false);
+            Assert.That(session.SaveStageSelection(
+                new StageSelection(StageId.DokkaebiPass, StageDifficulty.Omen)).Success, Is.True);
+            var currentLoadout = session.ActiveLoadout;
+            Assert.That(session.SaveLoadout(session.Data.ActivePatrolLoadoutIndex,
+                new PatrolLoadout(currentLoadout.Name, WeaponId.GakgungShot, currentLoadout.Styles,
+                    currentLoadout.DifficultyId)).Success, Is.True);
+
+            home.SetActive(true);
+            yield return null;
+
+            Assert.That(view.StageText.text, Is.EqualTo("도깨비 고갯길"));
+            Assert.That(view.DifficultyText.text, Is.EqualTo("흉조"));
+            Assert.That(view.StartingWeaponText.text, Is.EqualTo("각궁"));
+            Assert.That(view.StartingWeaponIcon.sprite, Is.Not.Null);
+            Assert.That(view.StartingWeaponIcon, Is.SameAs(authoredIcon));
+            CollectionAssert.AreEqual(authoredButtons, home.GetComponentsInChildren<Button>(true));
+            authoredButtons[0].onClick.Invoke();
+            Assert.That(clicks, Is.EqualTo(1));
         }
 
         private static GameObject CreateHome()
