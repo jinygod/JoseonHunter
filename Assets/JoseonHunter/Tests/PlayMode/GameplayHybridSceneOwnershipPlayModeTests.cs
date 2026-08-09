@@ -215,6 +215,57 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator IncompleteCompositionWithInvalidPlayerBindingRefusesResetAndPreservesCameraAuthoring()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var camera = composition.GameplayCamera;
+            var field = composition.BattlefieldRoot;
+            var runtimeObjects = composition.RuntimeObjectsRoot;
+            var runtimeSystems = composition.RuntimeSystemsRoot;
+            var spawnGuides = composition.SpawnGuidesRoot;
+            var player = composition.AuthoredPlayer;
+            var ui = composition.UiRoot;
+            var bodyRendererField = typeof(CombatantVisualView).GetField(
+                "bodyRenderer",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(bodyRendererField, Is.Not.Null);
+            var originalBodyRenderer = bodyRendererField.GetValue(player);
+            var cameraPosition = new Vector3(17f, -9f, -24f);
+            var cameraRotation = Quaternion.Euler(0f, 0f, 13f);
+            const float cameraSize = 7.25f;
+
+            camera.transform.SetPositionAndRotation(cameraPosition, cameraRotation);
+            camera.orthographicSize = cameraSize;
+            bodyRendererField.SetValue(player, null);
+            composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, player, null);
+            Assert.That(composition.IsComplete, Is.False);
+            LogAssert.Expect(
+                LogType.Warning,
+                "Gameplay scene composition is incomplete and its authored runtime core is unsafe. Reset was skipped to avoid duplicating scene-owned objects.");
+            try
+            {
+                controller.ResetRunForTests();
+                controller.ResetRunForTests();
+                yield return null;
+
+                Assert.That(camera.transform.position, Is.EqualTo(cameraPosition));
+                Assert.That(camera.transform.rotation, Is.EqualTo(cameraRotation));
+                Assert.That(camera.orthographicSize, Is.EqualTo(cameraSize));
+                Assert.That(runtimeObjects.GetComponentsInChildren<CombatantVisualView>(true)
+                    .Count(view => view.HasRequiredBindings(CombatantVisualRole.Player)), Is.Zero);
+            }
+            finally
+            {
+                bodyRendererField.SetValue(player, originalBodyRenderer);
+                composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, player, ui);
+                controller.ResetRunForTests();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator ResetRunKeepsAuthoredBattlefieldPreviewInactiveAndUsesOneGeneratedPresentation()
         {
             yield return LoadGameplay();

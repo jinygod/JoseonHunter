@@ -857,6 +857,9 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             using (FirstPlayableProfilerMarkers.RunUpdate.Auto())
             {
+                if (HasUnsafeIncompleteSceneComposition)
+                    return;
+
                 if (runEnded)
                 {
                     if (Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
@@ -922,7 +925,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void LateUpdate()
         {
-            if (flow != null && flow.IsGameplayRunning && gameplayCamera != null && player != null)
+            if (!HasUnsafeIncompleteSceneComposition && flow != null && flow.IsGameplayRunning && gameplayCamera != null && player != null)
             {
                 UpdateCamera();
             }
@@ -930,7 +933,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void SetupCamera()
         {
-            if (UsesAuthoredSceneCore)
+            if (sceneComposition != null)
             {
                 gameplayCamera = sceneComposition.GameplayCamera;
                 return;
@@ -955,16 +958,29 @@ namespace JoseonHunter.Runtime.Gameplay
         private bool HasReusableIncompleteSceneComposition =>
             sceneComposition != null &&
             !sceneComposition.IsComplete &&
+            gameObject.scene.IsValid() &&
+            sceneComposition.gameObject.scene == gameObject.scene &&
             sceneComposition.GameplayCamera != null &&
             sceneComposition.BattlefieldRoot != null &&
             sceneComposition.RuntimeObjectsRoot != null &&
             sceneComposition.RuntimeSystemsRoot != null &&
             sceneComposition.AuthoredPlayer != null &&
+            sceneComposition.GameplayCamera.gameObject.scene == gameObject.scene &&
+            sceneComposition.BattlefieldRoot.gameObject.scene == gameObject.scene &&
+            sceneComposition.RuntimeObjectsRoot.gameObject.scene == gameObject.scene &&
+            sceneComposition.RuntimeSystemsRoot.gameObject.scene == gameObject.scene &&
+            sceneComposition.AuthoredPlayer.gameObject.scene == gameObject.scene &&
+            sceneComposition.BattlefieldRoot.parent == transform &&
+            sceneComposition.RuntimeObjectsRoot.parent == transform &&
+            sceneComposition.RuntimeSystemsRoot.parent == transform &&
             sceneComposition.AuthoredPlayer.transform.parent == sceneComposition.RuntimeObjectsRoot &&
+            sceneComposition.AuthoredPlayer.HasRequiredBindings(CombatantVisualRole.Player) &&
             sceneComposition.RuntimeObjectsRoot != sceneComposition.RuntimeSystemsRoot &&
             !sceneComposition.RuntimeObjectsRoot.IsChildOf(sceneComposition.RuntimeSystemsRoot) &&
             !sceneComposition.RuntimeSystemsRoot.IsChildOf(sceneComposition.RuntimeObjectsRoot);
         private bool UsesAuthoredSceneCore => HasAuthoredSceneComposition || HasReusableIncompleteSceneComposition;
+        private bool HasUnsafeIncompleteSceneComposition =>
+            sceneComposition != null && !HasAuthoredSceneComposition && !HasReusableIncompleteSceneComposition;
         private Transform ResetScopedRoot => UsesAuthoredSceneCore
             ? sceneComposition.RuntimeSystemsRoot
             : runtimeObjects;
@@ -1038,7 +1054,7 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void ResetRun()
         {
-            if (sceneComposition != null && !HasAuthoredSceneComposition && !HasReusableIncompleteSceneComposition)
+            if (HasUnsafeIncompleteSceneComposition)
             {
                 WarnIncompleteSceneCompositionOnce(
                     "Gameplay scene composition is incomplete and its authored runtime core is unsafe. Reset was skipped to avoid duplicating scene-owned objects.");
