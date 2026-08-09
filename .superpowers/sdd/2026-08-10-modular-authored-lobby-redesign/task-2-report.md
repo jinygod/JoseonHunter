@@ -72,3 +72,44 @@ Result: 1 total, 1 passed, 0 failed.
 ## Concerns
 
 - Scene and prefab composition is intentionally deferred to Task 7, so the new Home presenter/view require Task 7 authoring/wiring before appearing in the Lobby scene.
+- The legacy six-argument `LobbyNavigationPresenter.Initialize` overload remains explicitly transitional for the old `LobbyBootstrap` shell. Task 7 owns replacement Home composition and removal of that old runtime shell; this fix round does not broaden into either integration surface.
+
+## Fix Round 1 — listener ownership and required wiring
+
+### RED evidence
+
+After correcting a test-only `System.Object`/`UnityEngine.Object` ambiguity, the focused navigation fixture was run with no Unity process present, BelowNormal priority, and affinity mask `255`:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1 `
+  -Platform playmode `
+  -Filter JoseonHunter.Tests.PlayMode.LobbyNavigationPlayModeTests
+```
+
+Result: 10 total, 8 passed, 2 failed. The new failures demonstrated that `RemoveAllListeners` erased an unrelated button callback and that incomplete wiring did not produce the required controlled `InvalidOperationException`.
+
+### GREEN evidence
+
+Both fixture commands were then run separately, each after confirming no Unity process and with BelowNormal priority/affinity `255`:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1 `
+  -Platform playmode `
+  -Filter JoseonHunter.Tests.PlayMode.LobbyNavigationPlayModeTests
+```
+
+Result: 10 total, 10 passed, 0 failed.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Unity/Test-Unity.ps1 `
+  -Platform playmode `
+  -Filter JoseonHunter.Tests.PlayMode.LobbyHomePlayModeTests
+```
+
+Result: 1 total, 1 passed, 0 failed.
+
+### Fix-round self-review
+
+- Navigation now retains its own `UnityAction` instances and removes only those callbacks from the buttons that previously received them.
+- The repeated-initialization regression attaches an unrelated listener and uses an enable/deactivate probe: retained duplicate owned callbacks would produce two activations, while erased external callbacks produce zero unrelated invocations.
+- Required page/menu references are validated before binding or showing, returning a named `InvalidOperationException` rather than a null-reference failure.

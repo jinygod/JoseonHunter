@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Linq;
 using JoseonHunter.Domain.Save;
@@ -10,6 +11,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using TMPro;
+using Object = UnityEngine.Object;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -67,7 +69,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ReinitializingNavigationDoesNotDuplicateTransitionsOrChangeSessionData()
+        public IEnumerator ReinitializingNavigationPreservesUnownedListenersAndAddsOneTransition()
         {
             var data = SaveDataV1.CreateDefaults();
             var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
@@ -84,6 +86,8 @@ namespace JoseonHunter.Tests.PlayMode
             var trainingBackButton = CreateButton("Training Back");
             var patrolBackButton = CreateButton("Patrol Back");
             var researchBackButton = CreateButton("Research Back");
+            var unrelatedInvocations = 0;
+            trainingMenuButton.onClick.AddListener(() => unrelatedInvocations++);
 
             presenter.Initialize(homePage, trainingPage, patrolPage, researchPage,
                 trainingMenuButton, patrolMenuButton, researchMenuButton,
@@ -93,11 +97,31 @@ namespace JoseonHunter.Tests.PlayMode
                 trainingBackButton, patrolBackButton, researchBackButton);
             yield return null;
 
-            patrolMenuButton.onClick.Invoke();
+            var activations = trainingPage.AddComponent<DeactivateWhenEnabled>();
+            activations.Record = true;
+            trainingMenuButton.onClick.Invoke();
 
-            AssertPage(presenter, LobbyPageId.Patrol, homePage, trainingPage, patrolPage, researchPage);
+            Assert.That(unrelatedInvocations, Is.EqualTo(1));
+            Assert.That(activations.Count, Is.EqualTo(1),
+                "One click after repeated initialization must dispatch one owned transition.");
+            Assert.That(presenter.CurrentPage, Is.EqualTo(LobbyPageId.Training));
             Assert.That(session.ActiveStageSelection, Is.EqualTo(expectedSelection));
             Assert.That(session.ActiveLoadout.StartingWeapon, Is.EqualTo(expectedLoadout.StartingWeapon));
+        }
+
+        [Test]
+        public void NavigationRejectsIncompleteWiringBeforeBindingOrShowing()
+        {
+            var presenter = new GameObject("Navigation").AddComponent<LobbyNavigationPresenter>();
+            var page = new GameObject("Page");
+            var button = CreateButton("Button");
+
+            var initializeError = Assert.Throws<InvalidOperationException>(() => presenter.Initialize(
+                null, page, page, page, button, button, button, button, button, button));
+            Assert.That(initializeError.Message, Does.Contain("homePage"));
+
+            var showError = Assert.Throws<InvalidOperationException>(() => presenter.Show(LobbyPageId.Home));
+            Assert.That(showError.Message, Does.Contain("homePage"));
         }
 
         [UnityTest]
@@ -267,6 +291,19 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.CurrentPage, Is.EqualTo(expected));
             Assert.That(pages.Count(page => page.activeSelf), Is.EqualTo(1));
             Assert.That(pages[(int)expected].activeSelf, Is.True);
+        }
+
+        private sealed class DeactivateWhenEnabled : MonoBehaviour
+        {
+            public bool Record { get; set; }
+            public int Count { get; private set; }
+
+            private void OnEnable()
+            {
+                if (!Record) return;
+                Count++;
+                gameObject.SetActive(false);
+            }
         }
 
         private static GameObject FindIncludingInactive(string name) =>
