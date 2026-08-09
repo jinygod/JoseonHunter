@@ -22,6 +22,7 @@ namespace JoseonHunter.Tests.EditMode
         [TestCase("HomeMenuCard", typeof(LobbyMenuCardView))]
         [TestCase("ProgressBar", typeof(LobbyProgressBarView))]
         [TestCase("DifficultyCard", typeof(LobbyDifficultyCardView))]
+        [TestCase("WeaponSelectorCard", typeof(LobbyWeaponSelectorCardView))]
         public void ProductionModuleHasRequiredViewAndNoMissingScripts(string name, Type viewType)
         {
             var path = ModuleRoot + name + ".prefab";
@@ -46,6 +47,9 @@ namespace JoseonHunter.Tests.EditMode
             AssertBindings("ProgressBar", ("Track", typeof(Image)), ("Fill", typeof(Image)),
                 ("Value", typeof(TMP_Text)));
             AssertBindings("DifficultyCard", ("Button", typeof(Button)), ("Label", typeof(TMP_Text)));
+            AssertBindings("WeaponSelectorCard", ("Button", typeof(Button)), ("Icon", typeof(Image)),
+                ("Caption", typeof(TMP_Text)), ("Weapon Name", typeof(TMP_Text)),
+                ("Chevron", typeof(TMP_Text)));
             AssertBindings("PrimaryActionButton", ("Button", typeof(Button)));
             AssertBindings("SecondaryActionButton", ("Button", typeof(Button)));
 
@@ -73,6 +77,19 @@ namespace JoseonHunter.Tests.EditMode
             var before = File.ReadAllBytes(CommonHeaderPath);
             LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
             Assert.That(File.ReadAllBytes(CommonHeaderPath), Is.EqualTo(before));
+        }
+
+        [Test]
+        public void WeaponSelectorCardModuleExistsWithAuthoredDirectChildren()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "WeaponSelectorCard.prefab");
+
+            Assert.That(prefab, Is.Not.Null, "The authored patrol page requires a reusable weapon selector module.");
+            var view = prefab.GetComponent<LobbyWeaponSelectorCardView>();
+            Assert.That(view, Is.Not.Null);
+            Assert.That(view.HasRequiredBindings, Is.True);
+            Assert.That(prefab.GetComponent<Image>().type, Is.EqualTo(Image.Type.Sliced));
+            Assert.That(view.Background.type, Is.EqualTo(Image.Type.Sliced));
         }
 
         [Test]
@@ -109,7 +126,7 @@ namespace JoseonHunter.Tests.EditMode
         private static GameObject[] ModulePrefabs() => new[]
         {
             "CommonHeader", "PageHeader", "HomeMenuCard", "InfoStrip", "ProgressBar", "DifficultyCard",
-            "PrimaryActionButton", "SecondaryActionButton"
+            "WeaponSelectorCard", "PrimaryActionButton", "SecondaryActionButton"
         }.Select(name => AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + name + ".prefab")).ToArray();
 
         private static void AssertBindings(string prefabName, params (string Name, Type Type)[] bindings)

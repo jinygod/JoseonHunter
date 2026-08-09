@@ -10,7 +10,10 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
         [SerializeField] private Button button;
         [SerializeField] private TMP_Text labelText;
 
-        public bool HasRequiredBindings => button != null && labelText != null;
+        public Button Button => button;
+        public Image Background => button == null ? null : button.targetGraphic as Image ?? button.GetComponent<Image>();
+        public TMP_Text Label => labelText;
+        public bool HasRequiredBindings => button != null && Background != null && labelText != null;
 
         public void Configure(Button cardButton, TMP_Text label)
         {
@@ -22,7 +25,7 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
         {
             labelText.text = label ?? string.Empty;
             button.gameObject.SetActive(true);
-            button.interactable = !locked;
+            button.interactable = true;
             PremiumPixelUiSkin.ApplyDifficulty(button, selected, locked);
         }
     }

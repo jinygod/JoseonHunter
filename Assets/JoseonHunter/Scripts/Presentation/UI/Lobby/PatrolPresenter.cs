@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
@@ -8,8 +9,10 @@ using JoseonHunter.Domain.Runs;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Runtime.Meta;
 using JoseonHunter.Runtime.Audio;
+using JoseonHunter.Presentation.UI.Lobby.Views;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace JoseonHunter.Presentation.UI.Lobby
@@ -18,6 +21,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
     public sealed class PatrolPresenter : MonoBehaviour
     {
         [SerializeField] private WeaponCatalogAsset weaponCatalog;
+        [SerializeField] private PatrolPageView view;
         [SerializeField] private Image heroImage;
         [SerializeField] private Image weaponIcon;
         [SerializeField] private TMP_Text weaponText;
@@ -40,6 +44,18 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private int viewedStageIndex;
         private StageDifficulty viewedDifficulty = StageDifficulty.Normal;
         private string stageFeedback = string.Empty;
+        private LobbyDifficultyCardView normalDifficultyView;
+        private LobbyDifficultyCardView omenDifficultyView;
+        private LobbyDifficultyCardView greatOmenDifficultyView;
+        private UnityAction weaponSelectorAction;
+        private UnityAction closeWeaponSelectionAction;
+        private UnityAction patrolAction;
+        private UnityAction previousStageAction;
+        private UnityAction nextStageAction;
+        private UnityAction normalDifficultyAction;
+        private UnityAction omenDifficultyAction;
+        private UnityAction greatOmenDifficultyAction;
+        private readonly Dictionary<Button, UnityAction> weaponOptionActions = new();
 
         public void Build()
         {
@@ -306,35 +322,106 @@ namespace JoseonHunter.Presentation.UI.Lobby
             weaponSelectionOverlay.SetActive(false);
         }
 
-        public void Initialize(MetaGameSession value, Action onChanged)
+        public void ConfigureView(PatrolPageView authoredView) => view = authoredView;
+
+        public void InitializeAuthored(MetaGameSession value, Action onChanged)
         {
+            UnbindListeners();
+            if (view == null || !view.HasRequiredBindings)
+                throw new InvalidOperationException("PatrolPageView is incomplete.");
+
+            BindAuthoredView();
+            InitializeBoundView(value, onChanged, authored: true);
+        }
+
+        // Transitional adapter for the pre-Task-7 runtime-built lobby shell.
+        // Task 7 must remove this path when Lobby.unity owns the complete PatrolPageView hierarchy.
+        public void Initialize(MetaGameSession value, Action onChanged) =>
+            InitializeLegacyRuntimeBuiltView(value, onChanged);
+
+        public void InitializeLegacyRuntimeBuiltView(MetaGameSession value, Action onChanged)
+        {
+            UnbindListeners();
             Build();
-            JoseonButtonSkin.Apply(patrolButton, JoseonButtonStyle.Primary);
-            JoseonButtonSkin.Apply(closeWeaponSelectionButton, JoseonButtonStyle.Secondary);
+            normalDifficultyView = null;
+            omenDifficultyView = null;
+            greatOmenDifficultyView = null;
+            InitializeBoundView(value, onChanged, authored: false);
+        }
+
+        private void InitializeBoundView(MetaGameSession value, Action onChanged, bool authored)
+        {
+            if (value == null) throw new ArgumentNullException(nameof(value));
+            ApplyBoundCopyAndStyle(authored);
             session = value;
             refreshHeader = onChanged;
             GameAudioButtonFeedback.Attach(patrolButton, GameAudioCueId.UiConfirm);
             LoadCurrentWeapon();
             LoadCurrentStage();
-
-            weaponSelectorButton.onClick.RemoveAllListeners();
-            closeWeaponSelectionButton.onClick.RemoveAllListeners();
-            patrolButton.onClick.RemoveAllListeners();
-            previousStageButton.onClick.RemoveAllListeners();
-            nextStageButton.onClick.RemoveAllListeners();
-            normalDifficultyButton.onClick.RemoveAllListeners();
-            omenDifficultyButton.onClick.RemoveAllListeners();
-            greatOmenDifficultyButton.onClick.RemoveAllListeners();
-            weaponSelectorButton.onClick.AddListener(OpenWeaponSelection);
-            closeWeaponSelectionButton.onClick.AddListener(CloseWeaponSelection);
-            patrolButton.onClick.AddListener(StartPatrol);
-            previousStageButton.onClick.AddListener(() => BrowseStage(-1));
-            nextStageButton.onClick.AddListener(() => BrowseStage(1));
-            normalDifficultyButton.onClick.AddListener(() => SelectDifficulty(StageDifficulty.Normal));
-            omenDifficultyButton.onClick.AddListener(() => SelectDifficulty(StageDifficulty.Omen));
-            greatOmenDifficultyButton.onClick.AddListener(() => SelectDifficulty(StageDifficulty.GreatOmen));
+            BindListeners();
             BindWeaponOptions();
             Refresh();
+        }
+
+        private void BindAuthoredView()
+        {
+            heroImage = view.HeroImage;
+            weaponIcon = view.WeaponSelector.Icon;
+            weaponText = view.WeaponSelector.WeaponName;
+            feedbackText = view.Feedback;
+            weaponSelectorButton = view.WeaponSelector.Button;
+            weaponSelectionOverlay = view.WeaponSelectionOverlay;
+            closeWeaponSelectionButton = view.CloseWeaponSelectionButton;
+            patrolButton = view.StartButton;
+            stageNameText = view.StageName;
+            stageStatusText = view.StageStatus;
+            previousStageButton = view.PreviousStageButton;
+            nextStageButton = view.NextStageButton;
+            normalDifficultyView = view.NormalDifficulty;
+            omenDifficultyView = view.OmenDifficulty;
+            greatOmenDifficultyView = view.GreatOmenDifficulty;
+            normalDifficultyButton = normalDifficultyView.Button;
+            omenDifficultyButton = omenDifficultyView.Button;
+            greatOmenDifficultyButton = greatOmenDifficultyView.Button;
+        }
+
+        private void ApplyBoundCopyAndStyle(bool authored)
+        {
+            var actionLabel = patrolButton.GetComponentsInChildren<TMP_Text>(true).FirstOrDefault();
+            if (actionLabel != null) actionLabel.text = "출전 시작";
+
+            if (authored)
+            {
+                view.PageHeader.Title.text = "출전";
+                view.WeaponSelector.Caption.text = "시작 무기";
+                PremiumPixelUiSkin.ApplyAction(patrolButton, PremiumActionStyle.Primary);
+                PremiumPixelUiSkin.ApplyAction(closeWeaponSelectionButton, PremiumActionStyle.Secondary);
+                return;
+            }
+
+            JoseonButtonSkin.Apply(patrolButton, JoseonButtonStyle.Primary);
+            JoseonButtonSkin.Apply(closeWeaponSelectionButton, JoseonButtonStyle.Secondary);
+        }
+
+        private void BindListeners()
+        {
+            weaponSelectorAction = OpenWeaponSelection;
+            closeWeaponSelectionAction = CloseWeaponSelection;
+            patrolAction = StartPatrol;
+            previousStageAction = () => BrowseStage(-1);
+            nextStageAction = () => BrowseStage(1);
+            normalDifficultyAction = () => SelectDifficulty(StageDifficulty.Normal);
+            omenDifficultyAction = () => SelectDifficulty(StageDifficulty.Omen);
+            greatOmenDifficultyAction = () => SelectDifficulty(StageDifficulty.GreatOmen);
+
+            weaponSelectorButton.onClick.AddListener(weaponSelectorAction);
+            closeWeaponSelectionButton.onClick.AddListener(closeWeaponSelectionAction);
+            patrolButton.onClick.AddListener(patrolAction);
+            previousStageButton.onClick.AddListener(previousStageAction);
+            nextStageButton.onClick.AddListener(nextStageAction);
+            normalDifficultyButton.onClick.AddListener(normalDifficultyAction);
+            omenDifficultyButton.onClick.AddListener(omenDifficultyAction);
+            greatOmenDifficultyButton.onClick.AddListener(greatOmenDifficultyAction);
         }
 
         public void ConfigureCatalog(WeaponCatalogAsset value) => weaponCatalog = value;
@@ -355,13 +442,44 @@ namespace JoseonHunter.Presentation.UI.Lobby
                     $"Weapon Selection Panel/Weapon Grid/Weapon Option {id.Value}");
                 if (optionTransform == null) continue;
                 var option = optionTransform.GetComponent<Button>();
-                option.onClick.RemoveAllListeners();
-                option.onClick.AddListener(() => SelectWeapon(id));
+                if (option == null) continue;
+                UnityAction action = () => SelectWeapon(id);
+                option.onClick.AddListener(action);
+                weaponOptionActions[option] = action;
                 var icon = optionTransform.Find("Weapon Option Icon")?.GetComponent<Image>();
                 if (icon == null) continue;
                 icon.sprite = ResolveWeaponSprite(id);
                 icon.enabled = icon.sprite != null;
             }
+        }
+
+        private void UnbindListeners()
+        {
+            RemoveOwnedListener(weaponSelectorButton, weaponSelectorAction);
+            RemoveOwnedListener(closeWeaponSelectionButton, closeWeaponSelectionAction);
+            RemoveOwnedListener(patrolButton, patrolAction);
+            RemoveOwnedListener(previousStageButton, previousStageAction);
+            RemoveOwnedListener(nextStageButton, nextStageAction);
+            RemoveOwnedListener(normalDifficultyButton, normalDifficultyAction);
+            RemoveOwnedListener(omenDifficultyButton, omenDifficultyAction);
+            RemoveOwnedListener(greatOmenDifficultyButton, greatOmenDifficultyAction);
+            foreach (var binding in weaponOptionActions)
+                RemoveOwnedListener(binding.Key, binding.Value);
+            weaponOptionActions.Clear();
+
+            weaponSelectorAction = null;
+            closeWeaponSelectionAction = null;
+            patrolAction = null;
+            previousStageAction = null;
+            nextStageAction = null;
+            normalDifficultyAction = null;
+            omenDifficultyAction = null;
+            greatOmenDifficultyAction = null;
+        }
+
+        private static void RemoveOwnedListener(Button button, UnityAction action)
+        {
+            if (button != null && action != null) button.onClick.RemoveListener(action);
         }
 
         private void LoadCurrentWeapon()
@@ -513,6 +631,13 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var selection = new StageSelection(StageCatalog.All[viewedStageIndex].Id, difficulty);
             var unlocked = StageUnlockRules.IsUnlocked(selection, records);
             var selected = viewedDifficulty == difficulty;
+            var authoredCard = DifficultyView(difficulty);
+            if (authoredCard != null)
+            {
+                authoredCard.Render(StageDifficultyNames.DisplayName(difficulty), selected, !unlocked);
+                return;
+            }
+
             button.interactable = true;
             var background = button.targetGraphic as Image;
             if (background != null)
@@ -526,9 +651,22 @@ namespace JoseonHunter.Presentation.UI.Lobby
             LobbySelectionChrome.Apply(button, selected, !unlocked);
         }
 
+        private LobbyDifficultyCardView DifficultyView(StageDifficulty difficulty)
+        {
+            return difficulty switch
+            {
+                StageDifficulty.Normal => normalDifficultyView,
+                StageDifficulty.Omen => omenDifficultyView,
+                StageDifficulty.GreatOmen => greatOmenDifficultyView,
+                _ => null
+            };
+        }
+
         private void OnDisable()
         {
             if (weaponSelectionOverlay != null) weaponSelectionOverlay.SetActive(false);
         }
+
+        private void OnDestroy() => UnbindListeners();
     }
 }

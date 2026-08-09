@@ -22,6 +22,7 @@ namespace JoseonHunter.Editor.Scenes
             new ModuleDefinition("InfoStrip", BuildInfoStrip, ValidateInfoStrip),
             new ModuleDefinition("ProgressBar", BuildProgressBar, ValidateProgressBar),
             new ModuleDefinition("DifficultyCard", BuildDifficultyCard, ValidateDifficultyCard),
+            new ModuleDefinition("WeaponSelectorCard", BuildWeaponSelectorCard, ValidateWeaponSelectorCard),
             new ModuleDefinition("PrimaryActionButton", BuildPrimaryActionButton, ValidateActionButton),
             new ModuleDefinition("SecondaryActionButton", BuildSecondaryActionButton, ValidateActionButton)
         };
@@ -164,6 +165,32 @@ namespace JoseonHunter.Editor.Scenes
             var view = root.AddComponent<LobbyDifficultyCardView>();
             view.Configure(button, label);
             view.Render("보통", false, false);
+            return root;
+        }
+
+        private static GameObject BuildWeaponSelectorCard()
+        {
+            var root = Root("WeaponSelectorCard", new Vector2(600f, 116f));
+            var frame = root.AddComponent<Image>();
+            frame.raycastTarget = false;
+            PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.ContentBackplate);
+
+            var button = Button("Button", root.transform, null);
+            Stretch(button.GetComponent<RectTransform>(), 6f, 6f, 6f, 6f);
+            PremiumPixelUiSkin.ApplyFrame(button.GetComponent<Image>(), PremiumFrame.WeaponSelector);
+
+            var icon = Image("Icon", root.transform, Color.white);
+            icon.preserveAspect = true;
+            Place(icon.rectTransform, new Vector2(.11f, .5f), new Vector2(76f, 76f), Vector2.zero);
+            var caption = Text("Caption", root.transform, "시작 무기", 17f, TextAlignmentOptions.Left);
+            Place(caption.rectTransform, new Vector2(.28f, .68f), new Vector2(170f, 34f), Vector2.zero);
+            var weaponName = Text("Weapon Name", root.transform, "환도 비검", 25f, TextAlignmentOptions.Left);
+            Place(weaponName.rectTransform, new Vector2(.47f, .37f), new Vector2(360f, 46f), Vector2.zero);
+            var chevron = Text("Chevron", root.transform, "〉", 30f);
+            Place(chevron.rectTransform, new Vector2(.91f, .5f), new Vector2(54f, 66f), Vector2.zero);
+
+            root.AddComponent<LobbyWeaponSelectorCardView>()
+                .Configure(button, icon, caption, weaponName, chevron);
             return root;
         }
 
@@ -310,6 +337,26 @@ namespace JoseonHunter.Editor.Scenes
             if (!view.HasRequiredBindings) throw new InvalidOperationException(root.name + " has incomplete difficulty bindings.");
             RequireDirect<Button>(root, "Button");
             RequireDirect<TMP_Text>(root, "Label");
+        }
+
+        private static void ValidateWeaponSelectorCard(GameObject root)
+        {
+            ValidateRoot(root, "Button", "Icon", "Caption", "Weapon Name", "Chevron");
+            var view = Require<LobbyWeaponSelectorCardView>(root);
+            if (!view.HasRequiredBindings)
+                throw new InvalidOperationException(root.name + " has incomplete weapon selector bindings.");
+            var rootImage = Require<Image>(root);
+            var button = RequireDirect<Button>(root, "Button");
+            RequireDirect<Image>(root, "Icon");
+            RequireDirect<TMP_Text>(root, "Caption");
+            RequireDirect<TMP_Text>(root, "Weapon Name");
+            RequireDirect<TMP_Text>(root, "Chevron");
+            if (rootImage.sprite == null || rootImage.type != UnityEngine.UI.Image.Type.Sliced)
+                throw new InvalidOperationException(root.name + " root must use a sliced frame.");
+            var buttonImage = button.targetGraphic as Image;
+            if (buttonImage == null || buttonImage.sprite == null ||
+                buttonImage.type != UnityEngine.UI.Image.Type.Sliced)
+                throw new InvalidOperationException(root.name + "/Button must use a sliced frame.");
         }
 
         private static void ValidateActionButton(GameObject root)
