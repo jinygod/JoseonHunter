@@ -228,6 +228,51 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GeneratorRejectsExternalCompositionWhenControllerHasNoCoLocatedComposition()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var library = RequireVisualLibrary();
+                var controllerRoot = CreateInScene(scene, "FirstPlayable");
+                var controller = controllerRoot.AddComponent<FirstPlayableController>();
+                var externalComposition = CreateInScene(scene, "External Composition")
+                    .AddComponent<GameplaySceneComposition>();
+                var authoredMarker = CreateInScene(scene, "Authored Marker");
+                authoredMarker.transform.SetPositionAndRotation(
+                    new Vector3(-8f, 6f, 3f),
+                    Quaternion.Euler(29f, 47f, 61f));
+                var markerPosition = authoredMarker.transform.position;
+                var markerRotation = authoredMarker.transform.rotation;
+                var rootNames = scene.GetRootGameObjects().Select(root => root.name).ToArray();
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("sceneComposition").objectReferenceValue = externalComposition;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                var sceneWasDirty = scene.isDirty;
+
+                AssertPrivateGeneratorFailure(
+                    "GenerateScene",
+                    "different scene composition",
+                    scene,
+                    library);
+
+                serialized.Update();
+                Assert.That(serialized.FindProperty("sceneComposition").objectReferenceValue,
+                    Is.EqualTo(externalComposition));
+                Assert.That(controllerRoot.GetComponent<GameplaySceneComposition>(), Is.Null);
+                Assert.That(authoredMarker.transform.position, Is.EqualTo(markerPosition));
+                Assert.That(authoredMarker.transform.rotation, Is.EqualTo(markerRotation));
+                CollectionAssert.AreEquivalent(rootNames,
+                    scene.GetRootGameObjects().Select(root => root.name).ToArray());
+                Assert.That(scene.isDirty, Is.EqualTo(sceneWasDirty));
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
         public void GeneratorRefusesDirtyLoadedGameplayBeforeMutation()
         {
             var scene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Additive);

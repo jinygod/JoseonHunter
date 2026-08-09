@@ -345,7 +345,7 @@ namespace JoseonHunter.Editor.Scenes
             if (controllerRoot == null) return;
             var controller = controllerRoot.GetComponent<FirstPlayableController>();
             var composition = controllerRoot.GetComponent<GameplaySceneComposition>();
-            if (controller == null || composition == null) return;
+            if (controller == null) return;
 
             var serialized = new SerializedObject(controller);
             var sceneComposition = serialized.FindProperty("sceneComposition");
