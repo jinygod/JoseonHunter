@@ -168,8 +168,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 rows = GetComponentsInChildren<LobbyTrainingRowView>(true);
             }
             Array.Sort(rows, (left, right) => left.TrainingId.CompareTo(right.TrainingId));
-            var icons = new Sprite[6];
-            view.Configure(rows, icons, currentText, nextText, costText, capacityText, purchaseButton, resetButton, feedbackText);
+            view.Configure(rows, null, currentText, nextText, costText, capacityText, purchaseButton, resetButton, feedbackText);
         }
 
         private static void ConvertLegacyButtonToRow(Button button, CommonTrainingId id)

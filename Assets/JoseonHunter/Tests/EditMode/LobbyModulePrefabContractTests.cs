@@ -17,6 +17,7 @@ namespace JoseonHunter.Tests.EditMode
     {
         private const string ModuleRoot = "Assets/JoseonHunter/Prefabs/UI/Lobby/Modules/";
         private const string CommonHeaderPath = ModuleRoot + "CommonHeader.prefab";
+        private const string TrainingIconSetPath = "Assets/JoseonHunter/Prefabs/UI/Lobby/TrainingIconSet.asset";
 
         [TestCase("CommonHeader", typeof(LobbyHeaderView))]
         [TestCase("PageHeader", typeof(LobbyPageHeaderView))]
@@ -117,6 +118,15 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(iconProperty.GetValue(view), Is.SameAs(lockIcon));
             Assert.That(constraintProperty.GetValue(view), Is.SameAs(constraint));
             Assert.That(view.HasRequiredBindings, Is.True);
+        }
+
+        [Test]
+        public void TrainingIconSetBindsTheSixTaskThreeSpritesInTrainingOrder()
+        {
+            var iconSet = AssetDatabase.LoadAssetAtPath<LobbyTrainingIconSet>(TrainingIconSetPath);
+
+            Assert.That(iconSet, Is.Not.Null, "Training rows require one authored icon-set asset.");
+            Assert.That(iconSet.HasExactBindings, Is.True);
         }
 
         [Test]

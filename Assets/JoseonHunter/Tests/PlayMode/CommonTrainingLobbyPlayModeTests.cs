@@ -194,7 +194,9 @@ namespace JoseonHunter.Tests.PlayMode
             var reset = CreateButton("Reset", root.transform);
             var externalPurchaseClicks = 0;
             purchase.onClick.AddListener(() => externalPurchaseClicks++);
-            page.Configure(rows, icons, current, next, cost, capacity, purchase, reset, feedback);
+            var iconSet = ScriptableObject.CreateInstance<LobbyTrainingIconSet>();
+            iconSet.Configure(icons);
+            page.Configure(rows, iconSet, current, next, cost, capacity, purchase, reset, feedback);
             presenter.ConfigureView(page);
 
             var rowIds = new int[rows.Length];

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using JoseonHunter.Presentation.UI;
+using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using TMPro;
 using UnityEditor;
@@ -13,6 +14,7 @@ namespace JoseonHunter.Editor.Scenes
     public static class LobbyModulePrefabBuilder
     {
         private const string ModuleDirectory = "Assets/JoseonHunter/Prefabs/UI/Lobby/Modules";
+        private const string TrainingIconSetPath = "Assets/JoseonHunter/Prefabs/UI/Lobby/TrainingIconSet.asset";
 
         private static readonly ModuleDefinition[] Definitions =
         {
@@ -56,7 +58,37 @@ namespace JoseonHunter.Editor.Scenes
                 }
             }
 
+            CreateOrValidateTrainingIconSet();
+
             if (createdAny) AssetDatabase.SaveAssets();
+        }
+
+        private static void CreateOrValidateTrainingIconSet()
+        {
+            var icons = new[]
+            {
+                LoadTrainingIcon("training_vitality"), LoadTrainingIcon("training_power"),
+                LoadTrainingIcon("training_footwork"), LoadTrainingIcon("training_learning"),
+                LoadTrainingIcon("training_guard"), LoadTrainingIcon("training_resonance")
+            };
+            var iconSet = AssetDatabase.LoadAssetAtPath<LobbyTrainingIconSet>(TrainingIconSetPath);
+            if (iconSet == null)
+            {
+                iconSet = ScriptableObject.CreateInstance<LobbyTrainingIconSet>();
+                iconSet.Configure(icons);
+                AssetDatabase.CreateAsset(iconSet, TrainingIconSetPath);
+                return;
+            }
+            if (!iconSet.HasExactBindings)
+                throw new InvalidOperationException("TrainingIconSet has incomplete or out-of-order Task 3 sprite bindings.");
+        }
+
+        private static Sprite LoadTrainingIcon(string name)
+        {
+            var path = "Assets/JoseonHunter/Art/UI/Lobby/Training/" + name + ".png";
+            var icon = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (icon == null) throw new InvalidOperationException("Missing training icon " + path + ".");
+            return icon;
         }
 
         public static void BuildInBatchMode()
