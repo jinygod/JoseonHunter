@@ -20,3 +20,8 @@
 - No `Resources.Load` use was introduced.
 - The exact six icon slots are serialized on `TrainingPageView` in required enum order. Task 7 owns their authored Lobby scene-instance assignment when it replaces the transitional shell.
 - `git diff --check` is required before commit.
+
+## Review fix round 1
+
+- `TrainingIconSet.asset` now owns the exact six Task 3 sprite references in enum order.
+- Duplicate authored rows/buttons are rejected before listener unbinding; the focused contract preserves prior listener behavior and row identity.
