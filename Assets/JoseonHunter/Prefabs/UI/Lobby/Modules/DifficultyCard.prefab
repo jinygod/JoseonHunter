@@ -399,6 +399,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyDifficultyCardView
   button: {fileID: 5941890337730883326}
   labelText: {fileID: 1727780745693323430}
+  lockSlash: {fileID: 4117843471120957835}
+  lockIcon: {fileID: 1688986641446058753}
+  lockSlashConstraint: {fileID: 2470147007911435349}
 --- !u!1 &5771375262260463464
 GameObject:
   m_ObjectHideFlags: 0

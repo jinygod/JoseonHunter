@@ -162,8 +162,15 @@ namespace JoseonHunter.Editor.Scenes
             Stretch(button.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             var label = Text("Label", root.transform, "보통", 24f);
             Stretch(label.rectTransform, 18f, 12f, 18f, 12f);
+            var lockSlash = Image("Lock Slash", button.transform, new Color(.92f, .63f, .18f, .95f));
+            lockSlash.sprite = null;
+            lockSlash.raycastTarget = false;
+            var lockSlashConstraint = lockSlash.gameObject.AddComponent<LockSlashConstraint>();
+            lockSlashConstraint.Configure();
+            var lockIcon = Image("Lock Icon", button.transform, Color.white);
+            lockIcon.raycastTarget = false;
             var view = root.AddComponent<LobbyDifficultyCardView>();
-            view.Configure(button, label);
+            view.Configure(button, label, lockSlash, lockIcon, lockSlashConstraint);
             view.Render("보통", false, false);
             return root;
         }
@@ -335,8 +342,16 @@ namespace JoseonHunter.Editor.Scenes
             ValidateRoot(root, "Button", "Label");
             var view = Require<LobbyDifficultyCardView>(root);
             if (!view.HasRequiredBindings) throw new InvalidOperationException(root.name + " has incomplete difficulty bindings.");
-            RequireDirect<Button>(root, "Button");
+            var button = RequireDirect<Button>(root, "Button");
             RequireDirect<TMP_Text>(root, "Label");
+            var lockSlash = button.transform.Find("Lock Slash")?.GetComponent<Image>();
+            var lockIcon = button.transform.Find("Lock Icon")?.GetComponent<Image>();
+            var lockSlashConstraint = lockSlash?.GetComponent<LockSlashConstraint>();
+            if (lockSlash == null || lockIcon == null || lockSlashConstraint == null)
+                throw new InvalidOperationException(root.name + " has incomplete authored lock decoration.");
+            if (view.LockSlash != lockSlash || view.LockIcon != lockIcon ||
+                view.LockSlashConstraint != lockSlashConstraint)
+                throw new InvalidOperationException(root.name + " has mismatched authored lock bindings.");
         }
 
         private static void ValidateWeaponSelectorCard(GameObject root)

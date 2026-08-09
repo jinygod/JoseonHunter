@@ -102,7 +102,10 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(selectorType.GetProperty(propertyName), Is.Not.Null, propertyName);
 
             var difficultyType = typeof(LobbyDifficultyCardView);
-            foreach (var propertyName in new[] { "Button", "Background", "Label" })
+            foreach (var propertyName in new[]
+                     {
+                         "Button", "Background", "Label", "LockSlash", "LockIcon", "LockSlashConstraint"
+                     })
                 Assert.That(difficultyType.GetProperty(propertyName), Is.Not.Null, propertyName);
         }
 
@@ -166,6 +169,33 @@ namespace JoseonHunter.Tests.PlayMode
             AssertDifficultyCardsHaveEqualSizeAndInternalLocks(harness.View);
         }
 
+        [Test]
+        public void AuthoredInitializeRejectsMissingLockBindingBeforeMutatingHierarchyOrListeners()
+        {
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            var harness = CreateAuthoredHarness();
+            var externalNextClicks = 0;
+            harness.View.NextStageButton.onClick.AddListener(() => externalNextClicks++);
+            harness.Presenter.ConfigureView(harness.View);
+            harness.Presenter.InitializeAuthored(session, null);
+
+            var initialIds = harness.AllTransformIds();
+            var greatOmen = harness.View.GreatOmenDifficulty;
+            var lockSlash = greatOmen.Button.transform.Find("Lock Slash").GetComponent<Image>();
+            var constraint = lockSlash.GetComponent<LockSlashConstraint>();
+            ConfigureDifficultyBindings(greatOmen, greatOmen.Button, greatOmen.Label, lockSlash, null, constraint);
+
+            Assert.Throws<InvalidOperationException>(() => harness.Presenter.InitializeAuthored(session, null),
+                "Strict authored initialization must reject an incomplete lock decoration before rendering it.");
+            Assert.That(harness.AllTransformIds(), Is.EqualTo(initialIds),
+                "Failed strict initialization must not repair or replace authored hierarchy objects.");
+
+            harness.View.NextStageButton.onClick.Invoke();
+            Assert.That(externalNextClicks, Is.EqualTo(1), "Unowned listeners must remain attached.");
+            Assert.That(harness.View.StageName.text, Does.StartWith("2장 ·"),
+                "The previously owned presenter listener must remain attached after rejected reconfiguration.");
+        }
+
         [UnityTest]
         public IEnumerator AuthoredPatrolPreservesDifficultySaveAndGameplayRouting()
         {
@@ -187,17 +217,30 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(harness.View.OmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_selected"));
             Assert.That(harness.View.NormalDifficulty.Background.sprite.name, Is.EqualTo("difficulty_idle"));
 
+            string firstTransitionTarget = null;
+            void CaptureFirstTransition(Scene scene, LoadSceneMode _) => firstTransitionTarget ??= scene.name;
+            SceneManager.sceneLoaded += CaptureFirstTransition;
             harness.GakgungOption.onClick.Invoke();
             harness.View.StartButton.onClick.Invoke();
-            Assert.That(session.ActiveLoadout.StartingWeapon, Is.EqualTo(WeaponId.GakgungShot));
-            Assert.That(session.ConsumePendingDestination("Fallback"), Is.EqualTo("Gameplay"));
+            var pendingDestination = session.ConsumePendingDestination("Fallback");
             session.SetPendingDestination("Lobby");
-            Object.DestroyImmediate(harness.Root);
+            yield return null;
+            var bootstrapIntentStarted = session.Router.IsRouting || firstTransitionTarget == "Bootstrap";
+            if (harness.Root != null) Object.DestroyImmediate(harness.Root);
             while (session.Router.IsRouting) yield return null;
             yield return null;
             while (SceneManager.GetActiveScene().name != "Lobby") yield return null;
             var loadingPresenter = Object.FindAnyObjectByType<BootstrapLoadingPresenter>();
             if (loadingPresenter != null) Object.DestroyImmediate(loadingPresenter.gameObject);
+            SceneManager.sceneLoaded -= CaptureFirstTransition;
+
+            Assert.That(session.ActiveLoadout.StartingWeapon, Is.EqualTo(WeaponId.GakgungShot));
+            Assert.That(pendingDestination, Is.EqualTo("Gameplay"),
+                "Patrol must preserve Gameplay as the exact post-loading destination.");
+            Assert.That(bootstrapIntentStarted, Is.True,
+                "Patrol must start the existing Bootstrap router transition before yielding control.");
+            Assert.That(firstTransitionTarget, Is.EqualTo("Bootstrap"),
+                "The first transition must target Bootstrap; Bootstrap-to-Gameplay arrival is covered by final integration.");
         }
 
         [UnityTest]
@@ -522,10 +565,37 @@ namespace JoseonHunter.Tests.PlayMode
             Stretch(button.GetComponent<RectTransform>());
             var label = Text("Label", root, labelValue);
             Stretch(label.rectTransform);
+            var lockSlash = Image("Lock Slash", button.transform);
+            var constraint = lockSlash.gameObject.AddComponent<LockSlashConstraint>();
+            constraint.Configure();
+            var lockIcon = Image("Lock Icon", button.transform);
             var view = root.gameObject.AddComponent<LobbyDifficultyCardView>();
-            view.Configure(button, label);
-            view.Render(labelValue, false, false);
+            ConfigureDifficultyBindings(view, button, label, lockSlash, lockIcon, constraint);
             return view;
+        }
+
+        private static void ConfigureDifficultyBindings(
+            LobbyDifficultyCardView view,
+            Button button,
+            TMP_Text label,
+            Image lockSlash,
+            Image lockIcon,
+            LockSlashConstraint constraint)
+        {
+            var authoredConfigure = typeof(LobbyDifficultyCardView).GetMethod(
+                "Configure",
+                new[] { typeof(Button), typeof(TMP_Text), typeof(Image), typeof(Image), typeof(LockSlashConstraint) });
+            if (authoredConfigure != null)
+            {
+                authoredConfigure.Invoke(view, new object[] { button, label, lockSlash, lockIcon, constraint });
+                return;
+            }
+
+            var legacyConfigure = typeof(LobbyDifficultyCardView).GetMethod(
+                "Configure",
+                new[] { typeof(Button), typeof(TMP_Text) });
+            Assert.That(legacyConfigure, Is.Not.Null, "Difficulty card must expose a configuration seam.");
+            legacyConfigure.Invoke(view, new object[] { button, label });
         }
 
         private static LobbyWeaponSelectorCardView WeaponSelector(Transform parent)

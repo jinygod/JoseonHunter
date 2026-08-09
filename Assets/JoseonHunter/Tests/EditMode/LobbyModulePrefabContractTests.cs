@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using JoseonHunter.Editor.Scenes;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using NUnit.Framework;
@@ -90,6 +91,32 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(view.HasRequiredBindings, Is.True);
             Assert.That(prefab.GetComponent<Image>().type, Is.EqualTo(Image.Type.Sliced));
             Assert.That(view.Background.type, Is.EqualTo(Image.Type.Sliced));
+        }
+
+        [Test]
+        public void DifficultyCardModuleOwnsCompleteAuthoredLockBindings()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "DifficultyCard.prefab");
+            var view = prefab.GetComponent<LobbyDifficultyCardView>();
+            var lockSlash = prefab.transform.Find("Button/Lock Slash")?.GetComponent<Image>();
+            var lockIcon = prefab.transform.Find("Button/Lock Icon")?.GetComponent<Image>();
+            var constraint = lockSlash?.GetComponent<LockSlashConstraint>();
+
+            Assert.That(lockSlash, Is.Not.Null, "Lock Slash must be authored under the card button.");
+            Assert.That(lockIcon, Is.Not.Null, "Lock Icon must be authored under the card button.");
+            Assert.That(constraint, Is.Not.Null, "Lock Slash must own its serialized layout constraint.");
+
+            var viewType = typeof(LobbyDifficultyCardView);
+            var slashProperty = viewType.GetProperty("LockSlash");
+            var iconProperty = viewType.GetProperty("LockIcon");
+            var constraintProperty = viewType.GetProperty("LockSlashConstraint");
+            Assert.That(slashProperty, Is.Not.Null, "The view must expose its authored slash binding.");
+            Assert.That(iconProperty, Is.Not.Null, "The view must expose its authored lock-icon binding.");
+            Assert.That(constraintProperty, Is.Not.Null, "The view must expose its authored constraint binding.");
+            Assert.That(slashProperty.GetValue(view), Is.SameAs(lockSlash));
+            Assert.That(iconProperty.GetValue(view), Is.SameAs(lockIcon));
+            Assert.That(constraintProperty.GetValue(view), Is.SameAs(constraint));
+            Assert.That(view.HasRequiredBindings, Is.True);
         }
 
         [Test]

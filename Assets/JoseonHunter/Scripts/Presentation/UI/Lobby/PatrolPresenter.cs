@@ -326,10 +326,10 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         public void InitializeAuthored(MetaGameSession value, Action onChanged)
         {
-            UnbindListeners();
             if (view == null || !view.HasRequiredBindings)
                 throw new InvalidOperationException("PatrolPageView is incomplete.");
 
+            UnbindListeners();
             BindAuthoredView();
             InitializeBoundView(value, onChanged, authored: true);
         }
