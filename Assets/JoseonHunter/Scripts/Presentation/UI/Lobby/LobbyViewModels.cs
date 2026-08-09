@@ -1,5 +1,6 @@
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Runs;
 
 namespace JoseonHunter.Presentation.UI.Lobby
 {
@@ -16,6 +17,14 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (id.Equals(WeaponId.FrostFlask)) return "서리병";
             return "풍뢰선";
         }
+
+        internal static string DifficultyName(StageDifficulty difficulty) => difficulty switch
+        {
+            StageDifficulty.Normal => "보통",
+            StageDifficulty.Omen => "흉조",
+            StageDifficulty.GreatOmen => "대흉",
+            _ => "알 수 없는 난이도"
+        };
 
         internal static string TrainingName(CommonTrainingId id) => id switch
         {

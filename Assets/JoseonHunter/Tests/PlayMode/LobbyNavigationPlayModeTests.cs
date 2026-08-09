@@ -28,49 +28,76 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator LobbyShowsExactlyThreeNavigationButtonsAndDefaultsToPatrol()
+        public IEnumerator NavigationStartsAtHomeAndBackButtonsReturnToHome()
         {
-            SceneManager.LoadScene("Lobby");
-            yield return null;
-            var lobby = Object.FindAnyObjectByType<LobbyBootstrap>();
-            Assert.That(lobby, Is.Not.Null);
+            var presenter = new GameObject("Navigation").AddComponent<LobbyNavigationPresenter>();
+            var homePage = new GameObject("Home");
+            var trainingPage = new GameObject("Training");
+            var patrolPage = new GameObject("Patrol");
+            var researchPage = new GameObject("Research");
+            var trainingMenuButton = CreateButton("Training Menu");
+            var patrolMenuButton = CreateButton("Patrol Menu");
+            var researchMenuButton = CreateButton("Research Menu");
+            var trainingBackButton = CreateButton("Training Back");
+            var patrolBackButton = CreateButton("Patrol Back");
+            var researchBackButton = CreateButton("Research Back");
 
-            var navigation = GameObject.Find("Bottom Navigation");
-            var buttons = navigation.GetComponentsInChildren<Button>(true);
-            Assert.That(buttons, Has.Length.EqualTo(3));
-            Assert.That(buttons.Select(button => button.GetComponentInChildren<TMPro.TMP_Text>(true))
-                .All(label => label == null || !label.gameObject.activeSelf || string.IsNullOrEmpty(label.text)),
-                Is.True);
-            Assert.That(buttons.Select(button => button.transform.Find("Premium Icon")?.GetComponent<Image>())
-                .All(icon => icon != null && icon.sprite != null), Is.True);
-            Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.True);
-            Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.False);
-            Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
-            var patrol = GameObject.Find("Patrol Navigation").transform;
-            var research = GameObject.Find("Weapon Research Navigation").transform;
-            Assert.That(patrol.Find("Premium Icon").GetComponent<Image>().sprite.name,
-                Is.EqualTo("icon_patrol"));
-            Assert.That(research.Find("Premium Icon").GetComponent<Image>().sprite.name,
-                Is.EqualTo("icon_research"));
-            Assert.That(((Image)patrol.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("tab_selected"));
-            Assert.That(((Image)research.GetComponent<Button>().targetGraphic).sprite.name,
-                Is.EqualTo("tab_idle"));
+            presenter.Initialize(
+                homePage, trainingPage, patrolPage, researchPage,
+                trainingMenuButton, patrolMenuButton, researchMenuButton,
+                trainingBackButton, patrolBackButton, researchBackButton);
+            yield return null;
+
+            AssertPage(presenter, LobbyPageId.Home, homePage, trainingPage, patrolPage, researchPage);
+
+            trainingMenuButton.onClick.Invoke();
+            AssertPage(presenter, LobbyPageId.Training, homePage, trainingPage, patrolPage, researchPage);
+            trainingBackButton.onClick.Invoke();
+            AssertPage(presenter, LobbyPageId.Home, homePage, trainingPage, patrolPage, researchPage);
+
+            patrolMenuButton.onClick.Invoke();
+            AssertPage(presenter, LobbyPageId.Patrol, homePage, trainingPage, patrolPage, researchPage);
+            patrolBackButton.onClick.Invoke();
+            AssertPage(presenter, LobbyPageId.Home, homePage, trainingPage, patrolPage, researchPage);
+
+            researchMenuButton.onClick.Invoke();
+            AssertPage(presenter, LobbyPageId.Research, homePage, trainingPage, patrolPage, researchPage);
+            researchBackButton.onClick.Invoke();
+            AssertPage(presenter, LobbyPageId.Home, homePage, trainingPage, patrolPage, researchPage);
         }
 
         [UnityTest]
-        public IEnumerator LobbyUsesApprovedCommonShellAnchorsAndPremiumFrames()
+        public IEnumerator ReinitializingNavigationDoesNotDuplicateTransitionsOrChangeSessionData()
         {
-            SceneManager.LoadScene("Lobby");
+            var data = SaveDataV1.CreateDefaults();
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
+            var expectedSelection = session.ActiveStageSelection;
+            var expectedLoadout = session.ActiveLoadout;
+            var presenter = new GameObject("Navigation").AddComponent<LobbyNavigationPresenter>();
+            var homePage = new GameObject("Home");
+            var trainingPage = new GameObject("Training");
+            var patrolPage = new GameObject("Patrol");
+            var researchPage = new GameObject("Research");
+            var trainingMenuButton = CreateButton("Training Menu");
+            var patrolMenuButton = CreateButton("Patrol Menu");
+            var researchMenuButton = CreateButton("Research Menu");
+            var trainingBackButton = CreateButton("Training Back");
+            var patrolBackButton = CreateButton("Patrol Back");
+            var researchBackButton = CreateButton("Research Back");
+
+            presenter.Initialize(homePage, trainingPage, patrolPage, researchPage,
+                trainingMenuButton, patrolMenuButton, researchMenuButton,
+                trainingBackButton, patrolBackButton, researchBackButton);
+            presenter.Initialize(homePage, trainingPage, patrolPage, researchPage,
+                trainingMenuButton, patrolMenuButton, researchMenuButton,
+                trainingBackButton, patrolBackButton, researchBackButton);
             yield return null;
 
-            AssertAnchors("Header", new Vector2(.025f, .91f), new Vector2(.975f, .985f));
-            AssertAnchors("Stage Content", new Vector2(.04f, .105f), new Vector2(.96f, .895f));
-            AssertAnchors("Bottom Navigation", new Vector2(.04f, .02f), new Vector2(.96f, .095f));
-            Assert.That(ImageNamed("Header").sprite.name, Is.EqualTo("header_bar"));
-            Assert.That(ImageNamed("Patrol Panel").sprite.name, Is.EqualTo("thin_outer_frame"),
-                "The approved shell uses the thin content border without an oversized architectural rail.");
-            Assert.That(VisibleNavigationLabels(), Is.Empty);
+            patrolMenuButton.onClick.Invoke();
+
+            AssertPage(presenter, LobbyPageId.Patrol, homePage, trainingPage, patrolPage, researchPage);
+            Assert.That(session.ActiveStageSelection, Is.EqualTo(expectedSelection));
+            Assert.That(session.ActiveLoadout.StartingWeapon, Is.EqualTo(expectedLoadout.StartingWeapon));
         }
 
         [UnityTest]
@@ -230,27 +257,16 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
-        [UnityTest]
-        public IEnumerator NavigationSwitchesOneOpaquePanelAtATime()
-        {
-            SceneManager.LoadScene("Lobby");
-            yield return null;
-            var navigation = GameObject.Find("Bottom Navigation");
-            var buttons = navigation.GetComponentsInChildren<Button>(true);
-            buttons[0].onClick.Invoke();
-            yield return null;
+        private static Button CreateButton(string name) =>
+            new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button))
+                .GetComponent<Button>();
 
-            Assert.That(FindIncludingInactive("Weapon Research Panel").activeSelf, Is.True);
-            Assert.That(FindIncludingInactive("Patrol Panel").activeSelf, Is.False);
-            Assert.That(FindIncludingInactive("Common Training Panel").activeSelf, Is.False);
-            Assert.That(((Image)buttons[0].targetGraphic).sprite.name,
-                Is.EqualTo("tab_selected"));
-            Assert.That(((Image)buttons[1].targetGraphic).sprite.name,
-                Is.EqualTo("tab_idle"));
-            Assert.That(buttons[0].transform.Find("Premium Icon").GetComponent<Image>().sprite.name,
-                Is.EqualTo("icon_research"));
-            Assert.That(buttons[1].transform.Find("Premium Icon").GetComponent<Image>().sprite.name,
-                Is.EqualTo("icon_patrol"));
+        private static void AssertPage(LobbyNavigationPresenter presenter, LobbyPageId expected,
+            params GameObject[] pages)
+        {
+            Assert.That(presenter.CurrentPage, Is.EqualTo(expected));
+            Assert.That(pages.Count(page => page.activeSelf), Is.EqualTo(1));
+            Assert.That(pages[(int)expected].activeSelf, Is.True);
         }
 
         private static GameObject FindIncludingInactive(string name) =>
