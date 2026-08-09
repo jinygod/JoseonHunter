@@ -235,6 +235,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var authoredBar = FindValidDirectBar(anchor);
             if (authoredBar != null)
             {
+                DeactivateReusableLegacyBars(anchor, "Health Bar");
                 authoredBar.Prepare(solidSprite);
                 authoredBar.SetNormalizedValue(1f);
                 return authoredBar.Fill;
@@ -371,6 +372,22 @@ namespace JoseonHunter.Runtime.Gameplay
                     return fill;
             }
             return null;
+        }
+
+        private static void DeactivateReusableLegacyBars(Transform parent, string runtimeName)
+        {
+            if (parent == null) return;
+            for (var index = 0; index < parent.childCount; index++)
+            {
+                var candidate = parent.GetChild(index);
+                if (candidate.name != runtimeName || candidate.GetComponent<WorldBarView>() != null)
+                    continue;
+                var background = candidate.Find("Background");
+                var fill = candidate.Find("Fill");
+                if (background?.GetComponent<SpriteRenderer>() != null &&
+                    fill?.GetComponent<SpriteRenderer>() != null)
+                    candidate.gameObject.SetActive(false);
+            }
         }
 
         private static WorldBarView FindValidDirectBar(Transform anchor)

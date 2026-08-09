@@ -239,6 +239,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(authoredBar, Is.Not.Null);
             Assert.That(fillRendererField, Is.Not.Null);
             var originalFillRenderer = fillRendererField.GetValue(authoredBar);
+            var originalBarActive = authoredBar.gameObject.activeSelf;
             var playerId = player.GetEntityId();
 
             fillRendererField.SetValue(authoredBar, null);
@@ -258,6 +259,7 @@ namespace JoseonHunter.Tests.PlayMode
             finally
             {
                 fillRendererField.SetValue(authoredBar, originalFillRenderer);
+                authoredBar.gameObject.SetActive(originalBarActive);
                 controller.ResetRunForTests();
             }
         }
@@ -282,6 +284,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(libraryField, Is.Not.Null);
 
             var originalFillRenderer = fillRendererField.GetValue(authoredBar);
+            var originalBarActive = authoredBar.gameObject.activeSelf;
             var originalLibrary = libraryField.GetValue(controller);
             var production = Resources.Load<GameplayVisualPrefabLibrary>("Gameplay/GameplayVisualPrefabLibrary");
             var missingHealthBarLibrary = ScriptableObject.CreateInstance<GameplayVisualPrefabLibrary>();
@@ -329,10 +332,20 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(legacyBars[0].GetComponent<WorldBarView>(), Is.Null);
                 Assert.That(legacyBars[0].Find("Background")?.GetComponent<SpriteRenderer>(), Is.Not.Null);
                 Assert.That(legacyBars[0].Find("Fill")?.GetComponent<SpriteRenderer>(), Is.Not.Null);
+
+                fillRendererField.SetValue(authoredBar, originalFillRenderer);
+                authoredBar.gameObject.SetActive(originalBarActive);
+                libraryField.SetValue(controller, originalLibrary);
+                controller.ResetRunForTests();
+                yield return null;
+
+                Assert.That(ActiveLegacyBarCount(player.HealthBarAnchor, "Health Bar"), Is.Zero);
+                Assert.That(ActiveUsableHealthBarCount(player.transform), Is.EqualTo(1));
             }
             finally
             {
                 fillRendererField.SetValue(authoredBar, originalFillRenderer);
+                authoredBar.gameObject.SetActive(originalBarActive);
                 libraryField.SetValue(controller, originalLibrary);
                 Object.Destroy(missingHealthBarLibrary);
                 controller.ResetRunForTests();
@@ -389,5 +402,12 @@ namespace JoseonHunter.Tests.PlayMode
         private static int ActiveUsableHealthBarCount(Transform root) =>
             root.GetComponentsInChildren<WorldBarView>(true).Count(bar =>
                 bar.gameObject.activeInHierarchy && bar.HasRequiredBindings);
+
+        private static int ActiveLegacyBarCount(Transform anchor, string name) =>
+            anchor.GetComponentsInChildren<Transform>(true).Count(candidate =>
+                candidate.parent == anchor && candidate.name == name && candidate.gameObject.activeInHierarchy &&
+                candidate.GetComponent<WorldBarView>() == null &&
+                candidate.Find("Background")?.GetComponent<SpriteRenderer>() != null &&
+                candidate.Find("Fill")?.GetComponent<SpriteRenderer>() != null);
     }
 }
