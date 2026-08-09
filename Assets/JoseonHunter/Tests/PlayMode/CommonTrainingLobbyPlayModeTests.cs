@@ -9,6 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using UnityEditor;
 
 namespace JoseonHunter.Tests.PlayMode
 {
@@ -179,11 +180,9 @@ namespace JoseonHunter.Tests.PlayMode
             var presenter = root.AddComponent<CommonTrainingPresenter>();
             var page = root.AddComponent<TrainingPageView>();
             var rows = new LobbyTrainingRowView[6];
-            var icons = new Sprite[6];
             for (var index = 0; index < rows.Length; index++)
             {
                 rows[index] = CreateAuthoredRow(root.transform, (CommonTrainingId)index);
-                icons[index] = CreateTestIcon(index);
             }
             var current = CreateText("Current Effect", root.transform);
             var next = CreateText("Next Effect", root.transform);
@@ -194,8 +193,8 @@ namespace JoseonHunter.Tests.PlayMode
             var reset = CreateButton("Reset", root.transform);
             var externalPurchaseClicks = 0;
             purchase.onClick.AddListener(() => externalPurchaseClicks++);
-            var iconSet = ScriptableObject.CreateInstance<LobbyTrainingIconSet>();
-            iconSet.Configure(icons);
+            var iconSet = AssetDatabase.LoadAssetAtPath<LobbyTrainingIconSet>(
+                "Assets/JoseonHunter/Prefabs/UI/Lobby/TrainingIconSet.asset");
             page.Configure(rows, iconSet, current, next, cost, capacity, purchase, reset, feedback);
             presenter.ConfigureView(page);
 
@@ -216,7 +215,7 @@ namespace JoseonHunter.Tests.PlayMode
             for (var index = 0; index < rows.Length; index++)
             {
                 Assert.That(rows[index].GetEntityId().GetHashCode(), Is.EqualTo(rowIds[index]));
-                Assert.That(rows[index].IconImage.sprite, Is.SameAs(icons[index]));
+                Assert.That(rows[index].IconImage.sprite, Is.SameAs(iconSet.Icons[index]));
                 Assert.That(rows[index].NameText.text, Is.Not.Empty);
                 Assert.That(rows[index].RankText.text, Is.EqualTo("0 / 20"));
             }
@@ -226,6 +225,32 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(session.Data.Coins, Is.EqualTo(400));
             Object.Destroy(root);
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator InvalidDuplicateAuthoredBindingsThrowBeforeUnbindingExistingListeners()
+        {
+            var data = SaveDataV1.CreateDefaults(); data.Coins = 500;
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
+            var root = new GameObject("Duplicate Training Page");
+            var presenter = root.AddComponent<CommonTrainingPresenter>();
+            var page = root.AddComponent<TrainingPageView>();
+            var rows = new LobbyTrainingRowView[6];
+            for (var index = 0; index < rows.Length; index++) rows[index] = CreateAuthoredRow(root.transform, (CommonTrainingId)index);
+            var iconSet = AssetDatabase.LoadAssetAtPath<LobbyTrainingIconSet>("Assets/JoseonHunter/Prefabs/UI/Lobby/TrainingIconSet.asset");
+            var purchase = CreateButton("Purchase", root.transform); var reset = CreateButton("Reset", root.transform);
+            page.Configure(rows, iconSet, CreateText("Current", root.transform), CreateText("Next", root.transform),
+                CreateText("Cost", root.transform), CreateText("Capacity", root.transform), purchase, reset, CreateText("Feedback", root.transform));
+            presenter.ConfigureView(page); presenter.InitializeAuthored(session, null);
+            var id = rows[0].GetEntityId(); var external = 0; purchase.onClick.AddListener(() => external++);
+            rows[1] = rows[0];
+            page.Configure(rows, iconSet, page.CurrentEffectText, page.NextEffectText, page.CostText, page.CapacityText, purchase, reset, page.FeedbackText);
+            Assert.That(() => presenter.InitializeAuthored(session, null), Throws.TypeOf<System.InvalidOperationException>());
+            Assert.That(rows[0].GetEntityId(), Is.EqualTo(id));
+            purchase.onClick.Invoke();
+            Assert.That(external, Is.EqualTo(1));
+            Assert.That(session.Data.Coins, Is.EqualTo(400));
+            Object.Destroy(root); yield return null;
         }
 
         [UnityTest]
@@ -322,11 +347,6 @@ namespace JoseonHunter.Tests.PlayMode
             return text;
         }
 
-        private static Sprite CreateTestIcon(int index)
-        {
-            var texture = new Texture2D(1, 1) { name = "Training Test Icon " + index };
-            return Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(.5f, .5f));
-        }
 
         private static void AssertInside(RectTransform container, params RectTransform[] children)
         {

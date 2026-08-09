@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eeccafd04d3915e44bf8bbc7d7ab6813, type: 3}
+  m_Name: TrainingIconSet
+  m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.LobbyTrainingIconSet
+  icons:
+  - {fileID: 21300000, guid: 776b49f8d2a4165498eda837d1d9787c, type: 3}
+  - {fileID: 21300000, guid: 64663c4e853f060498fdc8be68a6381f, type: 3}
+  - {fileID: 21300000, guid: 20a5152ef10f41f4fb5aa0d54b60d3ba, type: 3}
+  - {fileID: 21300000, guid: 6b7fc8811f0322f49905c5939fa2e904, type: 3}
+  - {fileID: 21300000, guid: 479e2519ceef1ee4682616d272e03514, type: 3}
+  - {fileID: 21300000, guid: ebf4f0888d90bcc49800f2787627d32f, type: 3}

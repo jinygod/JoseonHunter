@@ -25,6 +25,7 @@ namespace JoseonHunter.Tests.EditMode
         [TestCase("ProgressBar", typeof(LobbyProgressBarView))]
         [TestCase("DifficultyCard", typeof(LobbyDifficultyCardView))]
         [TestCase("WeaponSelectorCard", typeof(LobbyWeaponSelectorCardView))]
+        [TestCase("TrainingRow", typeof(LobbyTrainingRowView))]
         public void ProductionModuleHasRequiredViewAndNoMissingScripts(string name, Type viewType)
         {
             var path = ModuleRoot + name + ".prefab";
@@ -52,6 +53,8 @@ namespace JoseonHunter.Tests.EditMode
             AssertBindings("WeaponSelectorCard", ("Button", typeof(Button)), ("Icon", typeof(Image)),
                 ("Caption", typeof(TMP_Text)), ("Weapon Name", typeof(TMP_Text)),
                 ("Chevron", typeof(TMP_Text)));
+            AssertBindings("TrainingRow", ("Button", typeof(Button)), ("Icon", typeof(Image)),
+                ("Name", typeof(TMP_Text)), ("Rank", typeof(TMP_Text)), ("Progress", typeof(LobbyProgressBarView)));
             AssertBindings("PrimaryActionButton", ("Button", typeof(Button)));
             AssertBindings("SecondaryActionButton", ("Button", typeof(Button)));
 
@@ -77,8 +80,10 @@ namespace JoseonHunter.Tests.EditMode
         {
             LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
             var before = File.ReadAllBytes(CommonHeaderPath);
+            var trainingBefore = File.ReadAllBytes(ModuleRoot + "TrainingRow.prefab");
             LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
             Assert.That(File.ReadAllBytes(CommonHeaderPath), Is.EqualTo(before));
+            Assert.That(File.ReadAllBytes(ModuleRoot + "TrainingRow.prefab"), Is.EqualTo(trainingBefore));
         }
 
         [Test]
@@ -127,6 +132,16 @@ namespace JoseonHunter.Tests.EditMode
 
             Assert.That(iconSet, Is.Not.Null, "Training rows require one authored icon-set asset.");
             Assert.That(iconSet.HasExactBindings, Is.True);
+            var paths = iconSet.Icons.Select(AssetDatabase.GetAssetPath).ToArray();
+            Assert.That(paths, Is.EqualTo(new[]
+            {
+                "Assets/JoseonHunter/Art/UI/Lobby/Training/training_vitality.png",
+                "Assets/JoseonHunter/Art/UI/Lobby/Training/training_power.png",
+                "Assets/JoseonHunter/Art/UI/Lobby/Training/training_footwork.png",
+                "Assets/JoseonHunter/Art/UI/Lobby/Training/training_learning.png",
+                "Assets/JoseonHunter/Art/UI/Lobby/Training/training_guard.png",
+                "Assets/JoseonHunter/Art/UI/Lobby/Training/training_resonance.png"
+            }));
         }
 
         [Test]
@@ -164,6 +179,7 @@ namespace JoseonHunter.Tests.EditMode
         {
             "CommonHeader", "PageHeader", "HomeMenuCard", "InfoStrip", "ProgressBar", "DifficultyCard",
             "WeaponSelectorCard", "PrimaryActionButton", "SecondaryActionButton"
+            , "TrainingRow"
         }.Select(name => AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + name + ".prefab")).ToArray();
 
         private static void AssertBindings(string prefabName, params (string Name, Type Type)[] bindings)
