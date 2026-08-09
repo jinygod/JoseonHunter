@@ -191,6 +191,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var styles = WeaponMasteryCatalog.StylesFor(weaponId);
             if (session == null || styleIndex < 0 || styleIndex >= styles.Count) return;
             var style = styles[styleIndex];
+            if (IsEquipped(style)) return;
             if (styleIndex == 2 && !session.Data.UnlockedWeaponStyles.Contains(styles[1].LegacyPathId.Value))
             {
                 FeedbackText.text = "2단계 연구 완료 시 해금";
@@ -227,9 +228,8 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var styles = WeaponMasteryCatalog.StylesFor(weaponId);
             if (styleIndex < 0 || styleIndex >= styles.Count) return string.Empty;
             var style = styles[styleIndex];
-            var equipped = session.ActiveLoadout.StyleFor(weaponId);
-            if (style.IsBase) return string.IsNullOrEmpty(equipped.Value) ? "장착 중 : 기본형" : "기본형";
-            if (equipped.Equals(style.LegacyPathId)) return "장착 중";
+            if (style.IsBase) return IsEquipped(style) ? "장착 중 : 기본형" : "기본형";
+            if (IsEquipped(style)) return "장착 중";
             if (style.IsStarterUnlocked && session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value)) return "처음부터 해금";
             if (session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value)) return "해금 완료";
             if (styleIndex == 2 && !session.Data.UnlockedWeaponStyles.Contains(styles[1].LegacyPathId.Value)) return "2단계 연구 완료 시 해금";
@@ -282,7 +282,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             var owned = style.IsBase || session.Data.UnlockedWeaponStyles.Contains(style.LegacyPathId.Value);
             var sequentiallyLocked = index == 2 && !firstUnlocked;
             var eligible = owned || (mastery >= style.RequiredMastery && session.Data.Coins >= style.CoinCost);
-            var canAct = !sequentiallyLocked && eligible && !StateFor(index).Equals("장착 중");
+            var canAct = !sequentiallyLocked && eligible && !IsEquipped(style);
             var requirement = style.IsBase ? "처음부터 사용 가능" : style.IsStarterUnlocked ? "처음부터 해금" :
                 $"숙련도 {mastery:N0}/{style.RequiredMastery:N0} · 전수 {style.CoinCost:N0}";
             row.Render(style.DisplayName, StateFor(index), $"{style.Benefit} / {style.Tradeoff}", requirement,
@@ -311,6 +311,12 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         private int MasteryFor(WeaponId weaponId) =>
             session.Data.WeaponMasteryPoints.TryGetValue(weaponId.Value, out var points) ? points : 0;
+
+        private bool IsEquipped(WeaponMasteryStyleDefinition style)
+        {
+            var equipped = session.ActiveLoadout.StyleFor(WeaponRoster.All[selectedWeaponIndex]);
+            return style.IsBase ? string.IsNullOrEmpty(equipped.Value) : equipped.Equals(style.LegacyPathId);
+        }
 
         private Sprite IconFor(WeaponId weaponId) => weaponCatalog != null && weaponCatalog.TryGet(weaponId, out var definition)
             ? definition.UiIcon != null ? definition.UiIcon : definition.PresentationSprites.FirstOrDefault() : null;

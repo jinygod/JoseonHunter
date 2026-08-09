@@ -17,6 +17,11 @@ namespace JoseonHunter.Tests.PlayMode
 {
     public sealed class WeaponResearchLobbyPlayModeTests
     {
+        private static readonly WeaponId[] ExpectedWeaponOrder =
+        {
+            WeaponId.HwandoFlyingBlade, WeaponId.GakgungShot, WeaponId.TalismanThrow, WeaponId.ThunderCrashBomb,
+            WeaponId.JangseungWard, WeaponId.SingijeonVolley, WeaponId.FrostFlask, WeaponId.WindThunderFan
+        };
         [SetUp]
         public void SetUp()
         {
@@ -170,7 +175,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(page.HasRequiredBindings, Is.True);
             Assert.That(page.WeaponSelectors, Has.Length.EqualTo(8));
             Assert.That(page.Rows, Has.Length.EqualTo(3));
-            CollectionAssert.AreEqual(WeaponRoster.All.Select(weapon => weapon.Value),
+            CollectionAssert.AreEqual(ExpectedWeaponOrder.Select(weapon => weapon.Value),
                 page.WeaponSelectors.Select(selector => selector.name.Replace("Selector ", string.Empty)));
             CollectionAssert.AreEqual(selectorIds, page.WeaponSelectors.Select(selector => selector.GetEntityId()));
             CollectionAssert.AreEqual(rowIds, page.Rows.Select(row => row.GetEntityId()));
@@ -222,12 +227,97 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator AuthoredEquippedBaseStyleCannotSaveAgainWhenInvoked()
+        {
+            var repository = new MemoryRepository(SaveDataV1.CreateDefaults());
+            var session = MetaGameSession.EnsureExists(repository);
+            var root = new GameObject("Equipped Base Research Page");
+            var presenter = root.AddComponent<WeaponResearchPresenter>();
+            var page = CreateAuthoredPage(root.transform, out var selectors, out var rows);
+            presenter.ConfigureView(page);
+            presenter.InitializeAuthored(session, null);
+            presenter.SelectWeaponForTests(1);
+
+            Assert.That(rows[0].ActionButton.interactable, Is.False);
+            rows[0].ActionButton.onClick.Invoke();
+            Assert.That(repository.SaveCount, Is.Zero);
+            Object.Destroy(root);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator CrossAliasedAuthoredButtonFailsBeforePriorListenersOrSessionChange()
+        {
+            var repository = new MemoryRepository(SaveDataV1.CreateDefaults());
+            var session = MetaGameSession.EnsureExists(repository);
+            var root = new GameObject("Cross Aliased Research Page");
+            var presenter = root.AddComponent<WeaponResearchPresenter>();
+            var page = CreateAuthoredPage(root.transform, out var selectors, out var rows);
+            presenter.ConfigureView(page);
+            presenter.InitializeAuthored(session, null);
+            var ids = selectors.Select(selector => selector.GetEntityId()).Concat(rows.Select(row => row.GetEntityId())).ToArray();
+            var externalClicks = 0;
+            selectors[0].Button.onClick.AddListener(() => externalClicks++);
+            rows[0].Configure(rows[0].StageNameText, rows[0].StatusText, rows[0].EffectText, rows[0].RequirementText,
+                selectors[0].Button, rows[0].ActionText, rows[0].LockOverlay);
+            page.Configure(selectors, page.SelectedWeaponIcon, page.SelectedWeaponName, page.MasteryProgress, rows, page.FeedbackText);
+
+            Assert.That(() => presenter.InitializeAuthored(session, null), Throws.TypeOf<System.InvalidOperationException>());
+            selectors[0].Button.onClick.Invoke();
+            Assert.That(externalClicks, Is.EqualTo(1));
+            CollectionAssert.AreEqual(ids, selectors.Select(selector => selector.GetEntityId()).Concat(rows.Select(row => row.GetEntityId())));
+            Assert.That(repository.SaveCount, Is.Zero);
+            Object.Destroy(root);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ReinitializeAndSequentialResearchSaveExactlyPurchaseThenLoadout()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 99999;
+            data.WeaponMasteryPoints[WeaponId.GakgungShot.Value] = 10000;
+            var repository = new MemoryRepository(data);
+            var session = MetaGameSession.EnsureExists(repository);
+            var root = new GameObject("Research Save Order");
+            var presenter = root.AddComponent<WeaponResearchPresenter>();
+            var page = CreateAuthoredPage(root.transform, out _, out _);
+            presenter.ConfigureView(page);
+            presenter.InitializeAuthored(session, null);
+            presenter.InitializeAuthored(session, null);
+            presenter.SelectWeaponForTests(1);
+
+            presenter.ActivateStyleForTests(2);
+            Assert.That(repository.SaveCount, Is.Zero, "Path 2 cannot purchase before path 1.");
+            presenter.ActivateStyleForTests(1);
+            Assert.That(repository.SaveCount, Is.EqualTo(2));
+            presenter.ActivateStyleForTests(1);
+            Assert.That(repository.SaveCount, Is.EqualTo(2), "Equipped path 1 must not save again.");
+            presenter.ActivateStyleForTests(2);
+            Assert.That(repository.SaveCount, Is.EqualTo(4));
+            Object.Destroy(root);
+            yield return null;
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;
+            public int SaveCount { get; private set; }
             public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
             public LoadResult Load() => new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
-            public SaveResult Save(SaveDataV1 data) { stored = data.Copy(); return new SaveResult(true, SaveError.None); }
+            public SaveResult Save(SaveDataV1 data) { SaveCount++; stored = data.Copy(); return new SaveResult(true, SaveError.None); }
+        }
+
+        private static ResearchPageView CreateAuthoredPage(Transform parent, out LobbyWeaponSelectorCardView[] selectors,
+            out LobbyResearchRowView[] rows)
+        {
+            var page = parent.gameObject.AddComponent<ResearchPageView>();
+            selectors = ExpectedWeaponOrder.Select((weapon, index) => CreateSelector(parent, weapon, index)).ToArray();
+            rows = Enumerable.Range(0, 3).Select(index => CreateResearchRow(parent, index)).ToArray();
+            page.Configure(selectors, CreateImage("Selected Icon", parent), CreateText("Selected Name", parent),
+                CreateProgress("Mastery", parent), rows, CreateText("Feedback", parent));
+            return page;
         }
 
         private static Image ImageNamed(string name) => GameObject.Find(name).GetComponent<Image>();

@@ -52,6 +52,8 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
                 if (rows[index] == null || !rows[index].HasRequiredBindings) return false;
                 for (var other = index + 1; other < rows.Length; other++)
                     if (rows[index] == rows[other] || rows[index].ActionButton == rows[other].ActionButton) return false;
+                for (var selector = 0; selector < weaponSelectors.Length; selector++)
+                    if (rows[index].ActionButton == weaponSelectors[selector].Button) return false;
             }
 
             return true;
