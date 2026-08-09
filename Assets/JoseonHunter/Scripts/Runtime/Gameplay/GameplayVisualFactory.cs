@@ -304,6 +304,10 @@ namespace JoseonHunter.Runtime.Gameplay
             Color fallbackBackgroundColor,
             Color fallbackFillColor)
         {
+            var legacyBar = FindReusableLegacyBar(parent, runtimeName);
+            if (legacyBar != null)
+                return legacyBar;
+
             var prefabView = prefab == null ? null : prefab.GetComponent<WorldBarView>();
             if (prefabView != null && prefabView.HasRequiredBindings)
             {
@@ -351,13 +355,30 @@ namespace JoseonHunter.Runtime.Gameplay
             return fill;
         }
 
+        private static Transform FindReusableLegacyBar(Transform parent, string runtimeName)
+        {
+            if (parent == null) return null;
+            for (var index = 0; index < parent.childCount; index++)
+            {
+                var candidate = parent.GetChild(index);
+                if (candidate.name != runtimeName || !candidate.gameObject.activeSelf ||
+                    candidate.GetComponent<WorldBarView>() != null)
+                    continue;
+                var background = candidate.Find("Background");
+                var fill = candidate.Find("Fill");
+                if (background?.GetComponent<SpriteRenderer>() != null &&
+                    fill?.GetComponent<SpriteRenderer>() != null)
+                    return fill;
+            }
+            return null;
+        }
+
         private static WorldBarView FindValidDirectBar(Transform anchor)
         {
             if (anchor == null) return null;
             var bars = anchor.GetComponentsInChildren<WorldBarView>(true);
             for (var index = 0; index < bars.Length; index++)
-                if (bars[index].transform.parent == anchor && bars[index].gameObject.activeSelf &&
-                    bars[index].HasRequiredBindings)
+                if (bars[index].transform.parent == anchor && bars[index].HasRequiredBindings)
                     return bars[index];
             return null;
         }

@@ -262,6 +262,108 @@ namespace JoseonHunter.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator ResetRunReusesOneLegacyHealthBarWhenAuthoredAndLibraryBarsAreInvalid()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var player = composition.AuthoredPlayer;
+            var authoredBar = player.GetComponentInChildren<WorldBarView>(true);
+            var fillRendererField = typeof(WorldBarView).GetField(
+                "fillRenderer",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var libraryField = typeof(FirstPlayableController).GetField(
+                "gameplayVisualPrefabs",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(authoredBar, Is.Not.Null);
+            Assert.That(fillRendererField, Is.Not.Null);
+            Assert.That(libraryField, Is.Not.Null);
+
+            var originalFillRenderer = fillRendererField.GetValue(authoredBar);
+            var originalLibrary = libraryField.GetValue(controller);
+            var production = Resources.Load<GameplayVisualPrefabLibrary>("Gameplay/GameplayVisualPrefabLibrary");
+            var missingHealthBarLibrary = ScriptableObject.CreateInstance<GameplayVisualPrefabLibrary>();
+            missingHealthBarLibrary.Configure(
+                production.PlayerVisual,
+                production.EnemyVisual,
+                null,
+                production.WorldShieldBar,
+                production.ExperiencePickup,
+                production.YeopjeonPickup,
+                production.MagnetPickup);
+            var cameraId = composition.GameplayCamera.GetEntityId();
+            var fieldId = composition.BattlefieldRoot.GetEntityId();
+            var runtimeObjectsId = composition.RuntimeObjectsRoot.GetEntityId();
+            var runtimeSystemsId = composition.RuntimeSystemsRoot.GetEntityId();
+            var uiId = composition.UiRoot.GetEntityId();
+            var playerId = player.GetEntityId();
+
+            fillRendererField.SetValue(authoredBar, null);
+            libraryField.SetValue(controller, missingHealthBarLibrary);
+            LogAssert.Expect(
+                LogType.Warning,
+                "Authored WorldBar 'Health Bar' has invalid bindings. Disabling it before using the fallback for 'Health Bar'.");
+            LogAssert.Expect(
+                LogType.Warning,
+                "Gameplay visual prefab is missing for 'Health Bar'. Using the legacy visual fallback.");
+            try
+            {
+                controller.ResetRunForTests();
+                controller.ResetRunForTests();
+                yield return null;
+
+                Assert.That(composition.GameplayCamera.GetEntityId(), Is.EqualTo(cameraId));
+                Assert.That(composition.BattlefieldRoot.GetEntityId(), Is.EqualTo(fieldId));
+                Assert.That(composition.RuntimeObjectsRoot.GetEntityId(), Is.EqualTo(runtimeObjectsId));
+                Assert.That(composition.RuntimeSystemsRoot.GetEntityId(), Is.EqualTo(runtimeSystemsId));
+                Assert.That(composition.UiRoot.GetEntityId(), Is.EqualTo(uiId));
+                Assert.That(composition.AuthoredPlayer.GetEntityId(), Is.EqualTo(playerId));
+
+                var legacyBars = player.HealthBarAnchor.GetComponentsInChildren<Transform>(true)
+                    .Where(candidate => candidate.parent == player.HealthBarAnchor &&
+                                        candidate.name == "Health Bar" && candidate.gameObject.activeInHierarchy)
+                    .ToArray();
+                Assert.That(legacyBars, Has.Length.EqualTo(1));
+                Assert.That(legacyBars[0].GetComponent<WorldBarView>(), Is.Null);
+                Assert.That(legacyBars[0].Find("Background")?.GetComponent<SpriteRenderer>(), Is.Not.Null);
+                Assert.That(legacyBars[0].Find("Fill")?.GetComponent<SpriteRenderer>(), Is.Not.Null);
+            }
+            finally
+            {
+                fillRendererField.SetValue(authoredBar, originalFillRenderer);
+                libraryField.SetValue(controller, originalLibrary);
+                Object.Destroy(missingHealthBarLibrary);
+                controller.ResetRunForTests();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ResetRunDoesNotReplaceAnIntentionallyInactiveValidAuthoredHealthBar()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var player = controller.GetComponent<GameplaySceneComposition>().AuthoredPlayer;
+            var authoredBar = player.GetComponentInChildren<WorldBarView>(true);
+            Assert.That(authoredBar, Is.Not.Null);
+            authoredBar.gameObject.SetActive(false);
+            try
+            {
+                controller.ResetRunForTests();
+
+                Assert.That(authoredBar.gameObject.activeSelf, Is.False);
+                Assert.That(player.HealthBarAnchor.GetComponentsInChildren<WorldBarView>(true)
+                    .Count(bar => bar.transform.parent == player.HealthBarAnchor), Is.EqualTo(1));
+            }
+            finally
+            {
+                authoredBar.gameObject.SetActive(true);
+                controller.ResetRunForTests();
+            }
+        }
+
         private static IEnumerator LoadGameplay()
         {
             SceneManager.LoadScene("Gameplay");
