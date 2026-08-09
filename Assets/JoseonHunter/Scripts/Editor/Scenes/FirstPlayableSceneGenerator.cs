@@ -69,9 +69,9 @@ namespace JoseonHunter.Editor.Scenes
                 RequireOrCreateConnectedHealthBar(playerView.HealthBarAnchor, library.WorldHealthBar);
 
                 var uiRoot = RequireOrCreateRoot(scene, "First Playable UI");
-                RequireOrAdd<FirstPlayableUiBootstrap>(uiRoot);
+                RequireSingleUiBootstrap(scene, uiRoot);
                 var eventSystemRoot = RequireOrCreateRoot(scene, "EventSystem");
-                RequireSingleEventSystem(eventSystemRoot);
+                RequireSingleEventSystem(scene, eventSystemRoot);
 
                 ConfigureControllerAssets(controller, library);
                 composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, playerView, uiRoot);
@@ -155,19 +155,44 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void EnsureAuthoringPreview(Transform previewRoot)
         {
-            if (previewRoot.childCount != 0) return;
             var presentation = AssetDatabase.LoadAssetAtPath<BattlefieldPresentationLibrary>(BattlefieldPresentationPath);
-            if (presentation == null || presentation.ChunkPrefab == null) return;
+            if (presentation == null || presentation.ChunkPrefab == null || presentation.GroundTile == null)
+                throw new InvalidOperationException("Battlefield presentation library is missing its chunk prefab or ground tile.");
+            var chunks = previewRoot.GetComponentsInChildren<BattlefieldChunkView>(true);
+            if (chunks.Length != 0 && chunks.Length != BattlefieldChunkLayout.ActiveChunkCount)
+                throw new InvalidOperationException("Authoring Preview must contain exactly nine BattlefieldChunkView instances.");
+            if (chunks.Length == 0)
+            {
+                chunks = new BattlefieldChunkView[BattlefieldChunkLayout.ActiveChunkCount];
+                var index = 0;
+                for (var y = -1; y <= 1; y++)
+                for (var x = -1; x <= 1; x++)
+                {
+                    var chunk = PrefabUtility.InstantiatePrefab(
+                        presentation.ChunkPrefab.gameObject,
+                        previewRoot.gameObject.scene) as GameObject;
+                    if (chunk == null) throw new InvalidOperationException("Unity could not instantiate the battlefield chunk preview.");
+                    chunk.transform.SetParent(previewRoot, false);
+                    chunks[index++] = chunk.GetComponent<BattlefieldChunkView>();
+                }
+            }
+
+            if (chunks.Any(chunk => chunk == null ||
+                                    PrefabUtility.GetCorrespondingObjectFromOriginalSource(chunk.gameObject) !=
+                                    presentation.ChunkPrefab.gameObject))
+                throw new InvalidOperationException("Authoring Preview must use connected production BattlefieldChunkView instances.");
+
+            var coordinateIndex = 0;
             for (var y = -1; y <= 1; y++)
             for (var x = -1; x <= 1; x++)
             {
-                var chunk = PrefabUtility.InstantiatePrefab(
-                    presentation.ChunkPrefab.gameObject,
-                    previewRoot.gameObject.scene) as GameObject;
-                if (chunk == null) throw new InvalidOperationException("Unity could not instantiate the battlefield chunk preview.");
-                chunk.name = $"Preview Chunk {x + 1},{y + 1}";
-                chunk.transform.SetParent(previewRoot, false);
-                chunk.transform.localPosition = new Vector3(x * 12f, y * 12f, 0f);
+                chunks[coordinateIndex++].Assign(
+                    new Vector2Int(x, y),
+                    presentation.GroundTile,
+                    presentation.AlternateGroundTile,
+                    presentation.Decorations,
+                    presentation.GroundTile,
+                    0x4A4F5345);
             }
         }
 
@@ -188,12 +213,17 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void RequireOrCreateConnectedHealthBar(Transform anchor, GameObject prefab)
         {
-            var matches = anchor.GetComponentsInChildren<WorldBarView>(true)
-                .Where(view => PrefabUtility.GetCorrespondingObjectFromOriginalSource(view.gameObject) == prefab).ToArray();
-            if (matches.Length > 1) throw new InvalidOperationException("Han Yeonhwa has duplicate connected WorldHealthBar instances.");
-            if (matches.Length == 1) return;
-            if (anchor.GetComponentsInChildren<WorldBarView>(true).Length != 0)
-                throw new InvalidOperationException("Han Yeonhwa has a WorldHealthBar linked to an unexpected prefab.");
+            var allBars = anchor.GetComponentsInChildren<WorldBarView>(true);
+            if (allBars.Length > 1)
+                throw new InvalidOperationException("Han Yeonhwa has duplicate or nested WorldHealthBar instances.");
+            if (allBars.Length == 1)
+            {
+                var existing = allBars[0];
+                if (existing.transform.parent != anchor ||
+                    PrefabUtility.GetCorrespondingObjectFromOriginalSource(existing.gameObject) != prefab)
+                    throw new InvalidOperationException("Han Yeonhwa WorldHealthBar must be a direct connected child of HealthBarAnchor.");
+                return;
+            }
             var instance = PrefabUtility.InstantiatePrefab(prefab, anchor) as GameObject;
             if (instance == null) throw new InvalidOperationException("Unity could not instantiate WorldHealthBar.prefab.");
             instance.name = "Health Bar";
@@ -205,14 +235,32 @@ namespace JoseonHunter.Editor.Scenes
                 throw new InvalidOperationException($"{objectName} must remain a connected instance of {AssetDatabase.GetAssetPath(expectedPrefab)}.");
         }
 
-        private static void RequireSingleEventSystem(GameObject root)
+        private static void RequireSingleUiBootstrap(Scene scene, GameObject root)
         {
-            RequireOrAdd<EventSystem>(root);
+            var bootstraps = scene.GetRootGameObjects().SelectMany(candidate =>
+                candidate.GetComponentsInChildren<FirstPlayableUiBootstrap>(true)).ToArray();
+            if (bootstraps.Length > 1 || (bootstraps.Length == 1 && bootstraps[0].gameObject != root))
+                throw new InvalidOperationException("Gameplay scene contains an unexpected FirstPlayableUiBootstrap.");
+            if (bootstraps.Length == 0) root.AddComponent<FirstPlayableUiBootstrap>();
+        }
+
+        private static void RequireSingleEventSystem(Scene scene, GameObject root)
+        {
+            var eventSystems = scene.GetRootGameObjects().SelectMany(candidate =>
+                candidate.GetComponentsInChildren<EventSystem>(true)).ToArray();
+            if (eventSystems.Length > 1 || (eventSystems.Length == 1 && eventSystems[0].gameObject != root))
+                throw new InvalidOperationException("Gameplay scene contains an unexpected EventSystem.");
+            if (eventSystems.Length == 0) root.AddComponent<EventSystem>();
             var inputModuleType = Type.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
             if (inputModuleType == null) throw new InvalidOperationException("InputSystemUIInputModule is unavailable.");
             var modules = root.GetComponents<BaseInputModule>();
-            if (modules.Length > 1) throw new InvalidOperationException("EventSystem contains duplicate input modules.");
-            if (modules.Length == 0) root.AddComponent(inputModuleType);
+            if (modules.Length == 0)
+            {
+                root.AddComponent(inputModuleType);
+                return;
+            }
+            if (modules.Length != 1 || modules[0].GetType() != inputModuleType)
+                throw new InvalidOperationException("EventSystem requires exactly one InputSystemUIInputModule and no other input module.");
         }
 
         private static void ConfigureControllerAssets(FirstPlayableController controller, GameplayVisualPrefabLibrary library)
@@ -227,6 +275,25 @@ namespace JoseonHunter.Editor.Scenes
             AssignSprite(serialized, "coinSprite", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png");
             AssignSprite(serialized, "treasureChestSprite", "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/treasure_chest.png");
             AssignSprite(serialized, "battlefieldTilePrimary", "Assets/JoseonHunter/Art/World/Runtime/Battlefield/occult_battlefield.png");
+            AssignSpritesIfEmpty(serialized, "enemySprites", new[]
+            {
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/plague_rat.png",
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/bandit.png",
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/dokkaebi.png",
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/sakkat_specter.png",
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Enemies/vengeful_spirit.png"
+            });
+            AssignSpritesIfEmpty(serialized, "battlefieldDecals", new[]
+            {
+                "Assets/JoseonHunter/Art/World/Runtime/Battlefield/ward_paper_scraps.png",
+                "Assets/JoseonHunter/Art/World/Runtime/Battlefield/shrine_roof_fragment.png",
+                "Assets/JoseonHunter/Art/World/Runtime/Battlefield/dry_reed_clump.png",
+                "Assets/JoseonHunter/Art/World/Runtime/Battlefield/ritual_stone.png"
+            });
+            var geumjulVisuals = serialized.FindProperty("jangseungGeumjulVisuals");
+            if (geumjulVisuals.objectReferenceValue == null)
+                geumjulVisuals.objectReferenceValue = AssetDatabase.LoadAssetAtPath<JangseungGeumjulVisualLibrary>(
+                    "Assets/JoseonHunter/Resources/Presentation/JangseungGeumjulVisualLibrary.asset");
             var catalog = serialized.FindProperty("weaponCatalog");
             if (catalog.objectReferenceValue == null)
                 catalog.objectReferenceValue = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>("Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset");
@@ -244,6 +311,17 @@ namespace JoseonHunter.Editor.Scenes
             var property = serialized.FindProperty(propertyName);
             if (property.objectReferenceValue == null)
                 property.objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        private static void AssignSpritesIfEmpty(SerializedObject serialized, string propertyName, string[] paths)
+        {
+            var property = serialized.FindProperty(propertyName);
+            if (property.arraySize != 0 && Enumerable.Range(0, property.arraySize)
+                    .Any(index => property.GetArrayElementAtIndex(index).objectReferenceValue != null))
+                return;
+            property.arraySize = paths.Length;
+            for (var index = 0; index < paths.Length; index++)
+                property.GetArrayElementAtIndex(index).objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(paths[index]);
         }
     }
 }
