@@ -29,6 +29,11 @@ namespace JoseonHunter.Tests.EditMode
                 var uiRoot = FindSingleRoot(scene, "First Playable UI");
                 var eventSystemRoot = FindSingleRoot(scene, "EventSystem");
                 Assert.That(cameraRoot, Is.Not.Null);
+                var camera = cameraRoot.GetComponent<Camera>();
+                Assert.That(camera, Is.Not.Null);
+                Assert.That(camera.orthographic, Is.True);
+                Assert.That(camera.orthographicSize,
+                    Is.EqualTo(CombatVisualScaleProfile.MobilePortrait.CameraOrthographicSize));
                 Assert.That(firstPlayable, Is.Not.Null);
                 Assert.That(uiRoot, Is.Not.Null);
                 Assert.That(eventSystemRoot, Is.Not.Null);
@@ -94,7 +99,10 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(firstPlayable.GetComponents<GameFlowCoordinator>(), Has.Length.EqualTo(1));
                 Assert.That(AssetDatabase.LoadAssetAtPath<GameplayVisualPrefabLibrary>(
                     GameplayVisualPrefabBuilder.LibraryAssetPath), Is.Not.Null);
-                var controllerProperties = new SerializedObject(firstPlayable.GetComponent<FirstPlayableController>());
+                var controller = firstPlayable.GetComponent<FirstPlayableController>();
+                var controllerProperties = new SerializedObject(controller);
+                Assert.That(controllerProperties.FindProperty("sceneComposition").objectReferenceValue,
+                    Is.EqualTo(composition));
                 Assert.That(controllerProperties.FindProperty("enemySprites").arraySize, Is.GreaterThan(0));
                 Assert.That(controllerProperties.FindProperty("battlefieldDecals").arraySize, Is.GreaterThan(0));
                 Assert.That(controllerProperties.FindProperty("jangseungGeumjulVisuals").objectReferenceValue, Is.Not.Null);

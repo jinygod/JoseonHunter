@@ -2261,7 +2261,7 @@ Camera:
   far clip plane: 1000
   field of view: 60
   orthographic: 1
-  orthographic size: 6.25
+  orthographic size: 18
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -2441,6 +2441,7 @@ MonoBehaviour:
   motionLibrary: {fileID: 11400000, guid: aee251db328bfae44b7fc5980b679900, type: 2}
   jangseungGeumjulVisuals: {fileID: 11400000, guid: 8f260d29299e8cd4e9b4e07244e15ff6, type: 2}
   gameplayVisualPrefabs: {fileID: 11400000, guid: aa9d35978d88e464a961a7b878d26f49, type: 2}
+  sceneComposition: {fileID: 1589757388}
 --- !u!4 &1589757387
 Transform:
   m_ObjectHideFlags: 0

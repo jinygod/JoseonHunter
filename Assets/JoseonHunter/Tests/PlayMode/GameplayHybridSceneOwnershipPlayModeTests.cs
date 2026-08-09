@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -33,7 +34,11 @@ namespace JoseonHunter.Tests.PlayMode
             var playerPosition = player.transform.localPosition;
             var playerRotation = player.transform.localRotation;
             var playerScale = player.transform.localScale;
-            var canvasCount = Object.FindObjectsByType<Canvas>().Length;
+            var canvasIds = ui.GetComponentsInChildren<Canvas>(true)
+                .Select(canvas => canvas.GetEntityId())
+                .OrderBy(id => id)
+                .ToArray();
+            Assert.That(ui.GetComponents<FirstPlayableUiBootstrap>(), Has.Length.EqualTo(1));
 
             camera.transform.position = new Vector3(17f, -9f, -10f);
             player.transform.localPosition = new Vector3(5f, 4f, 0f);
@@ -55,7 +60,13 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(player.transform.localScale, Is.EqualTo(playerScale));
             Assert.That(player.GetComponentInChildren<WorldBarView>(true).GetEntityId(), Is.EqualTo(healthBar.GetEntityId()));
             Assert.That(Object.FindObjectsByType<FirstPlayableController>(), Has.Length.EqualTo(1));
-            Assert.That(Object.FindObjectsByType<Canvas>(), Has.Length.EqualTo(canvasCount));
+            var resetCanvasIds = composition.UiRoot.GetComponentsInChildren<Canvas>(true)
+                .Select(canvas => canvas.GetEntityId())
+                .OrderBy(id => id)
+                .ToArray();
+            Assert.That(resetCanvasIds, Has.Length.EqualTo(canvasIds.Length));
+            CollectionAssert.AreEqual(canvasIds, resetCanvasIds);
+            Assert.That(composition.UiRoot.GetComponents<FirstPlayableUiBootstrap>(), Has.Length.EqualTo(1));
         }
 
         [UnityTest]

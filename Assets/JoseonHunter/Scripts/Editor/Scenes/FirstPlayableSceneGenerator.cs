@@ -75,6 +75,7 @@ namespace JoseonHunter.Editor.Scenes
 
                 ConfigureControllerAssets(controller, library);
                 composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, playerView, uiRoot);
+                ConfigureControllerSceneComposition(controller, composition);
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene, GameplayScenePath))
                     throw new InvalidOperationException($"Unity failed to save {GameplayScenePath}.");
@@ -147,7 +148,7 @@ namespace JoseonHunter.Editor.Scenes
         {
             if (camera.transform.position != Vector3.zero || camera.orthographic) return;
             camera.orthographic = true;
-            camera.orthographicSize = 6.25f;
+            camera.orthographicSize = CombatVisualScaleProfile.MobilePortrait.CameraOrthographicSize;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(.075f, .07f, .08f);
             camera.transform.position = new Vector3(0f, 0f, -10f);
@@ -304,6 +305,22 @@ namespace JoseonHunter.Editor.Scenes
                 throw new InvalidOperationException("Gameplay controller references a different visual prefab library.");
             visuals.objectReferenceValue = library;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void ConfigureControllerSceneComposition(
+            FirstPlayableController controller,
+            GameplaySceneComposition composition)
+        {
+            var serialized = new SerializedObject(controller);
+            var sceneComposition = serialized.FindProperty("sceneComposition");
+            if (sceneComposition.objectReferenceValue != null && sceneComposition.objectReferenceValue != composition)
+                throw new InvalidOperationException(
+                    "Gameplay controller references a different scene composition.");
+            if (sceneComposition.objectReferenceValue == null)
+            {
+                sceneComposition.objectReferenceValue = composition;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         private static void AssignSprite(SerializedObject serialized, string propertyName, string path)
