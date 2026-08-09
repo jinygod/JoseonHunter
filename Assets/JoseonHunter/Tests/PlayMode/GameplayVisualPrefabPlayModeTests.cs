@@ -253,6 +253,7 @@ namespace JoseonHunter.Tests.PlayMode
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(libraryField, Is.Not.Null);
             libraryField.SetValue(controller, incompleteLibrary);
+            UseLegacyCompositionFallback();
 
             LogAssert.Expect(
                 LogType.Warning,
@@ -290,6 +291,7 @@ namespace JoseonHunter.Tests.PlayMode
                 production.YeopjeonPickup,
                 production.MagnetPickup);
             SetVisualLibrary(incompleteLibrary);
+            UseLegacyCompositionFallback();
 
             LogAssert.Expect(
                 LogType.Warning,
@@ -445,6 +447,15 @@ namespace JoseonHunter.Tests.PlayMode
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(libraryField, Is.Not.Null);
             libraryField.SetValue(controller, library);
+        }
+
+        private void UseLegacyCompositionFallback()
+        {
+            var field = typeof(FirstPlayableController).GetField(
+                "sceneComposition",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+            field.SetValue(controller, null);
         }
 
         private static void AssertBossShadowScale(CombatantVisualView view, Vector3 authoredScale)

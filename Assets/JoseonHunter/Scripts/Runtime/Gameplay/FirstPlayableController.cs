@@ -43,6 +43,8 @@ namespace JoseonHunter.Runtime.Gameplay
         [Header("Editable gameplay visual prefabs")]
         [SerializeField] private GameplayVisualPrefabLibrary gameplayVisualPrefabs;
 
+        [SerializeField] private GameplaySceneComposition sceneComposition;
+
         private readonly List<EnemyState> enemies = new List<EnemyState>();
         private readonly List<EnemyState> separationEnemies = new List<EnemyState>();
         private readonly List<EnemySeparationAgent> separationAgents = new List<EnemySeparationAgent>();
@@ -815,6 +817,8 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             GameplayReadySignal.Reset();
             flow = GetComponent<GameFlowCoordinator>() ?? gameObject.AddComponent<GameFlowCoordinator>();
+            sceneComposition = sceneComposition != null ? sceneComposition : GetComponent<GameplaySceneComposition>();
+            if (HasAuthoredSceneComposition) sceneComposition.CaptureAuthoredState();
             Application.targetFrameRate = 60;
             SetupCamera();
             CreateSharedSprite();
@@ -925,6 +929,12 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void SetupCamera()
         {
+            if (HasAuthoredSceneComposition)
+            {
+                gameplayCamera = sceneComposition.GameplayCamera;
+                return;
+            }
+
             gameplayCamera = Camera.main;
             if (gameplayCamera == null)
             {
@@ -939,6 +949,11 @@ namespace JoseonHunter.Runtime.Gameplay
             gameplayCamera.backgroundColor = new Color(0.075f, 0.07f, 0.08f);
             gameplayCamera.clearFlags = CameraClearFlags.SolidColor;
         }
+
+        private bool HasAuthoredSceneComposition => sceneComposition != null && sceneComposition.IsComplete;
+        private Transform ResetScopedRoot => HasAuthoredSceneComposition
+            ? sceneComposition.RuntimeSystemsRoot
+            : runtimeObjects;
 
         private void CreateSharedSprite()
         {
@@ -964,7 +979,9 @@ namespace JoseonHunter.Runtime.Gameplay
 
         private void CreateField()
         {
-            var field = transform.Find("FlatField");
+            var field = HasAuthoredSceneComposition
+                ? sceneComposition.BattlefieldRoot
+                : transform.Find("FlatField");
             if (field == null)
             {
                 field = new GameObject("FlatField").transform;
@@ -1011,13 +1028,22 @@ namespace JoseonHunter.Runtime.Gameplay
             if (combatDamageService != null) combatDamageService.DamageConfirmed -= OnCombatDamageConfirmed;
             weaponRuntime?.Dispose();
             weaponRuntime = null;
-            if (runtimeObjects != null)
+            if (HasAuthoredSceneComposition)
             {
-                Destroy(runtimeObjects.gameObject);
+                sceneComposition.ClearRunScopedChildren();
+                sceneComposition.RestoreAuthoredState();
+                runtimeObjects = sceneComposition.RuntimeObjectsRoot;
             }
+            else
+            {
+                if (runtimeObjects != null)
+                {
+                    Destroy(runtimeObjects.gameObject);
+                }
 
-            runtimeObjects = new GameObject("RuntimeObjects").transform;
-            runtimeObjects.SetParent(transform, false);
+                runtimeObjects = new GameObject("RuntimeObjects").transform;
+                runtimeObjects.SetParent(transform, false);
+            }
             for (var enemyIndex = 0; enemyIndex < enemies.Count; enemyIndex++)
                 enemies[enemyIndex].EnemyAttackPresenter?.Dispose();
             enemies.Clear();
@@ -1103,8 +1129,11 @@ namespace JoseonHunter.Runtime.Gameplay
             level = 1;
             experienceToNext = ExperienceCurve.GetThresholdForNextLevel(level);
             registeredWeaponIds.Clear();
-            weaponMasks.Load(weaponCatalog);
-            RegisterCatalogWeapons();
+            if (weaponCatalog != null)
+            {
+                weaponMasks.Load(weaponCatalog);
+                RegisterCatalogWeapons();
+            }
             coins = 0;
             kills = 0;
             nextCombatTargetRuntimeId = 1;
@@ -1130,17 +1159,32 @@ namespace JoseonHunter.Runtime.Gameplay
 
             visualFactory = GetGameplayVisualFactory();
 
-            player = GetGameplayVisualFactory().CreateCombatant(
-                "Han Yeonhwa",
-                playerSprite != null ? playerSprite : solidSprite,
-                Vector2.zero,
-                10,
-                runtimeObjects,
-                MotionWeight.Light,
-                0f,
-                out playerVisualRig,
-                CombatantVisualRole.Player);
-            player.transform.localScale = Vector3.one * VisualScale.PlayerScale;
+            if (HasAuthoredSceneComposition)
+            {
+                player = GetGameplayVisualFactory().BindAuthoredCombatant(
+                    sceneComposition.AuthoredPlayer.gameObject,
+                    "Han Yeonhwa",
+                    playerSprite != null ? playerSprite : solidSprite,
+                    10,
+                    MotionWeight.Light,
+                    0f,
+                    out playerVisualRig,
+                    CombatantVisualRole.Player);
+            }
+            else
+            {
+                player = GetGameplayVisualFactory().CreateCombatant(
+                    "Han Yeonhwa",
+                    playerSprite != null ? playerSprite : solidSprite,
+                    Vector2.zero,
+                    10,
+                    runtimeObjects,
+                    MotionWeight.Light,
+                    0f,
+                    out playerVisualRig,
+                    CombatantVisualRole.Player);
+                player.transform.localScale = Vector3.one * VisualScale.PlayerScale;
+            }
             playerRenderer = playerVisualRig.Renderer;
             playerHealthFill = GetGameplayVisualFactory().CreateHealthBar(
                 player.transform,
@@ -1154,17 +1198,18 @@ namespace JoseonHunter.Runtime.Gameplay
 
             geumjulPresenter = new GameObject("Geumjul Presentation")
                 .AddComponent<GeumjulTrailPresenter>();
-            geumjulPresenter.transform.SetParent(runtimeObjects, false);
-            geumjulPresenter.Configure(visualLibrary, runtimeObjects, 4);
-            bossTelegraphPresenter = new BossTelegraphPresenter(runtimeObjects);
+            geumjulPresenter.transform.SetParent(ResetScopedRoot, false);
+            geumjulPresenter.Configure(visualLibrary, ResetScopedRoot, 4);
+            bossTelegraphPresenter = new BossTelegraphPresenter(ResetScopedRoot);
             var stageAttackObject = new GameObject("Stage Attack Pools");
-            stageAttackObject.transform.SetParent(runtimeObjects, false);
+            stageAttackObject.transform.SetParent(ResetScopedRoot, false);
             stageProjectilePool = stageAttackObject.AddComponent<EnemyProjectilePool>();
             stageProjectilePool.Configure(48, solidSprite);
             stageHazardPool = stageAttackObject.AddComponent<StageHazardPool>();
             stageHazardPool.Configure(24, solidSprite);
 
-            gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
+            if (!HasAuthoredSceneComposition)
+                gameplayCamera.transform.position = new Vector3(0f, 0f, -10f);
             cameraFollowVelocity = Vector3.zero;
 #if UNITY_INCLUDE_TESTS
             AppliedUpgradeCount = 0;
@@ -1605,26 +1650,26 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 state.EnemyAttack = new EnemyAttackController(
                     EnemyAttackKind.WarnedSingleProjectile, 1.1f);
-                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(ResetScopedRoot);
             }
             else if (archetypeProfile.Archetype == EnemyArchetype.TombArcherGhost ||
                      archetypeProfile.Archetype == EnemyArchetype.RedLanternWraith)
             {
                 state.EnemyAttack = new EnemyAttackController(
                     EnemyAttackKind.WarnedLineProjectile, .65f);
-                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(ResetScopedRoot);
             }
             else if (archetypeProfile.Archetype == EnemyArchetype.CurseShaman)
             {
                 state.EnemyAttack = new EnemyAttackController(
                     EnemyAttackKind.PredictedCurseField, .8f);
-                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(ResetScopedRoot);
             }
             else if (archetypeProfile.Archetype == EnemyArchetype.GraveAmbusherElite)
             {
                 state.EnemyAttack = new EnemyAttackController(
                     EnemyAttackKind.WarnedBurrowEmergence, .9f);
-                state.EnemyAttackPresenter = new EnemyAttackPresenter(runtimeObjects);
+                state.EnemyAttackPresenter = new EnemyAttackPresenter(ResetScopedRoot);
             }
             state.CombatTarget = new PrototypeCombatTarget(this, state, nextCombatTargetRuntimeId++);
             combatTargets.Register(state.CombatTarget);
@@ -2710,7 +2755,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 experienceSprite != null ? experienceSprite : solidSprite,
                 player.transform.position,
                 14,
-                runtimeObjects);
+                ResetScopedRoot);
             experienceAbsorbFlash = flashObject.GetComponent<SpriteRenderer>();
             experienceAbsorbFlash.enabled = false;
             experienceAbsorbFlashTimer = 0f;
