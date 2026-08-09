@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby;
+using JoseonHunter.Presentation.UI.Lobby.Views;
+using JoseonHunter.Domain.Progression;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -16,7 +18,6 @@ namespace JoseonHunter.Editor.Scenes
     public static class LobbySceneBuilder
     {
         private const string ScenePath = "Assets/JoseonHunter/Scenes/Lobby.unity";
-        private const string PrefabPath = "Assets/JoseonHunter/Prefabs/UI/LobbyShell.prefab";
         private const string BackgroundPath = "Assets/JoseonHunter/Art/UI/Lobby/lobby_courtyard.png";
         private const string CoinSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png";
@@ -28,50 +29,225 @@ namespace JoseonHunter.Editor.Scenes
         public static void Build()
         {
             RefuseDirtyLobby();
-            Directory.CreateDirectory(Path.GetDirectoryName(PrefabPath) ?? string.Empty);
+            LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
             var scene = FindLoadedLobby();
-            var openedForBuild = !scene.IsValid();
-            if (openedForBuild) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
-            var previousActive = SceneManager.GetActiveScene();
-
+            var opened = !scene.IsValid();
+            if (opened) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
             try
             {
-                SceneManager.SetActiveScene(scene);
-                foreach (var root in scene.GetRootGameObjects()) UnityEngine.Object.DestroyImmediate(root);
-
-                var cameraObject = new GameObject("Lobby Camera", typeof(Camera),
-                    typeof(UniversalAdditionalCameraData), typeof(AudioListener));
-                SceneManager.MoveGameObjectToScene(cameraObject, scene);
-                var camera = cameraObject.GetComponent<Camera>();
-                camera.clearFlags = CameraClearFlags.SolidColor;
-                camera.backgroundColor = new Color(.035f, .025f, .018f, 1f);
-                camera.orthographic = true;
-                camera.transform.position = new Vector3(0f, 0f, -10f);
-
-                var canvasObject = new GameObject("Lobby Canvas", typeof(RectTransform), typeof(Canvas),
-                    typeof(CanvasScaler), typeof(GraphicRaycaster), typeof(LobbyBootstrap));
-                SceneManager.MoveGameObjectToScene(canvasObject, scene);
-                var bootstrap = canvasObject.GetComponent<LobbyBootstrap>();
-                bootstrap.BuildShell();
-
-                AssignSprites(canvasObject);
-                var eventSystem = UnityEngine.Object.FindAnyObjectByType<EventSystem>();
-                if (eventSystem == null) throw new InvalidOperationException("Lobby EventSystem was not created.");
-                eventSystem.name = "EventSystem";
-                if (eventSystem.gameObject.scene != scene) SceneManager.MoveGameObjectToScene(eventSystem.gameObject, scene);
-
-                PrefabUtility.SaveAsPrefabAssetAndConnect(canvasObject, PrefabPath, InteractionMode.AutomatedAction);
+                var canvas = scene.GetRootGameObjects().SingleOrDefault(root => root.name == "Lobby Canvas");
+                if (canvas == null) throw new InvalidOperationException("Lobby Canvas is missing; refusing an implicit scene repair.");
+                if (PrefabUtility.IsPartOfPrefabInstance(canvas))
+                    PrefabUtility.UnpackPrefabInstance(canvas, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+                ComposeAuthoredHierarchy(canvas);
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene, ScenePath))
-                    throw new InvalidOperationException("Could not save Lobby scene.");
+                    throw new InvalidOperationException("Could not save the authored Lobby scene.");
                 AssetDatabase.SaveAssets();
-                Debug.Log("JoseonHunter Lobby presentation built.");
+                Validate();
             }
             finally
             {
-                if (previousActive.IsValid() && previousActive.isLoaded) SceneManager.SetActiveScene(previousActive);
-                if (openedForBuild && scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene, true);
+                if (opened && scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        [MenuItem("JoseonHunter/Validation/Validate Lobby")]
+        public static void Validate()
+        {
+            var scene = FindLoadedLobby();
+            var opened = !scene.IsValid();
+            if (opened) scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                RequireExactlyOne(roots, "Lobby Camera");
+                var canvas = RequireExactlyOne(roots, "Lobby Canvas");
+                RequireExactlyOne(roots, "EventSystem");
+                var safeArea = canvas.transform.Find("Safe Area");
+                if (safeArea == null) throw new InvalidOperationException("Lobby Safe Area is missing.");
+                var expected = new[] { "Background", "Common Header", "Home Page", "Training Page", "Patrol Page", "Research Page", "Settings Overlay" };
+                if (!safeArea.Cast<Transform>().Select(child => child.name).OrderBy(name => name)
+                        .SequenceEqual(expected.OrderBy(name => name)))
+                    throw new InvalidOperationException("Lobby Safe Area does not have the required authored children.");
+                if (canvas.GetComponentsInChildren<LobbyRootView>(true).Length != 1 ||
+                    !canvas.GetComponentInChildren<LobbyRootView>(true).HasRequiredBindings)
+                    throw new InvalidOperationException("LobbyRootView is incomplete.");
+                if (canvas.GetComponentsInChildren<Transform>(true)
+                    .Sum(item => GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(item.gameObject)) != 0)
+                    throw new InvalidOperationException("Lobby contains missing scripts.");
+            }
+            finally
+            {
+                if (opened && scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        public static void ValidateInBatchMode()
+        {
+            try { Validate(); EditorApplication.Exit(0); }
+            catch (Exception exception) { Debug.LogException(exception); EditorApplication.Exit(1); }
+        }
+
+        private static GameObject RequireExactlyOne(GameObject[] roots, string name)
+        {
+            var matches = roots.Where(root => root.name == name).ToArray();
+            if (matches.Length != 1) throw new InvalidOperationException($"Expected exactly one Lobby root named '{name}'.");
+            return matches[0];
+        }
+
+        private static void ComposeAuthoredHierarchy(GameObject canvas)
+        {
+            var safeArea = canvas.transform.Find("Safe Area") as RectTransform;
+            if (safeArea == null) throw new InvalidOperationException("Lobby Safe Area is missing.");
+            var background = canvas.transform.Find("Lobby Background");
+            var header = safeArea.Find("Header");
+            var stage = safeArea.Find("Stage Content");
+            var settings = safeArea.Find("Audio Settings Overlay");
+            if (background == null || header == null || stage == null || settings == null)
+                throw new InvalidOperationException("Legacy Lobby bindings are incomplete; refusing a lossy migration.");
+            var patrol = stage.Find("Patrol Panel");
+            var training = stage.Find("Common Training Panel");
+            var research = stage.Find("Weapon Research Panel");
+            if (patrol == null || training == null || research == null)
+                throw new InvalidOperationException("Legacy Lobby detail pages are incomplete; refusing a lossy migration.");
+
+            var moduleRoot = "Assets/JoseonHunter/Prefabs/UI/Lobby/Modules/";
+            var commonHeader = InstantiateModule(moduleRoot + "CommonHeader.prefab", safeArea, "Common Header");
+            header.SetParent(commonHeader.transform, false);
+            background.SetParent(safeArea, false); background.name = "Background";
+            patrol.SetParent(safeArea, false); patrol.name = "Patrol Page";
+            training.SetParent(safeArea, false); training.name = "Training Page";
+            research.SetParent(safeArea, false); research.name = "Research Page";
+            settings.name = "Settings Overlay";
+            UnityEngine.Object.DestroyImmediate(stage.gameObject);
+            var navigation = safeArea.Find("Bottom Navigation");
+            if (navigation != null)
+            {
+                navigation.SetParent(canvas.transform, false);
+                navigation.name = "Lobby Navigation Binding";
+            }
+
+            var home = new GameObject("Home Page", typeof(RectTransform), typeof(LobbyHomeView), typeof(LobbyHomePresenter));
+            home.transform.SetParent(safeArea, false);
+            var homeView = home.GetComponent<LobbyHomeView>();
+            var cards = new[]
+            {
+                InstantiateModule(moduleRoot + "HomeMenuCard.prefab", home.transform, "Training Card").GetComponent<LobbyMenuCardView>(),
+                InstantiateModule(moduleRoot + "HomeMenuCard.prefab", home.transform, "Patrol Card").GetComponent<LobbyMenuCardView>(),
+                InstantiateModule(moduleRoot + "HomeMenuCard.prefab", home.transform, "Research Card").GetComponent<LobbyMenuCardView>()
+            };
+            var stageText = CreateText("Stage", home.transform);
+            var difficultyText = CreateText("Difficulty", home.transform);
+            var weaponText = CreateText("Starting Weapon", home.transform);
+            var weaponIcon = CreateImage("Starting Weapon Icon", home.transform);
+            homeView.Configure(stageText, difficultyText, weaponText, weaponIcon, cards[0], cards[1], cards[2]);
+            var headers = new[] { training, patrol, research }.Select(page =>
+                InstantiateModule(moduleRoot + "PageHeader.prefab", page, "Page Header").GetComponent<LobbyPageHeaderView>()).ToArray();
+            AuthorPageViews(moduleRoot, patrol, training, research, headers);
+            var root = canvas.GetComponent<LobbyRootView>() ?? canvas.AddComponent<LobbyRootView>();
+            var bootstrap = canvas.GetComponent<LobbyBootstrap>();
+            var navigationPresenter = canvas.GetComponentInChildren<LobbyNavigationPresenter>(true);
+            var patrolPresenter = patrol.GetComponent<PatrolPresenter>(); var patrolView = patrol.GetComponent<PatrolPageView>();
+            var trainingPresenter = training.GetComponent<CommonTrainingPresenter>(); var trainingView = training.GetComponent<TrainingPageView>();
+            var researchPresenter = research.GetComponent<WeaponResearchPresenter>(); var researchView = research.GetComponent<ResearchPageView>();
+            var settingsButton = header.GetComponentInChildren<Button>(true);
+            var audio = settings.GetComponentInChildren<AudioSettingsPresenter>(true);
+            if (bootstrap == null || navigationPresenter == null || patrolPresenter == null || patrolView == null ||
+                trainingPresenter == null || trainingView == null || researchPresenter == null || researchView == null ||
+                settingsButton == null || audio == null) throw new InvalidOperationException("Required legacy authored binding is missing.");
+            Set(root, "safeArea", safeArea); Set(root, "header", commonHeader.GetComponent<LobbyHeaderView>());
+            Set(root, "home", homeView); Set(root, "homePresenter", home.GetComponent<LobbyHomePresenter>()); Set(root, "navigation", navigationPresenter);
+            Set(root, "patrolView", patrolView); Set(root, "patrolPresenter", patrolPresenter); Set(root, "trainingView", trainingView);
+            Set(root, "trainingPresenter", trainingPresenter); Set(root, "researchView", researchView); Set(root, "researchPresenter", researchPresenter);
+            Set(root, "settingsOverlay", settings.gameObject); Set(root, "settingsButton", settingsButton); Set(root, "audioSettings", audio);
+            Set(bootstrap, "rootView", root);
+            Set(navigationPresenter, "homePage", home); Set(navigationPresenter, "trainingPage", training.gameObject);
+            Set(navigationPresenter, "patrolPage", patrol.gameObject); Set(navigationPresenter, "researchPage", research.gameObject);
+            Set(navigationPresenter, "trainingMenuButton", cards[0].Button); Set(navigationPresenter, "patrolMenuButton", cards[1].Button);
+            Set(navigationPresenter, "researchMenuButton", cards[2].Button); Set(navigationPresenter, "trainingBackButton", headers[0].BackButton);
+            Set(navigationPresenter, "patrolBackButton", headers[1].BackButton); Set(navigationPresenter, "researchBackButton", headers[2].BackButton);
+        }
+
+        private static void AuthorPageViews(string modules, Transform patrol, Transform training, Transform research,
+            LobbyPageHeaderView[] headers)
+        {
+            var patrolView = patrol.gameObject.AddComponent<PatrolPageView>();
+            var difficulties = Enumerable.Range(0, 3).Select(index => InstantiateModule(modules + "DifficultyCard.prefab", patrol,
+                new[] { "Difficulty Normal", "Difficulty Omen", "Difficulty Great Omen" }[index]).GetComponent<LobbyDifficultyCardView>()).ToArray();
+            var patrolSelector = InstantiateModule(modules + "WeaponSelectorCard.prefab", patrol, "Starting Weapon Selector").GetComponent<LobbyWeaponSelectorCardView>();
+            patrolView.Configure(headers[1], FindText(patrol, "Stage Name"), FindText(patrol, "Stage Status"),
+                FindButton(patrol, "Previous Stage"), FindButton(patrol, "Next Stage"), FindImage(patrol, "Patrol Hero"),
+                difficulties[0], difficulties[1], difficulties[2], patrolSelector, FindText(patrol, "Patrol Feedback"),
+                FindObject(patrol, "Weapon Selection Overlay").gameObject, FindButton(patrol, "Close Weapon Selection"), FindButton(patrol, "Start Patrol"));
+
+            var trainingView = training.gameObject.AddComponent<TrainingPageView>();
+            var rows = Enumerable.Range(0, 6).Select(index => InstantiateModule(modules + "TrainingRow.prefab", training,
+                "Training Row " + ((CommonTrainingId)index)).GetComponent<LobbyTrainingRowView>()).ToArray();
+            for (var index = 0; index < rows.Length; index++)
+            {
+                var row = rows[index];
+                row.Configure((CommonTrainingId)index, row.Button, row.NameText, row.IconImage, row.RankText, row.Progress);
+            }
+            var iconSet = AssetDatabase.LoadAssetAtPath<LobbyTrainingIconSet>("Assets/JoseonHunter/Prefabs/UI/Lobby/TrainingIconSet.asset");
+            if (iconSet == null) throw new InvalidOperationException("Production TrainingIconSet is missing.");
+            trainingView.Configure(rows, iconSet, FindText(training, "Current"), FindText(training, "Next"), FindText(training, "Cost"),
+                FindText(training, "Training Capacity"), FindButton(training, "Purchase Training"), FindButton(training, "Reset Training"), FindText(training, "Training Feedback"));
+
+            var researchView = research.gameObject.AddComponent<ResearchPageView>();
+            var selectors = Enumerable.Range(0, 8).Select(index => InstantiateModule(modules + "WeaponSelectorCard.prefab", research,
+                "Research Weapon " + index).GetComponent<LobbyWeaponSelectorCardView>()).ToArray();
+            var progress = InstantiateModule(modules + "ProgressBar.prefab", research, "Mastery Progress").GetComponent<LobbyProgressBarView>();
+            var researchRows = Enumerable.Range(0, 3).Select(index => InstantiateModule(modules + "ResearchRow.prefab", research,
+                "Research Row " + index).GetComponent<LobbyResearchRowView>()).ToArray();
+            researchView.Configure(selectors, FindImage(research, "Selected Weapon Icon"), FindText(research, "Research Title"), progress,
+                researchRows, FindText(research, "Research Feedback"));
+        }
+
+        private static Transform FindObject(Transform root, string name) => FindDescendant(root, name);
+        private static TMPro.TMP_Text FindText(Transform root, string name) => FindDescendant(root, name).GetComponent<TMPro.TMP_Text>();
+        private static Button FindButton(Transform root, string name) => FindDescendant(root, name).GetComponent<Button>();
+        private static Image FindImage(Transform root, string name) => FindDescendant(root, name).GetComponent<Image>();
+        private static Transform FindDescendant(Transform root, string name)
+        {
+            var matches = root.GetComponentsInChildren<Transform>(true).Where(item => item.name == name).ToArray();
+            if (matches.Length != 1) throw new InvalidOperationException($"Expected one '{name}' beneath '{root.name}', found {matches.Length}.");
+            return matches[0];
+        }
+
+        private static GameObject InstantiateModule(string path, Transform parent, string name)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) throw new InvalidOperationException($"Missing Lobby module prefab: {path}");
+            var instance = PrefabUtility.InstantiatePrefab(prefab, parent) as GameObject;
+            if (instance == null) throw new InvalidOperationException($"Could not instantiate Lobby module: {path}");
+            instance.name = name;
+            return instance;
+        }
+
+        private static TMPro.TMP_Text CreateText(string name, Transform parent)
+        {
+            var item = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI));
+            item.transform.SetParent(parent, false);
+            var text = item.GetComponent<TMPro.TextMeshProUGUI>();
+            text.font = TMPro.TMP_Settings.defaultFontAsset;
+            text.fontSize = 22f;
+            return text;
+        }
+
+        private static Image CreateImage(string name, Transform parent)
+        {
+            var item = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            item.transform.SetParent(parent, false);
+            return item.GetComponent<Image>();
+        }
+
+        private static void Set(UnityEngine.Object target, string name, UnityEngine.Object value)
+        {
+            var property = new SerializedObject(target).FindProperty(name);
+            if (property == null) throw new InvalidOperationException($"Missing serialized binding '{name}' on {target.GetType().Name}.");
+            property.objectReferenceValue = value;
+            property.serializedObject.ApplyModifiedPropertiesWithoutUndo();
         }
 
         public static void BuildInBatchMode()
@@ -91,8 +267,9 @@ namespace JoseonHunter.Editor.Scenes
         [MenuItem("JoseonHunter/Validation/Capture Lobby")]
         public static void CapturePreview()
         {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
-            if (prefab == null) throw new InvalidOperationException($"Missing Lobby prefab: {PrefabPath}");
+            throw new InvalidOperationException("Lobby preview capture is authored-scene work and is available after Task 8 capture wiring.");
+
+            /*
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var cameraObject = new GameObject("Lobby Preview Camera", typeof(Camera),
@@ -135,6 +312,7 @@ namespace JoseonHunter.Editor.Scenes
             UnityEngine.Object.DestroyImmediate(instance);
             UnityEngine.Object.DestroyImmediate(cameraObject);
             Debug.Log($"Captured Lobby previews to {output}.");
+            */
         }
 
         public static void CapturePreviewInBatchMode()
