@@ -242,13 +242,20 @@ namespace JoseonHunter.Tests.EditMode
                 var library = RequireVisualLibrary();
                 var controller = CreateInScene(scene, "Temporary Controller").AddComponent<FirstPlayableController>();
                 var serialized = new SerializedObject(controller);
+                var motionLibrary = AssetDatabase.LoadAssetAtPath<CombatMotionLibrary>(
+                    CombatMotionLibraryBuilder.AssetPath);
+                Assert.That(motionLibrary, Is.Not.Null);
+                serialized.FindProperty("motionLibrary").objectReferenceValue = motionLibrary;
                 serialized.FindProperty("enemySprites").arraySize = 0;
                 serialized.FindProperty("battlefieldDecals").arraySize = 0;
                 serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue = null;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
+                var motionLibraryWasDirty = EditorUtility.IsDirty(motionLibrary);
 
                 InvokePrivateGenerator("ConfigureControllerAssets", controller, library);
                 serialized.Update();
+                Assert.That(serialized.FindProperty("motionLibrary").objectReferenceValue, Is.EqualTo(motionLibrary));
+                Assert.That(EditorUtility.IsDirty(motionLibrary), Is.EqualTo(motionLibraryWasDirty));
                 Assert.That(serialized.FindProperty("enemySprites").arraySize, Is.EqualTo(5));
                 Assert.That(serialized.FindProperty("battlefieldDecals").arraySize, Is.EqualTo(4));
                 Assert.That(serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue, Is.Not.Null);
