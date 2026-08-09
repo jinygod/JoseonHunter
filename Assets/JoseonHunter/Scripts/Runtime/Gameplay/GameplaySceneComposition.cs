@@ -97,9 +97,21 @@ namespace JoseonHunter.Runtime.Gameplay
                    spawnGuidesRoot.gameObject.scene == scene &&
                    authoredPlayer.gameObject.scene == scene &&
                    uiRoot.scene == scene &&
+                   battlefieldRoot.parent == transform &&
+                   runtimeObjectsRoot.parent == transform &&
+                   runtimeSystemsRoot.parent == transform &&
+                   spawnGuidesRoot.parent == transform &&
                    authoredPlayer.transform.parent == runtimeObjectsRoot &&
-                   !RootsOverlap(runtimeObjectsRoot, runtimeSystemsRoot);
+                   !RootsOverlap(runtimeObjectsRoot, runtimeSystemsRoot) &&
+                   !IsInsideRunScopedRoot(gameplayCamera.transform) &&
+                   !IsInsideRunScopedRoot(battlefieldRoot) &&
+                   !IsInsideRunScopedRoot(spawnGuidesRoot) &&
+                   !IsInsideRunScopedRoot(uiRoot.transform);
         }
+
+        private bool IsInsideRunScopedRoot(Transform candidate) =>
+            candidate == runtimeObjectsRoot || candidate == runtimeSystemsRoot ||
+            candidate.IsChildOf(runtimeObjectsRoot) || candidate.IsChildOf(runtimeSystemsRoot);
 
         private static bool RootsOverlap(Transform first, Transform second)
         {

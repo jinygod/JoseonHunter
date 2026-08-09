@@ -26,10 +26,11 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void CompleteCompositionPreservesStableRootsAndRestoresAuthoredCameraAndPlayerPose()
         {
-            var battlefield = Create("Battlefield");
-            var runtimeObjects = Create("Runtime Objects", battlefield.transform);
-            var runtimeSystems = Create("Runtime Systems", battlefield.transform);
-            var spawnGuides = Create("Spawn Guides", battlefield.transform);
+            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
+            var battlefield = Create("Battlefield", composition.transform);
+            var runtimeObjects = Create("Runtime Objects", composition.transform);
+            var runtimeSystems = Create("Runtime Systems", composition.transform);
+            var spawnGuides = Create("Spawn Guides", composition.transform);
             var cameraObject = Create("Gameplay Camera");
             var camera = cameraObject.AddComponent<Camera>();
             camera.transform.SetPositionAndRotation(new Vector3(3f, -7f, -10f), Quaternion.Euler(12f, 0f, 31f));
@@ -38,7 +39,6 @@ namespace JoseonHunter.Tests.EditMode
             playerObject.transform.localScale = new Vector3(1.5f, 1.25f, 1f);
             var player = playerObject.AddComponent<CombatantVisualView>();
             var uiRoot = Create("UI Root");
-            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
             var battlefieldId = battlefield.GetEntityId();
             var runtimeObjectsId = runtimeObjects.GetEntityId();
             var runtimeSystemsId = runtimeSystems.GetEntityId();
@@ -176,20 +176,55 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(composition.IsComplete, Is.False);
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+        public void StableCameraOrBattlefieldInsideRuntimeSystemsIsRejectedAndNotCleared(bool placeCameraInRuntimeSystems)
+        {
+            var owner = Create("FirstPlayable");
+            var battlefield = Create("Battlefield", owner.transform);
+            var runtimeObjects = Create("Runtime Objects", owner.transform);
+            var runtimeSystems = Create("Runtime Systems", owner.transform);
+            var spawnGuides = Create("Spawn Guides", owner.transform);
+            var camera = Create("Gameplay Camera", placeCameraInRuntimeSystems
+                    ? runtimeSystems.transform
+                    : owner.transform)
+                .AddComponent<Camera>();
+            if (!placeCameraInRuntimeSystems)
+                battlefield.transform.SetParent(runtimeSystems.transform, false);
+            var playerObject = Create("Authored Player", runtimeObjects.transform);
+            var player = playerObject.AddComponent<CombatantVisualView>();
+            var composition = owner.AddComponent<GameplaySceneComposition>();
+
+            composition.Configure(
+                camera,
+                battlefield.transform,
+                runtimeObjects.transform,
+                runtimeSystems.transform,
+                spawnGuides.transform,
+                player,
+                Create("UI Root", owner.transform));
+
+            Assert.That(composition.IsComplete, Is.False);
+            composition.ClearRunScopedChildren();
+            Assert.That(camera, Is.Not.Null);
+            Assert.That(battlefield, Is.Not.Null);
+            Assert.That(playerObject, Is.Not.Null);
+        }
+
         [Test]
         public void CaptureAuthoredStateOnlyOnceKeepsTheFirstCameraAndPlayerPose()
         {
-            var battlefield = Create("Battlefield");
-            var runtimeObjects = Create("Runtime Objects", battlefield.transform);
-            var runtimeSystems = Create("Runtime Systems", battlefield.transform);
-            var spawnGuides = Create("Spawn Guides", battlefield.transform);
+            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
+            var battlefield = Create("Battlefield", composition.transform);
+            var runtimeObjects = Create("Runtime Objects", composition.transform);
+            var runtimeSystems = Create("Runtime Systems", composition.transform);
+            var spawnGuides = Create("Spawn Guides", composition.transform);
             var camera = Create("Gameplay Camera").AddComponent<Camera>();
             camera.transform.SetPositionAndRotation(new Vector3(-3f, 4f, -10f), Quaternion.Euler(0f, 0f, -20f));
             var playerObject = Create("Authored Player", runtimeObjects.transform);
             playerObject.transform.SetLocalPositionAndRotation(new Vector3(-1.5f, 2.25f, 0f), Quaternion.Euler(0f, 0f, 35f));
             playerObject.transform.localScale = new Vector3(.8f, 1.1f, 1f);
             var player = playerObject.AddComponent<CombatantVisualView>();
-            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
 
             composition.Configure(
                 camera,

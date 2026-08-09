@@ -955,32 +955,9 @@ namespace JoseonHunter.Runtime.Gameplay
         }
 
         private bool HasAuthoredSceneComposition => sceneComposition != null && sceneComposition.IsComplete;
-        private bool HasReusableIncompleteSceneComposition =>
-            sceneComposition != null &&
-            !sceneComposition.IsComplete &&
-            gameObject.scene.IsValid() &&
-            sceneComposition.gameObject.scene == gameObject.scene &&
-            sceneComposition.GameplayCamera != null &&
-            sceneComposition.BattlefieldRoot != null &&
-            sceneComposition.RuntimeObjectsRoot != null &&
-            sceneComposition.RuntimeSystemsRoot != null &&
-            sceneComposition.AuthoredPlayer != null &&
-            sceneComposition.GameplayCamera.gameObject.scene == gameObject.scene &&
-            sceneComposition.BattlefieldRoot.gameObject.scene == gameObject.scene &&
-            sceneComposition.RuntimeObjectsRoot.gameObject.scene == gameObject.scene &&
-            sceneComposition.RuntimeSystemsRoot.gameObject.scene == gameObject.scene &&
-            sceneComposition.AuthoredPlayer.gameObject.scene == gameObject.scene &&
-            sceneComposition.BattlefieldRoot.parent == transform &&
-            sceneComposition.RuntimeObjectsRoot.parent == transform &&
-            sceneComposition.RuntimeSystemsRoot.parent == transform &&
-            sceneComposition.AuthoredPlayer.transform.parent == sceneComposition.RuntimeObjectsRoot &&
-            sceneComposition.AuthoredPlayer.HasRequiredBindings(CombatantVisualRole.Player) &&
-            sceneComposition.RuntimeObjectsRoot != sceneComposition.RuntimeSystemsRoot &&
-            !sceneComposition.RuntimeObjectsRoot.IsChildOf(sceneComposition.RuntimeSystemsRoot) &&
-            !sceneComposition.RuntimeSystemsRoot.IsChildOf(sceneComposition.RuntimeObjectsRoot);
-        private bool UsesAuthoredSceneCore => HasAuthoredSceneComposition || HasReusableIncompleteSceneComposition;
+        private bool UsesAuthoredSceneCore => HasAuthoredSceneComposition;
         private bool HasUnsafeIncompleteSceneComposition =>
-            sceneComposition != null && !HasAuthoredSceneComposition && !HasReusableIncompleteSceneComposition;
+            sceneComposition != null && !HasAuthoredSceneComposition;
         private Transform ResetScopedRoot => UsesAuthoredSceneCore
             ? sceneComposition.RuntimeSystemsRoot
             : runtimeObjects;
@@ -1057,7 +1034,7 @@ namespace JoseonHunter.Runtime.Gameplay
             if (HasUnsafeIncompleteSceneComposition)
             {
                 WarnIncompleteSceneCompositionOnce(
-                    "Gameplay scene composition is incomplete and its authored runtime core is unsafe. Reset was skipped to avoid duplicating scene-owned objects.");
+                    "Gameplay scene composition is incomplete. Reset was skipped to avoid mutating scene-owned objects.");
                 return;
             }
 
@@ -1074,13 +1051,6 @@ namespace JoseonHunter.Runtime.Gameplay
                 sceneComposition.ClearRunScopedChildren();
                 sceneComposition.RestoreAuthoredState();
                 runtimeObjects = sceneComposition.RuntimeObjectsRoot;
-            }
-            else if (HasReusableIncompleteSceneComposition)
-            {
-                ClearIncompleteAuthoredRunScopedChildren();
-                runtimeObjects = sceneComposition.RuntimeObjectsRoot;
-                WarnIncompleteSceneCompositionOnce(
-                    "Gameplay scene composition is incomplete. Preserving usable authored runtime roots while using the safe fallback.");
             }
             else
             {
@@ -1271,12 +1241,6 @@ namespace JoseonHunter.Runtime.Gameplay
             RunReset?.Invoke();
         }
 
-        private void ClearIncompleteAuthoredRunScopedChildren()
-        {
-            ClearChildren(sceneComposition.RuntimeObjectsRoot, sceneComposition.AuthoredPlayer.transform);
-            ClearChildren(sceneComposition.RuntimeSystemsRoot, null);
-        }
-
         private void WarnIncompleteSceneCompositionOnce(string message)
         {
             if (incompleteSceneCompositionWarningEmitted)
@@ -1284,17 +1248,6 @@ namespace JoseonHunter.Runtime.Gameplay
 
             incompleteSceneCompositionWarningEmitted = true;
             Debug.LogWarning(message);
-        }
-
-        private static void ClearChildren(Transform root, Transform preservedChild)
-        {
-            for (var index = root.childCount - 1; index >= 0; index--)
-            {
-                var child = root.GetChild(index);
-                if (child == preservedChild)
-                    continue;
-                Destroy(child.gameObject);
-            }
         }
 
         private void ReadMovement()

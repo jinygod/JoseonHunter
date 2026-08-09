@@ -123,7 +123,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator IncompleteCompositionPreservesUsableAuthoredRuntimeRootsWithoutDuplicatingThem()
+        public IEnumerator IncompleteCompositionRefusesResetWithoutMutatingAuthoredRuntimeRootsOrPoses()
         {
             yield return LoadGameplay();
 
@@ -141,12 +141,16 @@ namespace JoseonHunter.Tests.PlayMode
             var runtimeObjectsId = runtimeObjects.GetEntityId();
             var runtimeSystemsId = runtimeSystems.GetEntityId();
             var playerId = player.GetEntityId();
+            var cameraPosition = new Vector3(17f, -9f, -24f);
+            var playerPosition = new Vector3(5f, 4f, 0f);
+            camera.transform.position = cameraPosition;
+            player.transform.localPosition = playerPosition;
 
             composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, player, null);
             Assert.That(composition.IsComplete, Is.False);
             LogAssert.Expect(
                 LogType.Warning,
-                "Gameplay scene composition is incomplete. Preserving usable authored runtime roots while using the safe fallback.");
+                "Gameplay scene composition is incomplete. Reset was skipped to avoid mutating scene-owned objects.");
             controller.ResetRunForTests();
             controller.ResetRunForTests();
             yield return null;
@@ -159,7 +163,9 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(player.transform.parent, Is.EqualTo(runtimeObjects));
             Assert.That(field.GetEntityId(), Is.EqualTo(fieldId));
             Assert.That(camera.GetEntityId(), Is.EqualTo(cameraId));
+            Assert.That(camera.transform.position, Is.EqualTo(cameraPosition));
             Assert.That(runtimeSystems.GetEntityId(), Is.EqualTo(runtimeSystemsId));
+            Assert.That(player.transform.localPosition, Is.EqualTo(playerPosition));
             Assert.That(runtimeObjects.GetComponentsInChildren<CombatantVisualView>(true)
                 .Count(view => view.HasRequiredBindings(CombatantVisualRole.Player)), Is.EqualTo(1));
             Assert.That(runtimeObjects.GetComponentsInChildren<WorldBarView>(true)
@@ -195,7 +201,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(composition.IsComplete, Is.False);
             LogAssert.Expect(
                 LogType.Warning,
-                "Gameplay scene composition is incomplete and its authored runtime core is unsafe. Reset was skipped to avoid duplicating scene-owned objects.");
+                "Gameplay scene composition is incomplete. Reset was skipped to avoid mutating scene-owned objects.");
             controller.ResetRunForTests();
             controller.ResetRunForTests();
             yield return null;
@@ -244,7 +250,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(composition.IsComplete, Is.False);
             LogAssert.Expect(
                 LogType.Warning,
-                "Gameplay scene composition is incomplete and its authored runtime core is unsafe. Reset was skipped to avoid duplicating scene-owned objects.");
+                "Gameplay scene composition is incomplete. Reset was skipped to avoid mutating scene-owned objects.");
             try
             {
                 controller.ResetRunForTests();
