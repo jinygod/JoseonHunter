@@ -128,6 +128,87 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator AuthoredPlayerAndNestedHealthBarAreReusedWithoutInstantiation()
+        {
+            var library = Resources.Load<GameplayVisualPrefabLibrary>(
+                "Gameplay/GameplayVisualPrefabLibrary");
+            Assert.That(library, Is.Not.Null);
+            var authoredPlayer = Object.Instantiate(library.PlayerVisual);
+            var playerView = authoredPlayer.GetComponent<CombatantVisualView>();
+            Assert.That(playerView, Is.Not.Null);
+            var authoredBar = Object.Instantiate(library.WorldHealthBar, playerView.HealthBarAnchor, false);
+            var authoredPlayerId = authoredPlayer.GetEntityId();
+            var authoredBarId = authoredBar.GetEntityId();
+            var factory = new GameplayVisualFactory(
+                library,
+                null,
+                playerView.BodyRenderer.sprite,
+                (_, _) => { });
+
+            var boundPlayer = factory.BindAuthoredCombatant(
+                authoredPlayer,
+                "Han Yeonhwa",
+                playerView.BodyRenderer.sprite,
+                10,
+                MotionWeight.Light,
+                0f,
+                out var visualRig,
+                CombatantVisualRole.Player);
+            var fill = factory.CreateHealthBar(
+                boundPlayer.transform,
+                new Vector3(0f, -.30f, 0f),
+                .58f);
+            yield return null;
+
+            Assert.That(boundPlayer.GetEntityId(), Is.EqualTo(authoredPlayerId));
+            Assert.That(visualRig, Is.Not.Null);
+            Assert.That(playerView.HealthBarAnchor.GetComponentsInChildren<WorldBarView>(true), Has.Length.EqualTo(1));
+            Assert.That(playerView.HealthBarAnchor.GetComponentInChildren<WorldBarView>(true).gameObject.GetEntityId(),
+                Is.EqualTo(authoredBarId));
+            Assert.That(fill, Is.SameAs(authoredBar.GetComponent<WorldBarView>().Fill));
+
+            Object.Destroy(authoredPlayer);
+        }
+
+        [UnityTest]
+        public IEnumerator FactoryStillCreatesEnemyAndReusesExperiencePickupTrailContract()
+        {
+            var library = Resources.Load<GameplayVisualPrefabLibrary>(
+                "Gameplay/GameplayVisualPrefabLibrary");
+            Assert.That(library, Is.Not.Null);
+            var root = new GameObject("Factory Visual Root").transform;
+            var enemySprite = library.EnemyVisual.GetComponent<CombatantVisualView>().BodyRenderer.sprite;
+            var factory = new GameplayVisualFactory(library, null, enemySprite, (_, _) => { });
+
+            var enemy = factory.CreateCombatant(
+                "Factory Enemy",
+                enemySprite,
+                new Vector2(4f, 2f),
+                8,
+                root,
+                MotionWeight.Medium,
+                .25f,
+                out var visualRig,
+                CombatantVisualRole.Enemy);
+            var pickup = factory.CreatePickup(
+                GameplayPickupVisualKind.Experience,
+                "Factory Experience",
+                library.ExperiencePickup.GetComponent<PickupVisualView>().VisualRenderer.sprite,
+                new Vector2(3f, 1f),
+                root,
+                out var pickupView);
+            yield return null;
+
+            Assert.That(enemy.GetComponent<CombatantVisualView>(), Is.Not.Null);
+            Assert.That(visualRig, Is.Not.Null);
+            Assert.That((Vector2)enemy.transform.position, Is.EqualTo(new Vector2(4f, 2f)));
+            Assert.That(pickup.GetComponent<PickupVisualView>(), Is.SameAs(pickupView));
+            Assert.That(pickup.GetComponent<TrailRenderer>(), Is.SameAs(pickupView.TrailRenderer));
+
+            Object.Destroy(root.gameObject);
+        }
+
+        [UnityTest]
         public IEnumerator MissingSerializedLibraryUsesResourcesFallbackAndStillInitializesPrefabViews()
         {
             var libraryField = typeof(FirstPlayableController).GetField(

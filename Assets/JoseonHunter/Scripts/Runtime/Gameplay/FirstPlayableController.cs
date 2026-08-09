@@ -85,6 +85,8 @@ namespace JoseonHunter.Runtime.Gameplay
         private GameObject player;
         private SpriteRenderer playerRenderer;
         private CombatantVisualRig playerVisualRig;
+        private GameplayVisualFactory visualFactory;
+        private GameplayVisualPrefabLibrary visualFactoryLibrary;
         private Transform playerHealthFill;
         private GeumjulTrailPresenter geumjulPresenter;
         private BossTelegraphPresenter bossTelegraphPresenter;
@@ -771,7 +773,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 state.ShieldCharges = result.RemainingCharges;
                 state.GuardHitPending = true;
                 state.GuardBrokePending = result.Broke;
-                UpdateBarFill(state.ShieldFill,
+                GameplayVisualFactory.UpdateBarFill(state.ShieldFill,
                     state.ShieldCharges / (float)ShieldDokkaebiGuard.MaximumCharges, 2f, .10f);
                 if (!result.Broke || state.ShieldFill == null) return;
                 UnityEngine.Object.Destroy(state.ShieldFill.parent.gameObject);
@@ -1126,7 +1128,9 @@ namespace JoseonHunter.Runtime.Gameplay
             newlyUnlockedNodes.Clear();
             returningToLobby = false;
 
-            player = CreateCombatantObject(
+            visualFactory = GetGameplayVisualFactory();
+
+            player = GetGameplayVisualFactory().CreateCombatant(
                 "Han Yeonhwa",
                 playerSprite != null ? playerSprite : solidSprite,
                 Vector2.zero,
@@ -1138,7 +1142,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 CombatantVisualRole.Player);
             player.transform.localScale = Vector3.one * VisualScale.PlayerScale;
             playerRenderer = playerVisualRig.Renderer;
-            playerHealthFill = CreateHealthBar(
+            playerHealthFill = GetGameplayVisualFactory().CreateHealthBar(
                 player.transform,
                 new Vector3(0f, -0.30f, 0f),
                 .58f);
@@ -1213,7 +1217,7 @@ namespace JoseonHunter.Runtime.Gameplay
             player.transform.position = position;
             playerVisualRig?.Tick(velocity, delta, MotionWeight.Light);
 
-            UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
+            GameplayVisualFactory.UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
         }
 
         private void UpdateCamera()
@@ -1484,7 +1488,7 @@ namespace JoseonHunter.Runtime.Gameplay
                     ? eliteSprite
                     : enemySpriteRoster.Resolve(resolvedContentId));
             var specialFrames = enemySpriteRoster.Frames(resolvedContentId);
-            var enemyObject = CreateCombatantObject(
+            var enemyObject = GetGameplayVisualFactory().CreateCombatant(
                 stageBoss != null ? stageBoss.DisplayName :
                 isBoss ? "Fallen General" :
                 isMidBoss ? (midBossTier >= 2 ? "Vengeful Field Commander" : "Dokkaebi Captain") :
@@ -1578,7 +1582,7 @@ namespace JoseonHunter.Runtime.Gameplay
 #endif
             if (rank.IsElite || isMidBoss)
             {
-                state.HealthFill = CreateHealthBar(
+                state.HealthFill = GetGameplayVisualFactory().CreateHealthBar(
                     enemyObject.transform,
                     new Vector3(0f, isMidBoss ? -1.2f : -0.78f, 0f),
                     isMidBoss ? .82f : .52f,
@@ -1588,11 +1592,11 @@ namespace JoseonHunter.Runtime.Gameplay
             {
                 state.ShieldCharges = ShieldDokkaebiGuard.MaximumCharges;
                 if (state.HealthFill == null)
-                    state.HealthFill = CreateHealthBar(
+                    state.HealthFill = GetGameplayVisualFactory().CreateHealthBar(
                         enemyObject.transform,
                         new Vector3(0f, -0.78f, 0f),
                         .52f);
-                state.ShieldFill = CreateShieldBar(
+                state.ShieldFill = GetGameplayVisualFactory().CreateShieldBar(
                     enemyObject.transform,
                     new Vector3(0f, -1.48f, 0f),
                     1f);
@@ -2269,7 +2273,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var damage = Mathf.Max(0f, amount * runIncomingDamageMultiplier);
             if (damage <= 0f) return;
             playerHealth = Mathf.Max(0f, playerHealth - damage);
-            UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
+            GameplayVisualFactory.UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
             contactInvulnerability = Mathf.Max(0f, invulnerabilitySeconds);
             StartCoroutine(FlashPlayer());
             PlayerDamaged?.Invoke();
@@ -2418,7 +2422,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 enemy.VisualRig?.ShowHit(incomingDirection,
                     enemy.IsBoss ? 0.05f : enemy.IsElite ? 0.075f : 0.095f);
             }
-            UpdateBarFill(enemy.HealthFill, enemy.Health / enemy.MaximumHealth, 2f, .14f);
+            GameplayVisualFactory.UpdateBarFill(enemy.HealthFill, enemy.Health / enemy.MaximumHealth, 2f, .14f);
             if (enemy.Health > 0f)
             {
                 return;
@@ -2479,7 +2483,7 @@ namespace JoseonHunter.Runtime.Gameplay
                 Vector2.Distance(deathPosition, player.transform.position) <= 1.6f)
             {
                 playerHealth = Mathf.Max(0f, playerHealth - 6f);
-                UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
+                GameplayVisualFactory.UpdateBarFill(playerHealthFill, playerHealth / playerMaxHealth, 2f, .14f);
             }
 
             kills++;
@@ -2599,11 +2603,12 @@ namespace JoseonHunter.Runtime.Gameplay
 
             if (pickup == null)
             {
-                var createdObject = CreatePickupObject(
-                    kind,
+                var createdObject = GetGameplayVisualFactory().CreatePickup(
+                    ToGameplayPickupVisualKind(kind),
                     objectName,
                     sprite != null ? sprite : solidSprite,
                     position,
+                    runtimeObjects,
                     out var pickupView);
                 var createdRenderer = pickupView != null
                     ? pickupView.VisualRenderer
@@ -3753,224 +3758,13 @@ namespace JoseonHunter.Runtime.Gameplay
             return result;
         }
 
-        private GameObject CreatePickupObject(
-            PickupKind kind,
-            string objectName,
-            Sprite sprite,
-            Vector2 position,
-            out PickupVisualView pickupView)
+        private static GameplayPickupVisualKind ToGameplayPickupVisualKind(PickupKind kind)
         {
-            pickupView = null;
-            var library = ResolveGameplayVisualPrefabs();
-            var prefab = kind == PickupKind.Experience
-                ? library?.ExperiencePickup
+            return kind == PickupKind.Experience
+                ? GameplayPickupVisualKind.Experience
                 : kind == PickupKind.Yeopjeon
-                    ? library?.YeopjeonPickup
-                    : library?.MagnetPickup;
-            var prefabView = prefab == null ? null : prefab.GetComponent<PickupVisualView>();
-            var valid = prefabView != null && prefabView.HasRequiredBindings &&
-                        (kind != PickupKind.Experience || prefabView.TrailRenderer != null);
-            if (valid)
-            {
-                var result = Instantiate(prefab, runtimeObjects, false);
-                result.name = objectName;
-                result.transform.position = position;
-                result.transform.rotation = Quaternion.identity;
-                pickupView = result.GetComponent<PickupVisualView>();
-                pickupView.VisualRenderer.sprite = sprite;
-                pickupView.VisualRenderer.sortingOrder = 6;
-                return result;
-            }
-
-            WarnMissingVisualPrefabOnce(
-                $"pickup:{kind}",
-                prefab == null
-                    ? $"Gameplay visual prefab is missing for pickup '{kind}'. Using the legacy visual fallback."
-                    : $"Gameplay visual prefab '{prefab.name}' has invalid PickupVisualView bindings. Using the legacy visual fallback.");
-            return CreateSpriteObject(objectName, sprite, position, 6, runtimeObjects);
-        }
-
-        private GameObject CreateCombatantObject(
-            string objectName,
-            Sprite sprite,
-            Vector2 position,
-            int sortingOrder,
-            Transform parent,
-            MotionWeight weight,
-            float phaseOffset,
-            out CombatantVisualRig visualRig,
-            CombatantVisualRole role = CombatantVisualRole.Enemy)
-        {
-            var library = ResolveGameplayVisualPrefabs();
-            var prefab = role == CombatantVisualRole.Player
-                ? library?.PlayerVisual
-                : library?.EnemyVisual;
-            var prefabView = prefab == null ? null : prefab.GetComponent<CombatantVisualView>();
-            if (prefabView != null && prefabView.HasRequiredBindings(role))
-            {
-                var prefabInstance = Instantiate(prefab, parent, false);
-                prefabInstance.name = objectName;
-                prefabInstance.transform.position = position;
-                prefabInstance.transform.rotation = Quaternion.identity;
-                visualRig = CombatantVisualRig.Bind(
-                    prefabInstance,
-                    prefabInstance.GetComponent<CombatantVisualView>(),
-                    sprite,
-                    sortingOrder,
-                    motionLibrary == null ? null : motionLibrary.Find(sprite),
-                    weight,
-                    phaseOffset,
-                    role);
-                return prefabInstance;
-            }
-
-            WarnMissingVisualPrefabOnce(
-                role == CombatantVisualRole.Player ? "combatant:player" : "combatant:enemy",
-                prefab == null
-                    ? $"Gameplay visual prefab is missing for combatant role '{role}'. Using the legacy visual fallback."
-                    : $"Gameplay visual prefab '{prefab.name}' has invalid CombatantVisualView bindings for role '{role}'. Using the legacy visual fallback.");
-
-            var result = new GameObject(objectName);
-            result.transform.SetParent(parent, false);
-            result.transform.position = position;
-            visualRig = CombatantVisualRig.Create(
-                result,
-                sprite,
-                sortingOrder,
-                motionLibrary == null ? null : motionLibrary.Find(sprite),
-                weight,
-                phaseOffset,
-                role);
-            return result;
-        }
-
-        private Transform CreateHealthBar(
-            Transform owner,
-            Vector3 fallbackLocalPosition,
-            float fallbackLocalScale,
-            bool overrideAuthoredAnchor = false)
-        {
-            var combatantView = owner == null ? null : owner.GetComponent<CombatantVisualView>();
-            var anchor = combatantView != null && combatantView.HealthBarAnchor != null
-                ? combatantView.HealthBarAnchor
-                : owner;
-            if (anchor != owner && overrideAuthoredAnchor)
-            {
-                anchor.localPosition = fallbackLocalPosition;
-                anchor.localScale = Vector3.one * fallbackLocalScale;
-            }
-
-            return CreateWorldBar(
-                "Health Bar",
-                ResolveGameplayVisualPrefabs()?.WorldHealthBar,
-                anchor,
-                anchor == owner ? fallbackLocalPosition : Vector3.zero,
-                anchor == owner ? fallbackLocalScale : 1f,
-                anchor != owner,
-                new Vector3(2.2f, .24f, 1f),
-                new Vector3(2f, .14f, 1f),
-                new Color(.16f, .12f, .12f, .92f),
-                new Color(.24f, .86f, .34f));
-        }
-
-        private Transform CreateShieldBar(
-            Transform owner,
-            Vector3 fallbackLocalPosition,
-            float fallbackLocalScale)
-        {
-            var combatantView = owner == null ? null : owner.GetComponent<CombatantVisualView>();
-            var anchor = combatantView != null && combatantView.ShieldBarAnchor != null
-                ? combatantView.ShieldBarAnchor
-                : owner;
-            return CreateWorldBar(
-                "Shield Guard Bar",
-                ResolveGameplayVisualPrefabs()?.WorldShieldBar,
-                anchor,
-                anchor == owner ? fallbackLocalPosition : Vector3.zero,
-                anchor == owner ? fallbackLocalScale : 1f,
-                anchor != owner,
-                new Vector3(2.2f, .20f, 1f),
-                new Vector3(2f, .10f, 1f),
-                new Color(.12f, .09f, .06f, .94f),
-                new Color(.72f, .45f, .14f, 1f));
-        }
-
-        private Transform CreateWorldBar(
-            string runtimeName,
-            GameObject prefab,
-            Transform parent,
-            Vector3 localPosition,
-            float localScale,
-            bool preservePrefabRootTransform,
-            Vector3 fallbackBackgroundScale,
-            Vector3 fallbackFillScale,
-            Color fallbackBackgroundColor,
-            Color fallbackFillColor)
-        {
-            var prefabView = prefab == null ? null : prefab.GetComponent<WorldBarView>();
-            if (prefabView != null && prefabView.HasRequiredBindings)
-            {
-                var instance = Instantiate(prefab, parent, false);
-                instance.name = runtimeName;
-                if (!preservePrefabRootTransform)
-                {
-                    instance.transform.localPosition = localPosition;
-                    instance.transform.localRotation = Quaternion.identity;
-                    instance.transform.localScale = Vector3.one * localScale;
-                }
-                var view = instance.GetComponent<WorldBarView>();
-                view.Prepare(solidSprite);
-                view.SetNormalizedValue(1f);
-                return view.Fill;
-            }
-
-            WarnMissingVisualPrefabOnce(
-                $"bar:{runtimeName}",
-                prefab == null
-                    ? $"Gameplay visual prefab is missing for '{runtimeName}'. Using the legacy visual fallback."
-                    : $"Gameplay visual prefab '{prefab.name}' has invalid WorldBarView bindings. Using the legacy visual fallback.");
-
-            var root = new GameObject(runtimeName).transform;
-            root.SetParent(parent, false);
-            root.localPosition = localPosition;
-            root.localRotation = Quaternion.identity;
-            root.localScale = Vector3.one * localScale;
-
-            var background = new GameObject("Background");
-            background.transform.SetParent(root, false);
-            background.transform.localScale = fallbackBackgroundScale;
-            var backgroundRenderer = background.AddComponent<SpriteRenderer>();
-            backgroundRenderer.sprite = solidSprite;
-            backgroundRenderer.color = fallbackBackgroundColor;
-            backgroundRenderer.sortingOrder = 20;
-
-            var fill = new GameObject("Fill").transform;
-            fill.SetParent(root, false);
-            fill.localScale = fallbackFillScale;
-            var fillRenderer = fill.gameObject.AddComponent<SpriteRenderer>();
-            fillRenderer.sprite = solidSprite;
-            fillRenderer.color = fallbackFillColor;
-            fillRenderer.sortingOrder = 21;
-            return fill;
-        }
-
-        private static void UpdateBarFill(Transform fill, float normalizedValue, float width, float height)
-        {
-            if (fill == null)
-            {
-                return;
-            }
-
-            var authoredView = fill.GetComponentInParent<WorldBarView>();
-            if (authoredView != null)
-            {
-                authoredView.SetNormalizedValue(normalizedValue);
-                return;
-            }
-
-            var ratio = Mathf.Clamp01(normalizedValue);
-            fill.localScale = new Vector3(width * ratio, height, 1f);
-            fill.localPosition = new Vector3(-width * .5f + width * ratio * .5f, 0f, -.01f);
+                    ? GameplayPickupVisualKind.Yeopjeon
+                    : GameplayPickupVisualKind.Magnet;
         }
 
         private GameplayVisualPrefabLibrary ResolveGameplayVisualPrefabs()
@@ -3982,6 +3776,22 @@ namespace JoseonHunter.Runtime.Gameplay
                     "library",
                     $"Missing Resources/{GameplayVisualPrefabResourcesPath}.asset. Gameplay visuals are using legacy code-created fallbacks.");
             return gameplayVisualPrefabs;
+        }
+
+        private GameplayVisualFactory GetGameplayVisualFactory()
+        {
+            var library = ResolveGameplayVisualPrefabs();
+            if (visualFactory == null || visualFactoryLibrary != library)
+            {
+                visualFactory = new GameplayVisualFactory(
+                    library,
+                    motionLibrary,
+                    solidSprite,
+                    WarnMissingVisualPrefabOnce);
+                visualFactoryLibrary = library;
+            }
+
+            return visualFactory;
         }
 
         private void WarnMissingVisualPrefabOnce(string key, string message)
