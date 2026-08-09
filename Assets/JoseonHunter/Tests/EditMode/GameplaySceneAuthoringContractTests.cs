@@ -230,7 +230,7 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void GeneratorRejectsExternalCompositionWhenControllerHasNoCoLocatedComposition()
         {
-            var scene = CreateTemporaryScene();
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
             try
             {
                 var library = RequireVisualLibrary();
@@ -248,7 +248,12 @@ namespace JoseonHunter.Tests.EditMode
                 var serialized = new SerializedObject(controller);
                 serialized.FindProperty("sceneComposition").objectReferenceValue = externalComposition;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
+                Assert.That(EditorSceneManager.SaveScene(scene, temporaryScenePath), Is.True);
                 var sceneWasDirty = scene.isDirty;
+                var controllerComponentsBefore = controllerRoot.GetComponents<Component>()
+                    .Select(component => $"{component.GetType().FullName}:{component.GetEntityId()}")
+                    .ToArray();
+                Assert.That(sceneWasDirty, Is.False);
 
                 AssertPrivateGeneratorFailure(
                     "GenerateScene",
@@ -260,6 +265,11 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(serialized.FindProperty("sceneComposition").objectReferenceValue,
                     Is.EqualTo(externalComposition));
                 Assert.That(controllerRoot.GetComponent<GameplaySceneComposition>(), Is.Null);
+                Assert.That(controllerRoot.GetComponent<GameFlowCoordinator>(), Is.Null);
+                CollectionAssert.AreEquivalent(controllerComponentsBefore,
+                    controllerRoot.GetComponents<Component>()
+                        .Select(component => $"{component.GetType().FullName}:{component.GetEntityId()}")
+                        .ToArray());
                 Assert.That(authoredMarker.transform.position, Is.EqualTo(markerPosition));
                 Assert.That(authoredMarker.transform.rotation, Is.EqualTo(markerRotation));
                 CollectionAssert.AreEquivalent(rootNames,
@@ -268,7 +278,7 @@ namespace JoseonHunter.Tests.EditMode
             }
             finally
             {
-                CloseTemporaryScene(scene);
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
             }
         }
 
@@ -442,6 +452,13 @@ namespace JoseonHunter.Tests.EditMode
             return EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Additive);
         }
 
+        private static Scene CreateIsolatedTemporaryScene(out string path)
+        {
+            path = $"Assets/JoseonHunter/Scenes/GameplaySceneAuthoringContractTests-{Guid.NewGuid():N}.unity";
+            Assert.That(AssetDatabase.CopyAsset(PreviewScenePath, path), Is.True);
+            return EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+        }
+
         private static GameObject CreateInScene(Scene scene, string name)
         {
             var gameObject = new GameObject(name);
@@ -453,6 +470,12 @@ namespace JoseonHunter.Tests.EditMode
         {
             if (scene.IsValid() && scene.isLoaded)
                 EditorSceneManager.CloseScene(scene, true);
+        }
+
+        private static void CloseIsolatedTemporaryScene(Scene scene, string path)
+        {
+            CloseTemporaryScene(scene);
+            AssetDatabase.DeleteAsset(path);
         }
 
         private static void AssertPrivateGeneratorFailure(string methodName, string expectedMessage, params object[] arguments)
