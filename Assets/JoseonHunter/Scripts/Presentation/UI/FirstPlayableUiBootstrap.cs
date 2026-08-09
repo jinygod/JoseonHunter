@@ -54,7 +54,10 @@ namespace JoseonHunter.Presentation.UI
         {
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneManager.sceneLoaded += OnSceneLoaded;
-            if (FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include).Length != 0)
+            // The authored Gameplay root may be inactive while scenes are being composed in the Editor.
+            // It remains the primary owner; this runtime path only supports legacy scenes without one.
+            var authoredBootstraps = FindObjectsByType<FirstPlayableUiBootstrap>(FindObjectsInactive.Include);
+            if (authoredBootstraps.Length != 0)
                 return;
 
             new GameObject("First Playable UI").AddComponent<FirstPlayableUiBootstrap>();

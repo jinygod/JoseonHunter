@@ -38,7 +38,7 @@ namespace JoseonHunter.Tests.EditMode
             {
                 var roots = scene.GetRootGameObjects();
                 var expected = scenePath.EndsWith("Gameplay.unity", StringComparison.Ordinal)
-                    ? new[] { "Main Camera", "FirstPlayable", "EventSystem" }
+                    ? new[] { "Main Camera", "FirstPlayable", "First Playable UI", "EventSystem" }
                     : scenePath.EndsWith("Bootstrap.unity", StringComparison.Ordinal)
                         ? new[] { "Bootstrap Loading" }
                         : new[] { "Lobby Camera", "Lobby Canvas", "EventSystem" };
@@ -59,7 +59,7 @@ namespace JoseonHunter.Tests.EditMode
             try
             {
                 CollectionAssert.AreEquivalent(
-                    new[] { "Main Camera", "FirstPlayable", "EventSystem" },
+                    new[] { "Main Camera", "FirstPlayable", "First Playable UI", "EventSystem" },
                     scene.GetRootGameObjects().Select(root => root.name));
             }
             finally
