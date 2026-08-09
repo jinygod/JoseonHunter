@@ -258,7 +258,9 @@ namespace JoseonHunter.Editor.Scenes
             ValidateRoot(root, "Account Level", "Account Progress", "Coins");
             var view = Require<LobbyHeaderView>(root);
             if (!view.HasRequiredBindings) throw new InvalidOperationException(root.name + " has incomplete header bindings.");
+            RequireDirect<TMP_Text>(root, "Account Level");
             RequireDirect<UnityEngine.UI.Image>(root, "Account Progress");
+            RequireDirect<TMP_Text>(root, "Coins");
         }
 
         private static void ValidatePageHeader(GameObject root)
@@ -268,6 +270,8 @@ namespace JoseonHunter.Editor.Scenes
             if (view.BackButton == null || view.Title == null || view.Icon == null)
                 throw new InvalidOperationException(root.name + " has incomplete page header bindings.");
             RequireDirect<Button>(root, "Back Button");
+            RequireDirect<TMP_Text>(root, "Title");
+            RequireDirect<UnityEngine.UI.Image>(root, "Icon");
         }
 
         private static void ValidateHomeMenuCard(GameObject root)
@@ -277,16 +281,26 @@ namespace JoseonHunter.Editor.Scenes
             if (view.Button == null || view.Title == null || view.Description == null || view.Icon == null)
                 throw new InvalidOperationException(root.name + " has incomplete menu card bindings.");
             RequireDirect<Button>(root, "Button");
+            RequireDirect<TMP_Text>(root, "Title");
+            RequireDirect<TMP_Text>(root, "Description");
+            RequireDirect<UnityEngine.UI.Image>(root, "Icon");
         }
 
-        private static void ValidateInfoStrip(GameObject root) => ValidateRoot(root, "Label", "Value");
+        private static void ValidateInfoStrip(GameObject root)
+        {
+            ValidateRoot(root, "Label", "Value");
+            RequireDirect<TMP_Text>(root, "Label");
+            RequireDirect<TMP_Text>(root, "Value");
+        }
 
         private static void ValidateProgressBar(GameObject root)
         {
             ValidateRoot(root, "Track", "Fill", "Value");
             var view = Require<LobbyProgressBarView>(root);
             if (!view.HasRequiredBindings) throw new InvalidOperationException(root.name + " has incomplete progress bindings.");
+            RequireDirect<UnityEngine.UI.Image>(root, "Track");
             RequireDirect<UnityEngine.UI.Image>(root, "Fill");
+            RequireDirect<TMP_Text>(root, "Value");
         }
 
         private static void ValidateDifficultyCard(GameObject root)
@@ -295,6 +309,7 @@ namespace JoseonHunter.Editor.Scenes
             var view = Require<LobbyDifficultyCardView>(root);
             if (!view.HasRequiredBindings) throw new InvalidOperationException(root.name + " has incomplete difficulty bindings.");
             RequireDirect<Button>(root, "Button");
+            RequireDirect<TMP_Text>(root, "Label");
         }
 
         private static void ValidateActionButton(GameObject root)

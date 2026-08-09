@@ -5,6 +5,7 @@ using JoseonHunter.Editor.Scenes;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using NUnit.Framework;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -35,14 +36,18 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void ModulesExposeExactDirectChildBindingsAndPremiumFrames()
         {
-            AssertBindings("CommonHeader", "Account Level", "Account Progress", "Coins");
-            AssertBindings("PageHeader", "Back Button", "Title", "Icon");
-            AssertBindings("HomeMenuCard", "Button", "Title", "Description", "Icon");
-            AssertBindings("InfoStrip", "Label", "Value");
-            AssertBindings("ProgressBar", "Track", "Fill", "Value");
-            AssertBindings("DifficultyCard", "Button", "Label");
-            AssertBindings("PrimaryActionButton", "Button");
-            AssertBindings("SecondaryActionButton", "Button");
+            AssertBindings("CommonHeader", ("Account Level", typeof(TMP_Text)),
+                ("Account Progress", typeof(Image)), ("Coins", typeof(TMP_Text)));
+            AssertBindings("PageHeader", ("Back Button", typeof(Button)), ("Title", typeof(TMP_Text)),
+                ("Icon", typeof(Image)));
+            AssertBindings("HomeMenuCard", ("Button", typeof(Button)), ("Title", typeof(TMP_Text)),
+                ("Description", typeof(TMP_Text)), ("Icon", typeof(Image)));
+            AssertBindings("InfoStrip", ("Label", typeof(TMP_Text)), ("Value", typeof(TMP_Text)));
+            AssertBindings("ProgressBar", ("Track", typeof(Image)), ("Fill", typeof(Image)),
+                ("Value", typeof(TMP_Text)));
+            AssertBindings("DifficultyCard", ("Button", typeof(Button)), ("Label", typeof(TMP_Text)));
+            AssertBindings("PrimaryActionButton", ("Button", typeof(Button)));
+            AssertBindings("SecondaryActionButton", ("Button", typeof(Button)));
 
             foreach (var prefab in ModulePrefabs())
             {
@@ -70,18 +75,54 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(File.ReadAllBytes(CommonHeaderPath), Is.EqualTo(before));
         }
 
+        [Test]
+        public void CreateOrValidateRejectsExistingModuleWithNamedChildOfWrongType()
+        {
+            const string path = ModuleRoot + "InfoStrip.prefab";
+            var original = File.ReadAllBytes(path);
+            try
+            {
+                var contents = PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    var label = contents.transform.Find("Label");
+                    UnityEngine.Object.DestroyImmediate(label.GetComponent<TMP_Text>());
+                    label.gameObject.AddComponent<Image>();
+                    PrefabUtility.SaveAsPrefabAsset(contents, path);
+                }
+                finally
+                {
+                    PrefabUtility.UnloadPrefabContents(contents);
+                }
+
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                Assert.That(() => LobbyModulePrefabBuilder.CreateOrValidateProductionModules(),
+                    Throws.TypeOf<InvalidOperationException>());
+            }
+            finally
+            {
+                File.WriteAllBytes(path, original);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            }
+        }
+
         private static GameObject[] ModulePrefabs() => new[]
         {
             "CommonHeader", "PageHeader", "HomeMenuCard", "InfoStrip", "ProgressBar", "DifficultyCard",
             "PrimaryActionButton", "SecondaryActionButton"
         }.Select(name => AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + name + ".prefab")).ToArray();
 
-        private static void AssertBindings(string prefabName, params string[] names)
+        private static void AssertBindings(string prefabName, params (string Name, Type Type)[] bindings)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + prefabName + ".prefab");
             Assert.That(prefab, Is.Not.Null, prefabName);
-            foreach (var name in names)
-                Assert.That(prefab.transform.Find(name), Is.Not.Null, prefabName + " direct child " + name);
+            foreach (var binding in bindings)
+            {
+                var child = prefab.transform.Find(binding.Name);
+                Assert.That(child, Is.Not.Null, prefabName + " direct child " + binding.Name);
+                Assert.That(child.GetComponent(binding.Type), Is.Not.Null,
+                    prefabName + " direct child " + binding.Name + " " + binding.Type.Name);
+            }
         }
     }
 }
