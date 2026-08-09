@@ -123,6 +123,98 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator IncompleteCompositionPreservesUsableAuthoredRuntimeRootsWithoutDuplicatingThem()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var camera = composition.GameplayCamera;
+            var field = composition.BattlefieldRoot;
+            var runtimeObjects = composition.RuntimeObjectsRoot;
+            var runtimeSystems = composition.RuntimeSystemsRoot;
+            var spawnGuides = composition.SpawnGuidesRoot;
+            var player = composition.AuthoredPlayer;
+            var ui = composition.UiRoot;
+            var cameraId = camera.GetEntityId();
+            var fieldId = field.GetEntityId();
+            var runtimeObjectsId = runtimeObjects.GetEntityId();
+            var runtimeSystemsId = runtimeSystems.GetEntityId();
+            var playerId = player.GetEntityId();
+
+            composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, player, null);
+            Assert.That(composition.IsComplete, Is.False);
+            LogAssert.Expect(
+                LogType.Warning,
+                "Gameplay scene composition is incomplete. Preserving usable authored runtime roots while using the safe fallback.");
+            controller.ResetRunForTests();
+            controller.ResetRunForTests();
+            yield return null;
+            yield return null;
+
+            Assert.That(Object.FindObjectsByType<Transform>()
+                .Count(candidate => candidate.name == "RuntimeObjects"), Is.EqualTo(1));
+            Assert.That(runtimeObjects.GetEntityId(), Is.EqualTo(runtimeObjectsId));
+            Assert.That(player.GetEntityId(), Is.EqualTo(playerId));
+            Assert.That(player.transform.parent, Is.EqualTo(runtimeObjects));
+            Assert.That(field.GetEntityId(), Is.EqualTo(fieldId));
+            Assert.That(camera.GetEntityId(), Is.EqualTo(cameraId));
+            Assert.That(runtimeSystems.GetEntityId(), Is.EqualTo(runtimeSystemsId));
+            Assert.That(runtimeObjects.GetComponentsInChildren<CombatantVisualView>(true)
+                .Count(view => view.HasRequiredBindings(CombatantVisualRole.Player)), Is.EqualTo(1));
+            Assert.That(runtimeObjects.GetComponentsInChildren<WorldBarView>(true)
+                .Count(bar => bar.HasRequiredBindings), Is.EqualTo(1));
+
+            composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, player, ui);
+            controller.ResetRunForTests();
+            yield return null;
+
+            Assert.That(composition.IsComplete, Is.True);
+            Assert.That(composition.RuntimeObjectsRoot.GetEntityId(), Is.EqualTo(runtimeObjectsId));
+            Assert.That(composition.AuthoredPlayer.GetEntityId(), Is.EqualTo(playerId));
+        }
+
+        [UnityTest]
+        public IEnumerator IncompleteCompositionWithUnsafeCoreRefusesResetWithoutCreatingLegacyDuplicates()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var camera = composition.GameplayCamera;
+            var field = composition.BattlefieldRoot;
+            var runtimeObjects = composition.RuntimeObjectsRoot;
+            var runtimeSystems = composition.RuntimeSystemsRoot;
+            var spawnGuides = composition.SpawnGuidesRoot;
+            var player = composition.AuthoredPlayer;
+            var ui = composition.UiRoot;
+            var runtimeObjectsId = runtimeObjects.GetEntityId();
+            var playerId = player.GetEntityId();
+
+            composition.Configure(camera, field, null, runtimeSystems, spawnGuides, player, ui);
+            Assert.That(composition.IsComplete, Is.False);
+            LogAssert.Expect(
+                LogType.Warning,
+                "Gameplay scene composition is incomplete and its authored runtime core is unsafe. Reset was skipped to avoid duplicating scene-owned objects.");
+            controller.ResetRunForTests();
+            controller.ResetRunForTests();
+            yield return null;
+
+            Assert.That(Object.FindObjectsByType<Transform>()
+                .Count(candidate => candidate.name == "RuntimeObjects"), Is.EqualTo(1));
+            Assert.That(runtimeObjects.GetEntityId(), Is.EqualTo(runtimeObjectsId));
+            Assert.That(player.GetEntityId(), Is.EqualTo(playerId));
+            Assert.That(player.transform.parent, Is.EqualTo(runtimeObjects));
+
+            composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, player, ui);
+            controller.ResetRunForTests();
+            yield return null;
+
+            Assert.That(composition.IsComplete, Is.True);
+            Assert.That(composition.RuntimeObjectsRoot.GetEntityId(), Is.EqualTo(runtimeObjectsId));
+        }
+
+        [UnityTest]
         public IEnumerator ResetRunKeepsAuthoredBattlefieldPreviewInactiveAndUsesOneGeneratedPresentation()
         {
             yield return LoadGameplay();
