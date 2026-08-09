@@ -97,7 +97,13 @@ namespace JoseonHunter.Runtime.Gameplay
                    spawnGuidesRoot.gameObject.scene == scene &&
                    authoredPlayer.gameObject.scene == scene &&
                    uiRoot.scene == scene &&
-                   authoredPlayer.transform.parent == runtimeObjectsRoot;
+                   authoredPlayer.transform.parent == runtimeObjectsRoot &&
+                   !RootsOverlap(runtimeObjectsRoot, runtimeSystemsRoot);
+        }
+
+        private static bool RootsOverlap(Transform first, Transform second)
+        {
+            return first == second || first.IsChildOf(second) || second.IsChildOf(first);
         }
 
         private static void ClearChildren(Transform root, Transform preservedChild)

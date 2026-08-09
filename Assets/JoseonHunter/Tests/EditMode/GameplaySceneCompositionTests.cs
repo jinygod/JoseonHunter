@@ -127,6 +127,92 @@ namespace JoseonHunter.Tests.EditMode
             }
         }
 
+        [Test]
+        public void OverlappingRunScopedRootsAreRejectedAndCannotDeleteAuthoredPlayer()
+        {
+            var battlefield = Create("Battlefield");
+            var runtimeObjects = Create("Runtime Objects", battlefield.transform);
+            var spawnGuides = Create("Spawn Guides", battlefield.transform);
+            var camera = Create("Gameplay Camera").AddComponent<Camera>();
+            var playerObject = Create("Authored Player", runtimeObjects.transform);
+            var player = playerObject.AddComponent<CombatantVisualView>();
+            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
+
+            composition.Configure(
+                camera,
+                battlefield.transform,
+                runtimeObjects.transform,
+                runtimeObjects.transform,
+                spawnGuides.transform,
+                player,
+                Create("UI Root"));
+
+            Assert.That(composition.IsComplete, Is.False);
+            composition.ClearRunScopedChildren();
+            Assert.That(playerObject == null, Is.False);
+            Assert.That(playerObject.transform.parent, Is.SameAs(runtimeObjects.transform));
+        }
+
+        [Test]
+        public void AncestorOrDescendantRunScopedRootsAreRejected()
+        {
+            var battlefield = Create("Battlefield");
+            var runtimeObjects = Create("Runtime Objects", battlefield.transform);
+            var runtimeSystems = Create("Runtime Systems", runtimeObjects.transform);
+            var spawnGuides = Create("Spawn Guides", battlefield.transform);
+            var camera = Create("Gameplay Camera").AddComponent<Camera>();
+            var player = Create("Authored Player", runtimeObjects.transform).AddComponent<CombatantVisualView>();
+            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
+
+            composition.Configure(
+                camera,
+                battlefield.transform,
+                runtimeObjects.transform,
+                runtimeSystems.transform,
+                spawnGuides.transform,
+                player,
+                Create("UI Root"));
+
+            Assert.That(composition.IsComplete, Is.False);
+        }
+
+        [Test]
+        public void CaptureAuthoredStateOnlyOnceKeepsTheFirstCameraAndPlayerPose()
+        {
+            var battlefield = Create("Battlefield");
+            var runtimeObjects = Create("Runtime Objects", battlefield.transform);
+            var runtimeSystems = Create("Runtime Systems", battlefield.transform);
+            var spawnGuides = Create("Spawn Guides", battlefield.transform);
+            var camera = Create("Gameplay Camera").AddComponent<Camera>();
+            camera.transform.SetPositionAndRotation(new Vector3(-3f, 4f, -10f), Quaternion.Euler(0f, 0f, -20f));
+            var playerObject = Create("Authored Player", runtimeObjects.transform);
+            playerObject.transform.SetLocalPositionAndRotation(new Vector3(-1.5f, 2.25f, 0f), Quaternion.Euler(0f, 0f, 35f));
+            playerObject.transform.localScale = new Vector3(.8f, 1.1f, 1f);
+            var player = playerObject.AddComponent<CombatantVisualView>();
+            var composition = Create("Composition").AddComponent<GameplaySceneComposition>();
+
+            composition.Configure(
+                camera,
+                battlefield.transform,
+                runtimeObjects.transform,
+                runtimeSystems.transform,
+                spawnGuides.transform,
+                player,
+                Create("UI Root"));
+            composition.CaptureAuthoredState();
+            camera.transform.SetPositionAndRotation(new Vector3(9f, 8f, 7f), Quaternion.identity);
+            playerObject.transform.SetLocalPositionAndRotation(Vector3.one, Quaternion.identity);
+            playerObject.transform.localScale = Vector3.one;
+            composition.CaptureAuthoredState();
+            composition.RestoreAuthoredState();
+
+            Assert.That(camera.transform.position, Is.EqualTo(new Vector3(-3f, 4f, -10f)));
+            Assert.That(Quaternion.Angle(camera.transform.rotation, Quaternion.Euler(0f, 0f, -20f)), Is.LessThan(.001f));
+            Assert.That(playerObject.transform.localPosition, Is.EqualTo(new Vector3(-1.5f, 2.25f, 0f)));
+            Assert.That(Quaternion.Angle(playerObject.transform.localRotation, Quaternion.Euler(0f, 0f, 35f)), Is.LessThan(.001f));
+            Assert.That(playerObject.transform.localScale, Is.EqualTo(new Vector3(.8f, 1.1f, 1f)));
+        }
+
         private GameObject Create(string name, Transform parent = null)
         {
             var gameObject = new GameObject(name);
