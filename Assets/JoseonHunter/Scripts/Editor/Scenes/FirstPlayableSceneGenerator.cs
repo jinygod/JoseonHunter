@@ -38,49 +38,12 @@ namespace JoseonHunter.Editor.Scenes
 
             try
             {
-                var cameraRoot = RequireOrCreateRoot(scene, "Main Camera");
-                var camera = RequireOrAdd<Camera>(cameraRoot);
-                if (cameraRoot.tag != "MainCamera") cameraRoot.tag = "MainCamera";
-                ConfigureNewCamera(camera);
-
-                var controllerRoot = RequireOrCreateRoot(scene, "FirstPlayable");
-                var controller = RequireOrAdd<FirstPlayableController>(controllerRoot);
-                RequireOrAdd<GameFlowCoordinator>(controllerRoot);
-                var composition = RequireOrAdd<GameplaySceneComposition>(controllerRoot);
-
-                var field = RequireOrCreateChild(controllerRoot.transform, "FlatField");
-                var authoringPreview = RequireOrCreateChild(field, "Authoring Preview");
-                if (authoringPreview.tag != "EditorOnly") authoringPreview.tag = "EditorOnly";
-                var runtimeBattlefield = RequireOrCreateChild(field, "Runtime Battlefield");
-                var host = RequireOrAdd<GameplayBattlefieldHost>(field.gameObject);
-                host.ConfigureAuthoringRoots(runtimeBattlefield, authoringPreview.gameObject);
-                EnsureAuthoringPreview(authoringPreview);
-
-                var runtimeObjects = RequireOrCreateChild(controllerRoot.transform, "RuntimeObjects");
-                var runtimeSystems = RequireOrCreateChild(controllerRoot.transform, "RuntimeSystems");
-                var spawnGuides = RequireOrCreateChild(controllerRoot.transform, "Spawn Guides");
-                var spawnGuide = RequireOrAdd<GameplaySpawnGuide>(spawnGuides.gameObject);
-                spawnGuide.Configure(camera, 1f, 3f);
-
-                var player = RequireOrCreateConnectedPlayer(runtimeObjects, library.PlayerVisual);
-                var playerView = player.GetComponent<CombatantVisualView>();
-                if (playerView == null || playerView.HealthBarAnchor == null)
-                    throw new InvalidOperationException("Authored PlayerVisual is missing CombatantVisualView.HealthBarAnchor.");
-                RequireOrCreateConnectedHealthBar(playerView.HealthBarAnchor, library.WorldHealthBar);
-
-                var uiRoot = RequireOrCreateRoot(scene, "First Playable UI");
-                RequireSingleUiBootstrap(scene, uiRoot);
-                var eventSystemRoot = RequireOrCreateRoot(scene, "EventSystem");
-                RequireSingleEventSystem(scene, eventSystemRoot);
-
-                ConfigureControllerAssets(controller, library);
-                composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, playerView, uiRoot);
-                ConfigureControllerSceneComposition(controller, composition);
+                GenerateScene(scene, library);
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene, GameplayScenePath))
                     throw new InvalidOperationException($"Unity failed to save {GameplayScenePath}.");
                 AssetDatabase.SaveAssets();
-                Selection.activeGameObject = controllerRoot;
+                Selection.activeGameObject = FindSingleRootOrNull(scene, "FirstPlayable");
                 Debug.Log("JoseonHunter authored Gameplay scene is valid.");
             }
             finally
@@ -88,6 +51,54 @@ namespace JoseonHunter.Editor.Scenes
                 if (openedHere && scene.IsValid() && scene.isLoaded)
                     EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        private static void GenerateScene(Scene scene, GameplayVisualPrefabLibrary library)
+        {
+            ValidateExistingControllerSceneComposition(scene);
+
+            var cameraRoot = FindSingleRootOrNull(scene, "Main Camera");
+            var createdCameraRoot = cameraRoot == null;
+            if (createdCameraRoot) cameraRoot = RequireOrCreateRoot(scene, "Main Camera");
+            var camera = cameraRoot.GetComponent<Camera>();
+            var createdCameraComponent = camera == null;
+            if (createdCameraComponent) camera = RequireOrAdd<Camera>(cameraRoot);
+            if (cameraRoot.tag != "MainCamera") cameraRoot.tag = "MainCamera";
+            if (createdCameraRoot || createdCameraComponent) ConfigureNewCamera(camera);
+
+            var controllerRoot = RequireOrCreateRoot(scene, "FirstPlayable");
+            var controller = RequireOrAdd<FirstPlayableController>(controllerRoot);
+            RequireOrAdd<GameFlowCoordinator>(controllerRoot);
+            var composition = RequireOrAdd<GameplaySceneComposition>(controllerRoot);
+
+            var field = RequireOrCreateChild(controllerRoot.transform, "FlatField");
+            var authoringPreview = RequireOrCreateChild(field, "Authoring Preview");
+            if (authoringPreview.tag != "EditorOnly") authoringPreview.tag = "EditorOnly";
+            var runtimeBattlefield = RequireOrCreateChild(field, "Runtime Battlefield");
+            var host = RequireOrAdd<GameplayBattlefieldHost>(field.gameObject);
+            host.ConfigureAuthoringRoots(runtimeBattlefield, authoringPreview.gameObject);
+            EnsureAuthoringPreview(authoringPreview);
+
+            var runtimeObjects = RequireOrCreateChild(controllerRoot.transform, "RuntimeObjects");
+            var runtimeSystems = RequireOrCreateChild(controllerRoot.transform, "RuntimeSystems");
+            var spawnGuides = RequireOrCreateChild(controllerRoot.transform, "Spawn Guides");
+            var spawnGuide = RequireOrAdd<GameplaySpawnGuide>(spawnGuides.gameObject);
+            spawnGuide.Configure(camera, 1f, 3f);
+
+            var player = RequireOrCreateConnectedPlayer(runtimeObjects, library.PlayerVisual);
+            var playerView = player.GetComponent<CombatantVisualView>();
+            if (playerView == null || playerView.HealthBarAnchor == null)
+                throw new InvalidOperationException("Authored PlayerVisual is missing CombatantVisualView.HealthBarAnchor.");
+            RequireOrCreateConnectedHealthBar(playerView.HealthBarAnchor, library.WorldHealthBar);
+
+            var uiRoot = RequireOrCreateRoot(scene, "First Playable UI");
+            RequireSingleUiBootstrap(scene, uiRoot);
+            var eventSystemRoot = RequireOrCreateRoot(scene, "EventSystem");
+            RequireSingleEventSystem(scene, eventSystemRoot);
+
+            ConfigureControllerAssets(controller, library);
+            composition.Configure(camera, field, runtimeObjects, runtimeSystems, spawnGuides, playerView, uiRoot);
+            ConfigureControllerSceneComposition(controller, composition);
         }
 
         public static void GenerateInBatchMode()
@@ -116,13 +127,19 @@ namespace JoseonHunter.Editor.Scenes
 
         private static GameObject RequireOrCreateRoot(Scene scene, string name)
         {
-            var matches = scene.GetRootGameObjects().Where(root => root.name == name).ToArray();
-            if (matches.Length > 1)
-                throw new InvalidOperationException($"{GameplayScenePath} contains duplicate root '{name}'.");
-            if (matches.Length == 1) return matches[0];
+            var existing = FindSingleRootOrNull(scene, name);
+            if (existing != null) return existing;
             var created = new GameObject(name);
             SceneManager.MoveGameObjectToScene(created, scene);
             return created;
+        }
+
+        private static GameObject FindSingleRootOrNull(Scene scene, string name)
+        {
+            var matches = scene.GetRootGameObjects().Where(root => root.name == name).ToArray();
+            if (matches.Length > 1)
+                throw new InvalidOperationException($"{GameplayScenePath} contains duplicate root '{name}'.");
+            return matches.SingleOrDefault();
         }
 
         private static Transform RequireOrCreateChild(Transform parent, string name)
@@ -146,7 +163,6 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void ConfigureNewCamera(Camera camera)
         {
-            if (camera.transform.position != Vector3.zero || camera.orthographic) return;
             camera.orthographic = true;
             camera.orthographicSize = CombatVisualScaleProfile.MobilePortrait.CameraOrthographicSize;
             camera.clearFlags = CameraClearFlags.SolidColor;
@@ -321,6 +337,21 @@ namespace JoseonHunter.Editor.Scenes
                 sceneComposition.objectReferenceValue = composition;
                 serialized.ApplyModifiedPropertiesWithoutUndo();
             }
+        }
+
+        private static void ValidateExistingControllerSceneComposition(Scene scene)
+        {
+            var controllerRoot = FindSingleRootOrNull(scene, "FirstPlayable");
+            if (controllerRoot == null) return;
+            var controller = controllerRoot.GetComponent<FirstPlayableController>();
+            var composition = controllerRoot.GetComponent<GameplaySceneComposition>();
+            if (controller == null || composition == null) return;
+
+            var serialized = new SerializedObject(controller);
+            var sceneComposition = serialized.FindProperty("sceneComposition");
+            if (sceneComposition.objectReferenceValue != null && sceneComposition.objectReferenceValue != composition)
+                throw new InvalidOperationException(
+                    "Gameplay controller references a different scene composition.");
         }
 
         private static void AssignSprite(SerializedObject serialized, string propertyName, string path)

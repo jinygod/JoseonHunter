@@ -142,6 +142,92 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GeneratorValidationPreservesEveryExistingAuthoredCameraInspectorValue()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var library = RequireVisualLibrary();
+                var cameraRoot = CreateInScene(scene, "Main Camera");
+                var camera = cameraRoot.AddComponent<Camera>();
+                camera.transform.SetPositionAndRotation(
+                    Vector3.zero,
+                    Quaternion.Euler(17f, 31f, 43f));
+                camera.orthographic = false;
+                camera.fieldOfView = 53f;
+                camera.orthographicSize = 8.75f;
+                camera.clearFlags = CameraClearFlags.Depth;
+                camera.backgroundColor = new Color(.13f, .27f, .41f, .59f);
+
+                var expectedPosition = camera.transform.position;
+                var expectedRotation = camera.transform.rotation;
+                var expectedOrthographic = camera.orthographic;
+                var expectedFieldOfView = camera.fieldOfView;
+                var expectedOrthographicSize = camera.orthographicSize;
+                var expectedClearFlags = camera.clearFlags;
+                var expectedBackground = camera.backgroundColor;
+
+                InvokePrivateGenerator("GenerateScene", scene, library);
+
+                Assert.That(camera.transform.position, Is.EqualTo(expectedPosition));
+                Assert.That(camera.transform.rotation, Is.EqualTo(expectedRotation));
+                Assert.That(camera.orthographic, Is.EqualTo(expectedOrthographic));
+                Assert.That(camera.fieldOfView, Is.EqualTo(expectedFieldOfView));
+                Assert.That(camera.orthographicSize, Is.EqualTo(expectedOrthographicSize));
+                Assert.That(camera.clearFlags, Is.EqualTo(expectedClearFlags));
+                Assert.That(camera.backgroundColor, Is.EqualTo(expectedBackground));
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsMismatchedCompositionBeforeMutatingTheScene()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var library = RequireVisualLibrary();
+                var controllerRoot = CreateInScene(scene, "FirstPlayable");
+                var controller = controllerRoot.AddComponent<FirstPlayableController>();
+                var expectedComposition = controllerRoot.AddComponent<GameplaySceneComposition>();
+                var mismatchedComposition = CreateInScene(scene, "Mismatched Composition")
+                    .AddComponent<GameplaySceneComposition>();
+                var authoredMarker = CreateInScene(scene, "Authored Marker");
+                authoredMarker.transform.SetPositionAndRotation(
+                    new Vector3(12f, -4f, 7f),
+                    Quaternion.Euler(11f, 22f, 33f));
+                var markerPosition = authoredMarker.transform.position;
+                var markerRotation = authoredMarker.transform.rotation;
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("sceneComposition").objectReferenceValue = mismatchedComposition;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                var sceneWasDirty = scene.isDirty;
+
+                AssertPrivateGeneratorFailure(
+                    "GenerateScene",
+                    "different scene composition",
+                    scene,
+                    library);
+
+                serialized.Update();
+                Assert.That(serialized.FindProperty("sceneComposition").objectReferenceValue,
+                    Is.EqualTo(mismatchedComposition));
+                Assert.That(controllerRoot.GetComponent<GameplaySceneComposition>(), Is.EqualTo(expectedComposition));
+                Assert.That(authoredMarker.transform.position, Is.EqualTo(markerPosition));
+                Assert.That(authoredMarker.transform.rotation, Is.EqualTo(markerRotation));
+                Assert.That(scene.GetRootGameObjects().Any(root => root.name == "Main Camera"), Is.False);
+                Assert.That(scene.isDirty, Is.EqualTo(sceneWasDirty));
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
         public void GeneratorRefusesDirtyLoadedGameplayBeforeMutation()
         {
             var scene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Additive);
