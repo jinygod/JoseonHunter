@@ -999,7 +999,11 @@ namespace JoseonHunter.Runtime.Gameplay
                 battlefieldHost = field.GetComponent<GameplayBattlefieldHost>();
             if (battlefieldHost == null)
                 battlefieldHost = field.gameObject.AddComponent<GameplayBattlefieldHost>();
-            battlefieldHost.ConfigureAuthoringRoots(runtimeBattlefield, null);
+            battlefieldHost.ConfigureAuthoringRoots(
+                runtimeBattlefield,
+                HasAuthoredSceneComposition
+                    ? field.Find("Authoring Preview")?.gameObject
+                    : null);
             battlefieldHost.ConfigureFallbackTiles(
                 battlefieldTilePrimary,
                 battlefieldTileAlternate,
@@ -1065,7 +1069,7 @@ namespace JoseonHunter.Runtime.Gameplay
             activeStageCombat = StageCombatCatalog.For(activeStageSelection.StageId);
             stagePresentationCatalog = Resources.Load<StagePresentationCatalog>("StagePresentationCatalog");
             activeDifficultyProfile = StageDifficultyProfile.For(activeStageSelection.Difficulty);
-            if (battlefieldHost == null || !battlefieldHost.IsBuilt ||
+            if (HasAuthoredSceneComposition || battlefieldHost == null || !battlefieldHost.IsBuilt ||
                 !battlefieldHost.PresentedStageId.Equals(activeStageSelection.StageId)) CreateField();
             var startingWeapon = patrolLoadout != null
                 ? patrolLoadout.StartingWeapon

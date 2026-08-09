@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using System.Reflection;
 using JoseonHunter.Runtime.Gameplay;
 using NUnit.Framework;
 using UnityEngine;
@@ -110,11 +111,181 @@ namespace JoseonHunter.Tests.PlayMode
             Object.Destroy(root);
         }
 
+        [UnityTest]
+        public IEnumerator ResetRunKeepsAuthoredBattlefieldPreviewInactiveAndUsesOneGeneratedPresentation()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var host = composition.BattlefieldRoot.GetComponent<GameplayBattlefieldHost>();
+            var preview = composition.BattlefieldRoot.Find("Authoring Preview");
+            Assert.That(host, Is.Not.Null);
+            Assert.That(preview, Is.Not.Null);
+
+            Assert.That(preview.gameObject.activeSelf, Is.False);
+            Assert.That(ActiveGeneratedPresentationCount(host), Is.EqualTo(1));
+
+            controller.ResetRunForTests();
+            controller.ResetRunForTests();
+            yield return null;
+            yield return null;
+
+            Assert.That(preview.gameObject.activeSelf, Is.False);
+            Assert.That(ActiveGeneratedPresentationCount(host), Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ResetRunRepairsInvalidAuthoredPlayerBindingWithoutReplacingStableComposition()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var player = composition.AuthoredPlayer;
+            var bodyRendererField = typeof(CombatantVisualView).GetField(
+                "bodyRenderer",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(bodyRendererField, Is.Not.Null);
+
+            var originalBodyRenderer = bodyRendererField.GetValue(player);
+            var cameraId = composition.GameplayCamera.GetEntityId();
+            var fieldId = composition.BattlefieldRoot.GetEntityId();
+            var runtimeObjectsId = composition.RuntimeObjectsRoot.GetEntityId();
+            var runtimeSystemsId = composition.RuntimeSystemsRoot.GetEntityId();
+            var uiId = composition.UiRoot.GetEntityId();
+            var playerId = player.GetEntityId();
+
+            bodyRendererField.SetValue(player, null);
+            LogAssert.Expect(
+                LogType.Warning,
+                "Authored combatant visual 'Han Yeonhwa' has invalid CombatantVisualView bindings for role 'Player'. Replacing it with a runtime fallback while preserving the authored player root.");
+            try
+            {
+                Assert.DoesNotThrow(() => controller.ResetRunForTests());
+                controller.ResetRunForTests();
+                yield return null;
+                yield return null;
+
+                Assert.That(composition.IsComplete, Is.True);
+                Assert.That(composition.GameplayCamera.GetEntityId(), Is.EqualTo(cameraId));
+                Assert.That(composition.BattlefieldRoot.GetEntityId(), Is.EqualTo(fieldId));
+                Assert.That(composition.RuntimeObjectsRoot.GetEntityId(), Is.EqualTo(runtimeObjectsId));
+                Assert.That(composition.RuntimeSystemsRoot.GetEntityId(), Is.EqualTo(runtimeSystemsId));
+                Assert.That(composition.UiRoot.GetEntityId(), Is.EqualTo(uiId));
+                Assert.That(composition.AuthoredPlayer.GetEntityId(), Is.EqualTo(playerId));
+                Assert.That(player.gameObject.activeInHierarchy, Is.True);
+                Assert.That(ActiveUsablePlayerVisualCount(player.transform), Is.EqualTo(1));
+                Assert.That(ActiveUsableHealthBarCount(player.transform), Is.EqualTo(1));
+            }
+            finally
+            {
+                bodyRendererField.SetValue(player, originalBodyRenderer);
+                controller.ResetRunForTests();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ResetRunPreservesInactiveAuthoredChildThroughInvalidPlayerRecovery()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var player = controller.GetComponent<GameplaySceneComposition>().AuthoredPlayer;
+            var inactiveChild = new GameObject("Authored Inactive Child");
+            inactiveChild.transform.SetParent(player.transform, false);
+            inactiveChild.SetActive(false);
+            var bodyRendererField = typeof(CombatantVisualView).GetField(
+                "bodyRenderer",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(bodyRendererField, Is.Not.Null);
+            var originalBodyRenderer = bodyRendererField.GetValue(player);
+
+            try
+            {
+                controller.ResetRunForTests();
+                Assert.That(inactiveChild.activeSelf, Is.False);
+
+                bodyRendererField.SetValue(player, null);
+                LogAssert.Expect(
+                    LogType.Warning,
+                    "Authored combatant visual 'Han Yeonhwa' has invalid CombatantVisualView bindings for role 'Player'. Replacing it with a runtime fallback while preserving the authored player root.");
+                controller.ResetRunForTests();
+                bodyRendererField.SetValue(player, originalBodyRenderer);
+                controller.ResetRunForTests();
+
+                Assert.That(inactiveChild.activeSelf, Is.False);
+            }
+            finally
+            {
+                bodyRendererField.SetValue(player, originalBodyRenderer);
+                Object.Destroy(inactiveChild);
+                controller.ResetRunForTests();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ResetRunDisablesInvalidAuthoredHealthBarBeforeCreatingOneUsableReplacement()
+        {
+            yield return LoadGameplay();
+
+            var controller = Object.FindAnyObjectByType<FirstPlayableController>();
+            var composition = controller.GetComponent<GameplaySceneComposition>();
+            var player = composition.AuthoredPlayer;
+            var authoredBar = player.GetComponentInChildren<WorldBarView>(true);
+            var fillRendererField = typeof(WorldBarView).GetField(
+                "fillRenderer",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(authoredBar, Is.Not.Null);
+            Assert.That(fillRendererField, Is.Not.Null);
+            var originalFillRenderer = fillRendererField.GetValue(authoredBar);
+            var playerId = player.GetEntityId();
+
+            fillRendererField.SetValue(authoredBar, null);
+            LogAssert.Expect(
+                LogType.Warning,
+                "Authored WorldBar 'Health Bar' has invalid bindings. Disabling it before using the fallback for 'Health Bar'.");
+            try
+            {
+                Assert.DoesNotThrow(() => controller.ResetRunForTests());
+                controller.ResetRunForTests();
+                yield return null;
+
+                Assert.That(composition.AuthoredPlayer.GetEntityId(), Is.EqualTo(playerId));
+                Assert.That(authoredBar.gameObject.activeSelf, Is.False);
+                Assert.That(ActiveUsableHealthBarCount(player.transform), Is.EqualTo(1));
+            }
+            finally
+            {
+                fillRendererField.SetValue(authoredBar, originalFillRenderer);
+                controller.ResetRunForTests();
+            }
+        }
+
         private static IEnumerator LoadGameplay()
         {
             SceneManager.LoadScene("Gameplay");
             yield return null;
             yield return null;
         }
+
+        private static int ActiveGeneratedPresentationCount(GameplayBattlefieldHost host)
+        {
+            var runtimeRoot = host.RuntimeRoot;
+            var count = 0;
+            for (var index = 0; index < runtimeRoot.childCount; index++)
+                if (runtimeRoot.GetChild(index).name == "Generated Battlefield Presentation" &&
+                    runtimeRoot.GetChild(index).gameObject.activeSelf)
+                    count++;
+            return count;
+        }
+
+        private static int ActiveUsablePlayerVisualCount(Transform root) =>
+            root.GetComponentsInChildren<CombatantVisualView>(true).Count(view =>
+                view.gameObject.activeInHierarchy && view.HasRequiredBindings(CombatantVisualRole.Player));
+
+        private static int ActiveUsableHealthBarCount(Transform root) =>
+            root.GetComponentsInChildren<WorldBarView>(true).Count(bar =>
+                bar.gameObject.activeInHierarchy && bar.HasRequiredBindings);
     }
 }

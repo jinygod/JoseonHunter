@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
@@ -13,10 +14,13 @@ namespace JoseonHunter.Runtime.Gameplay
     /// <summary>Builds or binds the runtime-owned visual shells used by gameplay.</summary>
     public sealed class GameplayVisualFactory
     {
+        private const string AuthoredFallbackVisualName = "Runtime Authored Player Fallback";
         private readonly GameplayVisualPrefabLibrary library;
         private readonly CombatMotionLibrary motionLibrary;
         private readonly Sprite solidSprite;
         private readonly Action<string, string> warnOnce;
+        private readonly Dictionary<Transform, Dictionary<GameObject, bool>> authoredVisualShellActiveStates =
+            new Dictionary<Transform, Dictionary<GameObject, bool>>();
 
         public GameplayVisualFactory(
             GameplayVisualPrefabLibrary library,
@@ -42,8 +46,17 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             var view = root == null ? null : root.GetComponent<CombatantVisualView>();
             if (view == null || !view.HasRequiredBindings(role))
-                throw new ArgumentException("Authored combatant visual is missing required bindings.", nameof(root));
+                return BindAuthoredFallback(
+                    root,
+                    objectName,
+                    sprite,
+                    sortingOrder,
+                    weight,
+                    phaseOffset,
+                    out visualRig,
+                    role);
 
+            RestoreAuthoredVisualShell(root.transform);
             root.name = objectName;
             visualRig = CombatantVisualRig.Bind(
                 root,
@@ -55,6 +68,61 @@ namespace JoseonHunter.Runtime.Gameplay
                 phaseOffset,
                 role);
             return root;
+        }
+
+        private GameObject BindAuthoredFallback(
+            GameObject authoredRoot,
+            string objectName,
+            Sprite sprite,
+            int sortingOrder,
+            MotionWeight weight,
+            float phaseOffset,
+            out CombatantVisualRig visualRig,
+            CombatantVisualRole role)
+        {
+            if (authoredRoot == null)
+                throw new ArgumentNullException(nameof(authoredRoot));
+
+            Warn(
+                $"authored-combatant:{role}",
+                $"Authored combatant visual '{authoredRoot.name}' has invalid CombatantVisualView bindings for role '{role}'. Replacing it with a runtime fallback while preserving the authored player root.");
+
+            var fallback = authoredRoot.transform.Find(AuthoredFallbackVisualName);
+            DeactivateAuthoredVisualShell(authoredRoot.transform, fallback);
+            if (fallback == null)
+            {
+                var created = CreateCombatant(
+                    AuthoredFallbackVisualName,
+                    sprite,
+                    Vector2.zero,
+                    sortingOrder,
+                    authoredRoot.transform,
+                    weight,
+                    phaseOffset,
+                    out visualRig,
+                    role);
+                created.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                created.transform.localScale = Vector3.one;
+                return created;
+            }
+
+            fallback.gameObject.SetActive(true);
+            fallback.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+            fallback.localScale = Vector3.one;
+            var fallbackView = fallback.GetComponent<CombatantVisualView>();
+            if (fallbackView == null || !fallbackView.HasRequiredBindings(role))
+                throw new ArgumentException("Runtime authored combatant fallback is missing required bindings.", nameof(authoredRoot));
+
+            visualRig = CombatantVisualRig.Bind(
+                fallback.gameObject,
+                fallbackView,
+                sprite,
+                sortingOrder,
+                motionLibrary == null ? null : motionLibrary.Find(sprite),
+                weight,
+                phaseOffset,
+                role);
+            return fallback.gameObject;
         }
 
         public GameObject CreateCombatant(
@@ -157,6 +225,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var anchor = combatantView != null && combatantView.HealthBarAnchor != null
                 ? combatantView.HealthBarAnchor
                 : owner;
+            DisableInvalidDirectBars(anchor, "Health Bar");
             if (anchor != owner && overrideAuthoredAnchor)
             {
                 anchor.localPosition = fallbackLocalPosition;
@@ -193,6 +262,7 @@ namespace JoseonHunter.Runtime.Gameplay
             var anchor = combatantView != null && combatantView.ShieldBarAnchor != null
                 ? combatantView.ShieldBarAnchor
                 : owner;
+            DisableInvalidDirectBars(anchor, "Shield Guard Bar");
             return CreateWorldBar(
                 "Shield Guard Bar",
                 library?.WorldShieldBar,
@@ -286,9 +356,63 @@ namespace JoseonHunter.Runtime.Gameplay
             if (anchor == null) return null;
             var bars = anchor.GetComponentsInChildren<WorldBarView>(true);
             for (var index = 0; index < bars.Length; index++)
-                if (bars[index].transform.parent == anchor && bars[index].HasRequiredBindings)
+                if (bars[index].transform.parent == anchor && bars[index].gameObject.activeSelf &&
+                    bars[index].HasRequiredBindings)
                     return bars[index];
             return null;
+        }
+
+        private void DeactivateAuthoredVisualShell(Transform root, Transform fallback)
+        {
+            if (!authoredVisualShellActiveStates.ContainsKey(root))
+            {
+                var activeStates = new Dictionary<GameObject, bool>();
+                for (var index = 0; index < root.childCount; index++)
+                {
+                    var child = root.GetChild(index);
+                    if (child != fallback)
+                        activeStates.Add(child.gameObject, child.gameObject.activeSelf);
+                }
+                authoredVisualShellActiveStates.Add(root, activeStates);
+            }
+
+            for (var index = 0; index < root.childCount; index++)
+            {
+                var child = root.GetChild(index);
+                if (child != fallback)
+                    child.gameObject.SetActive(false);
+            }
+        }
+
+        private void RestoreAuthoredVisualShell(Transform root)
+        {
+            var fallback = root.Find(AuthoredFallbackVisualName);
+            if (fallback != null)
+                fallback.gameObject.SetActive(false);
+            if (!authoredVisualShellActiveStates.TryGetValue(root, out var activeStates))
+                return;
+
+            foreach (var activeState in activeStates)
+            {
+                if (activeState.Key != null)
+                    activeState.Key.SetActive(activeState.Value);
+            }
+            authoredVisualShellActiveStates.Remove(root);
+        }
+
+        private void DisableInvalidDirectBars(Transform anchor, string runtimeName)
+        {
+            if (anchor == null) return;
+            var bars = anchor.GetComponentsInChildren<WorldBarView>(true);
+            for (var index = 0; index < bars.Length; index++)
+            {
+                var bar = bars[index];
+                if (bar.transform.parent != anchor || bar.HasRequiredBindings) continue;
+                Warn(
+                    $"authored-bar:{runtimeName}",
+                    $"Authored WorldBar '{bar.name}' has invalid bindings. Disabling it before using the fallback for '{runtimeName}'.");
+                bar.gameObject.SetActive(false);
+            }
         }
 
         private static GameObject CreateSpriteObject(
