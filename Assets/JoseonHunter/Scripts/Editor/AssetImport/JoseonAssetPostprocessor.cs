@@ -17,6 +17,8 @@ namespace JoseonHunter.Editor.AssetImport
         private const string MicroSlotUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/MicroSlot/";
         private const string AppraisalUiRoot = "Assets/JoseonHunter/Art/UI/AffixJackpot/Appraisal/";
         private const string LobbyUiRoot = "Assets/JoseonHunter/Art/UI/Lobby/";
+        private const string LobbyTrainingIconRoot =
+            "Assets/JoseonHunter/Art/UI/Lobby/Training/";
         private const string LobbyArtRoot = "Assets/JoseonHunter/Art/Characters/Lobby/";
         private const string PremiumLobbyResourceHeroPath =
             "Assets/JoseonHunter/Resources/Lobby/han_yeonhwa_hero.png";
@@ -71,13 +73,18 @@ namespace JoseonHunter.Editor.AssetImport
             var texture = (TextureImporter)assetImporter;
             if (assetPath.StartsWith(LobbyUiRoot, System.StringComparison.Ordinal))
             {
+                var keepsSourceAlpha = assetPath.StartsWith(
+                    LobbyTrainingIconRoot,
+                    System.StringComparison.Ordinal);
                 texture.textureType = TextureImporterType.Sprite;
                 texture.spriteImportMode = SpriteImportMode.Single;
                 texture.filterMode = FilterMode.Point;
                 texture.mipmapEnabled = false;
                 texture.spritePixelsPerUnit = 32f;
-                texture.alphaSource = TextureImporterAlphaSource.None;
-                texture.alphaIsTransparency = false;
+                texture.alphaSource = keepsSourceAlpha
+                    ? TextureImporterAlphaSource.FromInput
+                    : TextureImporterAlphaSource.None;
+                texture.alphaIsTransparency = keepsSourceAlpha;
                 texture.isReadable = false;
                 texture.textureCompression = TextureImporterCompression.Uncompressed;
                 texture.ClearPlatformTextureSettings("Android");
