@@ -19,3 +19,9 @@
 - `ResearchPageView` rejects selector-to-row action-button aliases before owned-listener teardown.
 - Counting-repository coverage proves path-two-first makes no writes, every successful purchase performs purchase-save then loadout-save, and repeated initialization does not duplicate listeners.
 - The retained two-save purchase/equip sequence is intentionally unchanged. Atomic rollback across the two existing session writes is pre-existing technical debt outside Task 6 scope.
+
+## Review fix round 2
+
+- The authored selector order test now compares the production `WeaponRoster` directly with the literal expected order and separately verifies literal Korean labels and catalog-backed icons.
+- A failing-save repository makes duplicate row-action callbacks observable: after two authored initializations, one actual row-button click produces exactly one loadout save attempt and one header refresh.
+- RED was demonstrated by temporarily bypassing owned-listener removal; the new test failed, then passed after restoring the production teardown.

@@ -22,6 +22,10 @@ namespace JoseonHunter.Tests.PlayMode
             WeaponId.HwandoFlyingBlade, WeaponId.GakgungShot, WeaponId.TalismanThrow, WeaponId.ThunderCrashBomb,
             WeaponId.JangseungWard, WeaponId.SingijeonVolley, WeaponId.FrostFlask, WeaponId.WindThunderFan
         };
+        private static readonly string[] ExpectedWeaponNames =
+        {
+            "환도 비검", "각궁", "주술 부적", "벽력탄", "장승진", "신기전", "서리병", "풍뢰선"
+        };
         [SetUp]
         public void SetUp()
         {
@@ -175,8 +179,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(page.HasRequiredBindings, Is.True);
             Assert.That(page.WeaponSelectors, Has.Length.EqualTo(8));
             Assert.That(page.Rows, Has.Length.EqualTo(3));
+            CollectionAssert.AreEqual(ExpectedWeaponOrder.Select(weapon => weapon.Value), WeaponRoster.All.Select(weapon => weapon.Value));
             CollectionAssert.AreEqual(ExpectedWeaponOrder.Select(weapon => weapon.Value),
                 page.WeaponSelectors.Select(selector => selector.name.Replace("Selector ", string.Empty)));
+            CollectionAssert.AreEqual(ExpectedWeaponNames, page.WeaponSelectors.Select(selector => selector.WeaponName.text));
+            Assert.That(page.WeaponSelectors.All(selector => selector.Icon.sprite != null), Is.True);
             CollectionAssert.AreEqual(selectorIds, page.WeaponSelectors.Select(selector => selector.GetEntityId()));
             CollectionAssert.AreEqual(rowIds, page.Rows.Select(row => row.GetEntityId()));
             Assert.That(page.SelectedWeaponName.text, Is.Not.Empty);
@@ -300,13 +307,48 @@ namespace JoseonHunter.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator RepeatedAuthoredInitializeBindsOneRowActionListener()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.UnlockedWeaponStyles.Add(WeaponLegacyPathId.GakgungSunPiercer.Value);
+            var repository = new MemoryRepository(data, failSaves: true);
+            var session = MetaGameSession.EnsureExists(repository);
+            var root = new GameObject("Research Owned Listener Count");
+            var presenter = root.AddComponent<WeaponResearchPresenter>();
+            var page = CreateAuthoredPage(root.transform, out _, out var rows);
+            presenter.ConfigureView(page);
+            var headerRefreshes = 0;
+            presenter.InitializeAuthored(session, () => headerRefreshes++);
+            presenter.InitializeAuthored(session, () => headerRefreshes++);
+            presenter.SelectWeaponForTests(1);
+
+            rows[1].ActionButton.onClick.Invoke();
+
+            Assert.That(repository.SaveCount, Is.EqualTo(1));
+            Assert.That(headerRefreshes, Is.EqualTo(1));
+            Object.Destroy(root);
+            yield return null;
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;
+            private readonly bool failSaves;
             public int SaveCount { get; private set; }
-            public MemoryRepository(SaveDataV1 data) => stored = data.Copy();
+            public MemoryRepository(SaveDataV1 data, bool failSaves = false)
+            {
+                stored = data.Copy();
+                this.failSaves = failSaves;
+            }
             public LoadResult Load() => new LoadResult(stored.Copy(), LoadSource.Current, SaveError.None);
-            public SaveResult Save(SaveDataV1 data) { SaveCount++; stored = data.Copy(); return new SaveResult(true, SaveError.None); }
+            public SaveResult Save(SaveDataV1 data)
+            {
+                SaveCount++;
+                if (failSaves) return new SaveResult(false, SaveError.IoFailure);
+                stored = data.Copy();
+                return new SaveResult(true, SaveError.None);
+            }
         }
 
         private static ResearchPageView CreateAuthoredPage(Transform parent, out LobbyWeaponSelectorCardView[] selectors,
