@@ -2,6 +2,7 @@ using System.Collections;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Presentation.UI.Lobby;
+using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
@@ -82,7 +83,7 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(presenter.CurrentTextForTests, Is.EqualTo("현재 최대 체력 +11.8%"));
             Assert.That(presenter.NextTextForTests, Is.EqualTo("강화 후 최대 체력 +12.4%"));
             Assert.That(presenter.CostTextForTests, Is.EqualTo("필요 엽전 868 · 강화 후 4,132"));
-            Assert.That(presenter.ButtonTextForTests(CommonTrainingId.Vitality), Is.EqualTo("활력\n8/20"));
+            Assert.That(presenter.ButtonTextForTests(CommonTrainingId.Vitality), Is.EqualTo("8 / 20"));
         }
 
         [UnityTest]
@@ -138,7 +139,7 @@ namespace JoseonHunter.Tests.PlayMode
             var cards = GameObject.Find("Training Grid").GetComponentsInChildren<Button>(true);
             Assert.That(cards, Has.Length.EqualTo(6));
             Assert.That(cards, Has.All.Matches<Button>(button =>
-                button.GetComponent<Image>().sprite.name == "small_item_frame"));
+                button.GetComponent<LobbyTrainingRowView>() != null));
             Assert.That(GameObject.Find("Training Summary Backplate").GetComponent<Image>().sprite.name,
                 Is.EqualTo("content_backplate"));
             var purchase = GameObject.Find("Purchase Training").GetComponent<Button>();
@@ -166,6 +167,63 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.LessThan(.01f));
             Assert.That(Vector2.Distance(reset.transform.position, (Vector2)resetBefore + panelDelta),
                 Is.LessThan(.01f));
+        }
+
+        [UnityTest]
+        public IEnumerator AuthoredTrainingPageBindsSixOrderedRowsWithoutReplacingExternalListeners()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 500;
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
+            var root = new GameObject("Authored Training Page");
+            var presenter = root.AddComponent<CommonTrainingPresenter>();
+            var page = root.AddComponent<TrainingPageView>();
+            var rows = new LobbyTrainingRowView[6];
+            var icons = new Sprite[6];
+            for (var index = 0; index < rows.Length; index++)
+            {
+                rows[index] = CreateAuthoredRow(root.transform, (CommonTrainingId)index);
+                icons[index] = CreateTestIcon(index);
+            }
+            var current = CreateText("Current Effect", root.transform);
+            var next = CreateText("Next Effect", root.transform);
+            var cost = CreateText("Cost", root.transform);
+            var capacity = CreateText("Capacity", root.transform);
+            var feedback = CreateText("Feedback", root.transform);
+            var purchase = CreateButton("Purchase", root.transform);
+            var reset = CreateButton("Reset", root.transform);
+            var externalPurchaseClicks = 0;
+            purchase.onClick.AddListener(() => externalPurchaseClicks++);
+            page.Configure(rows, icons, current, next, cost, capacity, purchase, reset, feedback);
+            presenter.ConfigureView(page);
+
+            var rowIds = new int[rows.Length];
+            for (var index = 0; index < rows.Length; index++) rowIds[index] = rows[index].GetEntityId().GetHashCode();
+            presenter.InitializeAuthored(session, null);
+            presenter.InitializeAuthored(session, null);
+            presenter.SelectForTests(CommonTrainingId.Vitality);
+
+            Assert.That(page.HasRequiredBindings, Is.True);
+            Assert.That(page.Rows, Has.Length.EqualTo(6));
+            Assert.That(page.Rows[0].TrainingId, Is.EqualTo(CommonTrainingId.Vitality));
+            Assert.That(page.Rows[1].TrainingId, Is.EqualTo(CommonTrainingId.Power));
+            Assert.That(page.Rows[2].TrainingId, Is.EqualTo(CommonTrainingId.Footwork));
+            Assert.That(page.Rows[3].TrainingId, Is.EqualTo(CommonTrainingId.Learning));
+            Assert.That(page.Rows[4].TrainingId, Is.EqualTo(CommonTrainingId.Guard));
+            Assert.That(page.Rows[5].TrainingId, Is.EqualTo(CommonTrainingId.Resonance));
+            for (var index = 0; index < rows.Length; index++)
+            {
+                Assert.That(rows[index].GetEntityId().GetHashCode(), Is.EqualTo(rowIds[index]));
+                Assert.That(rows[index].IconImage.sprite, Is.SameAs(icons[index]));
+                Assert.That(rows[index].NameText.text, Is.Not.Empty);
+                Assert.That(rows[index].RankText.text, Is.EqualTo("0 / 20"));
+            }
+
+            purchase.onClick.Invoke();
+            Assert.That(externalPurchaseClicks, Is.EqualTo(1));
+            Assert.That(session.Data.Coins, Is.EqualTo(400));
+            Object.Destroy(root);
+            yield return null;
         }
 
         [UnityTest]
@@ -222,6 +280,50 @@ namespace JoseonHunter.Tests.PlayMode
             foreach (Transform child in parent)
                 if (child.name == name) count++;
             return count;
+        }
+
+        private static LobbyTrainingRowView CreateAuthoredRow(Transform parent, CommonTrainingId id)
+        {
+            var root = new GameObject("Training Row " + id, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var button = CreateButton("Button", root.transform);
+            var icon = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
+            icon.transform.SetParent(root.transform, false);
+            var name = CreateText("Name", root.transform);
+            var rank = CreateText("Rank", root.transform);
+            var progressRoot = new GameObject("Progress", typeof(RectTransform));
+            progressRoot.transform.SetParent(root.transform, false);
+            var fill = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
+            fill.transform.SetParent(progressRoot.transform, false);
+            var value = CreateText("Value", progressRoot.transform);
+            var progress = progressRoot.AddComponent<LobbyProgressBarView>();
+            progress.Configure(fill, value);
+            var row = root.AddComponent<LobbyTrainingRowView>();
+            row.Configure(id, button, name, icon, rank, progress);
+            return row;
+        }
+
+        private static Button CreateButton(string name, Transform parent)
+        {
+            var image = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
+            image.transform.SetParent(parent, false);
+            var button = image.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            return button;
+        }
+
+        private static TMPro.TMP_Text CreateText(string name, Transform parent)
+        {
+            var text = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI))
+                .GetComponent<TMPro.TextMeshProUGUI>();
+            text.transform.SetParent(parent, false);
+            return text;
+        }
+
+        private static Sprite CreateTestIcon(int index)
+        {
+            var texture = new Texture2D(1, 1) { name = "Training Test Icon " + index };
+            return Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(.5f, .5f));
         }
 
         private static void AssertInside(RectTransform container, params RectTransform[] children)

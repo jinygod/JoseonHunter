@@ -23,6 +23,7 @@ namespace JoseonHunter.Editor.Scenes
             new ModuleDefinition("ProgressBar", BuildProgressBar, ValidateProgressBar),
             new ModuleDefinition("DifficultyCard", BuildDifficultyCard, ValidateDifficultyCard),
             new ModuleDefinition("WeaponSelectorCard", BuildWeaponSelectorCard, ValidateWeaponSelectorCard),
+            new ModuleDefinition("TrainingRow", BuildTrainingRow, ValidateTrainingRow),
             new ModuleDefinition("PrimaryActionButton", BuildPrimaryActionButton, ValidateActionButton),
             new ModuleDefinition("SecondaryActionButton", BuildSecondaryActionButton, ValidateActionButton)
         };
@@ -201,6 +202,39 @@ namespace JoseonHunter.Editor.Scenes
             return root;
         }
 
+        private static GameObject BuildTrainingRow()
+        {
+            var root = Root("TrainingRow", new Vector2(600f, 110f));
+            var button = Button("Button", root.transform, null);
+            Stretch(button.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
+            PremiumPixelUiSkin.ApplyFrame(button.GetComponent<Image>(), PremiumFrame.SmallItem);
+            var icon = Image("Icon", root.transform, Color.white);
+            icon.preserveAspect = true;
+            Place(icon.rectTransform, new Vector2(.10f, .5f), new Vector2(68f, 68f), Vector2.zero);
+            var name = Text("Name", root.transform, "활력", 24f, TextAlignmentOptions.Left);
+            Place(name.rectTransform, new Vector2(.35f, .66f), new Vector2(230f, 36f), Vector2.zero);
+            var rank = Text("Rank", root.transform, "0 / 20", 20f, TextAlignmentOptions.Right);
+            Place(rank.rectTransform, new Vector2(.80f, .66f), new Vector2(140f, 36f), Vector2.zero);
+            var progressRoot = new GameObject("Progress", typeof(RectTransform)).GetComponent<RectTransform>();
+            progressRoot.SetParent(root.transform, false);
+            Place(progressRoot, new Vector2(.58f, .29f), new Vector2(390f, 16f), Vector2.zero);
+            var track = Image("Track", progressRoot, Color.white);
+            Stretch(track.rectTransform, 0f, 0f, 0f, 0f);
+            PremiumPixelUiSkin.ApplyFrame(track, PremiumFrame.SmallItem);
+            var fill = Image("Fill", progressRoot, new Color(.78f, .54f, .20f, 1f));
+            fill.type = UnityEngine.UI.Image.Type.Filled;
+            fill.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
+            fill.fillOrigin = 0;
+            Stretch(fill.rectTransform, 0f, 0f, 0f, 0f);
+            var value = Text("Value", progressRoot, string.Empty, 1f);
+            value.gameObject.SetActive(false);
+            var progress = progressRoot.gameObject.AddComponent<LobbyProgressBarView>();
+            progress.Configure(fill, value);
+            root.AddComponent<LobbyTrainingRowView>().Configure(
+                JoseonHunter.Domain.Progression.CommonTrainingId.Vitality, button, name, icon, rank, progress);
+            return root;
+        }
+
         private static GameObject BuildPrimaryActionButton() => BuildActionButton("PrimaryActionButton", PremiumActionStyle.Primary);
 
         private static GameObject BuildSecondaryActionButton() => BuildActionButton("SecondaryActionButton", PremiumActionStyle.Secondary);
@@ -372,6 +406,21 @@ namespace JoseonHunter.Editor.Scenes
             if (buttonImage == null || buttonImage.sprite == null ||
                 buttonImage.type != UnityEngine.UI.Image.Type.Sliced)
                 throw new InvalidOperationException(root.name + "/Button must use a sliced frame.");
+        }
+
+        private static void ValidateTrainingRow(GameObject root)
+        {
+            ValidateRoot(root, "Button", "Icon", "Name", "Rank", "Progress");
+            var view = Require<LobbyTrainingRowView>(root);
+            if (!view.HasRequiredBindings)
+                throw new InvalidOperationException(root.name + " has incomplete training row bindings.");
+            RequireDirect<Button>(root, "Button");
+            RequireDirect<Image>(root, "Icon");
+            RequireDirect<TMP_Text>(root, "Name");
+            RequireDirect<TMP_Text>(root, "Rank");
+            var progress = RequireDirect<LobbyProgressBarView>(root, "Progress");
+            if (!progress.HasRequiredBindings)
+                throw new InvalidOperationException(root.name + " has incomplete training progress bindings.");
         }
 
         private static void ValidateActionButton(GameObject root)
