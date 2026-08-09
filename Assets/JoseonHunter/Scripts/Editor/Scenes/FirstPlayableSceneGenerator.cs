@@ -55,7 +55,7 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void GenerateScene(Scene scene, GameplayVisualPrefabLibrary library)
         {
-            ValidateExistingControllerSceneComposition(scene);
+            ValidateExistingScene(scene, library);
 
             var cameraRoot = FindSingleRootOrNull(scene, "Main Camera");
             var createdCameraRoot = cameraRoot == null;
@@ -64,7 +64,7 @@ namespace JoseonHunter.Editor.Scenes
             var createdCameraComponent = camera == null;
             if (createdCameraComponent) camera = RequireOrAdd<Camera>(cameraRoot);
             if (cameraRoot.tag != "MainCamera") cameraRoot.tag = "MainCamera";
-            if (createdCameraRoot || createdCameraComponent) ConfigureNewCamera(camera);
+            if (createdCameraRoot || createdCameraComponent) ConfigureNewCamera(camera, createdCameraRoot);
 
             var controllerRoot = RequireOrCreateRoot(scene, "FirstPlayable");
             var controller = RequireOrAdd<FirstPlayableController>(controllerRoot);
@@ -161,13 +161,13 @@ namespace JoseonHunter.Editor.Scenes
             return matches.Length == 1 ? matches[0] : gameObject.AddComponent<T>();
         }
 
-        private static void ConfigureNewCamera(Camera camera)
+        private static void ConfigureNewCamera(Camera camera, bool setRootPosition)
         {
             camera.orthographic = true;
             camera.orthographicSize = CombatVisualScaleProfile.MobilePortrait.CameraOrthographicSize;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(.075f, .07f, .08f);
-            camera.transform.position = new Vector3(0f, 0f, -10f);
+            if (setRootPosition) camera.transform.position = new Vector3(0f, 0f, -10f);
         }
 
         private static void EnsureAuthoringPreview(Transform previewRoot)
@@ -231,19 +231,28 @@ namespace JoseonHunter.Editor.Scenes
         private static void RequireOrCreateConnectedHealthBar(Transform anchor, GameObject prefab)
         {
             var allBars = anchor.GetComponentsInChildren<WorldBarView>(true);
-            if (allBars.Length > 1)
-                throw new InvalidOperationException("Han Yeonhwa has duplicate or nested WorldHealthBar instances.");
             if (allBars.Length == 1)
             {
-                var existing = allBars[0];
-                if (existing.transform.parent != anchor ||
-                    PrefabUtility.GetCorrespondingObjectFromOriginalSource(existing.gameObject) != prefab)
-                    throw new InvalidOperationException("Han Yeonhwa WorldHealthBar must be a direct connected child of HealthBarAnchor.");
+                ValidateExistingHealthBar(anchor, prefab);
                 return;
             }
+            if (allBars.Length > 1)
+                throw new InvalidOperationException("Han Yeonhwa has duplicate or nested WorldHealthBar instances.");
             var instance = PrefabUtility.InstantiatePrefab(prefab, anchor) as GameObject;
             if (instance == null) throw new InvalidOperationException("Unity could not instantiate WorldHealthBar.prefab.");
             instance.name = "Health Bar";
+        }
+
+        private static void ValidateExistingHealthBar(Transform anchor, GameObject prefab)
+        {
+            var allBars = anchor.GetComponentsInChildren<WorldBarView>(true);
+            if (allBars.Length > 1)
+                throw new InvalidOperationException("Han Yeonhwa has duplicate or nested WorldHealthBar instances.");
+            if (allBars.Length == 0) return;
+            var existing = allBars[0];
+            if (existing.transform.parent != anchor ||
+                PrefabUtility.GetCorrespondingObjectFromOriginalSource(existing.gameObject) != prefab)
+                throw new InvalidOperationException("Han Yeonhwa WorldHealthBar must be a direct connected child of HealthBarAnchor.");
         }
 
         private static void RequireExpectedPrefab(GameObject instance, GameObject expectedPrefab, string objectName)
@@ -339,6 +348,14 @@ namespace JoseonHunter.Editor.Scenes
             }
         }
 
+        private static void ValidateExistingScene(Scene scene, GameplayVisualPrefabLibrary library)
+        {
+            ValidateExistingControllerSceneComposition(scene);
+            ValidateExistingUiBootstrap(scene);
+            ValidateExistingEventSystem(scene);
+            ValidateExistingPlayerAndHealthBar(scene, library);
+        }
+
         private static void ValidateExistingControllerSceneComposition(Scene scene)
         {
             var controllerRoot = FindSingleRootOrNull(scene, "FirstPlayable");
@@ -352,6 +369,50 @@ namespace JoseonHunter.Editor.Scenes
             if (sceneComposition.objectReferenceValue != null && sceneComposition.objectReferenceValue != composition)
                 throw new InvalidOperationException(
                     "Gameplay controller references a different scene composition.");
+        }
+
+        private static void ValidateExistingUiBootstrap(Scene scene)
+        {
+            var root = FindSingleRootOrNull(scene, "First Playable UI");
+            var bootstraps = scene.GetRootGameObjects().SelectMany(candidate =>
+                candidate.GetComponentsInChildren<FirstPlayableUiBootstrap>(true)).ToArray();
+            if (bootstraps.Length > 1 || (bootstraps.Length == 1 &&
+                                          (root == null || bootstraps[0].gameObject != root)))
+                throw new InvalidOperationException("Gameplay scene contains an unexpected FirstPlayableUiBootstrap.");
+        }
+
+        private static void ValidateExistingEventSystem(Scene scene)
+        {
+            var root = FindSingleRootOrNull(scene, "EventSystem");
+            var eventSystems = scene.GetRootGameObjects().SelectMany(candidate =>
+                candidate.GetComponentsInChildren<EventSystem>(true)).ToArray();
+            if (eventSystems.Length > 1 || (eventSystems.Length == 1 &&
+                                            (root == null || eventSystems[0].gameObject != root)))
+                throw new InvalidOperationException("Gameplay scene contains an unexpected EventSystem.");
+        }
+
+        private static void ValidateExistingPlayerAndHealthBar(Scene scene, GameplayVisualPrefabLibrary library)
+        {
+            var controllerRoot = FindSingleRootOrNull(scene, "FirstPlayable");
+            if (controllerRoot == null) return;
+            var runtimeMatches = controllerRoot.transform.Cast<Transform>()
+                .Where(child => child.name == "RuntimeObjects").ToArray();
+            if (runtimeMatches.Length > 1)
+                throw new InvalidOperationException("FirstPlayable contains duplicate child 'RuntimeObjects'.");
+            if (runtimeMatches.Length == 0) return;
+
+            var playerMatches = runtimeMatches[0].Cast<Transform>()
+                .Where(child => child.name == "Han Yeonhwa").ToArray();
+            if (playerMatches.Length > 1)
+                throw new InvalidOperationException("RuntimeObjects contains duplicate Han Yeonhwa objects.");
+            if (playerMatches.Length == 0) return;
+
+            var player = playerMatches[0].gameObject;
+            RequireExpectedPrefab(player, library.PlayerVisual, "Han Yeonhwa");
+            var playerView = player.GetComponent<CombatantVisualView>();
+            if (playerView == null || playerView.HealthBarAnchor == null)
+                throw new InvalidOperationException("Authored PlayerVisual is missing CombatantVisualView.HealthBarAnchor.");
+            ValidateExistingHealthBar(playerView.HealthBarAnchor, library.WorldHealthBar);
         }
 
         private static void AssignSprite(SerializedObject serialized, string propertyName, string path)

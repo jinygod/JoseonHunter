@@ -184,6 +184,114 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void GeneratorAddsCameraDefaultsWithoutMovingAnExistingCameraRoot()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var cameraRoot = CreateInScene(scene, "Main Camera");
+                cameraRoot.transform.SetPositionAndRotation(
+                    new Vector3(4f, -7f, 13f),
+                    Quaternion.Euler(23f, 41f, 59f));
+                cameraRoot.transform.localScale = new Vector3(1.5f, 2f, .75f);
+                var expectedPosition = cameraRoot.transform.position;
+                var expectedRotation = cameraRoot.transform.rotation;
+                var expectedScale = cameraRoot.transform.localScale;
+
+                InvokePrivateGenerator("GenerateScene", scene, RequireVisualLibrary());
+
+                var camera = cameraRoot.GetComponent<Camera>();
+                Assert.That(camera, Is.Not.Null);
+                Assert.That(camera.orthographic, Is.True);
+                Assert.That(camera.orthographicSize,
+                    Is.EqualTo(CombatVisualScaleProfile.MobilePortrait.CameraOrthographicSize));
+                Assert.That(camera.transform.position, Is.EqualTo(expectedPosition));
+                Assert.That(camera.transform.rotation, Is.EqualTo(expectedRotation));
+                Assert.That(camera.transform.localScale, Is.EqualTo(expectedScale));
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsDuplicateInactiveUiBootstrapWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var uiRoot = CreateInScene(scene, "First Playable UI");
+                uiRoot.AddComponent<FirstPlayableUiBootstrap>();
+                var inactiveUi = CreateInScene(scene, "Inactive Extra UI");
+                inactiveUi.AddComponent<FirstPlayableUiBootstrap>();
+                inactiveUi.SetActive(false);
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "unexpected FirstPlayableUiBootstrap");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsDuplicateInactiveEventSystemWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var eventRoot = CreateInScene(scene, "EventSystem");
+                eventRoot.AddComponent<EventSystem>();
+                var inactiveEvent = CreateInScene(scene, "Inactive Extra EventSystem");
+                inactiveEvent.AddComponent<EventSystem>();
+                inactiveEvent.SetActive(false);
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "unexpected EventSystem");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsNestedConnectedHealthBarWithoutMutatingTheCleanScene()
+        {
+            var scene = CreateIsolatedTemporaryScene(out var temporaryScenePath);
+            try
+            {
+                var library = RequireVisualLibrary();
+                var controllerRoot = CreateInScene(scene, "FirstPlayable");
+                var runtimeObjects = CreateInScene(scene, "RuntimeObjects").transform;
+                runtimeObjects.SetParent(controllerRoot.transform, false);
+                var player = PrefabUtility.InstantiatePrefab(library.PlayerVisual, runtimeObjects) as GameObject;
+                Assert.That(player, Is.Not.Null);
+                player.name = "Han Yeonhwa";
+                var playerView = player.GetComponent<CombatantVisualView>();
+                var nestedParent = CreateInScene(scene, "Unexpected Nest").transform;
+                nestedParent.SetParent(playerView.HealthBarAnchor, false);
+                var healthBar = PrefabUtility.InstantiatePrefab(library.WorldHealthBar, nestedParent) as GameObject;
+                Assert.That(healthBar, Is.Not.Null);
+
+                AssertGenerationFailureLeavesCleanSceneUntouched(
+                    scene,
+                    temporaryScenePath,
+                    "direct connected child");
+            }
+            finally
+            {
+                CloseIsolatedTemporaryScene(scene, temporaryScenePath);
+            }
+        }
+
+        [Test]
         public void GeneratorRejectsMismatchedCompositionBeforeMutatingTheScene()
         {
             var scene = CreateTemporaryScene();
@@ -476,6 +584,43 @@ namespace JoseonHunter.Tests.EditMode
         {
             CloseTemporaryScene(scene);
             AssetDatabase.DeleteAsset(path);
+        }
+
+        private static void AssertGenerationFailureLeavesCleanSceneUntouched(
+            Scene scene,
+            string temporaryScenePath,
+            string expectedMessage)
+        {
+            Assert.That(EditorSceneManager.SaveScene(scene, temporaryScenePath), Is.True);
+            Assert.That(scene.isDirty, Is.False);
+            var snapshot = SnapshotScene(scene);
+
+            AssertPrivateGeneratorFailure("GenerateScene", expectedMessage, scene, RequireVisualLibrary());
+
+            CollectionAssert.AreEquivalent(snapshot, SnapshotScene(scene));
+            Assert.That(scene.isDirty, Is.False);
+        }
+
+        private static string[] SnapshotScene(Scene scene)
+        {
+            return scene.GetRootGameObjects()
+                .SelectMany(root => SnapshotGameObject(root, root.name))
+                .ToArray();
+        }
+
+        private static string[] SnapshotGameObject(GameObject gameObject, string path)
+        {
+            var prefab = PrefabUtility.GetCorrespondingObjectFromOriginalSource(gameObject);
+            var components = string.Join(",", gameObject.GetComponents<Component>()
+                .Select(component => $"{component.GetType().FullName}:{component.GetEntityId()}"));
+            var current = new[]
+            {
+                $"{path}:{gameObject.GetEntityId()}:{prefab?.GetEntityId()}:{gameObject.activeSelf}:" +
+                $"{gameObject.transform.localPosition}:{gameObject.transform.localRotation}:{gameObject.transform.localScale}:{components}"
+            };
+            return current.Concat(gameObject.transform.Cast<Transform>()
+                .SelectMany(child => SnapshotGameObject(child.gameObject, $"{path}/{child.name}")))
+                .ToArray();
         }
 
         private static void AssertPrivateGeneratorFailure(string methodName, string expectedMessage, params object[] arguments)
