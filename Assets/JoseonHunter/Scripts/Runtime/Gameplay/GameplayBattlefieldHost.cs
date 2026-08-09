@@ -1,4 +1,5 @@
 using JoseonHunter.Domain.Runs;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace JoseonHunter.Runtime.Gameplay
@@ -10,6 +11,10 @@ namespace JoseonHunter.Runtime.Gameplay
         private GameObject generatedPresentation;
         private BattlefieldTilePresenter battlefieldPresenter;
         private BoundedBattlefieldPresenter boundedBattlefieldPresenter;
+        private Sprite fallbackPrimaryTile;
+        private Sprite fallbackAlternateTile;
+        private IReadOnlyList<Sprite> fallbackDecorations;
+        private bool hasFallbackTiles;
 
         public StageId PresentedStageId { get; private set; }
         public bool IsBuilt { get; private set; }
@@ -21,6 +26,17 @@ namespace JoseonHunter.Runtime.Gameplay
         {
             runtimeRoot = nextRuntimeRoot;
             authoringPreviewRoot = nextAuthoringPreviewRoot;
+        }
+
+        public void ConfigureFallbackTiles(
+            Sprite primaryTile,
+            Sprite alternateTile,
+            IReadOnlyList<Sprite> decorations)
+        {
+            fallbackPrimaryTile = primaryTile;
+            fallbackAlternateTile = alternateTile;
+            fallbackDecorations = decorations;
+            hasFallbackTiles = true;
         }
 
         public void ConfigureForStage(
@@ -72,6 +88,14 @@ namespace JoseonHunter.Runtime.Gameplay
                         presentation.Decorations,
                         fallbackSprite,
                         seed);
+                }
+                else if (hasFallbackTiles)
+                {
+                    battlefieldPresenter.Build(
+                        fallbackPrimaryTile,
+                        fallbackAlternateTile,
+                        fallbackDecorations,
+                        fallbackSprite);
                 }
                 else
                 {

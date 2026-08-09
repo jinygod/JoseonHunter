@@ -981,6 +981,10 @@ namespace JoseonHunter.Runtime.Gameplay
             if (battlefieldHost == null)
                 battlefieldHost = field.gameObject.AddComponent<GameplayBattlefieldHost>();
             battlefieldHost.ConfigureAuthoringRoots(runtimeBattlefield, null);
+            battlefieldHost.ConfigureFallbackTiles(
+                battlefieldTilePrimary,
+                battlefieldTileAlternate,
+                battlefieldDecals);
 
             var presentation = Resources.Load<BattlefieldPresentationLibrary>(
                 BattlefieldPresentationResourcesPath);
