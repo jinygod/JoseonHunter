@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using JoseonHunter.Editor.Scenes;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Runtime.Gameplay;
@@ -15,6 +16,7 @@ namespace JoseonHunter.Tests.EditMode
     public sealed class GameplaySceneAuthoringContractTests
     {
         private const string GameplayScenePath = "Assets/JoseonHunter/Scenes/Gameplay.unity";
+        private const string PreviewScenePath = "Assets/JoseonHunter/Scenes/GameplayVisualPreview.unity";
 
         [Test]
         public void GameplaySceneContainsOneCompleteAuthoredComposition()
@@ -149,6 +151,178 @@ namespace JoseonHunter.Tests.EditMode
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        [Test]
+        public void GeneratorRejectsNestedConnectedWorldHealthBar()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var library = RequireVisualLibrary();
+                var anchor = CreateInScene(scene, "HealthBarAnchor").transform;
+                var nestedParent = CreateInScene(scene, "Unexpected Nest").transform;
+                nestedParent.SetParent(anchor, false);
+                PrefabUtility.InstantiatePrefab(library.WorldHealthBar, nestedParent);
+
+                AssertPrivateGeneratorFailure(
+                    "RequireOrCreateConnectedHealthBar",
+                    "direct connected child",
+                    anchor,
+                    library.WorldHealthBar);
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsWrongSoleInputModule()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var root = CreateInScene(scene, "EventSystem");
+                root.AddComponent<EventSystem>();
+                root.AddComponent<StandaloneInputModule>();
+
+                AssertPrivateGeneratorFailure(
+                    "RequireSingleEventSystem",
+                    "exactly one InputSystemUIInputModule",
+                    scene,
+                    root);
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
+        public void GeneratorRejectsInactiveDuplicateUiBootstrapAndEventSystem()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var uiRoot = CreateInScene(scene, "First Playable UI");
+                uiRoot.AddComponent<FirstPlayableUiBootstrap>();
+                var inactiveUi = CreateInScene(scene, "Inactive Extra UI");
+                inactiveUi.AddComponent<FirstPlayableUiBootstrap>();
+                inactiveUi.SetActive(false);
+                AssertPrivateGeneratorFailure(
+                    "RequireSingleUiBootstrap",
+                    "unexpected FirstPlayableUiBootstrap",
+                    scene,
+                    uiRoot);
+
+                var eventRoot = CreateInScene(scene, "EventSystem");
+                eventRoot.AddComponent<EventSystem>();
+                var inactiveEvent = CreateInScene(scene, "Inactive Extra EventSystem");
+                inactiveEvent.AddComponent<EventSystem>();
+                inactiveEvent.SetActive(false);
+                AssertPrivateGeneratorFailure(
+                    "RequireSingleEventSystem",
+                    "unexpected EventSystem",
+                    scene,
+                    eventRoot);
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        [Test]
+        public void GeneratorRepairsEmptyLegacyArraysButPreservesNonNullCustomReferences()
+        {
+            var scene = CreateTemporaryScene();
+            try
+            {
+                var library = RequireVisualLibrary();
+                var controller = CreateInScene(scene, "Temporary Controller").AddComponent<FirstPlayableController>();
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("enemySprites").arraySize = 0;
+                serialized.FindProperty("battlefieldDecals").arraySize = 0;
+                serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue = null;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                InvokePrivateGenerator("ConfigureControllerAssets", controller, library);
+                serialized.Update();
+                Assert.That(serialized.FindProperty("enemySprites").arraySize, Is.EqualTo(5));
+                Assert.That(serialized.FindProperty("battlefieldDecals").arraySize, Is.EqualTo(4));
+                Assert.That(serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue, Is.Not.Null);
+
+                var customSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                    "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png");
+                var customGeumjul = serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue;
+                serialized.FindProperty("enemySprites").arraySize = 1;
+                serialized.FindProperty("enemySprites").GetArrayElementAtIndex(0).objectReferenceValue = customSprite;
+                serialized.FindProperty("battlefieldDecals").arraySize = 1;
+                serialized.FindProperty("battlefieldDecals").GetArrayElementAtIndex(0).objectReferenceValue = customSprite;
+                serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue = customGeumjul;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+
+                InvokePrivateGenerator("ConfigureControllerAssets", controller, library);
+                serialized.Update();
+                Assert.That(serialized.FindProperty("enemySprites").arraySize, Is.EqualTo(1));
+                Assert.That(serialized.FindProperty("enemySprites").GetArrayElementAtIndex(0).objectReferenceValue,
+                    Is.EqualTo(customSprite));
+                Assert.That(serialized.FindProperty("battlefieldDecals").arraySize, Is.EqualTo(1));
+                Assert.That(serialized.FindProperty("battlefieldDecals").GetArrayElementAtIndex(0).objectReferenceValue,
+                    Is.EqualTo(customSprite));
+                Assert.That(serialized.FindProperty("jangseungGeumjulVisuals").objectReferenceValue,
+                    Is.EqualTo(customGeumjul));
+            }
+            finally
+            {
+                CloseTemporaryScene(scene);
+            }
+        }
+
+        private static GameplayVisualPrefabLibrary RequireVisualLibrary()
+        {
+            var library = AssetDatabase.LoadAssetAtPath<GameplayVisualPrefabLibrary>(
+                GameplayVisualPrefabBuilder.LibraryAssetPath);
+            Assert.That(library, Is.Not.Null);
+            return library;
+        }
+
+        private static Scene CreateTemporaryScene()
+        {
+            // The runner may retain an unsaved empty Scene between fixtures; Unity refuses another
+            // additive untitled Scene in that state. A saved preview Scene provides isolated,
+            // discarded additive test ownership without ever saving the production Gameplay asset.
+            return EditorSceneManager.OpenScene(PreviewScenePath, OpenSceneMode.Additive);
+        }
+
+        private static GameObject CreateInScene(Scene scene, string name)
+        {
+            var gameObject = new GameObject(name);
+            SceneManager.MoveGameObjectToScene(gameObject, scene);
+            return gameObject;
+        }
+
+        private static void CloseTemporaryScene(Scene scene)
+        {
+            if (scene.IsValid() && scene.isLoaded)
+                EditorSceneManager.CloseScene(scene, true);
+        }
+
+        private static void AssertPrivateGeneratorFailure(string methodName, string expectedMessage, params object[] arguments)
+        {
+            var exception = Assert.Throws<TargetInvocationException>(() => InvokePrivateGenerator(methodName, arguments));
+            Assert.That(exception.InnerException, Is.TypeOf<InvalidOperationException>());
+            Assert.That(exception.InnerException.Message, Does.Contain(expectedMessage));
+        }
+
+        private static void InvokePrivateGenerator(string methodName, params object[] arguments)
+        {
+            var method = typeof(FirstPlayableSceneGenerator).GetMethod(
+                methodName,
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, $"Missing private generator hook '{methodName}'.");
+            method.Invoke(null, arguments);
         }
 
         private static GameObject FindSingleRoot(Scene scene, string name)
