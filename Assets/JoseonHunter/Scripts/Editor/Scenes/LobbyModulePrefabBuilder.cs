@@ -26,6 +26,7 @@ namespace JoseonHunter.Editor.Scenes
             new ModuleDefinition("DifficultyCard", BuildDifficultyCard, ValidateDifficultyCard),
             new ModuleDefinition("WeaponSelectorCard", BuildWeaponSelectorCard, ValidateWeaponSelectorCard),
             new ModuleDefinition("TrainingRow", BuildTrainingRow, ValidateTrainingRow),
+            new ModuleDefinition("ResearchRow", BuildResearchRow, ValidateResearchRow),
             new ModuleDefinition("PrimaryActionButton", BuildPrimaryActionButton, ValidateActionButton),
             new ModuleDefinition("SecondaryActionButton", BuildSecondaryActionButton, ValidateActionButton)
         };
@@ -267,6 +268,33 @@ namespace JoseonHunter.Editor.Scenes
             return root;
         }
 
+        private static GameObject BuildResearchRow()
+        {
+            var root = Root("ResearchRow", new Vector2(600f, 160f));
+            var frame = root.AddComponent<Image>();
+            frame.raycastTarget = false;
+            PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.ContentBackplate);
+            var stage = Text("Stage", root.transform, "연구 단계", 24f, TextAlignmentOptions.Left);
+            Place(stage.rectTransform, new Vector2(.08f, .77f), new Vector2(220f, 34f), Vector2.zero);
+            var status = Text("Status", root.transform, "연구 중", 20f, TextAlignmentOptions.Right);
+            Place(status.rectTransform, new Vector2(.78f, .77f), new Vector2(200f, 34f), Vector2.zero);
+            var effect = Text("Effect", root.transform, "효과 / 대가", 18f, TextAlignmentOptions.Left);
+            Place(effect.rectTransform, new Vector2(.28f, .51f), new Vector2(500f, 32f), Vector2.zero);
+            var requirement = Text("Requirement", root.transform, "숙련도 0/0 · 전수 0", 17f, TextAlignmentOptions.Left);
+            Place(requirement.rectTransform, new Vector2(.28f, .24f), new Vector2(500f, 30f), Vector2.zero);
+            var action = Button("Action", root.transform, PremiumActionStyle.Primary);
+            Place(action.GetComponent<RectTransform>(), new Vector2(.12f, .38f), new Vector2(116f, 76f), Vector2.zero);
+            var actionText = Text("Action Text", action.transform, "해금", 20f);
+            Stretch(actionText.rectTransform, 8f, 6f, 8f, 6f);
+            var overlay = Image("Lock Overlay", root.transform, new Color(.02f, .025f, .02f, .72f));
+            Stretch(overlay.rectTransform, 0f, 0f, 0f, 0f);
+            overlay.raycastTarget = false;
+            overlay.gameObject.SetActive(false);
+            root.AddComponent<LobbyResearchRowView>().Configure(stage, status, effect, requirement, action, actionText,
+                overlay.gameObject);
+            return root;
+        }
+
         private static GameObject BuildPrimaryActionButton() => BuildActionButton("PrimaryActionButton", PremiumActionStyle.Primary);
 
         private static GameObject BuildSecondaryActionButton() => BuildActionButton("SecondaryActionButton", PremiumActionStyle.Secondary);
@@ -453,6 +481,22 @@ namespace JoseonHunter.Editor.Scenes
             var progress = RequireDirect<LobbyProgressBarView>(root, "Progress");
             if (!progress.HasRequiredBindings)
                 throw new InvalidOperationException(root.name + " has incomplete training progress bindings.");
+        }
+
+        private static void ValidateResearchRow(GameObject root)
+        {
+            ValidateRoot(root, "Stage", "Status", "Effect", "Requirement", "Action", "Lock Overlay");
+            var view = Require<LobbyResearchRowView>(root);
+            if (!view.HasRequiredBindings)
+                throw new InvalidOperationException(root.name + " has incomplete research row bindings.");
+            RequireDirect<TMP_Text>(root, "Stage");
+            RequireDirect<TMP_Text>(root, "Status");
+            RequireDirect<TMP_Text>(root, "Effect");
+            RequireDirect<TMP_Text>(root, "Requirement");
+            var action = RequireDirect<Button>(root, "Action");
+            if (action.GetComponentInChildren<TMP_Text>(true) != view.ActionText)
+                throw new InvalidOperationException(root.name + " has mismatched research action label binding.");
+            RequireDirect<Image>(root, "Lock Overlay");
         }
 
         private static void ValidateActionButton(GameObject root)

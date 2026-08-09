@@ -3,7 +3,9 @@ using System.Linq;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
+using JoseonHunter.Content.Weapons;
 using JoseonHunter.Presentation.UI.Lobby;
+using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
@@ -137,6 +139,89 @@ namespace JoseonHunter.Tests.PlayMode
                 Is.EqualTo(WeaponLegacyPathId.HwandoMoonEclipse));
         }
 
+        [UnityTest]
+        public IEnumerator AuthoredResearchPageBindsFixedWeaponOrderRowsAndExternalListeners()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.Coins = 800;
+            data.WeaponMasteryPoints[WeaponId.GakgungShot.Value] = 2000;
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
+            var root = new GameObject("Authored Research Page");
+            var presenter = root.AddComponent<WeaponResearchPresenter>();
+            var page = root.AddComponent<ResearchPageView>();
+            var selectors = WeaponRoster.All.Select((weapon, index) =>
+                CreateSelector(root.transform, weapon, index)).ToArray();
+            var rows = Enumerable.Range(0, 3).Select(index => CreateResearchRow(root.transform, index)).ToArray();
+            var actionClicks = 0;
+            rows[1].ActionButton.onClick.AddListener(() => actionClicks++);
+            page.Configure(selectors, CreateImage("Selected Icon", root.transform),
+                CreateText("Selected Name", root.transform), CreateProgress("Mastery", root.transform), rows,
+                CreateText("Feedback", root.transform));
+            presenter.ConfigureView(page);
+            presenter.ConfigureCatalog(UnityEditor.AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(
+                "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset"));
+
+            var selectorIds = selectors.Select(selector => selector.GetEntityId()).ToArray();
+            var rowIds = rows.Select(row => row.GetEntityId()).ToArray();
+            presenter.InitializeAuthored(session, null);
+            presenter.InitializeAuthored(session, null);
+            presenter.SelectWeaponForTests(1);
+
+            Assert.That(page.HasRequiredBindings, Is.True);
+            Assert.That(page.WeaponSelectors, Has.Length.EqualTo(8));
+            Assert.That(page.Rows, Has.Length.EqualTo(3));
+            CollectionAssert.AreEqual(WeaponRoster.All.Select(weapon => weapon.Value),
+                page.WeaponSelectors.Select(selector => selector.name.Replace("Selector ", string.Empty)));
+            CollectionAssert.AreEqual(selectorIds, page.WeaponSelectors.Select(selector => selector.GetEntityId()));
+            CollectionAssert.AreEqual(rowIds, page.Rows.Select(row => row.GetEntityId()));
+            Assert.That(page.SelectedWeaponName.text, Is.Not.Empty);
+            Assert.That(page.SelectedWeaponIcon.sprite, Is.Not.Null);
+            Assert.That(page.MasteryProgress.GetComponentInChildren<TMPro.TMP_Text>().text, Does.Contain("2,000"));
+            foreach (var row in page.Rows)
+            {
+                Assert.That(row.StageNameText.text, Is.Not.Empty);
+                Assert.That(row.StatusText.text, Is.Not.Empty);
+                Assert.That(row.EffectText.text, Is.Not.Empty);
+                Assert.That(row.RequirementText.text, Is.Not.Empty);
+                Assert.That(row.ActionText.text, Is.Not.Empty);
+                Assert.That(row.LockOverlay, Is.Not.Null);
+            }
+
+            rows[1].ActionButton.onClick.Invoke();
+            Assert.That(actionClicks, Is.EqualTo(1));
+            Assert.That(session.Data.UnlockedWeaponStyles, Contains.Item(WeaponLegacyPathId.GakgungSunPiercer.Value));
+            Object.Destroy(root);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator IncompleteAuthoredResearchBindingsThrowBeforeOwnedListenerUnbind()
+        {
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            var root = new GameObject("Incomplete Research Page");
+            var presenter = root.AddComponent<WeaponResearchPresenter>();
+            var page = root.AddComponent<ResearchPageView>();
+            var selectors = WeaponRoster.All.Select((weapon, index) =>
+                CreateSelector(root.transform, weapon, index)).ToArray();
+            var rows = Enumerable.Range(0, 3).Select(index => CreateResearchRow(root.transform, index)).ToArray();
+            page.Configure(selectors, CreateImage("Selected Icon", root.transform),
+                CreateText("Selected Name", root.transform), CreateProgress("Mastery", root.transform), rows,
+                CreateText("Feedback", root.transform));
+            presenter.ConfigureView(page);
+            presenter.InitializeAuthored(session, null);
+            var externalClicks = 0;
+            rows[0].ActionButton.onClick.AddListener(() => externalClicks++);
+            rows[1] = rows[0];
+            page.Configure(selectors, page.SelectedWeaponIcon, page.SelectedWeaponName, page.MasteryProgress, rows,
+                page.FeedbackText);
+
+            Assert.That(() => presenter.InitializeAuthored(session, null), Throws.TypeOf<System.InvalidOperationException>());
+            rows[0].ActionButton.onClick.Invoke();
+            Assert.That(externalClicks, Is.EqualTo(1));
+            Object.Destroy(root);
+            yield return null;
+        }
+
         private sealed class MemoryRepository : ISaveRepository
         {
             private SaveDataV1 stored;
@@ -152,6 +237,62 @@ namespace JoseonHunter.Tests.PlayMode
 
         private static TMPro.TMP_Text TextUnder(string name) =>
             GameObject.Find(name).GetComponentInChildren<TMPro.TMP_Text>(true);
+
+        private static LobbyWeaponSelectorCardView CreateSelector(Transform parent, WeaponId weaponId, int index)
+        {
+            var root = new GameObject("Selector " + weaponId.Value, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var selector = root.AddComponent<LobbyWeaponSelectorCardView>();
+            selector.Configure(CreateButton("Button", root.transform), CreateImage("Icon", root.transform),
+                CreateText("Caption", root.transform), CreateText("Name", root.transform),
+                CreateText("Chevron", root.transform));
+            return selector;
+        }
+
+        private static LobbyResearchRowView CreateResearchRow(Transform parent, int index)
+        {
+            var root = new GameObject("Research Row " + index, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var overlay = new GameObject("Lock Overlay", typeof(RectTransform));
+            overlay.transform.SetParent(root.transform, false);
+            var row = root.AddComponent<LobbyResearchRowView>();
+            row.Configure(CreateText("Stage", root.transform), CreateText("Status", root.transform),
+                CreateText("Effect", root.transform), CreateText("Requirement", root.transform),
+                CreateButton("Action", root.transform), CreateText("Action Text", root.transform), overlay);
+            return row;
+        }
+
+        private static LobbyProgressBarView CreateProgress(string name, Transform parent)
+        {
+            var root = new GameObject(name, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var progress = root.AddComponent<LobbyProgressBarView>();
+            progress.Configure(CreateImage("Fill", root.transform), CreateText("Value", root.transform));
+            return progress;
+        }
+
+        private static Image CreateImage(string name, Transform parent)
+        {
+            var image = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
+            image.transform.SetParent(parent, false);
+            return image;
+        }
+
+        private static Button CreateButton(string name, Transform parent)
+        {
+            var image = CreateImage(name, parent);
+            var button = image.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            return button;
+        }
+
+        private static TMPro.TMP_Text CreateText(string name, Transform parent)
+        {
+            var text = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TMPro.TextMeshProUGUI))
+                .GetComponent<TMPro.TextMeshProUGUI>();
+            text.transform.SetParent(parent, false);
+            return text;
+        }
 
         private static Rect WorldRect(RectTransform rect)
         {

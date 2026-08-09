@@ -26,6 +26,7 @@ namespace JoseonHunter.Tests.EditMode
         [TestCase("DifficultyCard", typeof(LobbyDifficultyCardView))]
         [TestCase("WeaponSelectorCard", typeof(LobbyWeaponSelectorCardView))]
         [TestCase("TrainingRow", typeof(LobbyTrainingRowView))]
+        [TestCase("ResearchRow", typeof(LobbyResearchRowView))]
         public void ProductionModuleHasRequiredViewAndNoMissingScripts(string name, Type viewType)
         {
             var path = ModuleRoot + name + ".prefab";
@@ -55,6 +56,9 @@ namespace JoseonHunter.Tests.EditMode
                 ("Chevron", typeof(TMP_Text)));
             AssertBindings("TrainingRow", ("Button", typeof(Button)), ("Icon", typeof(Image)),
                 ("Name", typeof(TMP_Text)), ("Rank", typeof(TMP_Text)), ("Progress", typeof(LobbyProgressBarView)));
+            AssertBindings("ResearchRow", ("Stage", typeof(TMP_Text)), ("Status", typeof(TMP_Text)),
+                ("Effect", typeof(TMP_Text)), ("Requirement", typeof(TMP_Text)), ("Action", typeof(Button)),
+                ("Lock Overlay", typeof(Image)));
             AssertBindings("PrimaryActionButton", ("Button", typeof(Button)));
             AssertBindings("SecondaryActionButton", ("Button", typeof(Button)));
 
@@ -81,9 +85,11 @@ namespace JoseonHunter.Tests.EditMode
             LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
             var before = File.ReadAllBytes(CommonHeaderPath);
             var trainingBefore = File.ReadAllBytes(ModuleRoot + "TrainingRow.prefab");
+            var researchBefore = File.ReadAllBytes(ModuleRoot + "ResearchRow.prefab");
             LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
             Assert.That(File.ReadAllBytes(CommonHeaderPath), Is.EqualTo(before));
             Assert.That(File.ReadAllBytes(ModuleRoot + "TrainingRow.prefab"), Is.EqualTo(trainingBefore));
+            Assert.That(File.ReadAllBytes(ModuleRoot + "ResearchRow.prefab"), Is.EqualTo(researchBefore));
         }
 
         [Test]
@@ -145,6 +151,19 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void ResearchRowModuleOwnsCompleteAuthoredLockAndActionBindings()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "ResearchRow.prefab");
+            var view = prefab.GetComponent<LobbyResearchRowView>();
+
+            Assert.That(view, Is.Not.Null);
+            Assert.That(view.HasRequiredBindings, Is.True);
+            Assert.That(view.ActionButton, Is.SameAs(prefab.transform.Find("Action").GetComponent<Button>()));
+            Assert.That(view.ActionText, Is.Not.Null);
+            Assert.That(view.LockOverlay, Is.SameAs(prefab.transform.Find("Lock Overlay").gameObject));
+        }
+
+        [Test]
         public void CreateOrValidateRejectsExistingModuleWithNamedChildOfWrongType()
         {
             const string path = ModuleRoot + "InfoStrip.prefab";
@@ -179,7 +198,7 @@ namespace JoseonHunter.Tests.EditMode
         {
             "CommonHeader", "PageHeader", "HomeMenuCard", "InfoStrip", "ProgressBar", "DifficultyCard",
             "WeaponSelectorCard", "PrimaryActionButton", "SecondaryActionButton"
-            , "TrainingRow"
+            , "TrainingRow", "ResearchRow"
         }.Select(name => AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + name + ".prefab")).ToArray();
 
         private static void AssertBindings(string prefabName, params (string Name, Type Type)[] bindings)
