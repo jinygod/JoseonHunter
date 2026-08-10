@@ -49,6 +49,7 @@ namespace JoseonHunter.Presentation.UI
     {
         private const string ResourceRoot = "UI/PremiumJoseon/";
         private const string PremiumIconName = "Premium Icon";
+        private static readonly Vector2 LockedDecorationAnchor = new(.5f, .7f);
 
         public static void ApplyFrame(Image image, PremiumFrame frame)
         {
@@ -123,7 +124,7 @@ namespace JoseonHunter.Presentation.UI
             var background = button.targetGraphic as Image ?? button.GetComponent<Image>();
             if (background == null) return;
             var frame = locked
-                ? PremiumFrame.DifficultyLocked
+                ? PremiumFrame.DifficultyIdle
                 : selected ? PremiumFrame.DifficultySelected : PremiumFrame.DifficultyIdle;
             ApplyFrame(background, frame);
             var tint = Color.white;
@@ -142,10 +143,11 @@ namespace JoseonHunter.Presentation.UI
 
             var lockIcon = EnsureImage(button.transform, "Lock Icon");
             var lockRect = lockIcon.rectTransform;
-            lockRect.anchorMin = lockRect.anchorMax = new Vector2(.5f, .5f);
+            lockRect.anchorMin = lockRect.anchorMax = LockedDecorationAnchor;
             lockRect.pivot = new Vector2(.5f, .5f);
             lockRect.anchoredPosition = Vector2.zero;
-            var lockSize = background.rectTransform.rect.height * .3f;
+            var cardSize = background.rectTransform.rect.size;
+            var lockSize = Mathf.Min(cardSize.y * .3f, cardSize.x * .3f);
             lockRect.sizeDelta = new Vector2(lockSize, lockSize);
             ApplyIcon(lockIcon, PremiumIcon.Lock);
             lockIcon.gameObject.SetActive(locked);

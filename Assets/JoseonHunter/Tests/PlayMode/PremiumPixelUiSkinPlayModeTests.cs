@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using JoseonHunter.Presentation.UI;
+using JoseonHunter.Presentation.UI.Lobby.Views;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -42,11 +43,11 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(((Image)button.targetGraphic).sprite.name, Is.EqualTo("difficulty_selected"));
 
             PremiumPixelUiSkin.ApplyDifficulty(button, selected: false, locked: true);
-            Assert.That(((Image)button.targetGraphic).sprite.name, Is.EqualTo("difficulty_locked"));
+            Assert.That(((Image)button.targetGraphic).sprite.name, Is.EqualTo("difficulty_idle"));
             var slashRect = button.transform.Find("Lock Slash").GetComponent<RectTransform>();
             var lockRect = button.transform.Find("Lock Icon").GetComponent<RectTransform>();
-            Assert.That(slashRect.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)));
-            Assert.That(slashRect.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
+            Assert.That(slashRect.anchorMin, Is.EqualTo(new Vector2(.5f, .7f)));
+            Assert.That(slashRect.anchorMax, Is.EqualTo(new Vector2(.5f, .7f)));
             Assert.That(lockRect.sizeDelta.x, Is.EqualTo(30f).Within(.001f));
             Assert.That(lockRect.sizeDelta.y, Is.EqualTo(30f).Within(.001f));
             AssertRectInsideButton(slashRect, button.GetComponent<RectTransform>());
@@ -68,9 +69,39 @@ namespace JoseonHunter.Tests.PlayMode
             PremiumPixelUiSkin.ApplyDifficulty(button, selected: false, locked: true);
 
             var slashRect = button.transform.Find("Lock Slash").GetComponent<RectTransform>();
+            var lockRect = button.transform.Find("Lock Icon").GetComponent<RectTransform>();
             Assert.That(button.transform.Cast<Transform>().Count(t => t.name == "Lock Slash"), Is.EqualTo(1));
             Assert.That(slashRect.localEulerAngles.z, Is.EqualTo(344f).Within(.001f));
             AssertRectInsideButton(slashRect, buttonRect);
+            AssertRectInsideButton(lockRect, buttonRect);
+
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void LockedDifficultyPlacesLabelBelowLockDecorationOnShortWideCard()
+        {
+            var root = new GameObject("Locked Difficulty Card", typeof(RectTransform));
+            var cardRect = root.GetComponent<RectTransform>();
+            cardRect.sizeDelta = new Vector2(280f, 100f);
+            var button = RuntimeUiFactory.Button("Button", root.transform, Color.black);
+            Stretch(button.GetComponent<RectTransform>());
+            var label = RuntimeUiFactory.Text("Label", root.transform, "대흉", 24f,
+                TextAlignmentOptions.Center);
+            Stretch(label.rectTransform, 18f, 12f, 18f, 12f);
+            var slash = RuntimeUiFactory.Image("Lock Slash", button.transform, Color.white);
+            var constraint = slash.gameObject.AddComponent<LockSlashConstraint>();
+            var icon = RuntimeUiFactory.Image("Lock Icon", button.transform, Color.white);
+            var card = root.AddComponent<LobbyDifficultyCardView>();
+            card.Configure(button, label, slash, icon, constraint);
+
+            card.Render("대흉", selected: false, locked: true);
+
+            var decorationBottom = Mathf.Min(RectBottom(slash.rectTransform), RectBottom(icon.rectTransform));
+            Assert.That(RectTop(label.rectTransform), Is.LessThanOrEqualTo(decorationBottom - 1f),
+                "A locked card must reserve the lower band for its readable difficulty label.");
+            AssertRectInsideButton(slash.rectTransform, button.GetComponent<RectTransform>());
+            AssertRectInsideButton(icon.rectTransform, button.GetComponent<RectTransform>());
 
             Object.DestroyImmediate(root);
         }
@@ -124,7 +155,7 @@ namespace JoseonHunter.Tests.PlayMode
             PremiumPixelUiSkin.ApplyDifficulty(button, false, true);
 
             Assert.That(((Image)button.targetGraphic).sprite.name,
-                Is.EqualTo("difficulty_locked"));
+                Is.EqualTo("difficulty_idle"));
             Assert.That(button.transform.Cast<Transform>().Count(t => t.name == "Lock Slash"),
                 Is.EqualTo(1));
             Assert.That(button.transform.Find("Lock Slash").gameObject.activeSelf, Is.True);
@@ -171,6 +202,29 @@ namespace JoseonHunter.Tests.PlayMode
                 Assert.That(corner.x, Is.InRange(buttonCorners[0].x, buttonCorners[2].x));
                 Assert.That(corner.y, Is.InRange(buttonCorners[0].y, buttonCorners[2].y));
             }
+        }
+
+        private static float RectBottom(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return corners.Min(corner => corner.y);
+        }
+
+        private static float RectTop(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return corners.Max(corner => corner.y);
+        }
+
+        private static void Stretch(RectTransform rect, float left = 0f, float bottom = 0f, float right = 0f,
+            float top = 0f)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(left, bottom);
+            rect.offsetMax = new Vector2(-right, -top);
         }
     }
 }

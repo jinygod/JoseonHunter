@@ -106,22 +106,92 @@ namespace JoseonHunter.Editor.Scenes
             }
         }
 
+        [MenuItem("JoseonHunter/Setup/Rebuild Lobby Modules")]
+        public static void RebuildProductionModules()
+        {
+            Directory.CreateDirectory(ModuleDirectory);
+            foreach (var definition in Definitions)
+            {
+                var root = definition.Build();
+                try
+                {
+                    definition.Validate(root);
+                    if (PrefabUtility.SaveAsPrefabAsset(root, PathFor(definition.Name)) == null)
+                        throw new InvalidOperationException("Could not rebuild Lobby module " + definition.Name + ".");
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                }
+            }
+            CreateOrValidateTrainingIconSet();
+            AssetDatabase.SaveAssets();
+        }
+
+        public static void RebuildInBatchMode()
+        {
+            try
+            {
+                RebuildProductionModules();
+                EditorApplication.Exit(0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+            }
+        }
+
         private static GameObject BuildCommonHeader()
         {
             var root = Root("CommonHeader", new Vector2(640f, 116f));
             var frame = Image("Frame", root.transform, Color.white);
             Stretch(frame.rectTransform, 0f, 0f, 0f, 0f);
             PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.HeaderBar);
-            var level = Text("Account Level", root.transform, "레벨 1", 28f);
-            Place(level.rectTransform, new Vector2(.05f, .5f), new Vector2(180f, 46f), Vector2.zero);
-            var progress = Image("Account Progress", root.transform, new Color(.78f, .54f, .20f, 1f));
+
+            var profile = new GameObject("Account Profile", typeof(RectTransform)).GetComponent<RectTransform>();
+            profile.SetParent(root.transform, false);
+            PlaceNormalized(profile, .02f, .10f, .68f, .90f);
+            var level = Text("Account Level", profile, "1", 28f);
+            PlaceNormalized(level.rectTransform, .01f, .12f, .13f, .88f);
+            var accountName = Text("Account Name", profile, "요괴 사냥꾼", 20f, TextAlignmentOptions.Left);
+            PlaceNormalized(accountName.rectTransform, .15f, .52f, .55f, .92f);
+            var experienceRoot = new GameObject("Account Experience", typeof(RectTransform)).GetComponent<RectTransform>();
+            experienceRoot.SetParent(profile, false);
+            PlaceNormalized(experienceRoot, .15f, .08f, .98f, .48f);
+            var experienceTrack = Image("Account Experience Track", experienceRoot, new Color(.10f, .08f, .09f, 1f));
+            Stretch(experienceTrack.rectTransform, 0f, 3f, 120f, 3f);
+            PremiumPixelUiSkin.ApplyFrame(experienceTrack, PremiumFrame.SmallItem);
+            var progress = Image("Account Experience Fill", experienceRoot, new Color(.18f, .72f, .36f, 1f));
+            AssignFillSprite(progress);
             progress.type = UnityEngine.UI.Image.Type.Filled;
             progress.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
             progress.fillOrigin = 0;
-            Place(progress.rectTransform, new Vector2(.5f, .5f), new Vector2(250f, 12f), Vector2.zero);
-            var coins = Text("Coins", root.transform, "0", 26f, TextAlignmentOptions.Right);
-            Place(coins.rectTransform, new Vector2(.94f, .5f), new Vector2(130f, 46f), Vector2.zero);
-            root.AddComponent<LobbyHeaderView>().Configure(level, progress, coins);
+            Stretch(progress.rectTransform, 8f, 8f, 128f, 8f);
+            var experience = Text("Account Experience Text", experienceRoot, "0 / 100", 15f,
+                TextAlignmentOptions.Right);
+            PlaceNormalized(experience.rectTransform, .76f, 0f, 1f, 1f);
+
+            var currency = Image("Currency Capsule", root.transform, Color.white);
+            PlaceNormalized(currency.rectTransform, .70f, .16f, .89f, .84f);
+            PremiumPixelUiSkin.ApplyFrame(currency, PremiumFrame.SmallItem);
+            var coinIcon = Image("Coin Icon", currency.transform, Color.white);
+            coinIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png");
+            coinIcon.preserveAspect = true;
+            PlaceNormalized(coinIcon.rectTransform, .06f, .18f, .34f, .82f);
+            var coins = Text("Coin Text", currency.transform, "0", 24f, TextAlignmentOptions.Right);
+            PlaceNormalized(coins.rectTransform, .34f, .12f, .94f, .88f);
+
+            var settings = Button("Settings Button", root.transform, null);
+            PlaceNormalized(settings.GetComponent<RectTransform>(), .90f, .16f, .985f, .84f);
+            PremiumPixelUiSkin.ApplyFrame(settings.GetComponent<Image>(), PremiumFrame.SmallItem);
+            var settingsIcon = Image("Settings Icon", settings.transform, Color.white);
+            PlaceNormalized(settingsIcon.rectTransform, .16f, .16f, .84f, .84f);
+            PremiumPixelUiSkin.ApplyIcon(settingsIcon, PremiumIcon.Settings);
+
+            root.AddComponent<LobbyHeaderView>().Configure(
+                level, accountName, progress, experience, coinIcon, coins, settings);
             return root;
         }
 
@@ -132,11 +202,14 @@ namespace JoseonHunter.Editor.Scenes
             Stretch(frame.rectTransform, 0f, 0f, 0f, 0f);
             PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.HeaderBar);
             var back = Button("Back Button", root.transform, PremiumActionStyle.Secondary);
-            Place(back.GetComponent<RectTransform>(), new Vector2(.08f, .5f), new Vector2(72f, 56f), Vector2.zero);
+            PlaceNormalized(back.GetComponent<RectTransform>(), .04f, .18f, .15f, .82f);
+            var backIcon = Image("Back Icon", back.transform, Color.white);
+            PlaceNormalized(backIcon.rectTransform, .18f, .18f, .82f, .82f);
+            PremiumPixelUiSkin.ApplyIcon(backIcon, PremiumIcon.Previous);
             var title = Text("Title", root.transform, "순찰", 32f);
-            Place(title.rectTransform, new Vector2(.5f, .5f), new Vector2(340f, 58f), Vector2.zero);
+            PlaceNormalized(title.rectTransform, .18f, .16f, .78f, .84f);
             var icon = Image("Icon", root.transform, Color.white);
-            Place(icon.rectTransform, new Vector2(.91f, .5f), new Vector2(48f, 48f), Vector2.zero);
+            PlaceNormalized(icon.rectTransform, .84f, .20f, .96f, .80f);
             PremiumPixelUiSkin.ApplyIcon(icon, PremiumIcon.Patrol);
             root.AddComponent<LobbyPageHeaderView>().Configure(back, title, icon);
             return root;
@@ -148,12 +221,14 @@ namespace JoseonHunter.Editor.Scenes
             var button = Button("Button", root.transform, null);
             Stretch(button.GetComponent<RectTransform>(), 0f, 0f, 0f, 0f);
             PremiumPixelUiSkin.ApplyFrame(button.GetComponent<Image>(), PremiumFrame.ContentBackplate);
+            var body = PlainBody("Body", button.transform, new Color(.055f, .045f, .065f, .88f));
+            Stretch(body.rectTransform, 10f, 10f, 10f, 10f);
             var title = Text("Title", root.transform, "순찰", 30f, TextAlignmentOptions.Left);
-            Place(title.rectTransform, new Vector2(.16f, .66f), new Vector2(320f, 42f), Vector2.zero);
+            PlaceNormalized(title.rectTransform, .07f, .52f, .68f, .82f);
             var description = Text("Description", root.transform, "귀신을 물리치고 마을을 지키세요", 20f, TextAlignmentOptions.Left);
-            Place(description.rectTransform, new Vector2(.16f, .34f), new Vector2(350f, 54f), Vector2.zero);
+            PlaceNormalized(description.rectTransform, .07f, .15f, .72f, .48f);
             var icon = Image("Icon", root.transform, Color.white);
-            Place(icon.rectTransform, new Vector2(.84f, .5f), new Vector2(78f, 78f), Vector2.zero);
+            PlaceNormalized(icon.rectTransform, .75f, .16f, .96f, .84f);
             PremiumPixelUiSkin.ApplyIcon(icon, PremiumIcon.Patrol);
             root.AddComponent<LobbyMenuCardView>().Configure(button, title, description, icon);
             return root;
@@ -179,12 +254,13 @@ namespace JoseonHunter.Editor.Scenes
             Stretch(track.rectTransform, 0f, 0f, 0f, 0f);
             PremiumPixelUiSkin.ApplyFrame(track, PremiumFrame.SmallItem);
             var fill = Image("Fill", root.transform, new Color(.78f, .54f, .20f, 1f));
+            AssignFillSprite(fill);
             fill.type = UnityEngine.UI.Image.Type.Filled;
             fill.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
             fill.fillOrigin = 0;
-            Place(fill.rectTransform, new Vector2(.06f, .5f), new Vector2(430f, 14f), Vector2.zero);
+            PlaceNormalized(fill.rectTransform, .06f, .35f, .72f, .65f);
             var value = Text("Value", root.transform, "0 / 0", 19f, TextAlignmentOptions.Right);
-            Place(value.rectTransform, new Vector2(.94f, .5f), new Vector2(130f, 38f), Vector2.zero);
+            PlaceNormalized(value.rectTransform, .75f, .15f, .94f, .85f);
             root.AddComponent<LobbyProgressBarView>().Configure(fill, value);
             return root;
         }
@@ -219,16 +295,18 @@ namespace JoseonHunter.Editor.Scenes
             var button = Button("Button", root.transform, null);
             Stretch(button.GetComponent<RectTransform>(), 6f, 6f, 6f, 6f);
             PremiumPixelUiSkin.ApplyFrame(button.GetComponent<Image>(), PremiumFrame.WeaponSelector);
+            var body = PlainBody("Body", button.transform, new Color(.055f, .045f, .065f, .90f));
+            Stretch(body.rectTransform, 9f, 9f, 9f, 9f);
 
             var icon = Image("Icon", root.transform, Color.white);
             icon.preserveAspect = true;
-            Place(icon.rectTransform, new Vector2(.11f, .5f), new Vector2(76f, 76f), Vector2.zero);
+            PlaceNormalized(icon.rectTransform, .05f, .16f, .17f, .84f);
             var caption = Text("Caption", root.transform, "시작 무기", 17f, TextAlignmentOptions.Left);
-            Place(caption.rectTransform, new Vector2(.28f, .68f), new Vector2(170f, 34f), Vector2.zero);
+            PlaceNormalized(caption.rectTransform, .20f, .58f, .75f, .88f);
             var weaponName = Text("Weapon Name", root.transform, "환도 비검", 25f, TextAlignmentOptions.Left);
-            Place(weaponName.rectTransform, new Vector2(.47f, .37f), new Vector2(360f, 46f), Vector2.zero);
+            PlaceNormalized(weaponName.rectTransform, .20f, .15f, .78f, .53f);
             var chevron = Text("Chevron", root.transform, "〉", 30f);
-            Place(chevron.rectTransform, new Vector2(.91f, .5f), new Vector2(54f, 66f), Vector2.zero);
+            PlaceNormalized(chevron.rectTransform, .84f, .17f, .96f, .83f);
 
             root.AddComponent<LobbyWeaponSelectorCardView>()
                 .Configure(button, icon, caption, weaponName, chevron);
@@ -243,18 +321,19 @@ namespace JoseonHunter.Editor.Scenes
             PremiumPixelUiSkin.ApplyFrame(button.GetComponent<Image>(), PremiumFrame.SmallItem);
             var icon = Image("Icon", root.transform, Color.white);
             icon.preserveAspect = true;
-            Place(icon.rectTransform, new Vector2(.10f, .5f), new Vector2(68f, 68f), Vector2.zero);
+            PlaceNormalized(icon.rectTransform, .05f, .18f, .16f, .82f);
             var name = Text("Name", root.transform, "활력", 24f, TextAlignmentOptions.Left);
-            Place(name.rectTransform, new Vector2(.35f, .66f), new Vector2(230f, 36f), Vector2.zero);
+            PlaceNormalized(name.rectTransform, .20f, .53f, .60f, .90f);
             var rank = Text("Rank", root.transform, "0 / 20", 20f, TextAlignmentOptions.Right);
-            Place(rank.rectTransform, new Vector2(.80f, .66f), new Vector2(140f, 36f), Vector2.zero);
+            PlaceNormalized(rank.rectTransform, .65f, .53f, .95f, .90f);
             var progressRoot = new GameObject("Progress", typeof(RectTransform)).GetComponent<RectTransform>();
             progressRoot.SetParent(root.transform, false);
-            Place(progressRoot, new Vector2(.58f, .29f), new Vector2(390f, 16f), Vector2.zero);
+            PlaceNormalized(progressRoot, .20f, .15f, .95f, .35f);
             var track = Image("Track", progressRoot, Color.white);
             Stretch(track.rectTransform, 0f, 0f, 0f, 0f);
             PremiumPixelUiSkin.ApplyFrame(track, PremiumFrame.SmallItem);
             var fill = Image("Fill", progressRoot, new Color(.78f, .54f, .20f, 1f));
+            AssignFillSprite(fill);
             fill.type = UnityEngine.UI.Image.Type.Filled;
             fill.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
             fill.fillOrigin = 0;
@@ -274,16 +353,18 @@ namespace JoseonHunter.Editor.Scenes
             var frame = root.AddComponent<Image>();
             frame.raycastTarget = false;
             PremiumPixelUiSkin.ApplyFrame(frame, PremiumFrame.ContentBackplate);
+            var body = PlainBody("Body", root.transform, new Color(.055f, .045f, .055f, .91f));
+            Stretch(body.rectTransform, 8f, 8f, 8f, 8f);
             var stage = Text("Stage", root.transform, "연구 단계", 24f, TextAlignmentOptions.Left);
-            Place(stage.rectTransform, new Vector2(.08f, .77f), new Vector2(220f, 34f), Vector2.zero);
+            PlaceNormalized(stage.rectTransform, .25f, .65f, .63f, .92f);
             var status = Text("Status", root.transform, "연구 중", 20f, TextAlignmentOptions.Right);
-            Place(status.rectTransform, new Vector2(.78f, .77f), new Vector2(200f, 34f), Vector2.zero);
+            PlaceNormalized(status.rectTransform, .65f, .65f, .96f, .92f);
             var effect = Text("Effect", root.transform, "효과 / 대가", 18f, TextAlignmentOptions.Left);
-            Place(effect.rectTransform, new Vector2(.28f, .51f), new Vector2(500f, 32f), Vector2.zero);
+            PlaceNormalized(effect.rectTransform, .25f, .39f, .96f, .62f);
             var requirement = Text("Requirement", root.transform, "숙련도 0/0 · 전수 0", 17f, TextAlignmentOptions.Left);
-            Place(requirement.rectTransform, new Vector2(.28f, .24f), new Vector2(500f, 30f), Vector2.zero);
+            PlaceNormalized(requirement.rectTransform, .25f, .13f, .96f, .34f);
             var action = Button("Action", root.transform, PremiumActionStyle.Primary);
-            Place(action.GetComponent<RectTransform>(), new Vector2(.12f, .38f), new Vector2(116f, 76f), Vector2.zero);
+            PlaceNormalized(action.GetComponent<RectTransform>(), .04f, .02f, .20f, .98f);
             var actionText = Text("Action Text", action.transform, "해금", 20f);
             Stretch(actionText.rectTransform, 8f, 6f, 8f, 6f);
             var overlay = Image("Lock Overlay", root.transform, new Color(.02f, .025f, .02f, .72f));
@@ -368,6 +449,32 @@ namespace JoseonHunter.Editor.Scenes
             rect.anchoredPosition = offset;
         }
 
+        private static void PlaceNormalized(RectTransform rect, float minX, float minY, float maxX, float maxY)
+        {
+            rect.anchorMin = new Vector2(minX, minY);
+            rect.anchorMax = new Vector2(maxX, maxY);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static void AssignFillSprite(Image image)
+        {
+            image.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            if (image.sprite == null)
+                throw new InvalidOperationException("Lobby progress fill sprite is missing.");
+            image.preserveAspect = false;
+        }
+
+        private static Image PlainBody(string name, Transform parent, Color color)
+        {
+            var image = Image(name, parent, color);
+            image.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+            if (image.sprite == null)
+                throw new InvalidOperationException("Built-in Lobby panel sprite is missing.");
+            image.type = UnityEngine.UI.Image.Type.Sliced;
+            return image;
+        }
+
         private static ColorBlock Colors() => new ColorBlock
         {
             normalColor = Color.white,
@@ -383,12 +490,19 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void ValidateCommonHeader(GameObject root)
         {
-            ValidateRoot(root, "Account Level", "Account Progress", "Coins");
+            ValidateRoot(root, "Account Profile", "Currency Capsule", "Settings Button");
             var view = Require<LobbyHeaderView>(root);
             if (!view.HasRequiredBindings) throw new InvalidOperationException(root.name + " has incomplete header bindings.");
-            RequireDirect<TMP_Text>(root, "Account Level");
-            RequireDirect<UnityEngine.UI.Image>(root, "Account Progress");
-            RequireDirect<TMP_Text>(root, "Coins");
+            var profile = root.transform.Find("Account Profile");
+            var currency = root.transform.Find("Currency Capsule");
+            if (profile?.Find("Account Level")?.GetComponent<TMP_Text>() != view.AccountLevelText ||
+                profile.Find("Account Name")?.GetComponent<TMP_Text>() != view.AccountNameText ||
+                profile.Find("Account Experience/Account Experience Fill")?.GetComponent<Image>() != view.ProgressFill ||
+                profile.Find("Account Experience/Account Experience Text")?.GetComponent<TMP_Text>() != view.AccountExperienceText ||
+                currency?.Find("Coin Icon")?.GetComponent<Image>() != view.CoinIcon ||
+                currency.Find("Coin Text")?.GetComponent<TMP_Text>() != view.CoinsText ||
+                root.transform.Find("Settings Button")?.GetComponent<Button>() != view.SettingsButton)
+                throw new InvalidOperationException(root.name + " has mismatched authored header bindings.");
         }
 
         private static void ValidatePageHeader(GameObject root)
@@ -400,6 +514,8 @@ namespace JoseonHunter.Editor.Scenes
             RequireDirect<Button>(root, "Back Button");
             RequireDirect<TMP_Text>(root, "Title");
             RequireDirect<UnityEngine.UI.Image>(root, "Icon");
+            if (root.transform.Find("Back Button/Back Icon")?.GetComponent<Image>() == null)
+                throw new InvalidOperationException(root.name + " has no authored back icon.");
         }
 
         private static void ValidateHomeMenuCard(GameObject root)
@@ -516,7 +632,9 @@ namespace JoseonHunter.Editor.Scenes
                 .Sum(item => GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(item.gameObject));
             if (missingScripts != 0) throw new InvalidOperationException(root.name + " has missing scripts.");
             foreach (var image in root.GetComponentsInChildren<UnityEngine.UI.Image>(true)
-                         .Where(image => image.sprite != null && image.type != UnityEngine.UI.Image.Type.Simple))
+                         .Where(image => image.sprite != null &&
+                                         image.type != UnityEngine.UI.Image.Type.Simple &&
+                                         image.type != UnityEngine.UI.Image.Type.Filled))
                 if (image.type != UnityEngine.UI.Image.Type.Sliced)
                     throw new InvalidOperationException(root.name + "/" + image.name + " must use a sliced frame.");
             foreach (var button in root.GetComponentsInChildren<Button>(true))

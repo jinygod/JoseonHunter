@@ -1,6 +1,8 @@
 using System.Collections;
+using System.Linq;
 using JoseonHunter.Domain;
 using JoseonHunter.Presentation.UI;
+using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Runtime.Gameplay;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
@@ -60,6 +62,9 @@ namespace JoseonHunter.Tests.PlayMode
             MetaGameSession.EnsureExists();
             SceneManager.LoadScene("Lobby");
             yield return null;
+            var navigation = Object.FindObjectsByType<LobbyNavigationPresenter>(FindObjectsInactive.Include)
+                .Single(item => item.gameObject.scene == SceneManager.GetActiveScene());
+            navigation.Show(LobbyPageId.Patrol);
             var start = GameObject.Find("Start Patrol").GetComponent<Button>();
             start.onClick.Invoke();
 

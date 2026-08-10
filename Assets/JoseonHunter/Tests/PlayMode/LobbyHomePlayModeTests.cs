@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Linq;
+using System.Reflection;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
@@ -55,6 +56,31 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(view.StageText.text, Is.EqualTo("귀곡 들판"));
             Assert.That(view.DifficultyText.text, Is.EqualTo("보통"));
             Assert.That(view.StartingWeaponText.text, Is.EqualTo("각궁"));
+        }
+
+        [UnityTest]
+        public IEnumerator InitializeRendersAuthoredSummaryWhenAwakeBindingIsUnavailable()
+        {
+            var data = SaveDataV1.CreateDefaults();
+            data.SelectedStageId = StageId.GwigokField.Value;
+            data.SelectedStageDifficulty = "normal";
+            data.PatrolLoadouts[0].StartingWeaponId = "gakgung_shot";
+            var session = MetaGameSession.EnsureExists(new MemoryRepository(data));
+            var home = CreateHome();
+            var presenter = home.GetComponent<LobbyHomePresenter>();
+            var view = home.GetComponent<LobbyHomeView>();
+            typeof(LobbyHomePresenter).GetField("view", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(presenter, null);
+
+            presenter.ConfigureView(view);
+            presenter.Initialize(session, null);
+            yield return null;
+
+            Assert.That(view.StageText.text, Is.EqualTo("\uadc0\uace1 \ub4e4\ud310"));
+            Assert.That(view.DifficultyText.text, Is.EqualTo("\ubcf4\ud1b5"));
+            Assert.That(view.StartingWeaponText.text, Is.EqualTo("\uac01\uad81"));
+            Assert.That(view.StartingWeaponIcon.sprite, Is.Null);
+            Assert.That(view.StartingWeaponIcon.enabled, Is.False);
         }
 
         [UnityTest]

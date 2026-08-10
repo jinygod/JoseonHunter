@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using JoseonHunter.Editor.Scenes;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby;
@@ -41,10 +42,12 @@ namespace JoseonHunter.Tests.EditMode
         [Test]
         public void ModulesExposeExactDirectChildBindingsAndPremiumFrames()
         {
-            AssertBindings("CommonHeader", ("Account Level", typeof(TMP_Text)),
-                ("Account Progress", typeof(Image)), ("Coins", typeof(TMP_Text)));
+            AssertBindings("CommonHeader", ("Account Profile", typeof(RectTransform)),
+                ("Currency Capsule", typeof(RectTransform)), ("Settings Button", typeof(Button)));
             AssertBindings("PageHeader", ("Back Button", typeof(Button)), ("Title", typeof(TMP_Text)),
                 ("Icon", typeof(Image)));
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "PageHeader.prefab")
+                .transform.Find("Back Button/Back Icon")?.GetComponent<Image>(), Is.Not.Null);
             AssertBindings("HomeMenuCard", ("Button", typeof(Button)), ("Title", typeof(TMP_Text)),
                 ("Description", typeof(TMP_Text)), ("Icon", typeof(Image)));
             AssertBindings("InfoStrip", ("Label", typeof(TMP_Text)), ("Value", typeof(TMP_Text)));
@@ -65,7 +68,9 @@ namespace JoseonHunter.Tests.EditMode
             foreach (var prefab in ModulePrefabs())
             {
                 foreach (var image in prefab.GetComponentsInChildren<Image>(true)
-                             .Where(image => image.sprite != null && image.type != Image.Type.Simple))
+                             .Where(image => image.sprite != null &&
+                                             image.type != Image.Type.Simple &&
+                                             image.type != Image.Type.Filled))
                     Assert.That(image.type, Is.EqualTo(Image.Type.Sliced), prefab.name + "/" + image.name);
 
                 foreach (var button in prefab.GetComponentsInChildren<Button>(true))
@@ -80,6 +85,29 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void CommonHeaderIsOneCompleteResponsiveModuleWithoutLegacyDuplicates()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CommonHeaderPath);
+            var view = prefab.GetComponent<LobbyHeaderView>();
+            var profile = prefab.transform.Find("Account Profile");
+            var currency = prefab.transform.Find("Currency Capsule");
+            var settings = prefab.transform.Find("Settings Button");
+
+            Assert.That(profile, Is.Not.Null);
+            Assert.That(profile.Find("Account Level")?.GetComponent<TMP_Text>(), Is.Not.Null);
+            Assert.That(profile.Find("Account Name")?.GetComponent<TMP_Text>(), Is.Not.Null);
+            Assert.That(profile.Find("Account Experience/Account Experience Fill")?.GetComponent<Image>(), Is.Not.Null);
+            Assert.That(profile.Find("Account Experience/Account Experience Text")?.GetComponent<TMP_Text>(), Is.Not.Null);
+            Assert.That(currency, Is.Not.Null);
+            Assert.That(currency.Find("Coin Icon")?.GetComponent<Image>(), Is.Not.Null);
+            Assert.That(currency.Find("Coin Text")?.GetComponent<TMP_Text>(), Is.Not.Null);
+            Assert.That(settings?.GetComponent<Button>(), Is.Not.Null);
+            Assert.That(settings.Find("Settings Icon")?.GetComponent<Image>(), Is.Not.Null);
+            Assert.That(view.HasRequiredBindings, Is.True);
+            Assert.That(prefab.transform.Find("Header"), Is.Null);
+        }
+
+        [Test]
         public void CreateOrValidateDoesNotOverwriteValidModules()
         {
             LobbyModulePrefabBuilder.CreateOrValidateProductionModules();
@@ -90,6 +118,45 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(File.ReadAllBytes(CommonHeaderPath), Is.EqualTo(before));
             Assert.That(File.ReadAllBytes(ModuleRoot + "TrainingRow.prefab"), Is.EqualTo(trainingBefore));
             Assert.That(File.ReadAllBytes(ModuleRoot + "ResearchRow.prefab"), Is.EqualTo(researchBefore));
+        }
+
+        [Test]
+        public void ModuleValidationAcceptsAuthoredFilledProgressImages()
+        {
+            var build = typeof(LobbyModulePrefabBuilder).GetMethod("BuildProgressBar",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            var validate = typeof(LobbyModulePrefabBuilder).GetMethod("ValidateRoot",
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(build, Is.Not.Null);
+            Assert.That(validate, Is.Not.Null);
+            var root = (GameObject)build.Invoke(null, null);
+            try
+            {
+                var fill = root.transform.Find("Fill").GetComponent<Image>();
+                Assert.That(fill.sprite, Is.Not.Null);
+                Assert.That(fill.type, Is.EqualTo(Image.Type.Filled));
+                Assert.DoesNotThrow(() => validate.Invoke(null, new object[] { root, Array.Empty<string>() }));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        [Test]
+        public void ProgressModulesUsePlainFilledSpritesInsteadOfDecorativeDividers()
+        {
+            var fills = new[]
+            {
+                AssetDatabase.LoadAssetAtPath<GameObject>(CommonHeaderPath)
+                    .transform.Find("Account Profile/Account Experience/Account Experience Fill").GetComponent<Image>(),
+                AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "ProgressBar.prefab")
+                    .transform.Find("Fill").GetComponent<Image>(),
+                AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "TrainingRow.prefab")
+                    .transform.Find("Progress/Fill").GetComponent<Image>()
+            };
+            Assert.That(fills, Is.All.Matches<Image>(fill => fill.sprite != null &&
+                fill.type == Image.Type.Filled && fill.sprite.name != "divider_gold"));
         }
 
         [Test]
@@ -194,6 +261,34 @@ namespace JoseonHunter.Tests.EditMode
             }
         }
 
+        [TestCase("BuildHomeMenuCard", 216f, 352f)]
+        [TestCase("BuildPageHeader", 662f, 83f)]
+        [TestCase("BuildProgressBar", 634f, 54f)]
+        [TestCase("BuildDifficultyCard", 211f, 115f)]
+        [TestCase("BuildWeaponSelectorCard", 634f, 115f)]
+        [TestCase("BuildTrainingRow", 634f, 110f)]
+        [TestCase("BuildResearchRow", 634f, 160f)]
+        public void ResponsiveModuleDefinitionsKeepDirectContentInsidePortraitAnchors(
+            string buildMethodName, float width, float height)
+        {
+            var build = typeof(LobbyModulePrefabBuilder).GetMethod(buildMethodName,
+                BindingFlags.Static | BindingFlags.NonPublic);
+            Assert.That(build, Is.Not.Null, buildMethodName);
+            var root = (GameObject)build.Invoke(null, null);
+            try
+            {
+                var rootRect = root.GetComponent<RectTransform>();
+                rootRect.sizeDelta = new Vector2(width, height);
+                Canvas.ForceUpdateCanvases();
+                foreach (RectTransform child in root.transform)
+                    AssertRectInside(child, rootRect, root.name + "/" + child.name);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
         private static GameObject[] ModulePrefabs() => new[]
         {
             "CommonHeader", "PageHeader", "HomeMenuCard", "InfoStrip", "ProgressBar", "DifficultyCard",
@@ -211,6 +306,19 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(child, Is.Not.Null, prefabName + " direct child " + binding.Name);
                 Assert.That(child.GetComponent(binding.Type), Is.Not.Null,
                     prefabName + " direct child " + binding.Name + " " + binding.Type.Name);
+            }
+        }
+
+        private static void AssertRectInside(RectTransform child, RectTransform parent, string label)
+        {
+            var childCorners = new Vector3[4];
+            var parentCorners = new Vector3[4];
+            child.GetWorldCorners(childCorners);
+            parent.GetWorldCorners(parentCorners);
+            foreach (var corner in childCorners)
+            {
+                Assert.That(corner.x, Is.InRange(parentCorners[0].x, parentCorners[2].x), label);
+                Assert.That(corner.y, Is.InRange(parentCorners[0].y, parentCorners[2].y), label);
             }
         }
     }

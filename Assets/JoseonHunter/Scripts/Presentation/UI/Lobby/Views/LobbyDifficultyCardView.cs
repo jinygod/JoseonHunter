@@ -12,6 +12,11 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
         [SerializeField] private Image lockSlash;
         [SerializeField] private Image lockIcon;
         [SerializeField] private LockSlashConstraint lockSlashConstraint;
+        private bool hasCapturedLabelLayout;
+        private Vector2 defaultLabelAnchorMin;
+        private Vector2 defaultLabelAnchorMax;
+        private Vector2 defaultLabelOffsetMin;
+        private Vector2 defaultLabelOffsetMax;
 
         public Button Button => button;
         public Image Background => button == null ? null : button.targetGraphic as Image ?? button.GetComponent<Image>();
@@ -45,6 +50,34 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
             button.gameObject.SetActive(true);
             button.interactable = true;
             PremiumPixelUiSkin.ApplyDifficulty(button, selected, locked);
+            ApplyLabelLayout(locked);
+        }
+
+        private void ApplyLabelLayout(bool locked)
+        {
+            var rect = labelText.rectTransform;
+            if (!hasCapturedLabelLayout)
+            {
+                hasCapturedLabelLayout = true;
+                defaultLabelAnchorMin = rect.anchorMin;
+                defaultLabelAnchorMax = rect.anchorMax;
+                defaultLabelOffsetMin = rect.offsetMin;
+                defaultLabelOffsetMax = rect.offsetMax;
+            }
+
+            if (!locked)
+            {
+                rect.anchorMin = defaultLabelAnchorMin;
+                rect.anchorMax = defaultLabelAnchorMax;
+                rect.offsetMin = defaultLabelOffsetMin;
+                rect.offsetMax = defaultLabelOffsetMax;
+                return;
+            }
+
+            rect.anchorMin = new Vector2(.07f, .06f);
+            rect.anchorMax = new Vector2(.93f, .47f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
     }
 }

@@ -1,15 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using JoseonHunter.Domain.Combat;
 using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Domain.Progression;
+using JoseonHunter.Domain.Save;
+using JoseonHunter.Runtime.Meta;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -18,12 +23,43 @@ namespace JoseonHunter.Editor.Scenes
     public static class LobbySceneBuilder
     {
         private const string ScenePath = "Assets/JoseonHunter/Scenes/Lobby.unity";
+        private const string CaptureDirectory = "Artifacts/LobbyPremium";
         private const string BackgroundPath = "Assets/JoseonHunter/Art/UI/Lobby/lobby_courtyard.png";
         private const string CoinSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Pickups/coin.png";
         private const string HeroSpritePath =
             "Assets/JoseonHunter/Art/StaticSprites/Runtime/Heroes/han_yeonhwa.png";
         private const string WeaponCatalogPath = "Assets/JoseonHunter/Content/Weapons/WeaponCatalog.asset";
+        private static readonly LobbyCaptureRequest[] CaptureRequests =
+        {
+            new(new Vector2Int(720, 1280), "Home"),
+            new(new Vector2Int(720, 1280), "Training"),
+            new(new Vector2Int(720, 1280), "Patrol"),
+            new(new Vector2Int(720, 1280), "Research-ready"),
+            new(new Vector2Int(1080, 1920), "Home"),
+            new(new Vector2Int(1080, 1920), "Training"),
+            new(new Vector2Int(1080, 1920), "Patrol"),
+            new(new Vector2Int(1080, 1920), "Research-ready"),
+            new(new Vector2Int(1080, 2340), "Home"),
+            new(new Vector2Int(1080, 2340), "Training"),
+            new(new Vector2Int(1080, 2340), "Patrol"),
+            new(new Vector2Int(1080, 2340), "Research-ready")
+        };
+
+        public static IReadOnlyList<LobbyCaptureRequest> CapturePlan => CaptureRequests;
+
+        public readonly struct LobbyCaptureRequest
+        {
+            public LobbyCaptureRequest(Vector2Int resolution, string page)
+            {
+                Resolution = resolution;
+                Page = page;
+            }
+
+            public Vector2Int Resolution { get; }
+            public string Page { get; }
+            public string FileName => $"{Resolution.x}x{Resolution.y}-{Page.ToLowerInvariant()}.png";
+        }
 
         [MenuItem("JoseonHunter/Setup/Build Lobby")]
         public static void Build()
@@ -63,6 +99,8 @@ namespace JoseonHunter.Editor.Scenes
         private static void RepairAuthoredHierarchy(GameObject canvas)
         {
             ValidateAuthoredRepairPreconditions(canvas);
+            var canvasRect = canvas.GetComponent<RectTransform>();
+            canvasRect.localScale = Vector3.one;
             var safe = canvas.transform.Find("Safe Area");
             if (safe == null) throw new InvalidOperationException("Authored Lobby Safe Area is missing.");
             Set(canvas.GetComponent<LobbyBootstrap>(), "weaponCatalog",
@@ -77,6 +115,15 @@ namespace JoseonHunter.Editor.Scenes
             safe.Find("Training Page").gameObject.SetActive(false);
             safe.Find("Patrol Page").gameObject.SetActive(false);
             safe.Find("Research Page").gameObject.SetActive(false);
+            foreach (var pageName in new[] { "Home Page", "Training Page", "Patrol Page", "Research Page" })
+                NormalizeAuthoredPage(safe.Find(pageName));
+
+            var commonHeaderView = safe.Find("Common Header").GetComponent<LobbyHeaderView>();
+            var rootView = canvas.GetComponent<LobbyRootView>();
+            Set(rootView, "header", commonHeaderView);
+            Set(rootView, "settingsButton", commonHeaderView.SettingsButton);
+            var legacyHeader = commonHeaderView.transform.Find("Header");
+            if (legacyHeader != null) UnityEngine.Object.DestroyImmediate(legacyHeader.gameObject);
             var cards = safe.Find("Home Page").GetComponentsInChildren<LobbyMenuCardView>(true);
             var cardTitles = new[] { "수련", "출전", "연구" };
             var cardDescriptions = new[] { "기초 능력을 단련합니다", "순찰을 시작합니다", "무기 연구를 확인합니다" };
@@ -91,6 +138,9 @@ namespace JoseonHunter.Editor.Scenes
                 cards[index].Title.text = cardTitles[index];
                 cards[index].Description.text = cardDescriptions[index];
                 cards[index].Icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(iconPaths[index]);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(cards[index].Title);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(cards[index].Description);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(cards[index].Icon);
                 cards[index].Icon.rectTransform.anchorMin = new Vector2(.32f, .66f);
                 cards[index].Icon.rectTransform.anchorMax = new Vector2(.68f, .94f);
                 cards[index].Icon.rectTransform.anchoredPosition = Vector2.zero;
@@ -113,6 +163,7 @@ namespace JoseonHunter.Editor.Scenes
                 rect.anchoredPosition = Vector2.zero;
                 rect.sizeDelta = Vector2.zero;
             }
+            AuthorHomeSummary(safe.Find("Home Page").GetComponent<LobbyHomeView>());
             var pageTitles = new[] { "수련", "출전", "연구" };
             var pageNames = new[] { "Training Page", "Patrol Page", "Research Page" };
             for (var index = 0; index < pageNames.Length; index++)
@@ -120,6 +171,8 @@ namespace JoseonHunter.Editor.Scenes
                 var header = safe.Find(pageNames[index]).GetComponentInChildren<LobbyPageHeaderView>(true);
                 header.Title.text = pageTitles[index];
                 header.Icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(iconPaths[index]);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(header.Title);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(header.Icon);
                 var rect = header.GetComponent<RectTransform>();
                 rect.anchorMin = new Vector2(.04f, .825f); rect.anchorMax = new Vector2(.96f, .890f);
                 rect.anchoredPosition = Vector2.zero; rect.sizeDelta = Vector2.zero;
@@ -129,6 +182,8 @@ namespace JoseonHunter.Editor.Scenes
             commonHeader.anchoredPosition = Vector2.zero; commonHeader.sizeDelta = Vector2.zero;
             RemoveLegacyDetailDuplicateRoots(safe);
             RemoveLegacyPatrolDuplicateRoots(safe.Find("Patrol Page"));
+            DestroyNamedDescendants(safe.Find("Training Page"), "Training Title");
+            DestroyNamedDescendants(safe.Find("Training Page"), "Training Description");
             ApplyDetailLayouts(safe);
             AuthorSettingsOverlay(safe.Find("Settings Overlay"));
         }
@@ -136,6 +191,8 @@ namespace JoseonHunter.Editor.Scenes
         private static void ValidateAuthoredRepairPreconditions(GameObject canvas)
         {
             if (canvas == null) throw new InvalidOperationException("Authored Lobby repair preflight failed: Lobby Canvas is missing.");
+            if (canvas.GetComponent<RectTransform>() == null)
+                throw new InvalidOperationException("Authored Lobby repair preflight failed: Lobby Canvas has no RectTransform.");
             var safe = canvas.transform.Find("Safe Area");
             if (safe == null) throw new InvalidOperationException("Authored Lobby repair preflight failed: Safe Area is missing.");
             var expected = new[] { "Background", "Common Header", "Home Page", "Training Page", "Patrol Page", "Research Page", "Settings Overlay" };
@@ -147,7 +204,7 @@ namespace JoseonHunter.Editor.Scenes
 
             var bootstrap = canvas.GetComponent<LobbyBootstrap>();
             var root = canvas.GetComponent<LobbyRootView>();
-            if (bootstrap == null || root == null || !root.HasRequiredBindings)
+            if (bootstrap == null || root == null)
                 throw new InvalidOperationException("Authored Lobby repair preflight failed: Bootstrap or root bindings are incomplete.");
             if (new SerializedObject(bootstrap).FindProperty("weaponCatalog") == null)
                 throw new InvalidOperationException("Authored Lobby repair preflight failed: Bootstrap weapon catalog binding is unavailable.");
@@ -167,10 +224,14 @@ namespace JoseonHunter.Editor.Scenes
             var patrolTransform = safe.Find("Patrol Page");
             var researchTransform = safe.Find("Research Page");
             var settingsTransform = safe.Find("Settings Overlay");
-            if (root.SafeArea != safe || root.Home == null || root.Home.transform != homeTransform ||
+            var header = safe.Find("Common Header").GetComponent<LobbyHeaderView>();
+            if (header == null || !header.HasRequiredBindings || root.Header != header ||
+                root.SafeArea != safe || root.Home == null || root.Home.transform != homeTransform ||
                 root.TrainingView == null || root.TrainingView.transform != trainingTransform ||
                 root.PatrolView == null || root.PatrolView.transform != patrolTransform ||
                 root.ResearchView == null || root.ResearchView.transform != researchTransform ||
+                root.Navigation == null || root.HomePresenter == null || root.TrainingPresenter == null ||
+                root.PatrolPresenter == null || root.ResearchPresenter == null || root.AudioSettings == null ||
                 root.SettingsOverlay == null || root.SettingsOverlay.transform != settingsTransform)
                 throw new InvalidOperationException("Authored Lobby repair preflight failed: root bindings do not match the direct authored hierarchy.");
 
@@ -325,15 +386,23 @@ namespace JoseonHunter.Editor.Scenes
             SetRect(patrol.StageName.rectTransform, .20f, .755f, .80f, .805f); SetRect(patrol.PreviousStageButton.GetComponent<RectTransform>(), .06f, .742f, .18f, .810f); SetRect(patrol.NextStageButton.GetComponent<RectTransform>(), .82f, .742f, .94f, .810f);
             SetRect(patrol.HeroImage.rectTransform, .29f, .535f, .71f, .720f); SetRect(patrol.NormalDifficulty.GetComponent<RectTransform>(), .06f, .405f, .353f, .495f); SetRect(patrol.OmenDifficulty.GetComponent<RectTransform>(), .353f, .405f, .647f, .495f); SetRect(patrol.GreatOmenDifficulty.GetComponent<RectTransform>(), .647f, .405f, .94f, .495f); SetRect(patrol.WeaponSelector.GetComponent<RectTransform>(), .06f, .275f, .94f, .365f); SetRect(patrol.StartButton.GetComponent<RectTransform>(), .18f, .105f, .82f, .205f);
             var research = safe.Find("Research Page").GetComponent<ResearchPageView>();
-            var selectorY = new[] { (.710f,.800f),(.615f,.705f),(.520f,.610f),(.425f,.515f) };
+            var selectorX = new[] { (.06f,.265f),(.285f,.49f),(.51f,.715f),(.735f,.94f) };
+            var selectorY = new[] { (.700f,.800f),(.585f,.685f) };
             for (var i = 0; i < research.WeaponSelectors.Length; i++)
             {
                 var selector = research.WeaponSelectors[i].GetComponent<RectTransform>();
                 if (selector.parent != research.transform) selector.SetParent(research.transform, false);
-                SetRect(selector, i % 2 == 0 ? .06f : .515f, selectorY[i / 2].Item1,
-                    i % 2 == 0 ? .485f : .94f, selectorY[i / 2].Item2);
+                SetRect(selector, selectorX[i % 4].Item1, selectorY[i / 4].Item1,
+                    selectorX[i % 4].Item2, selectorY[i / 4].Item2);
+                research.WeaponSelectors[i].Caption.gameObject.SetActive(false);
+                research.WeaponSelectors[i].Chevron.gameObject.SetActive(false);
+                SetRect(research.WeaponSelectors[i].Icon.rectTransform, .06f, .20f, .30f, .80f);
+                SetRect(research.WeaponSelectors[i].WeaponName.rectTransform, .33f, .17f, .95f, .83f);
+                research.WeaponSelectors[i].WeaponName.fontSize = 14f;
+                research.WeaponSelectors[i].WeaponName.textWrappingMode = TextWrappingModes.NoWrap;
+                research.WeaponSelectors[i].WeaponName.overflowMode = TextOverflowModes.Ellipsis;
             }
-            var researchRowY = new[] { (.310f,.400f),(.215f,.305f),(.120f,.210f) };
+            var researchRowY = new[] { (.440f,.550f),(.315f,.425f),(.190f,.300f) };
             for (var i = 0; i < research.Rows.Length; i++)
             {
                 var row = research.Rows[i].GetComponent<RectTransform>();
@@ -351,7 +420,39 @@ namespace JoseonHunter.Editor.Scenes
             SetRect(masteryProgress, .50f, .025f, .94f, .100f);
             var researchFeedback = research.FeedbackText.rectTransform;
             if (researchFeedback.parent != research.transform) researchFeedback.SetParent(research.transform, false);
-            SetRect(researchFeedback, .06f, .105f, .94f, .115f);
+            SetRect(researchFeedback, .06f, .105f, .94f, .175f);
+        }
+
+        private static void AuthorHomeSummary(LobbyHomeView home)
+        {
+            if (home == null || home.StageText == null || home.DifficultyText == null ||
+                home.StartingWeaponText == null || home.StartingWeaponIcon == null)
+                throw new InvalidOperationException("Authored Home summary bindings are incomplete.");
+            var summary = home.transform.Find("Current Deployment") as RectTransform;
+            if (summary == null)
+            {
+                var background = CreateImage("Current Deployment", home.transform);
+                PremiumPixelUiSkin.ApplyFrame(background, PremiumFrame.ContentBackplate);
+                summary = background.rectTransform;
+            }
+            SetRect(summary, .08f, .135f, .92f, .320f);
+            if (home.StageText.transform.parent != summary) home.StageText.transform.SetParent(summary, false);
+            if (home.DifficultyText.transform.parent != summary) home.DifficultyText.transform.SetParent(summary, false);
+            if (home.StartingWeaponText.transform.parent != summary) home.StartingWeaponText.transform.SetParent(summary, false);
+            if (home.StartingWeaponIcon.transform.parent != summary) home.StartingWeaponIcon.transform.SetParent(summary, false);
+            SetRect(home.StageText.rectTransform, .04f, .18f, .31f, .82f);
+            SetRect(home.DifficultyText.rectTransform, .35f, .18f, .62f, .82f);
+            SetRect(home.StartingWeaponIcon.rectTransform, .66f, .24f, .75f, .76f);
+            SetRect(home.StartingWeaponText.rectTransform, .75f, .18f, .97f, .82f);
+            foreach (var text in new[] { home.StageText, home.DifficultyText, home.StartingWeaponText })
+            {
+                text.fontSize = 18f;
+                text.enableAutoSizing = true;
+                text.fontSizeMin = 13f;
+                text.fontSizeMax = 19f;
+                text.alignment = TMPro.TextAlignmentOptions.Center;
+            }
+            home.StartingWeaponIcon.preserveAspect = true;
         }
 
         private static void RemoveLegacyDetailDuplicateRoots(Transform safe)
@@ -391,6 +492,17 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void SetRect(RectTransform rect, float minX, float minY, float maxX, float maxY)
         { rect.anchorMin=new Vector2(minX,minY); rect.anchorMax=new Vector2(maxX,maxY); rect.anchoredPosition=Vector2.zero; rect.sizeDelta=Vector2.zero; }
+
+        private static void NormalizeAuthoredPage(Transform page)
+        {
+            if (page is not RectTransform rect)
+                throw new InvalidOperationException("Authored Lobby page is missing a RectTransform: " + page?.name);
+            SetRect(rect, 0f, 0f, 1f, 1f);
+            var background = page.GetComponent<Image>();
+            if (background == null) return;
+            background.color = new Color(background.color.r, background.color.g, background.color.b, 0f);
+            background.raycastTarget = false;
+        }
 
         [MenuItem("JoseonHunter/Validation/Validate Lobby")]
         public static void Validate()
@@ -444,6 +556,9 @@ namespace JoseonHunter.Editor.Scenes
 
         private static void ComposeAuthoredHierarchy(GameObject canvas)
         {
+            var canvasRect = canvas.GetComponent<RectTransform>();
+            if (canvasRect == null) throw new InvalidOperationException("Lobby Canvas RectTransform is missing.");
+            canvasRect.localScale = Vector3.one;
             var safeArea = canvas.transform.Find("Safe Area") as RectTransform;
             if (safeArea == null) throw new InvalidOperationException("Lobby Safe Area is missing.");
             var background = canvas.transform.Find("Lobby Background");
@@ -460,11 +575,14 @@ namespace JoseonHunter.Editor.Scenes
 
             var moduleRoot = "Assets/JoseonHunter/Prefabs/UI/Lobby/Modules/";
             var commonHeader = InstantiateModule(moduleRoot + "CommonHeader.prefab", safeArea, "Common Header");
-            header.SetParent(commonHeader.transform, false);
+            UnityEngine.Object.DestroyImmediate(header.gameObject);
             background.SetParent(safeArea, false); background.name = "Background";
             patrol.SetParent(safeArea, false); patrol.name = "Patrol Page";
             training.SetParent(safeArea, false); training.name = "Training Page";
             research.SetParent(safeArea, false); research.name = "Research Page";
+            NormalizeAuthoredPage(patrol);
+            NormalizeAuthoredPage(training);
+            NormalizeAuthoredPage(research);
             settings.name = "Settings Overlay";
             AuthorSettingsOverlay(settings);
             UnityEngine.Object.DestroyImmediate(stage.gameObject);
@@ -480,6 +598,7 @@ namespace JoseonHunter.Editor.Scenes
 
             var home = new GameObject("Home Page", typeof(RectTransform), typeof(LobbyHomeView), typeof(LobbyHomePresenter));
             home.transform.SetParent(safeArea, false);
+            NormalizeAuthoredPage(home.transform);
             var homeView = home.GetComponent<LobbyHomeView>();
             var cards = new[]
             {
@@ -497,6 +616,8 @@ namespace JoseonHunter.Editor.Scenes
             AuthorPageViews(moduleRoot, patrol, training, research, headers);
             RemoveLegacyDetailDuplicateRoots(safeArea);
             RemoveLegacyPatrolDuplicateRoots(patrol);
+            DestroyNamedDescendants(training, "Training Title");
+            DestroyNamedDescendants(training, "Training Description");
             ApplyDetailLayouts(safeArea);
             var root = canvas.GetComponent<LobbyRootView>() ?? canvas.AddComponent<LobbyRootView>();
             var bootstrap = canvas.GetComponent<LobbyBootstrap>();
@@ -504,7 +625,7 @@ namespace JoseonHunter.Editor.Scenes
             var patrolPresenter = patrol.GetComponent<PatrolPresenter>(); var patrolView = patrol.GetComponent<PatrolPageView>();
             var trainingPresenter = training.GetComponent<CommonTrainingPresenter>(); var trainingView = training.GetComponent<TrainingPageView>();
             var researchPresenter = research.GetComponent<WeaponResearchPresenter>(); var researchView = research.GetComponent<ResearchPageView>();
-            var settingsButton = header.GetComponentInChildren<Button>(true);
+            var settingsButton = commonHeader.GetComponent<LobbyHeaderView>().SettingsButton;
             var audio = settings.GetComponentInChildren<AudioSettingsPresenter>(true);
             if (bootstrap == null || navigationPresenter == null || patrolPresenter == null || patrolView == null ||
                 trainingPresenter == null || trainingView == null || researchPresenter == null || researchView == null ||
@@ -522,6 +643,7 @@ namespace JoseonHunter.Editor.Scenes
             Set(navigationPresenter, "researchMenuButton", cards[2].Button); Set(navigationPresenter, "trainingBackButton", headers[0].BackButton);
             Set(navigationPresenter, "patrolBackButton", headers[1].BackButton); Set(navigationPresenter, "researchBackButton", headers[2].BackButton);
             home.SetActive(true); training.gameObject.SetActive(false); patrol.gameObject.SetActive(false); research.gameObject.SetActive(false);
+            RepairAuthoredHierarchy(canvas);
         }
 
         private static void AuthorPageViews(string modules, Transform patrol, Transform training, Transform research,
@@ -622,52 +744,76 @@ namespace JoseonHunter.Editor.Scenes
         [MenuItem("JoseonHunter/Validation/Capture Lobby")]
         public static void CapturePreview()
         {
-            throw new InvalidOperationException("Lobby preview capture is authored-scene work and is available after Task 8 capture wiring.");
+            if (EditorApplication.isPlaying)
+                throw new InvalidOperationException("Lobby capture refuses to run while the editor is in Play Mode.");
+            RefuseDirtyLobby();
+            var previousSession = MetaGameSession.Current;
+            if (previousSession != null)
+                throw new InvalidOperationException("Lobby capture refuses to replace an existing MetaGameSession.");
 
-            /*
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            var cameraObject = new GameObject("Lobby Preview Camera", typeof(Camera),
-                typeof(UniversalAdditionalCameraData));
-            SceneManager.MoveGameObjectToScene(cameraObject, scene);
-            var camera = cameraObject.GetComponent<Camera>();
-            camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(.035f, .025f, .018f, 1f);
-            camera.orthographic = true;
-            camera.transform.position = new Vector3(0f, 0f, -10f);
-
-            var instance = PrefabUtility.InstantiatePrefab(prefab, scene) as GameObject;
-            if (instance == null) throw new InvalidOperationException("Could not instantiate Lobby preview.");
-            PopulatePatrolPreview(instance);
-            var canvas = instance.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = camera;
-            canvas.planeDistance = 1f;
-
-            var output = Path.GetFullPath("Artifacts/LobbyPremium");
-            Directory.CreateDirectory(output);
-            foreach (var resolution in new[] { new Vector2Int(720, 1280), new Vector2Int(1080, 2340) })
+            var activeScene = SceneManager.GetActiveScene();
+            var sourceScene = FindLoadedLobby();
+            var openedSource = !sourceScene.IsValid();
+            var replaceUntitledBatchScene = openedSource && Application.isBatchMode && string.IsNullOrEmpty(activeScene.path);
+            var temporaryScene = default(Scene);
+            GameObject clonedCanvas = null;
+            GameObject cameraObject = null;
+            MetaGameSession temporarySession = null;
+            try
             {
-                ShowPanel(instance, "Patrol Panel");
-                PopulatePatrolPreview(instance);
-                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-patrol.png"));
+                if (openedSource)
+                    sourceScene = EditorSceneManager.OpenScene(ScenePath,
+                        replaceUntitledBatchScene ? OpenSceneMode.Single : OpenSceneMode.Additive);
+                var sourceCanvas = sourceScene.GetRootGameObjects().SingleOrDefault(root => root.name == "Lobby Canvas");
+                if (sourceCanvas == null) throw new InvalidOperationException("Lobby Canvas is missing from the production Lobby scene.");
 
-                ShowPanel(instance, "Weapon Research Panel");
-                PopulateResearchPreview(instance, "연구 중", 0, string.Empty);
-                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-research-locked.png"));
-                PopulateResearchPreview(instance, "해금 가능", 2000, string.Empty);
-                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-research-ready.png"));
-                PopulateResearchPreview(instance, "엽전 부족", 2000, "엽전이 부족합니다.");
-                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-research-coins.png"));
+                SceneManager.SetActiveScene(sourceScene);
+                temporaryScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+                SceneManager.SetActiveScene(temporaryScene);
+                clonedCanvas = UnityEngine.Object.Instantiate(sourceCanvas);
+                clonedCanvas.name = "Lobby Canvas Capture Clone";
+                SceneManager.MoveGameObjectToScene(clonedCanvas, temporaryScene);
+                var captureCanvasRect = clonedCanvas.GetComponent<RectTransform>();
+                captureCanvasRect.localPosition = Vector3.zero;
+                captureCanvasRect.localRotation = Quaternion.identity;
+                captureCanvasRect.localScale = Vector3.one;
+                cameraObject = new GameObject("Lobby Capture Camera", typeof(Camera));
+                SceneManager.MoveGameObjectToScene(cameraObject, temporaryScene);
+                var camera = cameraObject.GetComponent<Camera>();
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(.035f, .025f, .018f, 1f);
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0f, 0f, -10f);
 
-                ShowPanel(instance, "Common Training Panel");
-                PopulateTrainingPreview(instance);
-                Capture(camera, resolution, Path.Combine(output, $"{resolution.x}x{resolution.y}-training.png"));
+                temporarySession = CreateCaptureSession();
+                var bootstrap = clonedCanvas.GetComponent<LobbyBootstrap>();
+                var root = clonedCanvas.GetComponent<LobbyRootView>();
+                if (bootstrap == null || root == null || !root.HasRequiredBindings)
+                    throw new InvalidOperationException("Cloned Lobby Canvas has incomplete authored bindings.");
+                bootstrap.enabled = false;
+                bootstrap.BindAuthoredView(temporarySession);
+
+                var outputDirectory = Path.Combine(ProjectRoot(), CaptureDirectory);
+                Directory.CreateDirectory(outputDirectory);
+                foreach (var request in CapturePlan)
+                {
+                    ShowCapturePage(root, request.Page);
+                    CaptureCamera(camera, request.Resolution, Path.Combine(outputDirectory, request.FileName));
+                }
+                Debug.Log($"Lobby capture completed {CapturePlan.Count} authored-scene PNGs in {outputDirectory}.");
             }
-            UnityEngine.Object.DestroyImmediate(instance);
-            UnityEngine.Object.DestroyImmediate(cameraObject);
-            Debug.Log($"Captured Lobby previews to {output}.");
-            */
+            finally
+            {
+                if (temporarySession != null) UnityEngine.Object.DestroyImmediate(temporarySession.gameObject);
+                SetCurrentSession(previousSession);
+                if (cameraObject != null) UnityEngine.Object.DestroyImmediate(cameraObject);
+                if (clonedCanvas != null) UnityEngine.Object.DestroyImmediate(clonedCanvas);
+                if (temporaryScene.IsValid() && temporaryScene.isLoaded) EditorSceneManager.CloseScene(temporaryScene, true);
+                if (openedSource && !replaceUntitledBatchScene && sourceScene.IsValid() && sourceScene.isLoaded)
+                    EditorSceneManager.CloseScene(sourceScene, true);
+                if (activeScene.IsValid() && activeScene.isLoaded) SceneManager.SetActiveScene(activeScene);
+            }
+
         }
 
         public static void CapturePreviewInBatchMode()
@@ -688,7 +834,6 @@ namespace JoseonHunter.Editor.Scenes
         {
             try
             {
-                Build();
                 CapturePreview();
                 EditorApplication.Exit(0);
             }
@@ -699,176 +844,151 @@ namespace JoseonHunter.Editor.Scenes
             }
         }
 
-        private static void AssignSprites(GameObject canvasObject)
+        private static MetaGameSession CreateCaptureSession()
         {
-            var transforms = canvasObject.GetComponentsInChildren<Transform>(true);
-            var background = transforms.Single(item => item.name == "Lobby Background").GetComponent<Image>();
-            background.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(BackgroundPath);
-            if (background.sprite == null) throw new InvalidOperationException($"Missing Lobby background: {BackgroundPath}");
-            background.color = Color.white;
+            var data = SaveDataV1.CreateDefaults();
+            data.AccountExperience = AccountProgression.TotalExperienceForLevel(28);
+            data.Coins = 50000;
+            data.CommonTrainingRanks[CommonTrainingId.Vitality.ToString()] = 6;
+            data.CommonTrainingRanks[CommonTrainingId.Power.ToString()] = 6;
+            var styles = WeaponMasteryCatalog.StylesFor(WeaponId.GakgungShot);
+            data.WeaponMasteryPoints[WeaponId.GakgungShot.Value] = styles[1].RequiredMastery;
 
-            var coinIcon = transforms.Single(item => item.name == "Coin Icon").GetComponent<Image>();
-            coinIcon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(CoinSpritePath);
-            if (coinIcon.sprite == null) throw new InvalidOperationException($"Missing coin sprite: {CoinSpritePath}");
-            coinIcon.preserveAspect = true;
-
-            var settingsIcon = transforms.Single(item => item.name == "Settings Icon").GetComponent<Image>();
-            PremiumPixelUiSkin.ApplyIcon(settingsIcon, PremiumIcon.Settings);
-
-            var patrolHero = transforms.Single(item => item.name == "Patrol Hero").GetComponent<Image>();
-            patrolHero.sprite = AssetDatabase.LoadAssetAtPath<Sprite>(HeroSpritePath);
-            if (patrolHero.sprite == null) throw new InvalidOperationException($"Missing hero sprite: {HeroSpritePath}");
-            patrolHero.preserveAspect = true;
-
-            foreach (var panelName in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
-            {
-                var panel = transforms.Single(item => item.name == panelName).GetComponent<Image>();
-                panel.sprite = null;
-                panel.color = new Color(.035f, .043f, .065f, 1f);
-            }
-
-            LobbySelectionChrome.Apply(
-                transforms.Single(item => item.name == "Difficulty Normal").GetComponent<Button>(), true);
-            LobbySelectionChrome.Apply(
-                transforms.Single(item => item.name == "Difficulty Omen").GetComponent<Button>(), false);
-            LobbySelectionChrome.Apply(
-                transforms.Single(item => item.name == "Difficulty Great Omen").GetComponent<Button>(), false, true);
-
-            foreach (var button in canvasObject.GetComponentsInChildren<Button>(true))
-            {
-                if (UsesSemanticPremiumSkin(button)) continue;
-                JoseonButtonSkin.Apply(button,
-                    button.name is "Start Patrol" or "Purchase Training"
-                        ? JoseonButtonStyle.Primary
-                        : JoseonButtonStyle.Secondary);
-            }
-
-            var catalog = AssetDatabase.LoadAssetAtPath<JoseonHunter.Content.Weapons.WeaponCatalogAsset>(
-                WeaponCatalogPath);
-            if (catalog == null) throw new InvalidOperationException($"Missing weapon catalog: {WeaponCatalogPath}");
-            var startingWeaponIcon = transforms.Single(item => item.name == "Starting Weapon Icon").GetComponent<Image>();
-            if (catalog.TryGet(JoseonHunter.Domain.Combat.WeaponId.HwandoFlyingBlade, out var startingWeapon))
-            {
-                startingWeaponIcon.sprite = startingWeapon.UiIcon != null
-                    ? startingWeapon.UiIcon
-                    : startingWeapon.PresentationSprites.FirstOrDefault();
-                startingWeaponIcon.enabled = startingWeaponIcon.sprite != null;
-                var researchWeaponIcon = transforms.Single(item => item.name == "Selected Weapon Icon")
-                    .GetComponent<Image>();
-                researchWeaponIcon.sprite = startingWeaponIcon.sprite;
-                researchWeaponIcon.enabled = researchWeaponIcon.sprite != null;
-            }
-            canvasObject.GetComponentInChildren<PatrolPresenter>(true).ConfigureCatalog(catalog);
-            canvasObject.GetComponentInChildren<WeaponResearchPresenter>(true).ConfigureCatalog(catalog);
-
+            var sessionObject = new GameObject("Lobby Capture Meta Session");
+            var session = sessionObject.AddComponent<MetaGameSession>();
+            var router = typeof(MetaGameSession).GetProperty(nameof(MetaGameSession.Router))?.GetSetMethod(true);
+            if (router == null) throw new InvalidOperationException("MetaGameSession router setter is unavailable for capture.");
+            router.Invoke(session, new object[] { new GameSceneRouter() });
+            SetCurrentSession(session);
+            if (MetaGameSession.Current != session)
+                throw new InvalidOperationException("Lobby capture could not establish its temporary MetaGameSession.");
+            return MetaGameSession.EnsureExists(new InMemoryCaptureSaveRepository(data));
         }
 
-        private static bool UsesSemanticPremiumSkin(Button button) =>
-            button.GetComponentInParent<LobbyTrainingRowView>() != null || UsesSemanticPremiumSkin(button.name);
-
-        private static bool UsesSemanticPremiumSkin(string buttonName) => buttonName is
-            "Settings Button" or
-            "Previous Stage" or
-            "Next Stage" or
-            "Difficulty Normal" or
-            "Difficulty Omen" or
-            "Difficulty Great Omen" or
-            "Starting Weapon Selector" or
-            "Weapon Research Navigation" or
-            "Patrol Navigation" or
-            "Common Training Navigation" ||
-            buttonName.StartsWith("Style ", StringComparison.Ordinal) ||
-            buttonName.StartsWith("Training ", StringComparison.Ordinal);
-
-        private static void PopulatePatrolPreview(GameObject instance)
+        private static void SetCurrentSession(MetaGameSession session)
         {
-            var transforms = instance.GetComponentsInChildren<Transform>(true);
-            SetPreviewText(transforms, "Starting Weapon Name", "환도 비검");
-            SetPreviewText(transforms, "Coin Text", "155");
-            transforms.Single(item => item.name == "Stage Status").gameObject.SetActive(false);
-
-            var normal = transforms.Single(item => item.name == "Difficulty Normal").GetComponent<Button>();
-            var omen = transforms.Single(item => item.name == "Difficulty Omen").GetComponent<Button>();
-            var greatOmen = transforms.Single(item => item.name == "Difficulty Great Omen").GetComponent<Button>();
-            greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text = "대흉";
-            LobbySelectionChrome.Apply(normal, true);
-            LobbySelectionChrome.Apply(omen, false);
-            LobbySelectionChrome.Apply(greatOmen, false, true);
-
-            var start = transforms.Single(item => item.name == "Start Patrol").GetComponent<Button>();
-            JoseonButtonSkin.Apply(start, JoseonButtonStyle.Primary);
-
-            LobbySelectionChrome.ApplyNavigation(transforms.Single(item => item.name == "Patrol Navigation")
-                .GetComponent<Button>(), PremiumIcon.Patrol, true);
-            LobbySelectionChrome.ApplyNavigation(transforms.Single(item => item.name == "Weapon Research Navigation")
-                .GetComponent<Button>(), PremiumIcon.Research, false);
-            LobbySelectionChrome.ApplyNavigation(transforms.Single(item => item.name == "Common Training Navigation")
-                .GetComponent<Button>(), PremiumIcon.Training, false);
+            var setter = typeof(MetaGameSession).GetProperty(nameof(MetaGameSession.Current))?.GetSetMethod(true);
+            if (setter == null) throw new InvalidOperationException("MetaGameSession Current setter is unavailable for capture.");
+            setter.Invoke(null, new object[] { session });
         }
 
-        private static void PopulateResearchPreview(GameObject instance, string state, int mastery, string feedback)
+        private static void ShowCapturePage(LobbyRootView root, string page)
         {
-            var transforms = instance.GetComponentsInChildren<Transform>(true);
-            SetPreviewText(transforms, "Research Title", "환도 비검 연구");
-            SetPreviewText(transforms, "Mastery Summary", $"숙련도 {mastery:N0} / 2,000");
-            SetPreviewText(transforms, "Research Feedback", feedback);
-            var buttons = instance.GetComponentsInChildren<Button>(true)
-                .Where(button => button.name.StartsWith("Style ", StringComparison.Ordinal))
-                .OrderBy(button => button.name).ToArray();
-            buttons[0].GetComponentInChildren<TMPro.TMP_Text>(true).text =
-                "기본식 · 장착 중\n무기의 본래 운용법 / 추가 효과 없음\n처음부터 사용 가능";
-            buttons[1].GetComponentInChildren<TMPro.TMP_Text>(true).text =
-                $"맹독 비검 · {state}\n독 피해 강화 / 직접 피해 감소\n숙련도 2,000 · 엽전 800";
-            buttons[2].GetComponentInChildren<TMPro.TMP_Text>(true).text =
-                "월식 비검 · 연구 중\n강한 일격 / 재사용 대기 증가\n숙련도 8,000 · 엽전 2,400";
-        }
-
-        private static void PopulateTrainingPreview(GameObject instance)
-        {
-            var transforms = instance.GetComponentsInChildren<Transform>(true);
-            SetPreviewText(transforms, "Current", "현재 최대 체력 +0%");
-            SetPreviewText(transforms, "Next", "강화 후 최대 체력 +2%");
-            SetPreviewText(transforms, "Cost", "필요 엽전 100");
-            SetPreviewText(transforms, "Training Feedback", "모든 출전에 적용되는 소규모 공통 강화입니다.");
-        }
-
-        private static void ShowPanel(GameObject instance, string selectedName)
-        {
-            foreach (var name in new[] { "Weapon Research Panel", "Patrol Panel", "Common Training Panel" })
+            switch (page)
             {
-                var panel = instance.GetComponentsInChildren<Transform>(true)
-                    .Single(item => item.name == name).gameObject;
-                panel.SetActive(name == selectedName);
+                case "Home": root.Navigation.Show(LobbyPageId.Home); break;
+                case "Training": root.Navigation.Show(LobbyPageId.Training); break;
+                case "Patrol": root.Navigation.Show(LobbyPageId.Patrol); break;
+                case "Research-ready":
+                    root.Navigation.Show(LobbyPageId.Research);
+                    var index = WeaponRoster.All.ToList().FindIndex(id => id.Equals(WeaponId.GakgungShot));
+                    if (index < 0) throw new InvalidOperationException("Gakgung is missing from the weapon roster.");
+                    root.ResearchPresenter.SelectWeaponForTests(index);
+                    break;
+                default: throw new ArgumentOutOfRangeException(nameof(page), page, "Unknown Lobby capture page.");
             }
         }
 
-        private static void SetPreviewText(Transform[] transforms, string name, string value)
+        private static void ForceCaptureLayout(GameObject clonedCanvas)
         {
-            var text = transforms.Single(item => item.name == name).GetComponent<TMPro.TMP_Text>();
-            text.text = value;
+            foreach (var text in clonedCanvas.GetComponentsInChildren<TMPro.TMP_Text>(true)) text.ForceMeshUpdate(true, true);
+            foreach (var rect in clonedCanvas.GetComponentsInChildren<RectTransform>(true))
+                LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+            Canvas.ForceUpdateCanvases();
         }
 
-        private static void Capture(Camera camera, Vector2Int resolution, string outputPath)
+        private static void CaptureCamera(Camera camera, Vector2Int resolution, string outputPath)
         {
-            var renderTexture = new RenderTexture(resolution.x, resolution.y, 24, RenderTextureFormat.ARGB32);
-            var texture = new Texture2D(resolution.x, resolution.y, TextureFormat.RGBA32, false);
-            var previous = RenderTexture.active;
+            RenderTexture renderTexture = null;
+            Texture2D texture = null;
+            var previousTarget = camera.targetTexture;
+            var previousActive = RenderTexture.active;
+            var previousAspect = camera.aspect;
+            var previousOrthographicSize = camera.orthographicSize;
+            var canvases = camera.gameObject.scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Canvas>(true)).ToArray();
+            var modes = canvases.Select(canvas => canvas.renderMode).ToArray();
+            var cameras = canvases.Select(canvas => canvas.worldCamera).ToArray();
+            var distances = canvases.Select(canvas => canvas.planeDistance).ToArray();
+            var canvasRects = canvases.Select(canvas => canvas.GetComponent<RectTransform>()).ToArray();
+            var positions = canvasRects.Select(rect => rect.localPosition).ToArray();
+            var rotations = canvasRects.Select(rect => rect.localRotation).ToArray();
+            var scales = canvasRects.Select(rect => rect.localScale).ToArray();
+            var sizes = canvasRects.Select(rect => rect.sizeDelta).ToArray();
+            var scalers = canvases.Select(canvas => canvas.GetComponent<CanvasScaler>()).ToArray();
+            var scalerStates = scalers.Select(scaler => scaler != null && scaler.enabled).ToArray();
             try
             {
+                renderTexture = new RenderTexture(resolution.x, resolution.y, 24, RenderTextureFormat.ARGB32);
                 camera.targetTexture = renderTexture;
-                Canvas.ForceUpdateCanvases();
+                camera.aspect = (float)resolution.x / resolution.y;
+                var logicalSize = LogicalCaptureSize(resolution);
+                camera.orthographicSize = logicalSize.y * .5f;
+                for (var index = 0; index < canvases.Length; index++)
+                {
+                    var canvas = canvases[index];
+                    canvas.renderMode = RenderMode.WorldSpace;
+                    canvas.worldCamera = camera;
+                    var rect = canvasRects[index];
+                    rect.localPosition = Vector3.zero;
+                    rect.localRotation = Quaternion.identity;
+                    rect.localScale = Vector3.one;
+                    rect.sizeDelta = logicalSize;
+                    if (scalers[index] != null) scalers[index].enabled = false;
+                }
+                if (canvases.Length == 0) throw new InvalidOperationException("Lobby capture clone contains no Canvas.");
+                ForceCaptureLayout(canvases[0].gameObject);
+                texture = new Texture2D(resolution.x, resolution.y, TextureFormat.RGBA32, false);
                 camera.Render();
                 RenderTexture.active = renderTexture;
                 texture.ReadPixels(new Rect(0f, 0f, resolution.x, resolution.y), 0, 0);
-                texture.Apply();
+                texture.Apply(false, false);
                 File.WriteAllBytes(outputPath, texture.EncodeToPNG());
+                if (new FileInfo(outputPath).Length == 0) throw new InvalidOperationException("Lobby capture PNG was empty.");
             }
             finally
             {
-                camera.targetTexture = null;
-                RenderTexture.active = previous;
-                UnityEngine.Object.DestroyImmediate(texture);
-                UnityEngine.Object.DestroyImmediate(renderTexture);
+                camera.targetTexture = previousTarget;
+                camera.aspect = previousAspect;
+                camera.orthographicSize = previousOrthographicSize;
+                RenderTexture.active = previousActive;
+                for (var index = 0; index < canvases.Length; index++)
+                {
+                    if (canvases[index] == null) continue;
+                    canvases[index].renderMode = modes[index];
+                    canvases[index].worldCamera = cameras[index];
+                    canvases[index].planeDistance = distances[index];
+                    canvasRects[index].localPosition = positions[index];
+                    canvasRects[index].localRotation = rotations[index];
+                    canvasRects[index].localScale = scales[index];
+                    canvasRects[index].sizeDelta = sizes[index];
+                    if (scalers[index] != null) scalers[index].enabled = scalerStates[index];
+                }
+                Canvas.ForceUpdateCanvases();
+                if (texture != null) UnityEngine.Object.DestroyImmediate(texture);
+                if (renderTexture != null) UnityEngine.Object.DestroyImmediate(renderTexture);
+            }
+        }
+
+        private static Vector2 LogicalCaptureSize(Vector2Int resolution)
+        {
+            if (resolution.x <= 0 || resolution.y <= 0)
+                throw new ArgumentOutOfRangeException(nameof(resolution), resolution, "Capture resolution must be positive.");
+            const float logicalWidth = 720f;
+            return new Vector2(logicalWidth, logicalWidth * resolution.y / resolution.x);
+        }
+
+        private static string ProjectRoot() => Directory.GetParent(Application.dataPath)?.FullName
+            ?? throw new InvalidOperationException("Unable to resolve the project root.");
+
+        private sealed class InMemoryCaptureSaveRepository : ISaveRepository
+        {
+            private readonly SaveDataV1 data;
+            public InMemoryCaptureSaveRepository(SaveDataV1 source) => data = source.Copy();
+            public LoadResult Load() => new LoadResult(data.Copy(), LoadSource.Defaults, SaveError.None);
+            public SaveResult Save(SaveDataV1 value)
+            {
+                data.CopyFrom(value);
+                return new SaveResult(true, SaveError.None);
             }
         }
 

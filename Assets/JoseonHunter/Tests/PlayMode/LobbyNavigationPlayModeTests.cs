@@ -154,8 +154,9 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Lobby");
             yield return null;
 
-            var coinIcon = GameObject.Find("Coin Icon")?.GetComponent<Image>();
-            var coinText = GameObject.Find("Coin Text")?.GetComponent<TMPro.TMP_Text>();
+            var commonHeader = GameObject.Find("Common Header")?.transform;
+            var coinIcon = commonHeader?.Find("Currency Capsule/Coin Icon")?.GetComponent<Image>();
+            var coinText = commonHeader?.Find("Currency Capsule/Coin Text")?.GetComponent<TMPro.TMP_Text>();
 
             Assert.That(coinIcon, Is.Not.Null);
             Assert.That(coinIcon.sprite, Is.Not.Null);
@@ -175,10 +176,13 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Lobby");
             yield return null;
 
-            var level = GameObject.Find("Account Level")?.GetComponent<TMPro.TMP_Text>();
-            var accountName = GameObject.Find("Account Name")?.GetComponent<TMPro.TMP_Text>();
-            var experienceText = GameObject.Find("Account Experience Text")?.GetComponent<TMPro.TMP_Text>();
-            var experienceFill = GameObject.Find("Account Experience Fill")?.GetComponent<Image>();
+            var commonHeader = GameObject.Find("Common Header")?.transform;
+            var profile = commonHeader?.Find("Account Profile");
+            var level = profile?.Find("Account Level")?.GetComponent<TMPro.TMP_Text>();
+            var accountName = profile?.Find("Account Name")?.GetComponent<TMPro.TMP_Text>();
+            var experienceText = profile?.Find("Account Experience/Account Experience Text")
+                ?.GetComponent<TMPro.TMP_Text>();
+            var experienceFill = profile?.Find("Account Experience/Account Experience Fill")?.GetComponent<Image>();
 
             Assert.That(level, Is.Not.Null);
             Assert.That(level.text, Is.EqualTo("3"));
@@ -197,7 +201,7 @@ namespace JoseonHunter.Tests.PlayMode
             SceneManager.LoadScene("Lobby");
             yield return null;
 
-            var header = GameObject.Find("Header")?.transform;
+            var header = GameObject.Find("Common Header")?.transform;
             Assert.That(header, Is.Not.Null);
             var profile = header.Find("Account Profile")?.GetComponent<RectTransform>();
             var currency = header.Find("Currency Capsule")?.GetComponent<RectTransform>();

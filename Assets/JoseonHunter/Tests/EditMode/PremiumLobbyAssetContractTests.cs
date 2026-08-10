@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using JoseonHunter.Presentation.UI;
 using NUnit.Framework;
 using UnityEditor;
@@ -157,6 +158,56 @@ namespace JoseonHunter.Tests.EditMode
                 Assert.That(importer.mipmapEnabled, Is.False, path);
                 Assert.That(importer.maxTextureSize, Is.LessThanOrEqualTo(1024), path);
             }
+        }
+
+        [Test]
+        public void AuthoredLobbyCapturePlanHasTheExactTwelvePremiumPortraitOutputs()
+        {
+            var planProperty = typeof(JoseonHunter.Editor.Scenes.LobbySceneBuilder).GetProperty(
+                "CapturePlan",
+                BindingFlags.Public | BindingFlags.Static);
+
+            Assert.That(planProperty, Is.Not.Null,
+                "Authored lobby capture must expose a deterministic pure capture plan.");
+            var plan = ((System.Collections.IEnumerable)planProperty.GetValue(null)).Cast<object>().ToArray();
+            Assert.That(plan.Select(item => (Vector2Int)item.GetType().GetProperty("Resolution").GetValue(item)).ToArray(),
+                Is.EqualTo(new[]
+                {
+                    new Vector2Int(720, 1280), new Vector2Int(720, 1280), new Vector2Int(720, 1280), new Vector2Int(720, 1280),
+                    new Vector2Int(1080, 1920), new Vector2Int(1080, 1920), new Vector2Int(1080, 1920), new Vector2Int(1080, 1920),
+                    new Vector2Int(1080, 2340), new Vector2Int(1080, 2340), new Vector2Int(1080, 2340), new Vector2Int(1080, 2340)
+                }));
+            Assert.That(plan.Select(item => (string)item.GetType().GetProperty("Page").GetValue(item)).ToArray(),
+                Is.EqualTo(new[]
+                {
+                    "Home", "Training", "Patrol", "Research-ready",
+                    "Home", "Training", "Patrol", "Research-ready",
+                    "Home", "Training", "Patrol", "Research-ready"
+                }));
+            Assert.That(plan.Select(item => (string)item.GetType().GetProperty("FileName").GetValue(item)).ToArray(),
+                Is.EqualTo(new[]
+                {
+                    "720x1280-home.png", "720x1280-training.png", "720x1280-patrol.png", "720x1280-research-ready.png",
+                    "1080x1920-home.png", "1080x1920-training.png", "1080x1920-patrol.png", "1080x1920-research-ready.png",
+                    "1080x2340-home.png", "1080x2340-training.png", "1080x2340-patrol.png", "1080x2340-research-ready.png"
+                }));
+        }
+
+        [TestCase(720, 1280, 720, 1280)]
+        [TestCase(1080, 1920, 720, 1280)]
+        [TestCase(1080, 2340, 720, 1560)]
+        public void AuthoredLobbyCaptureUsesDeterministicPortraitCanvasSize(
+            int width, int height, int expectedLogicalWidth, int expectedLogicalHeight)
+        {
+            var method = typeof(JoseonHunter.Editor.Scenes.LobbySceneBuilder).GetMethod(
+                "LogicalCaptureSize",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+            Assert.That(method, Is.Not.Null,
+                "Capture must not inherit the current editor GameView dimensions.");
+            var logical = (Vector2)method.Invoke(null, new object[] { new Vector2Int(width, height) });
+            Assert.That(logical.x, Is.EqualTo(expectedLogicalWidth).Within(.01f));
+            Assert.That(logical.y, Is.EqualTo(expectedLogicalHeight).Within(.01f));
         }
 
         private static void AssertRectInside(RectTransform child, RectTransform parent)

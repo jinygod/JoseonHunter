@@ -68,11 +68,33 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(pages.Count(page => page.activeSelf), Is.EqualTo(1));
             Assert.That(pages[0].activeSelf, Is.True);
 
+            foreach (var page in pages)
+            {
+                var rect = page.GetComponent<RectTransform>();
+                Assert.That(rect.anchorMin, Is.EqualTo(Vector2.zero), page.name);
+                Assert.That(rect.anchorMax, Is.EqualTo(Vector2.one), page.name);
+                Assert.That(rect.anchoredPosition, Is.EqualTo(Vector2.zero), page.name);
+                Assert.That(rect.sizeDelta, Is.EqualTo(Vector2.zero), page.name);
+                var pageBackground = page.GetComponent<Image>();
+                if (pageBackground != null)
+                    Assert.That(pageBackground.color.a, Is.LessThanOrEqualTo(.05f),
+                        page.name + " must not cover the persistent header or courtyard background.");
+            }
+
             var cards = pages[0].GetComponentsInChildren<LobbyMenuCardView>(true);
             Assert.That(cards.Select(card => card.Title.text), Is.EquivalentTo(new[] { "수련", "출전", "연구" }));
             Assert.That(cards.Select(card => card.Icon.sprite), Is.All.Not.Null);
+            Assert.That(cards.Select(card => card.Icon.sprite.name), Is.EquivalentTo(new[]
+                { "icon_training", "icon_patrol", "icon_research" }));
             Assert.That(cards.Select(card => card.GetComponent<RectTransform>().anchorMin.x), Is.Unique);
-            Assert.That(canvas.GetComponentInChildren<LobbyHomePresenter>(true).GetComponent<LobbyHomeView>(), Is.Not.Null);
+            var homeView = canvas.GetComponentInChildren<LobbyHomePresenter>(true).GetComponent<LobbyHomeView>();
+            Assert.That(homeView, Is.Not.Null);
+            var deployment = pages[0].transform.Find("Current Deployment");
+            Assert.That(deployment, Is.Not.Null);
+            Assert.That(homeView.StageText.transform.IsChildOf(deployment), Is.True);
+            Assert.That(homeView.DifficultyText.transform.IsChildOf(deployment), Is.True);
+            Assert.That(homeView.StartingWeaponText.transform.IsChildOf(deployment), Is.True);
+            Assert.That(homeView.StartingWeaponIcon.transform.IsChildOf(deployment), Is.True);
             foreach (var page in pages.Skip(1))
             {
                 var header = page.GetComponentInChildren<LobbyPageHeaderView>(true);
@@ -83,7 +105,11 @@ namespace JoseonHunter.Tests.EditMode
             var commonHeader = safeArea.Find("Common Header").GetComponent<RectTransform>();
             Assert.That(commonHeader.anchorMin.y, Is.GreaterThan(.85f));
             Assert.That(commonHeader.anchorMax.y, Is.GreaterThan(.9f));
-            Assert.That(safeArea.Find("Common Header/Header/Settings Button"), Is.Not.Null);
+            Assert.That(commonHeader.Find("Header"), Is.Null,
+                "The modular CommonHeader must not retain a second legacy header hierarchy.");
+            Assert.That(commonHeader.Find("Account Profile"), Is.Not.Null);
+            Assert.That(commonHeader.Find("Currency Capsule"), Is.Not.Null);
+            Assert.That(commonHeader.Find("Settings Button"), Is.Not.Null);
             Assert.That(safeArea.Find("Settings Overlay").GetComponent<LobbyAudioSettingsView>(), Is.Not.Null);
             Assert.That(safeArea.Find("Settings Overlay").GetComponent<LobbyAudioSettingsView>().HasRequiredBindings, Is.True);
             var settingsOverlay = safeArea.Find("Settings Overlay");
@@ -229,13 +255,41 @@ namespace JoseonHunter.Tests.EditMode
             Assert.That(research.WeaponSelectors, Has.Length.EqualTo(8));
             Assert.That(research.WeaponSelectors, Is.Unique);
             Assert.That(research.WeaponSelectors.Select(selector => selector.Button), Is.Unique);
+            var selectorColumns = new[] { (.06f, .265f), (.285f, .49f), (.51f, .715f), (.735f, .94f) };
+            var selectorRows = new[] { (.70f, .80f), (.585f, .685f) };
+            for (var index = 0; index < research.WeaponSelectors.Length; index++)
+            {
+                var rect = research.WeaponSelectors[index].GetComponent<RectTransform>();
+                var column = selectorColumns[index % 4];
+                var row = selectorRows[index / 4];
+                AssertAnchors(rect, column.Item1, row.Item1, column.Item2, row.Item2);
+                Assert.That(research.WeaponSelectors[index].Caption.gameObject.activeSelf, Is.False,
+                    research.WeaponSelectors[index].name + " must use the compact icon-and-name layout.");
+            }
             Assert.That(research.Rows, Has.Length.EqualTo(3));
             Assert.That(research.Rows, Is.Unique);
             Assert.That(research.Rows.Select(row => row.ActionButton), Is.Unique);
+            var researchRows = new[] { (.44f, .55f), (.315f, .425f), (.19f, .30f) };
+            for (var index = 0; index < research.Rows.Length; index++)
+            {
+                var rect = research.Rows[index].GetComponent<RectTransform>();
+                AssertAnchors(rect, .06f, researchRows[index].Item1, .94f, researchRows[index].Item2);
+                Assert.That(research.Rows[index].ActionButton.GetComponent<RectTransform>().rect.height * scaleTo720,
+                    Is.GreaterThanOrEqualTo(64f), research.Rows[index].name + " action");
+            }
             Assert.That(research.MasteryProgress, Is.Not.Null);
             var fill = research.MasteryProgress.GetComponentsInChildren<Image>(true)
                 .Single(image => image.name == "Fill");
             Assert.That(fill.type, Is.EqualTo(Image.Type.Filled));
+            var researchFeedback = research.FeedbackText.rectTransform;
+            AssertAnchors(researchFeedback, .06f, .105f, .94f, .175f);
+            Assert.That(researchFeedback.rect.height * scaleTo720, Is.GreaterThanOrEqualTo(40f),
+                "Research feedback must remain readable at 720x1280.");
+            foreach (var row in research.Rows)
+                AssertWorldRectsDoNotOverlap(researchFeedback, row.GetComponent<RectTransform>(),
+                    "Research Feedback", row.name);
+            AssertWorldRectsDoNotOverlap(researchFeedback, research.MasteryProgress.GetComponent<RectTransform>(),
+                "Research Feedback", "Mastery Progress");
             foreach (var legacyRoot in new[]
                      { "Research Progress Backplate", "Weapon Grid", "Style Card 0", "Style Card 1", "Style Card 2" })
                 Assert.That(FindNamed(researchPage, legacyRoot), Is.Empty, legacyRoot);
@@ -382,6 +436,19 @@ namespace JoseonHunter.Tests.EditMode
                 stage.Find("Patrol Page").name = "Patrol Panel";
                 stage.Find("Training Page").name = "Common Training Panel";
                 stage.Find("Research Page").name = "Weapon Research Panel";
+                foreach (var pageHeader in stage.GetComponentsInChildren<LobbyPageHeaderView>(true).ToArray())
+                    UnityEngine.Object.DestroyImmediate(pageHeader.gameObject);
+                foreach (var module in stage.Find("Patrol Panel").GetComponentsInChildren<LobbyDifficultyCardView>(true)
+                             .Cast<Component>().Concat(stage.Find("Patrol Panel")
+                                 .GetComponentsInChildren<LobbyWeaponSelectorCardView>(true)).ToArray())
+                    UnityEngine.Object.DestroyImmediate(module.gameObject);
+                foreach (var row in stage.Find("Common Training Panel").GetComponentsInChildren<LobbyTrainingRowView>(true).ToArray())
+                    UnityEngine.Object.DestroyImmediate(row.gameObject);
+                foreach (var module in stage.Find("Weapon Research Panel").GetComponentsInChildren<LobbyWeaponSelectorCardView>(true)
+                             .Cast<Component>().Concat(stage.Find("Weapon Research Panel")
+                                 .GetComponentsInChildren<LobbyResearchRowView>(true)).Concat(stage.Find("Weapon Research Panel")
+                                 .GetComponentsInChildren<LobbyProgressBarView>(true)).ToArray())
+                    UnityEngine.Object.DestroyImmediate(module.gameObject);
                 UnityEngine.Object.DestroyImmediate(stage.Find("Patrol Panel").GetComponent<PatrolPageView>());
                 UnityEngine.Object.DestroyImmediate(stage.Find("Common Training Panel").GetComponent<TrainingPageView>());
                 UnityEngine.Object.DestroyImmediate(stage.Find("Weapon Research Panel").GetComponent<ResearchPageView>());

@@ -166,8 +166,8 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(harness.View.StartButton.targetGraphic.GetComponent<Image>().sprite.name,
                 Is.EqualTo("primary_red_button"));
             Assert.That(harness.View.NormalDifficulty.Background.sprite.name, Is.EqualTo("difficulty_selected"));
-            Assert.That(harness.View.OmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_locked"));
-            Assert.That(harness.View.GreatOmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_locked"));
+            Assert.That(harness.View.OmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_idle"));
+            Assert.That(harness.View.GreatOmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_idle"));
             AssertDifficultyCardsHaveEqualSizeAndInternalLocks(harness.View);
         }
 
@@ -327,9 +327,9 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(((Image)page.NormalDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_selected"));
             Assert.That(((Image)page.OmenDifficulty.Button.targetGraphic)
-                .sprite.name, Is.EqualTo("difficulty_locked"));
+                .sprite.name, Is.EqualTo("difficulty_idle"));
             Assert.That(((Image)page.GreatOmenDifficulty.Button.targetGraphic)
-                .sprite.name, Is.EqualTo("difficulty_locked"));
+                .sprite.name, Is.EqualTo("difficulty_idle"));
             Assert.That(page.WeaponSelector.Background.sprite.name,
                 Is.EqualTo("weapon_selector_frame"));
             Assert.That(((Image)FindPatrolControl("Start Patrol").GetComponent<Button>().targetGraphic).sprite.name,
@@ -394,15 +394,15 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(((Image)page.NormalDifficulty.Button.targetGraphic)
                 .sprite.name, Is.EqualTo("difficulty_selected"));
             Assert.That(((Image)page.OmenDifficulty.Button.targetGraphic)
-                .sprite.name, Is.EqualTo("difficulty_locked"));
+                .sprite.name, Is.EqualTo("difficulty_idle"));
             var greatOmen = page.GreatOmenDifficulty.gameObject;
             Assert.That(greatOmen.GetComponentInChildren<TMPro.TMP_Text>(true).text, Is.EqualTo("대흉"));
             var greatOmenCard = page.GreatOmenDifficulty;
             Assert.That(greatOmenCard.LockSlash.gameObject.activeSelf, Is.True);
             var lockSlash = greatOmenCard.LockSlash.rectTransform;
-            Assert.That(lockSlash.anchorMin, Is.EqualTo(new Vector2(.5f, .5f)),
-                "production lock slash must be centered rather than stretched across transparent card margins");
-            Assert.That(lockSlash.anchorMax, Is.EqualTo(new Vector2(.5f, .5f)));
+            Assert.That(lockSlash.anchorMin, Is.EqualTo(new Vector2(.5f, .7f)),
+                "production lock slash must stay in the upper decoration band rather than crossing the label.");
+            Assert.That(lockSlash.anchorMax, Is.EqualTo(new Vector2(.5f, .7f)));
             AssertVisualRectInside(lockSlash, greatOmenCard.GetComponent<RectTransform>());
             Assert.That(greatOmenCard.LockIcon.sprite.name,
                 Is.EqualTo("icon_lock"));

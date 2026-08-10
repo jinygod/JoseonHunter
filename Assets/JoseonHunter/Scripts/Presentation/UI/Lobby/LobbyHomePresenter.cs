@@ -17,7 +17,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
         private void Awake()
         {
-            if (view == null) view = GetComponent<LobbyHomeView>();
+            if (view == null) ConfigureView(GetComponent<LobbyHomeView>());
         }
 
         private void OnEnable()
@@ -32,9 +32,14 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Refresh();
         }
 
+        public void ConfigureView(LobbyHomeView authoredView)
+        {
+            view = authoredView;
+        }
+
         public void Refresh()
         {
-            if (view == null || session == null) return;
+            if (view == null || !view.HasRequiredBindings || session == null) return;
 
             var selection = session.ActiveStageSelection;
             var loadout = session.ActiveLoadout;
@@ -43,10 +48,11 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 : "알 수 없는 지역";
             view.DifficultyText.text = LobbyViewModels.DifficultyName(selection.Difficulty);
             view.StartingWeaponText.text = LobbyViewModels.WeaponName(loadout.StartingWeapon);
-            view.StartingWeaponIcon.sprite = weaponCatalog != null &&
-                                           weaponCatalog.TryGet(loadout.StartingWeapon, out var weapon)
+            var icon = weaponCatalog != null && weaponCatalog.TryGet(loadout.StartingWeapon, out var weapon)
                 ? weapon.UiIcon != null ? weapon.UiIcon : weapon.PresentationSprites.FirstOrDefault()
                 : null;
+            view.StartingWeaponIcon.sprite = icon;
+            view.StartingWeaponIcon.enabled = icon != null;
         }
     }
 }

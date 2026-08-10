@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Linq;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Presentation.UI.Lobby;
@@ -40,9 +41,11 @@ namespace JoseonHunter.Tests.PlayMode
 
             Assert.That(page, Is.Not.Null);
             var pageText = page.GetComponentsInChildren<TMPro.TMP_Text>(true);
-            Assert.That(pageText, Has.Some.Matches<TMPro.TMP_Text>(text => text.text == "수련"));
-            Assert.That(pageText, Has.Some.Matches<TMPro.TMP_Text>(text =>
-                text.text == "수련 효과는 모든 출전에 적용되며, 항목별 최대치는 15%입니다."));
+            Assert.That(pageText.Count(text => text.text == "수련"), Is.EqualTo(1),
+                "The authored page header is the sole training title.");
+            Assert.That(page.GetComponentsInChildren<Transform>(true)
+                .Any(item => item.name is "Training Title" or "Training Description"), Is.False,
+                "Legacy title and description controls must not overlap the modular page header.");
 
             presenter.SelectForTests(CommonTrainingId.Vitality);
             Assert.That(presenter.CurrentTextForTests, Is.EqualTo("현재 최대 체력 +0%"));

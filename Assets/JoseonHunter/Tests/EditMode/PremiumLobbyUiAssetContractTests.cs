@@ -34,6 +34,13 @@ namespace JoseonHunter.Tests.EditMode
             AssertPlatformIsUncompressed(importer, "Android", path);
             AssertPlatformIsUncompressed(importer, "WebGL", path);
             Assert.That(importer.spriteBorder.sqrMagnitude, sliced ? Is.GreaterThan(0f) : Is.EqualTo(0f));
+            if (sliced)
+            {
+                var settings = new TextureImporterSettings();
+                importer.ReadTextureSettings(settings);
+                Assert.That(settings.spriteMeshType, Is.EqualTo(SpriteMeshType.FullRect),
+                    path + " sliced frames must not lose their corners to a tight sprite mesh");
+            }
         }
 
         [TestCase("difficulty_selected")]

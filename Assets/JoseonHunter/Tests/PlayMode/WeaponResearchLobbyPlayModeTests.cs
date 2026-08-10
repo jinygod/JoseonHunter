@@ -133,9 +133,9 @@ namespace JoseonHunter.Tests.PlayMode
             {
                 Assert.That(row.EffectText.text.Split('\n').Length, Is.LessThanOrEqualTo(3));
                 Assert.That(row.EffectText.fontSize, Is.EqualTo(18f));
-                Assert.That(row.EffectText.rectTransform.anchorMin, Is.EqualTo(new Vector2(.28f, .51f)));
-                Assert.That(row.EffectText.rectTransform.anchorMax, Is.EqualTo(new Vector2(.28f, .51f)));
-                Assert.That(row.EffectText.rectTransform.sizeDelta, Is.EqualTo(new Vector2(500f, 32f)));
+                Assert.That(row.EffectText.rectTransform.anchorMin, Is.EqualTo(new Vector2(.25f, .39f)));
+                Assert.That(row.EffectText.rectTransform.anchorMax, Is.EqualTo(new Vector2(.96f, .62f)));
+                Assert.That(row.EffectText.rectTransform.sizeDelta, Is.EqualTo(Vector2.zero));
                 var rowBounds = WorldRect(row.GetComponent<RectTransform>());
                 var effectBounds = WorldRect(row.EffectText.rectTransform);
                 Assert.That(rowBounds.Contains(effectBounds.min) && rowBounds.Contains(effectBounds.max), Is.True,

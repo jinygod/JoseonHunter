@@ -38,12 +38,17 @@ namespace JoseonHunter.Editor.AssetProduction
                 SetUncompressedPlatform(importer, "WebGL");
                 importer.spritePixelsPerUnit = 100f;
                 var name = Path.GetFileNameWithoutExtension(path);
-                importer.spriteBorder = Array.IndexOf(Sliced, name) >= 0
+                var sliced = Array.IndexOf(Sliced, name) >= 0;
+                importer.spriteBorder = sliced
                     ? new Vector4(name == "thin_outer_frame" ? 16f : 12f,
                         name == "thin_outer_frame" ? 16f : 12f,
                         name == "thin_outer_frame" ? 16f : 12f,
                         name == "thin_outer_frame" ? 16f : 12f)
                     : Vector4.zero;
+                var textureSettings = new TextureImporterSettings();
+                importer.ReadTextureSettings(textureSettings);
+                textureSettings.spriteMeshType = sliced ? SpriteMeshType.FullRect : SpriteMeshType.Tight;
+                importer.SetTextureSettings(textureSettings);
                 importer.SaveAndReimport();
             }
 

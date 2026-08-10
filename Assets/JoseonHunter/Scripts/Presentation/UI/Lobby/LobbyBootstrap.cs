@@ -5,9 +5,7 @@ using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Audio;
 using JoseonHunter.Runtime.Meta;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace JoseonHunter.Presentation.UI.Lobby
 {
@@ -16,7 +14,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
     {
         [SerializeField] private LobbyRootView rootView;
         [SerializeField] private WeaponCatalogAsset weaponCatalog;
-        [SerializeField] private TMP_Text accountExperienceText;
         private Rect lastSafeArea;
 
         private void Awake()
@@ -45,6 +42,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             rootView.PatrolPresenter.ConfigureView(rootView.PatrolView);
             rootView.TrainingPresenter.ConfigureView(rootView.TrainingView);
             rootView.ResearchPresenter.ConfigureView(rootView.ResearchView);
+            rootView.HomePresenter.ConfigureView(rootView.Home);
             rootView.HomePresenter.Initialize(session, weaponCatalog);
             rootView.PatrolPresenter.InitializeAuthored(session, RefreshHeader);
             rootView.TrainingPresenter.InitializeAuthored(session, RefreshHeader);
@@ -74,21 +72,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
             if (session == null) return;
             var account = AccountProgression.StateFor(session.Data.AccountExperience);
             rootView.Header.Render(account, session.Data.Coins);
-            if (accountExperienceText == null)
-            {
-                foreach (var text in rootView.Header.GetComponentsInChildren<TMP_Text>(true))
-                {
-                    if (text.name == "Account Experience Text")
-                    {
-                        accountExperienceText = text;
-                        break;
-                    }
-                }
-            }
-            if (accountExperienceText != null)
-                accountExperienceText.text = account.IsMaximumLevel
-                    ? "최고 단계"
-                    : $"{account.CurrentLevelExperience:N0} / {account.NextLevelRequirement:N0}";
         }
 
         private void ApplySafeArea()
