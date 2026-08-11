@@ -40,7 +40,7 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
 
         public bool HasRequiredBindings =>
             safeArea != null && header != null && header.HasRequiredBindings &&
-            home != null && homePresenter != null && navigation != null &&
+            home != null && home.HasRequiredBindings && homePresenter != null && navigation != null && navigation.HasRequiredBindings &&
             patrolView != null && patrolView.HasRequiredBindings && patrolPresenter != null &&
             trainingView != null && trainingView.HasRequiredBindings && trainingPresenter != null &&
             researchView != null && researchView.HasRequiredBindings && researchPresenter != null &&

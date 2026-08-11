@@ -28,12 +28,18 @@ namespace JoseonHunter.Presentation.UI.Lobby
         private UnityAction researchBackAction;
 
         public LobbyPageId CurrentPage => currentPage;
+        public bool HasRequiredBindings => homePage != null && trainingPage != null && patrolPage != null && researchPage != null &&
+            trainingMenuButton != null && patrolMenuButton != null && researchMenuButton != null &&
+            trainingBackButton != null && patrolBackButton != null && researchBackButton != null &&
+            HasUniqueReferences();
 
         private void Awake()
         {
             if (homePage != null || trainingPage != null || patrolPage != null || researchPage != null)
                 Bind();
         }
+
+        private void OnDestroy() => Unbind();
 
         public void Initialize(GameObject home, GameObject training, GameObject patrol, GameObject research,
             Button trainingMenu, Button patrolMenu, Button researchMenu,
@@ -71,20 +77,25 @@ namespace JoseonHunter.Presentation.UI.Lobby
         {
             ValidateBindingReferences();
             Unbind();
-            trainingMenuAction = () => Show(LobbyPageId.Training);
-            patrolMenuAction = () => Show(LobbyPageId.Patrol);
-            researchMenuAction = () => Show(LobbyPageId.Research);
-            trainingBackAction = ShowHome;
-            patrolBackAction = ShowHome;
-            researchBackAction = ShowHome;
+            trainingMenuAction = OpenTrainingPage;
+            patrolMenuAction = OpenPatrolPage;
+            researchMenuAction = OpenResearchPage;
+            trainingBackAction = ReturnToHomePage;
+            patrolBackAction = ReturnToHomePage;
+            researchBackAction = ReturnToHomePage;
             trainingMenuButton.onClick.AddListener(trainingMenuAction);
             patrolMenuButton.onClick.AddListener(patrolMenuAction);
             researchMenuButton.onClick.AddListener(researchMenuAction);
-            if (trainingBackButton != null) trainingBackButton.onClick.AddListener(trainingBackAction);
-            if (patrolBackButton != null) patrolBackButton.onClick.AddListener(patrolBackAction);
-            if (researchBackButton != null) researchBackButton.onClick.AddListener(researchBackAction);
+            trainingBackButton.onClick.AddListener(trainingBackAction);
+            patrolBackButton.onClick.AddListener(patrolBackAction);
+            researchBackButton.onClick.AddListener(researchBackAction);
             ShowHome();
         }
+
+        public void OpenTrainingPage() => Show(LobbyPageId.Training);
+        public void OpenPatrolPage() => Show(LobbyPageId.Patrol);
+        public void OpenResearchPage() => Show(LobbyPageId.Research);
+        public void ReturnToHomePage() => ShowHome();
 
         private void Unbind()
         {
@@ -108,7 +119,15 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Require(trainingMenuButton, nameof(trainingMenuButton));
             Require(patrolMenuButton, nameof(patrolMenuButton));
             Require(researchMenuButton, nameof(researchMenuButton));
+            Require(trainingBackButton, nameof(trainingBackButton));
+            Require(patrolBackButton, nameof(patrolBackButton));
+            Require(researchBackButton, nameof(researchBackButton));
+            if (!HasUniqueReferences())
+                throw new InvalidOperationException($"Lobby navigation on '{name}' requires unique page and button references before binding.");
         }
+
+        private bool HasUniqueReferences() => AreUnique(homePage, trainingPage, patrolPage, researchPage,
+            trainingMenuButton, patrolMenuButton, researchMenuButton, trainingBackButton, patrolBackButton, researchBackButton);
 
         private void ValidatePageReferences()
         {
@@ -118,7 +137,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Require(researchPage, nameof(researchPage));
         }
 
-        private static void ValidateRequiredReferences(GameObject home, GameObject training,
+        private void ValidateRequiredReferences(GameObject home, GameObject training,
             GameObject patrol, GameObject research, Button trainingMenu, Button patrolMenu, Button researchMenu,
             Button trainingBack, Button patrolBack, Button researchBack)
         {
@@ -132,12 +151,24 @@ namespace JoseonHunter.Presentation.UI.Lobby
             Require(trainingBack, nameof(trainingBackButton));
             Require(patrolBack, nameof(patrolBackButton));
             Require(researchBack, nameof(researchBackButton));
+            if (!AreUnique(home, training, patrol, research,
+                    trainingMenu, patrolMenu, researchMenu, trainingBack, patrolBack, researchBack))
+                throw new InvalidOperationException($"Lobby navigation on '{name}' requires unique page and button references before binding.");
         }
 
-        private static void Require(UnityEngine.Object reference, string name)
+        private void Require(UnityEngine.Object reference, string fieldName)
         {
             if (reference == null)
-                throw new InvalidOperationException($"Lobby navigation requires '{name}' before binding or showing.");
+                throw new InvalidOperationException(
+                    $"Lobby navigation on '{name}' is missing required serialized field '{fieldName}' before binding or showing.");
+        }
+
+        private static bool AreUnique(params UnityEngine.Object[] values)
+        {
+            for (var index = 0; index < values.Length; index++)
+                for (var other = index + 1; other < values.Length; other++)
+                    if (values[index] != null && values[index] == values[other]) return false;
+            return true;
         }
 
         private static void RemoveOwnedListener(Button button, UnityAction action)

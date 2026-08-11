@@ -59,7 +59,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.055, g: 0.045, b: 0.065, a: 0.88}
-  m_RaycastTarget: 0
+  m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -343,6 +343,7 @@ MonoBehaviour:
   title: {fileID: 4169932461888808211}
   description: {fileID: 2042820450629284626}
   icon: {fileID: 5144940331608275404}
+  inputSurface: {fileID: 8436879993515406527}
 --- !u!1 &6026376016718440645
 GameObject:
   m_ObjectHideFlags: 0
@@ -460,7 +461,7 @@ MonoBehaviour:
     m_SelectedTrigger: Selected
     m_DisabledTrigger: Disabled
   m_Interactable: 1
-  m_TargetGraphic: {fileID: 2101861683293364100}
+  m_TargetGraphic: {fileID: 8436879993515406527}
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []

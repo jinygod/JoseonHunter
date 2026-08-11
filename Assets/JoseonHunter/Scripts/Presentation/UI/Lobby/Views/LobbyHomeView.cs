@@ -23,7 +23,9 @@ namespace JoseonHunter.Presentation.UI.Lobby.Views
         public LobbyMenuCardView ResearchCard => researchCard;
         public bool HasRequiredBindings =>
             stageText != null && difficultyText != null && startingWeaponText != null && startingWeaponIcon != null &&
-            trainingCard != null && patrolCard != null && researchCard != null;
+            trainingCard != null && trainingCard.HasRequiredBindings &&
+            patrolCard != null && patrolCard.HasRequiredBindings &&
+            researchCard != null && researchCard.HasRequiredBindings;
 
         public void Configure(TMP_Text stage, TMP_Text difficulty, TMP_Text weapon, Image weaponIcon,
             LobbyMenuCardView training, LobbyMenuCardView patrol, LobbyMenuCardView research)

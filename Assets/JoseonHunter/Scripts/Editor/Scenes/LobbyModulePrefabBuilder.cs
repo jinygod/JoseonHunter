@@ -223,6 +223,8 @@ namespace JoseonHunter.Editor.Scenes
             PremiumPixelUiSkin.ApplyFrame(button.GetComponent<Image>(), PremiumFrame.ContentBackplate);
             var body = PlainBody("Body", button.transform, new Color(.055f, .045f, .065f, .88f));
             Stretch(body.rectTransform, 10f, 10f, 10f, 10f);
+            body.raycastTarget = true;
+            button.targetGraphic = body;
             var title = Text("Title", root.transform, "순찰", 30f, TextAlignmentOptions.Left);
             PlaceNormalized(title.rectTransform, .07f, .52f, .68f, .82f);
             var description = Text("Description", root.transform, "귀신을 물리치고 마을을 지키세요", 20f, TextAlignmentOptions.Left);
@@ -230,7 +232,7 @@ namespace JoseonHunter.Editor.Scenes
             var icon = Image("Icon", root.transform, Color.white);
             PlaceNormalized(icon.rectTransform, .75f, .16f, .96f, .84f);
             PremiumPixelUiSkin.ApplyIcon(icon, PremiumIcon.Patrol);
-            root.AddComponent<LobbyMenuCardView>().Configure(button, title, description, icon);
+            root.AddComponent<LobbyMenuCardView>().Configure(button, title, description, icon, body);
             return root;
         }
 
@@ -522,12 +524,16 @@ namespace JoseonHunter.Editor.Scenes
         {
             ValidateRoot(root, "Button", "Title", "Description", "Icon");
             var view = Require<LobbyMenuCardView>(root);
-            if (view.Button == null || view.Title == null || view.Description == null || view.Icon == null)
+            if (!view.HasRequiredBindings || view.Description == null)
                 throw new InvalidOperationException(root.name + " has incomplete menu card bindings.");
             RequireDirect<Button>(root, "Button");
             RequireDirect<TMP_Text>(root, "Title");
             RequireDirect<TMP_Text>(root, "Description");
             RequireDirect<UnityEngine.UI.Image>(root, "Icon");
+            var inputSurface = root.transform.Find("Button/Body")?.GetComponent<Image>();
+            if (inputSurface == null || inputSurface != view.InputSurface ||
+                !inputSurface.enabled || !inputSurface.raycastTarget || view.Button.targetGraphic != inputSurface)
+                throw new InvalidOperationException(root.name + " has an invalid authored input surface.");
         }
 
         private static void ValidateInfoStrip(GameObject root)

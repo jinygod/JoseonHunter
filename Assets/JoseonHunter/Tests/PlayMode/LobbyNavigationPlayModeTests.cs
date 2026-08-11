@@ -1,12 +1,15 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using JoseonHunter.Domain.Save;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Presentation.UI.Lobby;
+using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Meta;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -66,6 +69,59 @@ namespace JoseonHunter.Tests.PlayMode
             AssertPage(presenter, LobbyPageId.Research, homePage, trainingPage, patrolPage, researchPage);
             researchBackButton.onClick.Invoke();
             AssertPage(presenter, LobbyPageId.Home, homePage, trainingPage, patrolPage, researchPage);
+        }
+
+        [UnityTest]
+        public IEnumerator AuthoredHomeCardsAndBackButtonsSurviveTenPointerRoundTrips()
+        {
+            MetaGameSession.EnsureExists(new MemoryRepository(SaveDataV1.CreateDefaults()));
+            SceneManager.LoadScene("Lobby");
+            yield return null;
+
+            var root = Object.FindObjectsByType<LobbyRootView>(FindObjectsInactive.Include)
+                .Single();
+            var eventSystem = EventSystem.current;
+            Assert.That(root.HasRequiredBindings, Is.True);
+            var raycaster = root.GetComponent<GraphicRaycaster>();
+            Assert.That(raycaster, Is.Not.Null);
+            Assert.That(eventSystem, Is.Not.Null);
+
+            var trainingBack = root.TrainingView.GetComponentInChildren<LobbyPageHeaderView>(true).BackButton;
+            var patrolBack = root.PatrolView.PageHeader.BackButton;
+            var researchBack = root.ResearchView.GetComponentInChildren<LobbyPageHeaderView>(true).BackButton;
+            var pages = new[]
+            {
+                root.Home.gameObject, root.TrainingView.gameObject,
+                root.PatrolView.gameObject, root.ResearchView.gameObject
+            };
+            foreach (var card in new[] { root.Home.TrainingCard, root.Home.PatrolCard, root.Home.ResearchCard })
+            {
+                Assert.That(card.HasRequiredBindings, Is.True, card.name);
+                Assert.That(card.InputSurface.gameObject.activeInHierarchy, Is.True, card.name);
+                Assert.That(card.InputSurface.canvas, Is.SameAs(root.GetComponent<Canvas>()), card.name);
+                Assert.That(card.InputSurface.rectTransform.rect.width, Is.GreaterThan(0f), card.name);
+                Assert.That(card.InputSurface.rectTransform.rect.height, Is.GreaterThan(0f), card.name);
+                Assert.That(card.InputSurface.canvasRenderer.cull, Is.False, card.name);
+            }
+
+            AssertPage(root.Navigation, LobbyPageId.Home, pages);
+            for (var round = 0; round < 10; round++)
+            {
+                ClickThroughAuthoredSurface(root.Home.TrainingCard.Button, root.Home.TrainingCard.InputSurface, eventSystem, raycaster);
+                AssertPage(root.Navigation, LobbyPageId.Training, pages);
+                ClickThroughAuthoredSurface(trainingBack, trainingBack.targetGraphic, eventSystem, raycaster);
+                AssertPage(root.Navigation, LobbyPageId.Home, pages);
+
+                ClickThroughAuthoredSurface(root.Home.PatrolCard.Button, root.Home.PatrolCard.InputSurface, eventSystem, raycaster);
+                AssertPage(root.Navigation, LobbyPageId.Patrol, pages);
+                ClickThroughAuthoredSurface(patrolBack, patrolBack.targetGraphic, eventSystem, raycaster);
+                AssertPage(root.Navigation, LobbyPageId.Home, pages);
+
+                ClickThroughAuthoredSurface(root.Home.ResearchCard.Button, root.Home.ResearchCard.InputSurface, eventSystem, raycaster);
+                AssertPage(root.Navigation, LobbyPageId.Research, pages);
+                ClickThroughAuthoredSurface(researchBack, researchBack.targetGraphic, eventSystem, raycaster);
+                AssertPage(root.Navigation, LobbyPageId.Home, pages);
+            }
         }
 
         [UnityTest]
@@ -309,6 +365,67 @@ namespace JoseonHunter.Tests.PlayMode
         private static Button CreateButton(string name) =>
             new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button))
                 .GetComponent<Button>();
+
+        private static void ClickThroughAuthoredSurface(Button button, Graphic inputSurface, EventSystem eventSystem,
+            GraphicRaycaster raycaster)
+        {
+            Assert.That(button, Is.Not.Null);
+            Assert.That(inputSurface, Is.Not.Null, button.name);
+            Assert.That(button.gameObject.activeInHierarchy, Is.True, button.name);
+            Assert.That(inputSurface.enabled, Is.True, button.name);
+            Assert.That(inputSurface.raycastTarget, Is.True, button.name);
+            Assert.That(inputSurface.transform.IsChildOf(button.transform) || inputSurface.gameObject == button.gameObject,
+                Is.True, button.name);
+            var canvasTransform = raycaster.GetComponent<RectTransform>();
+            var authoredCanvasScale = canvasTransform.localScale;
+            var canvas = raycaster.GetComponent<Canvas>();
+            var authoredRenderMode = canvas.renderMode;
+            var authoredWorldCamera = canvas.worldCamera;
+            var authoredPlaneDistance = canvas.planeDistance;
+            var camera = Camera.main ?? Object.FindAnyObjectByType<Camera>();
+            var authoredTargetTexture = camera != null ? camera.targetTexture : null;
+            RenderTexture renderTexture = null;
+            try
+            {
+                // A batch Test Runner does not perform the GameView render pass that normalizes a root Overlay Canvas.
+                // Render only this runtime instance once while asking the production GraphicRaycaster for its hit.
+                Assert.That(camera, Is.Not.Null, "The authored lobby needs its Main Camera for the batch raycast check.");
+                if (authoredCanvasScale == Vector3.zero) canvasTransform.localScale = Vector3.one;
+                renderTexture = RenderTexture.GetTemporary(Mathf.Max(1, Screen.width), Mathf.Max(1, Screen.height), 24);
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 1f;
+                camera.targetTexture = renderTexture;
+                Canvas.ForceUpdateCanvases();
+                camera.Render();
+                Canvas.ForceUpdateCanvases();
+                var pointer = new PointerEventData(eventSystem)
+                {
+                    button = PointerEventData.InputButton.Left,
+                    position = RectTransformUtility.WorldToScreenPoint(raycaster.eventCamera,
+                        inputSurface.rectTransform.TransformPoint(inputSurface.rectTransform.rect.center))
+                };
+                var hits = new List<RaycastResult>();
+                raycaster.Raycast(pointer, hits);
+                var hit = hits.FirstOrDefault();
+                Assert.That(hit.gameObject, Is.SameAs(inputSurface.gameObject),
+                    $"'{button.name}' input surface was not the top production GraphicRaycaster hit at its visual center. " +
+                    $"Depth: {inputSurface.depth}; Screen: {Screen.width}x{Screen.height}; " +
+                    $"Pointer: {pointer.position}; Hits: {string.Join(", ", hits.Select(result => result.gameObject.name))}");
+                Assert.That(ExecuteEvents.ExecuteHierarchy(hit.gameObject, pointer, ExecuteEvents.pointerClickHandler),
+                    Is.Not.Null, $"'{button.name}' did not handle the pointer click.");
+            }
+            finally
+            {
+                if (camera != null) camera.targetTexture = authoredTargetTexture;
+                canvas.renderMode = authoredRenderMode;
+                canvas.worldCamera = authoredWorldCamera;
+                canvas.planeDistance = authoredPlaneDistance;
+                canvasTransform.localScale = authoredCanvasScale;
+                Canvas.ForceUpdateCanvases();
+                if (renderTexture != null) RenderTexture.ReleaseTemporary(renderTexture);
+            }
+        }
 
         private static void AssertPage(LobbyNavigationPresenter presenter, LobbyPageId expected,
             params GameObject[] pages)

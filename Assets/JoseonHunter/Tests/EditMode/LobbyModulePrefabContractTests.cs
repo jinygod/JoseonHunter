@@ -85,6 +85,30 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
+        public void HomeMenuCardUsesItsAuthoredBodyAsTheOnlyRaycastSurface()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(ModuleRoot + "HomeMenuCard.prefab");
+            var view = prefab.GetComponent<LobbyMenuCardView>();
+            var button = prefab.transform.Find("Button")?.GetComponent<Button>();
+            var body = prefab.transform.Find("Button/Body")?.GetComponent<Image>();
+
+            Assert.That(view, Is.Not.Null);
+            Assert.That(button, Is.Not.Null);
+            Assert.That(body, Is.Not.Null);
+            Assert.That(body.enabled, Is.True);
+            Assert.That(body.raycastTarget, Is.True);
+            Assert.That(button.targetGraphic, Is.SameAs(body));
+            var serializedInput = new SerializedObject(view).FindProperty("inputSurface");
+            Assert.That(serializedInput, Is.Not.Null);
+            Assert.That(serializedInput.objectReferenceValue, Is.SameAs(body));
+
+            Assert.That(prefab.transform.Find("Button/Click Target"), Is.Null);
+            Assert.That(prefab.transform.Find("Icon")?.GetComponent<Image>().raycastTarget, Is.False);
+            Assert.That(prefab.transform.Find("Title")?.GetComponent<TMP_Text>().raycastTarget, Is.False);
+            Assert.That(prefab.transform.Find("Description")?.GetComponent<TMP_Text>().raycastTarget, Is.False);
+        }
+
+        [Test]
         public void CommonHeaderIsOneCompleteResponsiveModuleWithoutLegacyDuplicates()
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(CommonHeaderPath);
