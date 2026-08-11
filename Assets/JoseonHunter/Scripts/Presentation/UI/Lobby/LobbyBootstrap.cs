@@ -27,6 +27,7 @@ namespace JoseonHunter.Presentation.UI.Lobby
 
             GameMusicDirector.EnsureExists();
             GameMusicDirector.Instance?.Request(GameMusicRole.Lobby, .8f);
+            rootView.Header.gameObject.SetActive(true);
             BindAuthoredView(MetaGameSession.EnsureExists());
             ApplySafeArea();
         }

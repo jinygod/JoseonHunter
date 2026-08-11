@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Linq;
-using System.Reflection;
 using JoseonHunter.Content.Weapons;
 using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
@@ -59,7 +58,7 @@ namespace JoseonHunter.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator InitializeRendersAuthoredSummaryWhenAwakeBindingIsUnavailable()
+        public IEnumerator ExplicitConfigurationRendersAuthoredSummary()
         {
             var data = SaveDataV1.CreateDefaults();
             data.SelectedStageId = StageId.GwigokField.Value;
@@ -69,8 +68,6 @@ namespace JoseonHunter.Tests.PlayMode
             var home = CreateHome();
             var presenter = home.GetComponent<LobbyHomePresenter>();
             var view = home.GetComponent<LobbyHomeView>();
-            typeof(LobbyHomePresenter).GetField("view", BindingFlags.Instance | BindingFlags.NonPublic)
-                .SetValue(presenter, null);
 
             presenter.ConfigureView(view);
             presenter.Initialize(session, null);
@@ -142,7 +139,7 @@ namespace JoseonHunter.Tests.PlayMode
             var patrol = CreateCard("출전", home.transform);
             var research = CreateCard("연구", home.transform);
             view.Configure(stage, difficulty, weapon, icon, training, patrol, research);
-            home.AddComponent<LobbyHomePresenter>();
+            home.AddComponent<LobbyHomePresenter>().ConfigureView(view);
             return home;
         }
 
@@ -158,8 +155,13 @@ namespace JoseonHunter.Tests.PlayMode
             var description = CreateText("Description", card.transform);
             var icon = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image)).GetComponent<Image>();
             icon.transform.SetParent(card.transform, false);
+            var inputSurface = new GameObject("Body", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image))
+                .GetComponent<Image>();
+            inputSurface.transform.SetParent(button.transform, false);
+            inputSurface.raycastTarget = true;
+            button.targetGraphic = inputSurface;
             var view = card.GetComponent<LobbyMenuCardView>();
-            view.Configure(button, title, description, icon);
+            view.Configure(button, title, description, icon, inputSurface);
             return view;
         }
 

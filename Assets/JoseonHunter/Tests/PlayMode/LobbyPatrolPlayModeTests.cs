@@ -68,7 +68,8 @@ namespace JoseonHunter.Tests.PlayMode
 
             var start = FindPatrolControl("Start Patrol");
             Assert.That(start, Is.Not.Null);
-            Assert.That(start.GetComponentInChildren<TMPro.TMP_Text>().text, Is.EqualTo("출전 시작"));
+            Assert.That(start.GetComponentInChildren<TMPro.TMP_Text>().text, Is.Not.Empty,
+                "The authored action label must remain present; its copy belongs to the Inspector.");
             Assert.That(start.GetComponent<RectTransform>().rect.height, Is.GreaterThanOrEqualTo(76f));
         }
 
@@ -157,14 +158,12 @@ namespace JoseonHunter.Tests.PlayMode
             Assert.That(session.ActiveLoadout.StartingWeapon, Is.EqualTo(WeaponId.GakgungShot));
             Assert.That(harness.View.WeaponSelector.WeaponName.text, Is.EqualTo("각궁"));
 
-            Assert.That(harness.ActionLabel.text, Is.EqualTo("출전 시작"));
-            Assert.That(harness.View.PageHeader.Title.text, Is.EqualTo("출전"));
-            Assert.That(harness.View.WeaponSelector.Caption.text, Is.EqualTo("시작 무기"));
+            Assert.That(harness.ActionLabel.text, Is.EqualTo("임시"));
+            Assert.That(harness.View.PageHeader.Title.text, Is.EqualTo("임시 제목"));
+            Assert.That(harness.View.WeaponSelector.Caption.text, Is.EqualTo("임시 무기"));
             Assert.That(harness.View.NormalDifficulty.Label.text, Is.EqualTo("보통"));
             Assert.That(harness.View.OmenDifficulty.Label.text, Is.EqualTo("흉조"));
             Assert.That(harness.View.GreatOmenDifficulty.Label.text, Is.EqualTo("대흉"));
-            Assert.That(harness.View.StartButton.targetGraphic.GetComponent<Image>().sprite.name,
-                Is.EqualTo("primary_red_button"));
             Assert.That(harness.View.NormalDifficulty.Background.sprite.name, Is.EqualTo("difficulty_selected"));
             Assert.That(harness.View.OmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_idle"));
             Assert.That(harness.View.GreatOmenDifficulty.Background.sprite.name, Is.EqualTo("difficulty_idle"));

@@ -7,11 +7,9 @@ using JoseonHunter.Domain.Combat;
 using JoseonHunter.Domain.Progression;
 using JoseonHunter.Domain.Runs;
 using JoseonHunter.Domain.Save;
-using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Audio;
 using JoseonHunter.Runtime.Meta;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -50,7 +48,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
             UnbindListeners();
             session = value ?? throw new ArgumentNullException(nameof(value));
             refreshHeader = onChanged;
-            ApplyAuthoredCopyAndStyle();
             GameAudioButtonFeedback.Attach(view.StartButton, GameAudioCueId.UiConfirm);
             LoadCurrentWeapon();
             LoadCurrentStage();
@@ -67,16 +64,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
             selectedWeapon = weaponId;
             SaveCurrentWeapon();
             Refresh();
-        }
-
-        private void ApplyAuthoredCopyAndStyle()
-        {
-            var actionLabel = view.StartButton.GetComponentsInChildren<TMP_Text>(true).FirstOrDefault();
-            if (actionLabel != null) actionLabel.text = "출전 시작";
-            view.PageHeader.Title.text = "출전";
-            view.WeaponSelector.Caption.text = "시작 무기";
-            PremiumPixelUiSkin.ApplyAction(view.StartButton, PremiumActionStyle.Primary);
-            PremiumPixelUiSkin.ApplyAction(view.CloseWeaponSelectionButton, PremiumActionStyle.Secondary);
         }
 
         private void BindListeners()

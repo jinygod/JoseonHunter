@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using JoseonHunter.Domain.Progression;
-using JoseonHunter.Presentation.UI;
 using JoseonHunter.Presentation.UI.Lobby.Views;
 using JoseonHunter.Runtime.Meta;
-using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
@@ -41,10 +39,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
             UnbindListeners();
             session = value ?? throw new ArgumentNullException(nameof(value));
             refreshHeader = onChanged;
-            SetButtonLabel(view.PurchaseButton, "수련하기");
-            SetButtonLabel(view.ResetButton, "전체 초기화");
-            PremiumPixelUiSkin.ApplyAction(view.PurchaseButton, PremiumActionStyle.Primary);
-            PremiumPixelUiSkin.ApplyAction(view.ResetButton, PremiumActionStyle.Secondary);
             BindListeners();
             Refresh();
         }
@@ -133,12 +127,6 @@ namespace JoseonHunter.Presentation.UI.Lobby
                 row.Render(LobbyViewModels.TrainingName(id), view.Icon(id), progression.Rank(id),
                     CommonTrainingProgression.MaximumRankPerTrack, selected == id);
             }
-        }
-
-        private static void SetButtonLabel(Button button, string value)
-        {
-            var label = button.GetComponentInChildren<TMP_Text>(true);
-            if (label != null) label.text = value;
         }
 
         private static void RemoveOwnedListener(Button button, UnityAction action)

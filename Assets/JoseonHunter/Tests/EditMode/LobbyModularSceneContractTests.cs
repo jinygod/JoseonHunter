@@ -58,7 +58,7 @@ namespace JoseonHunter.Tests.EditMode
         }
 
         [Test]
-        public void AuthoredLobbyStartsAtHomeWithDistinctBoundedModules()
+        public void AuthoredLobbyKeepsOneInspectablePageWithDistinctBoundedModules()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             var canvas = scene.GetRootGameObjects().Single(root => root.name == "Lobby Canvas");
@@ -66,7 +66,6 @@ namespace JoseonHunter.Tests.EditMode
             var pages = new[] { "Home Page", "Training Page", "Patrol Page", "Research Page" }
                 .Select(name => safeArea.Find(name).gameObject).ToArray();
             Assert.That(pages.Count(page => page.activeSelf), Is.EqualTo(1));
-            Assert.That(pages[0].activeSelf, Is.True);
 
             foreach (var page in pages)
             {
@@ -134,9 +133,12 @@ namespace JoseonHunter.Tests.EditMode
                 { "Background", "Common Header", "Home Page", "Training Page", "Patrol Page", "Research Page", "Settings Overlay" }));
             foreach (var card in cards)
             {
-                Assert.That(card.Title.fontSize, Is.GreaterThanOrEqualTo(22f));
-                Assert.That(card.Description.fontSize, Is.GreaterThanOrEqualTo(16f));
-                Assert.That(card.Icon.rectTransform.anchorMin.y, Is.GreaterThan(.5f));
+                Assert.That(card.HasRequiredBindings, Is.True, card.name);
+                Assert.That(card.Button.targetGraphic, Is.SameAs(card.InputSurface), card.name);
+                Assert.That(card.InputSurface.raycastTarget, Is.True, card.name);
+                Assert.That(card.Title.raycastTarget, Is.False, card.name);
+                if (card.Description != null) Assert.That(card.Description.raycastTarget, Is.False, card.name);
+                Assert.That(card.Icon.raycastTarget, Is.False, card.name);
             }
             Assert.That(canvas.GetComponentsInChildren<HorizontalLayoutGroup>(true), Is.Empty);
             Assert.That(canvas.GetComponentsInChildren<Button>(true).Where(button =>
@@ -390,17 +392,21 @@ namespace JoseonHunter.Tests.EditMode
                 item.gameObject.activeSelf)));
 
         [Test]
-        public void RebuildAuthoredLobbyIsIdempotentAndKeepsHomeActive()
+        public void ValidateAuthoredLobbyIsReadOnlyAndKeepsInspectorPreviewState()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             var canvas = scene.GetRootGameObjects().Single(root => root.name == "Lobby Canvas");
-            var cards = canvas.GetComponentsInChildren<LobbyMenuCardView>(true).Select(card => card.gameObject).ToArray();
-            LobbySceneBuilder.Build();
-            Assert.That(canvas.GetComponentsInChildren<LobbyMenuCardView>(true).Select(card => card.gameObject), Is.EquivalentTo(cards));
-            var safe = canvas.transform.Find("Safe Area");
-            Assert.That(safe.Find("Home Page").gameObject.activeSelf, Is.True);
-            Assert.That(new[] { "Training Page", "Patrol Page", "Research Page" }.Count(name => safe.Find(name).gameObject.activeSelf), Is.Zero);
-            Assert.That(canvas.GetComponentsInChildren<HorizontalLayoutGroup>(true), Is.Empty);
+            var hierarchy = SnapshotHierarchy(canvas);
+            var components = canvas.GetComponentsInChildren<Component>(true)
+                .Where(component => component != null).Select(component => component.GetEntityId()).ToArray();
+            var wasDirty = scene.isDirty;
+
+            Assert.DoesNotThrow(LobbySceneBuilder.Validate);
+
+            Assert.That(SnapshotHierarchy(canvas), Is.EqualTo(hierarchy));
+            Assert.That(canvas.GetComponentsInChildren<Component>(true)
+                .Where(component => component != null).Select(component => component.GetEntityId()), Is.EqualTo(components));
+            Assert.That(scene.isDirty, Is.EqualTo(wasDirty));
         }
 
         [Test]
