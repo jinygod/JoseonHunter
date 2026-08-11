@@ -217,7 +217,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8615296496187644190, guid: 7eb7064f4cd798946bfa0b007bb723e8, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: 35782c48c6dbf8b479895ed0350a8656, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -238,7 +238,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &29960310
 GameObject:
@@ -287,7 +287,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -424,7 +424,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -460,6 +460,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7905229969519576534}
     m_Modifications:
+    - target: {fileID: 539796469782901649, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 539796469782901649, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 2651308808401536533, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -540,9 +548,37 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3021676165100657183, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 3021676165100657183, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 3557231044810765589, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 3557231044810765589, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 3794536219494877340, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
       propertyPath: m_Name
       value: Common Header
+      objectReference: {fileID: 0}
+    - target: {fileID: 3794536219494877340, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5647390604494616000, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 5647390604494616000, guid: eea0fd5e806554140907e62b5532f20c, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -563,7 +599,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f41e867b93dd3d845bf828b7e91f2ccf, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyHeaderView
 --- !u!114 &199021857 stripped
 MonoBehaviour:
@@ -574,7 +610,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &245348550
 GameObject:
@@ -623,7 +659,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -633,7 +669,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ed2e175fc837397429c5205f9056b284, type: 2}
   m_sharedMaterial: {fileID: 2066273422931885612, guid: ed2e175fc837397429c5205f9056b284, type: 2}
@@ -655,7 +691,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -824,7 +860,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6a34db362922cbb43ad1024b312c04e6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyResearchRowView
 --- !u!1 &294673401
 GameObject:
@@ -912,7 +948,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
   m_Navigation:
     m_Mode: 3
@@ -963,7 +999,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1102,7 +1138,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbd417d7573d15f4187d62ed5c162559, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyDifficultyCardView
 --- !u!1001 &456209575
 PrefabInstance:
@@ -1215,7 +1251,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbd417d7573d15f4187d62ed5c162559, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyDifficultyCardView
 --- !u!1 &594198526
 GameObject:
@@ -1264,7 +1300,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1342,7 +1378,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 67db9e8f0e2ae9c40bc1e2b64352a6b4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Slider
   m_Navigation:
     m_Mode: 3
@@ -1393,7 +1429,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1441,6 +1477,18 @@ PrefabInstance:
       propertyPath: m_fontSizeBase
       value: 16
       objectReference: {fileID: 0}
+    - target: {fileID: 2042820450629284626, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 2042820450629284626, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 2101861683293364100, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_text
       value: "\uC5F0\uAD6C"
@@ -1450,8 +1498,28 @@ PrefabInstance:
       value: 24
       objectReference: {fileID: 0}
     - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_fontSizeBase
       value: 24
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 610130664744537401, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_AnchorMax.x
@@ -1471,15 +1539,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: -131.78
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.000022888184
+      objectReference: {fileID: 0}
+    - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -83
+      objectReference: {fileID: 0}
     - target: {fileID: 5144940331608275404, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: 35782c48c6dbf8b479895ed0350a8656, type: 3}
     - target: {fileID: 5349598864677877377, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Name
@@ -1507,6 +1583,30 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -0.00004196167
+      objectReference: {fileID: 0}
+    - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -104.12
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.a
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.b
+      value: 0.3137255
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.g
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.r
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
@@ -1614,7 +1714,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 8552401631784629031, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
@@ -1627,7 +1728,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!224 &682082385 stripped
 RectTransform:
@@ -1643,7 +1744,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90beef83db761d64dadd74aefad1f7eb, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyMenuCardView
 --- !u!1001 &682281140
 PrefabInstance:
@@ -1665,6 +1766,26 @@ PrefabInstance:
       propertyPath: m_fontSizeBase
       value: 16
       objectReference: {fileID: 0}
+    - target: {fileID: 2042820450629284626, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 2042820450629284626, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 2101861683293364100, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.a
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2101861683293364100, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2101861683293364100, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_RaycastTarget
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_text
       value: "\uC218\uB828"
@@ -1674,8 +1795,28 @@ PrefabInstance:
       value: 24
       objectReference: {fileID: 0}
     - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_fontSizeBase
       value: 24
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 610130664744537401, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_AnchorMax.x
@@ -1695,16 +1836,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: -121.62
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 6.8033
+      objectReference: {fileID: 0}
+    - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -86
+      objectReference: {fileID: 0}
     - target: {fileID: 5144940331608275404, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: ad6e3268ed4434d4c8a6981685256c60, type: 3}
+    - target: {fileID: 5144940331608275404, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Maskable
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5349598864677877377, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Name
       value: Training Card
@@ -1732,6 +1885,30 @@ PrefabInstance:
     - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -96
+      objectReference: {fileID: 0}
+    - target: {fileID: 8049657755508153041, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8049657755508153041, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8049657755508153041, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.a
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Pivot.x
@@ -1838,7 +2015,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 8552401631784629031, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
@@ -1856,7 +2034,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90beef83db761d64dadd74aefad1f7eb, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyMenuCardView
 --- !u!114 &682281143 stripped
 MonoBehaviour:
@@ -1867,7 +2045,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &841445454
 GameObject:
@@ -1916,7 +2094,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2053,7 +2231,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2254,7 +2432,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6a34db362922cbb43ad1024b312c04e6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyResearchRowView
 --- !u!1001 &955591916
 PrefabInstance:
@@ -2415,7 +2593,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1 &1004643075
 GameObject:
@@ -2464,7 +2642,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2500,6 +2678,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4765168036140907363}
     m_Modifications:
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5774672488808102078, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -2607,7 +2801,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c177635316155f4ebefc7b7afcd834b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyTrainingRowView
 --- !u!1001 &1032888554
 PrefabInstance:
@@ -2768,7 +2962,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1 &1087906374
 GameObject:
@@ -2819,7 +3013,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -2863,7 +3057,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -2928,7 +3122,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
   m_RenderShadows: 1
   m_RequiresDepthTextureOption: 2
@@ -3187,7 +3381,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1 &1265645186
 GameObject:
@@ -3240,7 +3434,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -3276,6 +3470,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4765168036140907363}
     m_Modifications:
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5774672488808102078, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -3356,6 +3566,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6919256265392505607, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_Type
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6919256265392505607, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
     - target: {fileID: 7910982618802964051, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Name
       value: Training Row Vitality
@@ -3379,7 +3597,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c177635316155f4ebefc7b7afcd834b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyTrainingRowView
 --- !u!1001 &1328043876
 PrefabInstance:
@@ -3401,6 +3619,14 @@ PrefabInstance:
       propertyPath: m_fontSizeBase
       value: 16
       objectReference: {fileID: 0}
+    - target: {fileID: 2042820450629284626, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 2042820450629284626, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_text
       value: "\uCD9C\uC804"
@@ -3410,8 +3636,28 @@ PrefabInstance:
       value: 24
       objectReference: {fileID: 0}
     - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_fontSizeBase
       value: 24
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 610130664744537401, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 4169932461888808211, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_AnchorMax.x
@@ -3431,15 +3677,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: -138.11
       objectReference: {fileID: 0}
     - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4827756277164238557, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -84.473
+      objectReference: {fileID: 0}
     - target: {fileID: 5349598864677877377, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Name
       value: Patrol Card
+      objectReference: {fileID: 0}
+    - target: {fileID: 5947733325825307164, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: description
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_AnchorMax.x
@@ -3464,6 +3722,30 @@ PrefabInstance:
     - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7482675890385453080, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -105.59
+      objectReference: {fileID: 0}
+    - target: {fileID: 8049657755508153041, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8049657755508153041, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8049657755508153041, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8436879993515406527, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
+      propertyPath: m_Color.a
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_Pivot.x
@@ -3491,7 +3773,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: 27.123
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_SizeDelta.y
@@ -3527,11 +3809,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: -2.7601013
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -0.000091552734
       objectReference: {fileID: 0}
     - target: {fileID: 8720198089441217954, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -3570,7 +3852,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 8552401631784629031, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6aa2b85ad80260548be6b0adafb04359, type: 3}
@@ -3588,7 +3871,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90beef83db761d64dadd74aefad1f7eb, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyMenuCardView
 --- !u!114 &1328043879 stripped
 MonoBehaviour:
@@ -3599,7 +3882,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1 &1387533695
 GameObject:
@@ -3629,7 +3912,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.UI.InputSystemUIInputModule
   m_SendPointerHoverToParent: 1
   m_MoveRepeatDelay: 0.5
@@ -3660,7 +3943,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventSystem
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
@@ -3776,9 +4059,17 @@ PrefabInstance:
       propertyPath: m_text
       value: "\uC218\uB828"
       objectReference: {fileID: 0}
+    - target: {fileID: 8377413679293676922, guid: 7eb7064f4cd798946bfa0b007bb723e8, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 8377413679293676922, guid: 7eb7064f4cd798946bfa0b007bb723e8, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 8615296496187644190, guid: 7eb7064f4cd798946bfa0b007bb723e8, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: ad6e3268ed4434d4c8a6981685256c60, type: 3}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3799,7 +4090,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!1001 &1459655833
 PrefabInstance:
@@ -3960,7 +4251,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1001 &1460330750
 PrefabInstance:
@@ -4073,7 +4364,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbd417d7573d15f4187d62ed5c162559, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyDifficultyCardView
 --- !u!1001 &1516554383
 PrefabInstance:
@@ -4083,6 +4374,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4765168036140907363}
     m_Modifications:
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5774672488808102078, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -4190,7 +4497,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c177635316155f4ebefc7b7afcd834b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyTrainingRowView
 --- !u!1001 &1528266933
 PrefabInstance:
@@ -4200,6 +4507,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4765168036140907363}
     m_Modifications:
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5774672488808102078, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -4307,7 +4630,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c177635316155f4ebefc7b7afcd834b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyTrainingRowView
 --- !u!1001 &1563346026
 PrefabInstance:
@@ -4424,7 +4747,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
 --- !u!114 &1563346029 stripped
 MonoBehaviour:
@@ -4435,7 +4758,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4c5f88c7bc21ad14c836d9b813a34fc0, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyPageHeaderView
 --- !u!1001 &1580887448
 PrefabInstance:
@@ -4548,7 +4871,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 037272f0e68152948bd36dc501bd03f0, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyProgressBarView
 --- !u!1 &1644429638
 GameObject:
@@ -4597,7 +4920,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4784,7 +5107,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1 &1674564946
 GameObject:
@@ -4869,7 +5192,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4944,7 +5267,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -4954,7 +5277,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ed2e175fc837397429c5205f9056b284, type: 2}
   m_sharedMaterial: {fileID: 2066273422931885612, guid: ed2e175fc837397429c5205f9056b284, type: 2}
@@ -4976,7 +5299,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -5145,7 +5468,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1001 &1782987276
 PrefabInstance:
@@ -5306,7 +5629,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1 &1806215549
 GameObject:
@@ -5503,7 +5826,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1001 &1852261859
 PrefabInstance:
@@ -5664,7 +5987,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0f89f95dddea604b86a5a4cc8d2b303, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyWeaponSelectorCardView
 --- !u!1 &1875947833
 GameObject:
@@ -5683,7 +6006,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1875947834
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5717,7 +6040,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 116c815ab26b5634a8ee2e24232e8709, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.LobbyHomePresenter
   view: {fileID: 0}
 --- !u!114 &1875947836
@@ -5730,7 +6053,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 24edcfbd0e4e9e447ae9eea21ac534b6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyHomeView
   stageText: {fileID: 1723678001}
   difficultyText: {fileID: 1888370379}
@@ -5747,6 +6070,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4765168036140907363}
     m_Modifications:
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5774672488808102078, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -5854,7 +6193,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c177635316155f4ebefc7b7afcd834b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyTrainingRowView
 --- !u!1 &1882352759
 GameObject:
@@ -5903,7 +6242,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -6040,7 +6379,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -6050,7 +6389,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ed2e175fc837397429c5205f9056b284, type: 2}
   m_sharedMaterial: {fileID: 2066273422931885612, guid: ed2e175fc837397429c5205f9056b284, type: 2}
@@ -6072,7 +6411,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -6241,7 +6580,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6a34db362922cbb43ad1024b312c04e6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyResearchRowView
 --- !u!1 &2041420552
 GameObject:
@@ -6287,6 +6626,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4765168036140907363}
     m_Modifications:
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 839697442497984923, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4290110453
+      objectReference: {fileID: 0}
+    - target: {fileID: 1187291354811606196, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5774672488808102078, guid: 43ed1cfa9c2a1884b8a3b01cd447c633, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -6394,7 +6749,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c177635316155f4ebefc7b7afcd834b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyTrainingRowView
 --- !u!222 &74705149213906767
 CanvasRenderer:
@@ -6414,7 +6769,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!224 &133114916623435409
@@ -6483,7 +6838,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d8e70ec620cb75040816ab8f8b13a492, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.PixelOvalGraphic
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.17}
@@ -6570,7 +6925,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -6673,7 +7028,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -6743,7 +7098,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -6787,7 +7142,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a8695521f0d02e499659fee002a26c2, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GridLayoutGroup
   m_Padding:
     m_Left: 0
@@ -6811,7 +7166,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!1 &682329339641409315
@@ -6850,7 +7205,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!224 &736704074857835315
@@ -6927,7 +7282,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -6937,7 +7292,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
   m_sharedMaterial: {fileID: 610130664744537401, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
@@ -7019,7 +7374,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -7119,7 +7474,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -7201,7 +7556,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -7367,7 +7722,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.035, g: 0.043, b: 0.065, a: 0}
@@ -7548,7 +7903,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -7558,7 +7913,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
   m_sharedMaterial: {fileID: 610130664744537401, guid: 763f6220f51a1844a9cbb195356a3990, type: 2}
@@ -7580,7 +7935,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -7640,7 +7995,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -7670,7 +8025,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -7803,7 +8158,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!224 &1744690622449120188
@@ -7838,7 +8193,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -7868,7 +8223,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0}
@@ -7916,7 +8271,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8095,7 +8450,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8198,7 +8553,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8236,7 +8591,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8266,7 +8621,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8358,7 +8713,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8493,7 +8848,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -8537,7 +8892,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8567,7 +8922,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 78eccb78ced6e544ba3e6fdab5945bcd, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.LobbyBootstrap
   rootView: {fileID: 8354788935060529764}
   weaponCatalog: {fileID: 11400000, guid: 14000000000000000000000000000009, type: 2}
@@ -8656,7 +9011,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8748,7 +9103,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!114 &2626169864313085760
@@ -8761,7 +9116,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!224 &2637736844238270458
@@ -8800,7 +9155,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8810,7 +9165,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
   m_sharedMaterial: {fileID: 5704639011930290381, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
@@ -8832,7 +9187,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -8947,7 +9302,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8977,7 +9332,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.035, g: 0.043, b: 0.065, a: 0}
@@ -9027,7 +9382,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9083,7 +9438,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9113,7 +9468,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9159,7 +9514,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
   m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
@@ -9182,7 +9537,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9231,7 +9586,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9250,7 +9605,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4290305000
   m_fontColor: {r: 0.91, g: 0.86, b: 0.72, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -9263,7 +9618,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -9361,7 +9716,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9380,7 +9735,7 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4294967295
+    rgba: 4290305000
   m_fontColor: {r: 0.91, g: 0.86, b: 0.72, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
@@ -9393,7 +9748,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -9472,7 +9827,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9510,7 +9865,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9686,7 +10041,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9778,7 +10133,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -9822,7 +10177,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -9898,7 +10253,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6694115960ce6d14cb0e0272280e5dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.AudioSettingsPresenter
 --- !u!1 &3582049728775547544
 GameObject:
@@ -9936,7 +10291,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10037,7 +10392,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10067,7 +10422,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10077,7 +10432,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
   m_sharedMaterial: {fileID: 5704639011930290381, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
@@ -10099,7 +10454,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -10180,7 +10535,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10317,7 +10672,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.035, g: 0.043, b: 0.065, a: 0}
@@ -10366,7 +10721,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10376,7 +10731,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
   m_sharedMaterial: {fileID: 5704639011930290381, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
@@ -10398,7 +10753,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -10466,7 +10821,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10514,7 +10869,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.72, g: 0.64, b: 0.52, a: 1}
@@ -10544,7 +10899,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10595,7 +10950,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!114 &4333095408919221585
@@ -10608,7 +10963,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!222 &4351152286368528414
@@ -10647,7 +11002,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -10699,7 +11054,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -10832,7 +11187,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &4644832012327524635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10843,7 +11198,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -10936,7 +11291,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11059,7 +11414,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11089,7 +11444,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -11133,7 +11488,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11244,7 +11599,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -11312,7 +11667,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d87b7f0cd93d3dd44a9e8b951b1621de, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.CommonTrainingPresenter
   view: {fileID: 0}
 --- !u!114 &4951182681172077265
@@ -11325,7 +11680,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11335,7 +11690,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
   m_sharedMaterial: {fileID: 5704639011930290381, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
@@ -11561,7 +11916,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!1 &5244711195331273927
@@ -11612,7 +11967,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11642,7 +11997,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11689,7 +12044,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!224 &5335540268214419907
@@ -11740,7 +12095,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11905,7 +12260,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 268d2dfc8a5ca9b4f9d4b91f1ca4cd55, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.TrainingPageView
   rows:
   - {fileID: 1279905985}
@@ -11940,7 +12295,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11970,7 +12325,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!222 &5687173098473412959
@@ -12117,7 +12472,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -12180,7 +12535,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.72, g: 0.64, b: 0.52, a: 1}
@@ -12368,7 +12723,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.96, g: 0.89, b: 0.71, a: 1}
@@ -12448,7 +12803,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12549,7 +12904,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -12630,7 +12985,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12660,7 +13015,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!114 &6737646185009781416
@@ -12673,7 +13028,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12789,7 +13144,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12799,7 +13154,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
   m_sharedMaterial: {fileID: 5704639011930290381, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
@@ -12945,7 +13300,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12975,7 +13330,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
   m_IgnoreReversedGraphics: 1
   m_BlockingObjects: 0
@@ -13073,7 +13428,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8239a128e10247a47ac34936fc6ba7ee, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.PatrolPresenter
   weaponCatalog: {fileID: 11400000, guid: 14000000000000000000000000000009, type: 2}
   view: {fileID: 0}
@@ -13087,7 +13442,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a22488ddaa2302646ab4bfb3b1e0784a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.PatrolPageView
   pageHeader: {fileID: 1563346029}
   stageName: {fileID: 3865840442610639072}
@@ -13319,7 +13674,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13349,7 +13704,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!114 &7393319671538547309
@@ -13362,7 +13717,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13523,7 +13878,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13553,7 +13908,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.02, g: 0.025, b: 0.04, a: 0.96}
@@ -13610,7 +13965,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13702,7 +14057,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13752,7 +14107,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13782,7 +14137,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -13826,7 +14181,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13875,7 +14230,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -13993,7 +14348,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -14072,7 +14427,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -14142,7 +14497,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14203,7 +14558,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14322,7 +14677,7 @@ MonoBehaviour:
   m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14401,7 +14756,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 84b6963d5e0cb3441a413c8ed62a5a2b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyRootView
   safeArea: {fileID: 7905229969519576534}
   header: {fileID: 199021856}
@@ -14465,7 +14820,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14557,7 +14912,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e13500a9d6546a4db6b2be4763080a3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.GameAudioButtonFeedback
   cue: 1
 --- !u!114 &8617737765531238790
@@ -14570,7 +14925,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 36fbd6d5cc54b6a4098adeade485e815, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.LobbyNavigationPresenter
   homePage: {fileID: 1875947833}
   trainingPage: {fileID: 4641197802261114952}
@@ -14592,7 +14947,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14662,7 +15017,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14727,7 +15082,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14765,7 +15120,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b112d21186af33f44aac0b224daeead9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.WeaponResearchPresenter
   view: {fileID: 0}
   weaponCatalog: {fileID: 11400000, guid: 14000000000000000000000000000009, type: 2}
@@ -14797,7 +15152,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.01, g: 0.012, b: 0.02, a: 0.88}
@@ -14827,7 +15182,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dbc0a32bc1be09646a341060bf164eec, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.LobbyAudioSettingsView
   title: {fileID: 843034957}
   musicSlider: {fileID: 660544373}
@@ -14893,7 +15248,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bd7b9d9464ddbb64e9d1b06cd2ca2ea3, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: JoseonHunter.Presentation::JoseonHunter.Presentation.UI.Lobby.Views.ResearchPageView
   weaponSelectors:
   - {fileID: 955591918}
@@ -14930,7 +15285,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.08, g: 0.065, b: 0.08, a: 1}
@@ -14960,7 +15315,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -14970,7 +15325,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
   m_sharedMaterial: {fileID: 5704639011930290381, guid: 8d5ef26102de2ff418ceab5815f2fcdb, type: 2}
@@ -14992,7 +15347,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
