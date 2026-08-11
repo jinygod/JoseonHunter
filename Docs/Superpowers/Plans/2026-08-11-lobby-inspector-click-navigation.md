@@ -191,6 +191,6 @@ Scan modified scenes/prefabs for missing scripts, verify Build Settings order Bo
 
 Review the integrated diff once for P0/P1 issues, listener lifetime, serialized reference safety, and accidental visual changes; fix only confirmed findings and rerun affected tests.
 
-- [ ] **Step 5: Push exact commits**
+- [x] **Step 5: Push exact commits**
 
 Push only after all required validation and final review complete; preserve all unrelated dirty files untouched.

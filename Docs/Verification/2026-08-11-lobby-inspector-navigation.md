@@ -50,6 +50,7 @@
 
 - 수동 UI 체크포인트: `582b8a2 chore: checkpoint manual lobby ui edits` (`Lobby.unity`만 포함).
 - 클릭·Navigation 기능 수정: `9ea6a45 fix: restore authored lobby menu clicks`.
+- Inspector 디자인 소유권·문서: `7c9e322 refactor: separate authored lobby ui from behavior`.
 - 체크포인트 이후 `git diff 582b8a2 -- Assets/JoseonHunter/Scenes/Lobby.unity`: 변경 없음.
 - focused: Module 26/26, Scene 1/1, Modular Scene 8/8, Navigation 12/12, Navigation Structure 3/3, Home 3/3, Patrol 14/14, Training 8/8, Research 10/10, Authored Design Ownership 2/2.
 - 전체 EditMode: 1,015/1,015 passed, failed/skipped/inconclusive 0.
